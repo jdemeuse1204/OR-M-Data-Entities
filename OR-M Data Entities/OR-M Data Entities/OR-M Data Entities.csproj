@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{A7E402C6-3B5C-4477-950D-20772598FE4C}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>OR_M_Data_Entities</RootNamespace>
+    <AssemblyName>OR-M Data Entities</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Commands\ComparisonType.cs" />
+    <Compile Include="Commands\JoinType.cs" />
+    <Compile Include="Commands\Secure\SqlSecureExecutable.cs" />
+    <Compile Include="Commands\Secure\SqlSecureObject.cs" />
+    <Compile Include="Commands\SqlDeleteBuilder.cs" />
+    <Compile Include="Commands\SqlInsertBuilder.cs" />
+    <Compile Include="Commands\SqlQueryBuilder.cs" />
+    <Compile Include="Commands\SqlUpdateBuilder.cs" />
+    <Compile Include="Commands\Support\Field.cs" />
+    <Compile Include="Commands\Support\InsertItem.cs" />
+    <Compile Include="Commands\Support\ISqlBuilder.cs" />
+    <Compile Include="Commands\Support\KeyContainer.cs" />
+    <Compile Include="Commands\Support\SqlValidation.cs" />
+    <Compile Include="Commands\Transform\Cast.cs" />
+    <Compile Include="Commands\Transform\Conversion.cs" />
+    <Compile Include="Commands\Transform\DataTransform.cs" />
+    <Compile Include="Commands\Transform\DataTransformContainer.cs" />
+    <Compile Include="Connection\IConnectionBuilder.cs" />
+    <Compile Include="Connection\SqlServerConnectionBuilder.cs" />
+    <Compile Include="Data\Database.cs" />
+    <Compile Include="Data\DatabaseEntity.cs" />
+    <Compile Include="Data\DatabaseReader.cs" />
+    <Compile Include="Data\DatabaseSchemata.cs" />
+    <Compile Include="Data\DataFetching.cs" />
+    <Compile Include="Data\DataOperations.cs" />
+    <Compile Include="Data\DataReader.cs" />
+    <Compile Include="DbSqlContext.cs" />
+    <Compile Include="Entity\DbEntityContext.cs" />
+    <Compile Include="Entity\DbTable.cs" />
+    <Compile Include="Entity\IDbTable.cs" />
+    <Compile Include="Entity\SaveAction.cs" />
+    <Compile Include="Expressions\ExpressionQuery.cs" />
+    <Compile Include="Expressions\Resolver\ExpressionResolutionResult.cs" />
+    <Compile Include="Expressions\Resolver\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolver\ExpressionSelectResult.cs" />
+    <Compile Include="Expressions\Resolver\ExpressionTypeTransform.cs" />
+    <Compile Include="Expressions\Resolver\ExpressionWhereResult.cs" />
+    <Compile Include="Extension.cs" />
+    <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
+    <Compile Include="Mapping\Column.cs" />
+    <Compile Include="Mapping\DbGenerationOption.cs" />
+    <Compile Include="Mapping\DbTranslation.cs" />
+    <Compile Include="Mapping\Key.cs" />
+    <Compile Include="Mapping\SearchablePrimaryKeyType.cs" />
+    <Compile Include="Mapping\Table.cs" />
+    <Compile Include="Mapping\Unmapped.cs" />
+    <Compile Include="ModificationState.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueryNotValidException.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

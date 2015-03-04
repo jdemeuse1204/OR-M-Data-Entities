@@ -1,0 +1,9 @@
+c:\users\jdemeuse\documents\visual studio 2013\Projects\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.dll
+c:\users\jdemeuse\documents\visual studio 2013\Projects\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.pdb
+c:\users\jdemeuse\documents\visual studio 2013\Projects\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.csprojResolveAssemblyReference.cache
+c:\users\jdemeuse\documents\visual studio 2013\Projects\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.dll
+c:\users\jdemeuse\documents\visual studio 2013\Projects\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.pdb
