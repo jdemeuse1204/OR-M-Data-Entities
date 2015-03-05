@@ -1,9 +1,9 @@
 # OR-M-Data-Entities
-Object Relational Mapper aimed at speed.
+Speedy Object Relational Mapper
 
 OR-M Data Entities
 Overview:  <br><br>
-This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, OR-M Data Entities is much faster and reading and inserting.
+This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, OR-M Data Entities is much faster than ORM's like Entity Framework.  The catch is there is less "micro managing" of code going on, which makes the framework much faster.  The great thing about OR-M Data Entities are the two different data context's you can use.  DbSqlContext is for those familiar with Sql.  DbSqlContext is a derivative of Entity Framework, the difference is there are no DbSets to declare.  Instead your classes (tables) will perform the direct manipluation (See code below).  Also, there is DbEntityContext, which is almost an exact mirror of Entity Framework, just lighter and different inner workings.  Simple operations are the same such as saving and deleting.  If there is more demand I can add onto it.
 
 ####Objects:
 ######1.	DbSqlContext
@@ -14,9 +14,9 @@ Constructor:
     DbSqlContext(string connectionString)
     
 Methods:
-	
+```C#
     All<T>() 
-    
+```
     - Returns everything from Table T
     
     Delete<T>(T entity) where T : class
