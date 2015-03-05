@@ -47,10 +47,12 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 ````
 #####Method Examples
 ```C#
-	DbSqlContext context = new DbSqlContext("your connection string"); 
-	
+
 	class Program
 	{
+	
+		DbSqlContext context = new DbSqlContext("your connection string"); 
+	
 		static void main(string[] args)
 		{
 			// ALL
@@ -307,5 +309,68 @@ public class Contact
 	public string Test {get;set;}
 }
 ```
+<br><br>
 
+
+####Performing Queries Using ExpressionQuery:
+#####The aim of the ExpressionQuery class is to make writing sql in C# much easier.  Know how to write a join in Lambda without StackOverflow?  Know how to write a left join in Lambda?  Hate using DbFunctions in Entity Framework to truncate time.  Now all of this is easier than ever!
+
+```C#
+[Table("Contacts")]
+public class Contact
+{
+	public int Id {get;set;}
+	
+	public DateTime DateAdded {get;set;}
+	
+	public string CreatedBy {get;set;}
+}
+
+[Table("Appointments")]
+public class Appointment
+{
+	public int Id {get;set;}
+	
+	public int ContactId {get;set;}
+}
+
+
+	
+class Program
+{
+
+	DbSqlContext context = new DbSqlContext("your connection string"); 
+
+	static void main(string[] args)
+	{
+		// Lets write the following with ExpressionQuery syntax
+		// Select * From Contacts Where Cast(CreatedBy as date) = Cast(getdate() as date)
+		
+		var query = context.From<Contact>().Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
+		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
+		
+		// The great thing about ExpressionQuery is order does not matter.  From always needs to come first, 
+		// after that it does not matter.
+		// The above can also be written as:
+		
+		var query = context.From<Contact>().Select<Contact>().Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
+		== Cast.As(DateTime.Now, SqlDbType.date);
+		
+		// Lets write an Inner Join
+		var query = context.From<Contact>().Join<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
+		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
+		
+		// Lets write an Left Join
+		var query = context.From<Contact>().LeftJoin<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
+		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
+		
+		// Lets write an Select Top 10
+		var query = context.From<Contact>().LeftJoin<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
+		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>().Take(10);
+		
+		// Dont have a class to return, use Select<dynamic>() and it will return everything in your 
+		// select.  Want to return a struct?  Use Select<int>() to return your value.  More examples to come!
+	}
+}
+```
 
