@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq.Expressions;
-using System.Xml;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Expressions;
 
@@ -114,7 +113,7 @@ namespace OR_M_Data_Entities.Data
         protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
             where T : class
         {
-            return new ExpressionQuery(DatabaseSchemata.GetTableName<T>(), fetching);
+            return fetching.From<T>().Where(propertyLambda);
         }
         #endregion
 

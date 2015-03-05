@@ -48,6 +48,9 @@ namespace OR_M_Data_Entities.Entity
                     }
                 }
             }
+
+            // unload the old data in the local tables
+            OnModelCreating();
         }
 
         protected void OnModelCreating()

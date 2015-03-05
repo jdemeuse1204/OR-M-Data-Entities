@@ -372,5 +372,43 @@ class Program
 		// select.  Want to return a struct?  Use Select<int>() to return your value.  More examples to come!
 	}
 }
+
+####Converting and Casting:
+<br><br>
+Currently only casting works and not converting
+#####Namespace: OR_M_Data_Entities.Commands.Transform<br>
+
+#####Methods
+```C#
+ object As(object entity, SqlDbType type)
+```
+
+
+####Sql to .NET<br><br>
+.NET: Equals()<br>
+Sql: =<br>
+Example<br><br>
+
+.NET: StartsWith()<br>
+Sql: Like 'Param1%'<br><br>
+
+.NET: EndsWith()<br>
+Sql: Like '%Param1'<br><br>
+
+.NET: Contains()<br>
+Sql: Like '%Param1%'<br><br>
+
+.NET List<T>()<br>
+Sql: In ()<br>
+Example:
+```C#
+    var ids = new List<int>();
+    ids.Add(45);
+    ids.Add(46);
+    
+    var items = context.Where<Contact>(w => ids.Contains(w.Id))
+    
+    // Translation: Select * From Contacts Where ID In (45,46)
+```
 ```
 

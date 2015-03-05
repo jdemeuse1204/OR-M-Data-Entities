@@ -55,23 +55,16 @@ namespace OR_M_Data_Entities.Entity
 
         public List<T> Where(Expression<Func<T, bool>> propertyLambda)
         {
-            //using (var reader = _context.ExecuteQuery(propertyLambda, _context))
-            //{
-            //    return reader.All();
-            //}
+            var query = _context.Where(propertyLambda);
 
-            // TODO FIX ME
-            return null;
+            return query.All<T>();
         }
 
         public T FirstOrDefault(Expression<Func<T, bool>> propertyLambda)
         {
-            //using (var reader = _context.ExecuteQuery(propertyLambda))
-            //{
-            //    return reader.Select();;
-            //}
-            // TODO FIX ME
-            return null;
+            var query = _context.Where(propertyLambda);
+
+            return query.First<T>();
         }
 
         public T Find(params object[] pks)

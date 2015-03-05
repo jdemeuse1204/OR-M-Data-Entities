@@ -474,18 +474,5 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             return ((MethodCallExpression)expression).Method.DeclaringType == typeof(Conversion);
         }
         #endregion
-
-        //private static object _getValue(dynamic rightSide)
-        //{
-        //    Type t = rightSide.Expression.Value.GetType();
-        //    var result = t.InvokeMember(
-        //        rightSide.Member.Name,
-        //        BindingFlags.GetField,
-        //        null,
-        //        rightSide.Expression.Value,
-        //        null);
-
-        //    return result;
-        //}
     }
 }

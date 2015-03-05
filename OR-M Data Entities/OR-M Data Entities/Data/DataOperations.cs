@@ -174,7 +174,12 @@ namespace OR_M_Data_Entities.Data
 
             Execute(builder);
 
-            return First<T>();
+            if (Reader.HasRows)
+            {
+                Reader.Read();
+            }
+
+            return Select<T>();
         }
         #endregion
     }
