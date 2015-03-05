@@ -1,7 +1,14 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq.Expressions;
+using System.Xml;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Expressions;
 
@@ -64,6 +71,8 @@ namespace OR_M_Data_Entities.Data
         /// <param name="builder"></param>
 		protected void Execute(ISqlBuilder builder)
         {
+            _tryCloseReader();
+
             Command = builder.Build(Connection);
 
             Connect();
@@ -78,6 +87,8 @@ namespace OR_M_Data_Entities.Data
         /// <param name="sql"></param>
 		protected void Execute(string sql)
         {
+            _tryCloseReader();
+
             Command = new SqlCommand(sql, Connection);
 
             Connect();
@@ -86,6 +97,8 @@ namespace OR_M_Data_Entities.Data
 
         protected void Execute(string sql, Dictionary<string, object> parameters)
         {
+            _tryCloseReader();
+
             Command = new SqlCommand(sql, Connection);
 
             foreach (var item in parameters)
@@ -126,6 +139,14 @@ namespace OR_M_Data_Entities.Data
 
             return new DataReader<T>(Reader);
         }
+
+        private void _tryCloseReader()
+        {
+            if (Reader == null) return;
+            Reader.Close();
+            Reader.Dispose();
+        }
+
         #endregion
     }
 }

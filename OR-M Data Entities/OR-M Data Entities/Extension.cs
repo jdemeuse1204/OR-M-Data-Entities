@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -38,26 +44,27 @@ namespace OR_M_Data_Entities
 		    }
 
 			// find any unmapped attributes
-			var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null);
+			var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
 
 			// find any columns that have the column name attribute on them,
 			// we need to swtich the column name to the one in the property
 			var columnRenameProperties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<ColumnAttribute>() != null).Select(w => w.Name).ToList();
 
-			foreach (var property in properties)
-			{
-				var columnName = property.Name;
+		    for (var i = 0; i < properties.Count; i++)
+		    {
+		        var property = properties[i];
+		        var columnName = property.Name;
 
-				if (columnRenameProperties.Contains(columnName))
-				{
-					columnName = property.GetCustomAttribute<ColumnAttribute>().Name;
-				}
+		        if (columnRenameProperties.Contains(columnName))
+		        {
+		            columnName = property.GetCustomAttribute<ColumnAttribute>().Name;
+		        }
 
-				var dbValue = reader[columnName];
-				DatabaseEntity.SetPropertyValue(obj, property.Name, dbValue is DBNull ? null : dbValue);
-			}
+		        var dbValue = reader[columnName];
+		        DatabaseEntity.SetPropertyValue(obj, property.Name, dbValue is DBNull ? null : dbValue);
+		    }
 
-			return obj;
+		    return obj;
 		}
 
 		public static bool IsNumeric(this object o)

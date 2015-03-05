@@ -1,4 +1,10 @@
-﻿using System.Data;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System.Data;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;

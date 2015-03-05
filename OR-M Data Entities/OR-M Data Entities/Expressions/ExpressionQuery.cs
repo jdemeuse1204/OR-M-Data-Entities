@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -158,7 +164,7 @@ namespace OR_M_Data_Entities.Expressions
             // Parent
 			var childTableName = compareValue.TableName.Substring(0, compareValue.TableName.Length - 1);
             join.CompareValue = compareValue;
-			join.PropertyName = childTableName + "ID";
+			join.ColumnName = childTableName + "ID";
             join.TableName = DatabaseSchemata.GetTableName<TParent>();
 
             return join;
@@ -312,9 +318,9 @@ namespace OR_M_Data_Entities.Expressions
                     {
                         var joinData = item.CompareValue as ExpressionSelectResult;
                         var parentTable = item.TableName.ToUpper() == _from ? joinData.TableName : item.TableName;
-                        var parentColumn = item.TableName.ToUpper() == _from ? joinData.ColumnName : item.PropertyName;
+                        var parentColumn = item.TableName.ToUpper() == _from ? joinData.ColumnName : item.ColumnName;
                         var childTable = item.TableName.ToUpper() != _from ? joinData.TableName : item.TableName;
-                        var childColumn = item.TableName.ToUpper() != _from ? joinData.ColumnName : item.PropertyName;
+                        var childColumn = item.TableName.ToUpper() != _from ? joinData.ColumnName : item.ColumnName;
 
                         if (hasLeftJoins)
                         {
@@ -344,7 +350,7 @@ namespace OR_M_Data_Entities.Expressions
 
                         _sql += string.Format(" LEFT JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ",
                         item.TableName,
-                        item.PropertyName,
+                        item.ColumnName,
                         joinData.TableName,
                         joinData.ColumnName);
                     }
@@ -357,7 +363,7 @@ namespace OR_M_Data_Entities.Expressions
                 var leftSide = !item.ShouldCast
                     ? string.Format(" [{0}].[{1}] ",
                         item.TableName,
-                        item.PropertyName)
+                        item.ColumnName)
                     : Cast(item);
 
                 var rightSide = "";

@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -257,7 +263,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             var result = new ExpressionWhereResult();
             var columnOptions = _getColumnAndTableName(expression.Arguments[0] is MemberExpression ? expression.Arguments[0] as dynamic : expression.Object as dynamic, tableNameLookup, SqlDbType.VarChar);
 
-            result.PropertyName = columnOptions.ColumnName;
+            result.ColumnName = columnOptions.ColumnName;
             result.TableName = columnOptions.TableName;
             result.CompareValue = _getValue((!(expression.Arguments[0] is MemberExpression)) ? expression.Arguments[0] as dynamic : expression.Object as dynamic);
             result.ComparisonType = _getComparisonType(expression.Method.Name);
@@ -286,7 +292,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             // Get column options (Column Name, Table Name, Transform Type)
             var columnOptions = _getColumnAndTableName(leftSideHasParameter ? leftSide : rightSide, tableNameLookup, SqlDbType.VarChar);
 
-            result.PropertyName = columnOptions.ColumnName;
+            result.ColumnName = columnOptions.ColumnName;
             result.TableName = columnOptions.TableName;
             result.Transform = columnOptions.Transform;
 

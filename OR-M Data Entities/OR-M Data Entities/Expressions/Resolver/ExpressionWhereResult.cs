@@ -1,15 +1,16 @@
-﻿using System;
-using System.Data;
+﻿/*
+ * OR-M Data Entities v1.0.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using OR_M_Data_Entities.Commands;
 
 namespace OR_M_Data_Entities.Expressions.Resolver
 {
-    public sealed class ExpressionWhereResult
+    public sealed class ExpressionWhereResult : ExpressionSelectResult
     {
-        public string PropertyName { get; set; }
-        public Type PropertyType { get; set; }
-        public string TableName { get; set; }
-
         private object _compareValue;
         public object CompareValue
         {
@@ -17,10 +18,6 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             set { _compareValue = (value ?? DBNull.Value); }
         }
 
-        public SqlDbType Transform { get; set; }
-
         public ComparisonType ComparisonType { get; set; }
-
-        public bool ShouldCast { get; set; }
     }
 }
