@@ -56,18 +56,18 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 			// ALL
 			
 			// NOTES - Returns everything from the corresponding table
-			var allItems = context.All<T>();  // Returns everything from Persons table
+			var allItems = context.All<Contact>();  // Returns everything from Contacts table
 			
 			// DELETE
 			
 			// NOTES - Deletes the entity from the corresponding table, 
 			// returns true if deleted and false if no action taken.
 			// **Looks up the value to delete based on the primary key
-			var person = new Person
+			var contact = new Contact
 			{
 				Id = 1
 			};
-			var success = context.Delete(person);
+			var success = context.Delete(contact);
 			
 			// DISCONNECT
 			
@@ -168,98 +168,77 @@ IEnumerator<T> GetEnumerator()
 	}
 ```
 
-Constructor – DataReader(SqlDataReader reader)
-Methods:
-•	IsEOF : returns bool
-o	Is end of file, if true no records to fetch
-•	All<T>() : returns List<T>
-o	Fetches all records
-•	Dispose() : disposes of the reader
-•	IEnumerator<T> GetEnumerator() : Allows for iteration over results
-•	T Select() : selects the current item of the results
+######3.	ExpressionQuery : DataTransform, IEnumerable
 
-3.	ExpressionQuery
-a.	Namespace: OR_M_Data_Entities.Expressions
-Constructor – ExpressionQuery(string fromTable, DataFetching context)
-SQL Methods:
-	NOTE: ORDER DOES NOT MATTER!
-•	Distinct() : returns type of ExpressionQuery
-o	Will select distinct in sql
-•	Join<TParent, TChild>( Expression<Func<TParent, TChild, bool>> joinExpression)
-o	Performs an inner join
-	Example
-•	.Join<Class1, Class2>((c1,c2) => c1.Class2Id == c2.Id)
-•	Join<TParent, TChild>()
-o	If your tables and keys are well formed the join will be chosen for you
-	Example:  if we join Appointment onto Contact, Appointment must have a property of ContactId and Contact must have a property of Id. 
-•	Left Join<TParent, TChild>( Expression<Func<TParent, TChild, bool>> joinExpression)
-o	Performs an left join
-	Example
-•	.LeftJoin<Class1, Class2>((c1,c2) => c1.Class2Id == c2.Id)
-•	LeftJoin<TParent, TChild>()
-o	If your tables and keys are well formed the join will be chosen for you
-	Example:  if we join Appointment onto Contact, Appointment must have a property of ContactId and Contact must have a property of Id. 
-•	Select<T>() : returns type of ExpressionQuery
-o	This is a Select All
-•	Select<T>(Expression<Func<T, object>> result) : returns type of ExpressionQuery
-o	Selects only the columns specified
-•	Take(int rows) : returns type of ExpressionQuery
-o	Takes only top X rows specified
-•	Where<T>(Expression<Func<T, bool>> whereExpression)
-o	Performs validation on the query, tells your query which data you want returned
+#####Namespace: OR_M_Data_Entities.Expressions<br>
 
+#####Methods
+```C#
+ExpressionQuery Where<T>(Expression<Func<T, bool>> whereExpression)
+ExpressionQuery Join<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
+            where TParent : class
+            where TChild : class
+ExpressionQuery Join<TParent, TChild>()
+            where TParent : class
+            where TChild : class
+ExpressionQuery LeftJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
+            where TParent : class
+            where TChild : class
+ExpressionQuery LeftJoin<TParent, TChild>()
+            where TParent : class
+            where TChild : class
+ExpressionQuery Select<T>(Expression<Func<T, object>> result)
+ExpressionQuery Select<T>()
+ExpressionQuery Distinct()
+ExpressionQuery Take(int rows)
+object First()
+T First<T>()
+ICollection All()
+List<T> All<T>()
+IEnumerator GetEnumerator<T>()
+```
 
-Data Retrieval Methods:
-•	All() : returns type of ICollection
-•	All<T>() : returns type of List<T>
-•	First() : returns type of dynamic
-o	This is useful if the data you wish to return is not of a type
-•	First<T>() : returns type of T
-•	IEnumerator GetEnumerator<T>() : returns iterator so results can be iterated over
-o	Choose which fields to select
+#####Methods Examples:
+```C#
 
-Examples:
-Class Contact
-{
-	Public int Id {get;set;}
-	Public string Name {get;set;}
-}
+```
 
-Class Appointment
-{
-	Public int Id {get;set;}
-	Public string Description {get;set;}
-	Public int ContactId {get;set;}
-}
+####Mapping:
 
-Select: 
-// Grabs the first result
-// Corresponding Sql:  Select * From Contact Where Id = 1
-Var context = new DbSqlDataContext(“connectionString”);
-Var result = context.From<Contact>().Where<Contact>(w => w.Id == 1).Select<Contact>().First<Contact>();
-Join:
-// Join Contact and Appointment
-Var context = new DbSqlDataContext(“connectionString”);
-Var result = context.From<Contact>().Join<Contact, Appointment>((c,a) => c.Id == a.ContactId).Select<Contact>().First<Contact>();
+######1.	ColumnAttribute : SearchablePrimaryKeyAttribute
 
-Mapping Attributes:
-	Namespace: OR_M_Data_Entities.Mapping
-•	Column
-o	Usage:  Properties or Fields
-o	Must pass in column name into the constructor
-•	DbGenerationOption
-o	Usage: Properties of Fields
-o	Must pass in DbGenerationOption in the constructor
-	Options: Generate, IdentitySpecification (default), None
-•	Key
-o	Usage: Properties or Fields
-o	If your Primary key is not explicitly named Id or TableId then you must mark your key
-•	Table
-o	Usage: Class
-o	Must mass in table name into the constructor
-•	Unmapped
-o	Usage: Properties or Fields
-o	If you have properties you do not want mapped to and from the database, mark it with this attribute
+#####Namespace: Mapping.Expressions<br>
 
-Notes:  Must always specify T in methods, it does take more code, but it adds to the speed of the query builder.  It is much easier and faster if the type is supplied.
+#####Usage: Properties or Fields
+
+######2.	DbGenerationOptionAttribute : Attribute
+
+#####Namespace: Mapping.Expressions<br>
+
+#####Usage: Properties or Fields
+
+######3.	DbTranslationAttribute : Attribute
+
+#####Namespace: Mapping.Expressions<br>
+
+#####Usage: Properties or Fields
+
+######4.	KeyAttribute : SearchablePrimaryKeyAttribute
+
+#####Namespace: Mapping.Expressions<br>
+
+#####Usage: Properties or Fields
+
+######5.	TableAttribute : Attribute
+
+#####Namespace: Mapping.Expressions<br>
+
+#####Usage: Class
+
+######6.	UnmappedAttribute : Attribute
+
+#####Namespace: Mapping.Expressions<br>
+
+#####Usage: Properties or Fields
+
 
