@@ -29,9 +29,23 @@ This solution is a micro Object-Relational Mapper aimed at speed.  Others out th
 
 ####Objects:
 ######1.	DbSqlContext
-Namespace: OR_M_Data_Entities<br>
+
+#####Namespace: OR_M_Data_Entities<br>
 
 #####Methods:
+```C#
+List<T> All<T>()
+bool Delete<T>(T entity) where T : class
+void Disconnect()
+DataReader<T> ExecuteQuery<T>(string sql)
+DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
+DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
+T Find<T>(params object[] pks)
+ExpressionQuery From<T>()
+void SaveChanges<T>(T entity) where T : class
+ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : class
+````
+#####Method Examples
 ```C#
 	DbSqlContext context = new DbSqlContext("your connection string"); 
 	
@@ -111,10 +125,49 @@ Namespace: OR_M_Data_Entities<br>
     
 ```
 
+######2.	DataReader<T> : IEnumerable, IDisposable
 
+#####Namespace: OR_M_Data_Entities.Data<br>
 
-2.	DataReader<T> : IEnumerable, IDisposable	
-a.	Namespace: OR_M_Data_Entities.Data
+#####Methods
+```C#
+bool IsEOF {get;}
+T Select()
+List<T> All()
+IEnumerator<T> GetEnumerator()
+```
+
+#####Methods Examples:
+```C#
+	DbSqlContext context = new DbSqlContext("your connection string"); 
+	
+	class Program
+	{
+		static void main(string[] args)
+		{
+			var builder = new SqlQueryBuilder();
+        		builder.SelectAll<Contact>();
+        		
+        		reader = ExecuteQuery<Contact>(builder);
+        		
+        		// Example 1  (Select() and IsEOF
+        		while(!reader.IsEOF)
+        		{
+        			var item = reader.Select();
+        		}
+        		
+        		// Example 2 (Enumeration)
+        		foreach(var item in reader)
+        		{
+        		
+        		}
+        		
+        		// Example 3 (All)
+        		var allItems = context.All();
+		}
+	}
+```
+
 Constructor – DataReader(SqlDataReader reader)
 Methods:
 •	IsEOF : returns bool
