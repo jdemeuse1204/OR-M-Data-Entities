@@ -210,35 +210,102 @@ IEnumerator GetEnumerator<T>()
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	[Column("Name From Database")]
+	public string MyName {get;set;}
+}
+```
+<br><br>
+
 
 ######2.	DbGenerationOptionAttribute : Attribute
 
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	// example if Identity Specification is not set to true
+	[DbGenerationOption(DbGenerationOption.Generate)]
+	public int Id {get;set;}
+	
+	// example if you always want to set your key and insert it
+	[DbGenerationOption(DbGenerationOption.None)]
+	public int Id {get;set;}
+	
+	// example if identity insert is on, (Default for Primary Keys)
+	public int Id {get;set;}
+}
+```
+<br><br>
+
 
 ######3.	DbTranslationAttribute : Attribute
 
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	// If database is datetime2(7)
+	[DbTranslationAttribute(SqlDbType.datetime2)]
+	public DateTime Date {get;set;}
+}
+```
+<br><br>
 
 ######4.	KeyAttribute : SearchablePrimaryKeyAttribute
 
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	// Clustered key
+	[Key]
+	[DbGenerationOption(DbGenerationOption.None)] // set to none if you want to insert into a table with no PK
+	public int FkId_1 {get;set;}
+	
+	[Key]
+	[DbGenerationOption(DbGenerationOption.None)]  // set to none if you want to insert into a table with no PK
+	public int FkId_2 {get;set;}
+}
+```
+<br><br>
+
 
 ######5.	TableAttribute : Attribute
 
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Class
+```C#
+[Table("Contacts")]  // only needed if your class name is not the same as your table name
+public class Contact
+{
+	public int Id {get;set;}
+}
+```
+<br><br>
 
 ######6.	UnmappedAttribute : Attribute
 
 #####Namespace: Mapping.Expressions<br>
 
 #####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	public int Id {get;set;}
+	
+	[Unmapped] // data is not pulled from or pushed to database
+	public string Test {get;set;}
+}
+```
 
 
