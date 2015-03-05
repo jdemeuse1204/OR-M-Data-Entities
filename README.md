@@ -5,46 +5,113 @@ OR-M Data Entities
 Overview:  <br><br>
 This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, OR-M Data Entities is much faster than ORM's like Entity Framework.  The catch is there is less "micro managing" of code going on, which makes the framework much faster.  The great thing about OR-M Data Entities are the two different data context's you can use.  DbSqlContext is for those familiar with Sql.  DbSqlContext is a derivative of Entity Framework, the difference is there are no DbSets to declare.  Instead your classes (tables) will perform the direct manipluation (See code below).  Also, there is DbEntityContext, which is almost an exact mirror of Entity Framework, just lighter and different inner workings.  Simple operations are the same such as saving and deleting.  If there is more demand I can add onto it.
 
+###Example Classes to be used below:
+```C#
+	[Table("Contacts")] // Only needed if your table name is not the same as the class name
+	public class Contact
+	{
+		public int Id {get;set;}
+		
+		public string Name {get;set;}
+	}
+	
+	[Table("Appointments")]
+	public class Appointment 
+	{
+		public int Id {get;set;}
+		
+		[Column("AppointmentAddress")]  // only needed if you want your property name to be different than the corresponding column name in the table
+		public string Address {get;set;}
+		
+		public int ContactId {get;set;
+	}
+```
+
 ####Objects:
 ######1.	DbSqlContext
 Namespace: OR_M_Data_Entities<br>
 
-Constructor:
-  
-    DbSqlContext(string connectionString)
-    
-Methods:
+#####Methods:
 ```C#
-    All<T>() 
+	DbSqlContext context = new DbSqlContext("your connection string"); 
+	
+	class Program
+	{
+		static void main(string[] args)
+		{
+			// ALL
+			
+			// NOTES - Returns everything from the corresponding table
+			var allItems = context.All<T>();  // Returns everything from Persons table
+			
+			// DELETE
+			
+			// NOTES - Deletes the entity from the corresponding table, 
+			// returns true if deleted and false if no action taken.
+			// **Looks up the value to delete based on the primary key
+			var person = new Person
+			{
+				Id = 1
+			};
+			var success = context.Delete(person);
+			
+			// DISCONNECT
+			
+			// Disconnects the existing connection
+			context.Disconnect();
+			
+			// EXECUTE QUERY
+			
+			// ** All execute queries return a DataReader, which is custom
+			
+			// This can be unsafe as no parameters are used
+			var sql = "Select * From Contacts";
+			var reader = ExecuteQuery<Contact>(sql);  
+			
+			// Safest option for regular sql
+			sql = "Select * From Contacts Where Id = @Param1";
+			var parameters = new Dictionary<string, object>();
+			parameters.Add("Param1",1);
+			reader = ExecuteQuery<Contact>(sql, parameters);
+			
+			// Safe option as well, uses Sql Builders
+			var builder = new SqlQueryBuilder();
+        		builder.SelectAll<Contact>();
+        		
+        		reader = ExecuteQuery<Contact>(builder);
+        		
+        		// FIND
+        		
+        		var contact = context.Find<Contact>(1); // Finds a contact where ids Primary Key is 1
+        		
+        		// FROM
+        		
+        		var expressionQuery = context.From<Contact>(); 
+        		// Returns a ExpressionQuery which is custom
+        		// Best option to use when selecting data
+        		
+        		// SAVE CHANGES
+        		
+        		// ** If the primary key is 0 for integers or MinValue for Guid a record will be inserted, 
+        		// else the record will be updated.  Strings not supported for primary keys.
+        		// ** If a table has no keys and you would like to insert a record, you must specifiy 
+        		// at least one key with the KeyAttribute and set the DbGenerationAttribute to None. 
+        		
+        		var contact = new Contact();
+        		context.SaveChanges(contact);
+        		// Insert contact because the Primary Key is 0.  the Contact object will automatically have 
+        		// the Primary Key set after it is saved
+        		
+        		// WHERE
+        		
+        		// Default is select all records that pass the validation.  Returns ExpressionQuery
+        		var expressionQuery = context.Where<Contact>(w => w.Id == 1);
+		}
+	}
+    
 ```
-    - Returns everything from Table T
-    
-    Delete<T>(T entity) where T : class
-    
-    -Deletes the entity from the corresponding table, returns true if deleted and false if no action taken.
-    *Note:  Looks up the value to delete based on the primary key
-    
-    Disconnnect()
-    
-    -Disconnects from the server
-    
-    ExecuteQuery<T>(string sql) : returns typeof DataReader
-    ExecuteQuery<T>(string sql, Dictionary<string,object> parameters) : returns typeof DataReader
-    ExecuteQuery<T>(ISqlBuilder builder) : returns typeof DataReader
-    
-    -Executes a query and returns a DataReader
-    
-    Find<T>(params object[] pks) : returns entity of type T
-    From<T>() : Returns type of ExpressionQuery
-    
-    SaveChanges<T>(T entity) where T : class
-    
-    -Saves changes of the entity
-    *Note: If the primary key is 0 for integers or MinValue for Guid a record will be inserted, else the record will be updated.  Strings not supported for primary keys.
-	If a table has no keys and you would like to insert a record, you must specifiy at least one key with the KeyAttribute and set the DbGenerationAttribute to None. 
 
-    Where<T>(Expression<Func<T,bool>> lambdaExpression)
-    -Default is select all records that pass the Where validation
+
 
 2.	DataReader<T> : IEnumerable, IDisposable	
 a.	Namespace: OR_M_Data_Entities.Data
