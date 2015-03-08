@@ -6,6 +6,7 @@
  */
 using System;
 using System.Data;
+using System.Reflection;
 
 namespace OR_M_Data_Entities.Expressions.Resolver
 {
@@ -20,5 +21,9 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         public SqlDbType Transform { get; set; }
 
         public bool ShouldCast { get; set; }
+
+		public bool ShouldConvert { get; set; }
+
+		public int ConversionStyle { get; set; }
     }
 }

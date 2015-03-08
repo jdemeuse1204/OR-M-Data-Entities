@@ -28,20 +28,19 @@ namespace OR_M_Data_Entities
 		{
             if (!reader.HasRows) return default(T);
 
-			// Create instance
-			var obj = Activator.CreateInstance<T>();
-
-		    if (typeof (T).IsValueType)
+		    if (typeof (T).IsValueType
+				|| typeof(T) == typeof(string))
 		    {
-		        obj = (T)reader[0];
-
-		        return obj;
+		        return (T)reader[0];
 		    }
 
             if (typeof(T) == typeof(IDynamicMetaObjectProvider))
 		    {
 		        return reader.ToObject();
 		    }
+
+			// Create instance
+			var obj = Activator.CreateInstance<T>();
 
 			// find any unmapped attributes
 			var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();

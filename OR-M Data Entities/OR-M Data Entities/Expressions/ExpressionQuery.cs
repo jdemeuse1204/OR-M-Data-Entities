@@ -303,9 +303,19 @@ namespace OR_M_Data_Entities.Expressions
 
             foreach (var item in @select)
             {
-                _sql += string.Format("[{0}].{1} ",
+				if (item.ShouldConvert)
+				{
+					_sql += string.Format("Convert({0}, [{1}].[{2}], {3}) as '{2}' ",
+						item.Transform,
+						item.TableName,
+						item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName),
+						item.ConversionStyle);
+					continue;
+				}
+
+                _sql += string.Format("[{0}].[{1}] ",
                     item.TableName,
-                    item.ColumnName == "*" ? item.ColumnName : string.Format("[{0}]", item.ColumnName));
+                    item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName));
             }
 
             _sql += string.Format("FROM [{0}] ", _from);
