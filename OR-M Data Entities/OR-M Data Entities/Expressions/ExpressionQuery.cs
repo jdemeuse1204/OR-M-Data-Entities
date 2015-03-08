@@ -305,7 +305,7 @@ namespace OR_M_Data_Entities.Expressions
             {
 				if (item.ShouldConvert)
 				{
-					_sql += string.Format("Convert({0}, [{1}].[{2}], {3}) as '{2}' ",
+					_sql += string.Format("Convert({0}, [{1}].{2}, {3}) as '{2}' ",
 						item.Transform,
 						item.TableName,
 						item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName),
@@ -313,7 +313,7 @@ namespace OR_M_Data_Entities.Expressions
 					continue;
 				}
 
-                _sql += string.Format("[{0}].[{1}] ",
+                _sql += string.Format("[{0}].{1} ",
                     item.TableName,
                     item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName));
             }
