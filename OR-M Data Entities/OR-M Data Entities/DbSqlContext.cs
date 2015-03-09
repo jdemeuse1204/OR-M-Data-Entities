@@ -4,7 +4,8 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
-using OR_M_Data_Entities.Connection;
+
+using System.Data.SqlClient;
 using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities
@@ -12,11 +13,11 @@ namespace OR_M_Data_Entities
     public class DbSqlContext : DataOperations
     {
         #region Constructor
-        public DbSqlContext(string connectionString)
-            : base(connectionString) { }
+        public DbSqlContext(string connectionStringOrName)
+            : base(connectionStringOrName) { }
 
-        public DbSqlContext(IConnectionBuilder connection)
-            : base(connection.BuildConnectionString()) { }
+        public DbSqlContext(SqlConnectionStringBuilder connection)
+            : this(connection.ConnectionString) { }
         #endregion
     }
 }

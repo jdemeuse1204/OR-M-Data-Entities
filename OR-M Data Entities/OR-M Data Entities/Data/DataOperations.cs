@@ -16,8 +16,8 @@ namespace OR_M_Data_Entities.Data
     public abstract class DataOperations : DataFetching
     {
         #region Constructor
-        protected DataOperations(string connectionString) 
-            : base(connectionString)
+        protected DataOperations(string connectionStringOrName)
+            : base(connectionStringOrName)
         {
         }
         #endregion

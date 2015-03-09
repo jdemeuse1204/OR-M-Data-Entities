@@ -19,8 +19,8 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseReader : Database
     {
         #region Constructor
-        protected DatabaseReader(string connectionString) 
-            : base(connectionString)
+        protected DatabaseReader(string connectionStringOrName)
+            : base(connectionStringOrName)
         {
         }
         #endregion

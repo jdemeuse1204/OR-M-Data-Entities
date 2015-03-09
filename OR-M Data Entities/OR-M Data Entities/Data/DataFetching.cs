@@ -19,8 +19,8 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReader
     {
-        protected DataFetching(string connectionString) 
-            : base(connectionString)
+        protected DataFetching(string connectionStringOrName)
+            : base(connectionStringOrName)
         {
         }
 

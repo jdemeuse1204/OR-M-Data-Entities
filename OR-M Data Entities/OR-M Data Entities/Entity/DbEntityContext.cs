@@ -6,9 +6,9 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Connection;
 
 namespace OR_M_Data_Entities.Entity
 {
@@ -18,14 +18,14 @@ namespace OR_M_Data_Entities.Entity
         private readonly DbSqlContext _context;
         private List<PropertyInfo> _tables { get; set; }
 
-        protected DbEntityContext(string connectionString)
+        protected DbEntityContext(string connectionStringOrName)
         {
-            _context = new DbSqlContext(connectionString);
+            _context = new DbSqlContext(connectionStringOrName);
             OnModelCreating();
         }
 
-        protected DbEntityContext(IConnectionBuilder connection)
-            : this(connection.BuildConnectionString())
+        protected DbEntityContext(SqlConnectionStringBuilder connection)
+            : this(connection.ConnectionString)
         {
         }
 

@@ -5,6 +5,7 @@
  * (c) 2015 James Demeuse
  */
 using System;
+using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Expressions.Resolver;
@@ -18,9 +19,21 @@ namespace OR_M_Data_Entities.Data
         protected SqlCommand Command { get; set; }
         protected SqlDataReader Reader { get; set; }
 
-        protected Database(string connectionString)
+        protected Database(string connectionStringOrName)
         {
-            ConnectionString = connectionString;
+            if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
+            {
+                ConnectionString = connectionStringOrName;
+            }
+            else
+            {
+                var conn = ConfigurationManager.ConnectionStrings[connectionStringOrName];
+
+                if (conn == null) throw new ConfigurationErrorsException("Connection string not found in config");
+
+                ConnectionString = conn.ConnectionString;
+            }
+            
             Connection = new SqlConnection(ConnectionString);
         }
 

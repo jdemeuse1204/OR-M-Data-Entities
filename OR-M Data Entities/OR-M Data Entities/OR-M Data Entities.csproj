@@ -34,6 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -59,8 +60,6 @@
     <Compile Include="Commands\Transform\Conversion.cs" />
     <Compile Include="Commands\Transform\DataTransform.cs" />
     <Compile Include="Commands\Transform\DataTransformContainer.cs" />
-    <Compile Include="Connection\IConnectionBuilder.cs" />
-    <Compile Include="Connection\SqlServerConnectionBuilder.cs" />
     <Compile Include="Data\Database.cs" />
     <Compile Include="Data\DatabaseEntity.cs" />
     <Compile Include="Data\DatabaseReader.cs" />
