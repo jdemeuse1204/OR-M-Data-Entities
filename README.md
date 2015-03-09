@@ -87,7 +87,7 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 			// Safest option for regular sql
 			sql = "Select * From Contacts Where Id = @Param1";
 			var parameters = new Dictionary<string, object>();
-			parameters.Add("Param1",1);
+			parameters.Add("@Param1",1);
 			reader = ExecuteQuery<Contact>(sql, parameters);
 			
 			// Safe option as well, uses Sql Builders
