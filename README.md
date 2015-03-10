@@ -379,4 +379,4 @@ _Linq joins are not supported at this time because I simply don't use them.  I u
 
 Issues/Questions/Comments:
 
-Contact Me - james.dememuse@gmail.com
+Mail To - james.demeuse@gmail.com
