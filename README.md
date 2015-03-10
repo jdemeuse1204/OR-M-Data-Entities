@@ -201,9 +201,7 @@ IEnumerator GetEnumerator<T>()
 ```
 
 #####Methods Examples:
-```C#
-
-```
+See _Performing Queries Using ExpressionQuery_ Section (Below)
 
 ####Mapping:
 
@@ -219,6 +217,7 @@ public class Contact
 	public string MyName {get;set;}
 }
 ```
+#####Notes: Needed if you wish to make your property name different than your database column name
 <br><br>
 
 
@@ -242,6 +241,7 @@ public class Contact
 	public int Id {get;set;}
 }
 ```
+#####Notes: Needed to specify the key generation type.  A key can be auto generated if Generate is chosen.  If None is chosen a record will always be inserted
 <br><br>
 
 
@@ -258,6 +258,7 @@ public class Contact
 	public DateTime Date {get;set;}
 }
 ```
+#####Notes: If you would like to change your Sql Type you need this attribute.
 <br><br>
 
 ######4.	KeyAttribute : SearchablePrimaryKeyAttribute
@@ -278,6 +279,7 @@ public class Contact
 	public int FkId_2 {get;set;}
 }
 ```
+#####Notes: If a column is your primary key and it is not named "Id" or "ID" then you need to add this attribute to identity it
 <br><br>
 
 
@@ -293,6 +295,7 @@ public class Contact
 	public int Id {get;set;}
 }
 ```
+#####Notes: Needed if you wish to make your class name different than your database table name
 <br><br>
 
 ######6.	UnmappedAttribute : Attribute
@@ -309,6 +312,7 @@ public class Contact
 	public string Test {get;set;}
 }
 ```
+#####Notes: Needed if you wish to keep this property from being pushed or pulled from the database
 <br><br>
 
 
