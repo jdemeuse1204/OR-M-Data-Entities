@@ -378,3 +378,11 @@ class Program
 }
 ```
 
+####Noted Issues:
+######5.	Linq Joins
+_Linq joins are not supported at this time because I simply don't use them.  I use my ExpresssionQuery Joins instead.  If you would like them to be supported please contact me_
+
+
+Issues/Questions/Comments:
+
+Contact Me - james.dememuse@gmail.com
