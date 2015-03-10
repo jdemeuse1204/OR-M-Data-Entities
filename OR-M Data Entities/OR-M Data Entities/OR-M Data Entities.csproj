@@ -72,12 +72,13 @@
     <Compile Include="Entity\DbTable.cs" />
     <Compile Include="Entity\IDbTable.cs" />
     <Compile Include="Entity\SaveAction.cs" />
+    <Compile Include="Expressions\Evaluation\ExpressionEvaluator.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
-    <Compile Include="Expressions\Resolver\ExpressionResolutionResult.cs" />
+    <Compile Include="Expressions\Types\ExpressionWhereResult.cs" />
+    <Compile Include="Expressions\Types\ExpressionResolutionResult.cs" />
     <Compile Include="Expressions\Resolver\ExpressionResolver.cs" />
-    <Compile Include="Expressions\Resolver\ExpressionSelectResult.cs" />
+    <Compile Include="Expressions\Types\ExpressionSelectResult.cs" />
     <Compile Include="Expressions\Resolver\ExpressionTypeTransform.cs" />
-    <Compile Include="Expressions\Resolver\ExpressionWhereResult.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />

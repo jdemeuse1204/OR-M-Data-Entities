@@ -10,9 +10,10 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Evaluation;
+using OR_M_Data_Entities.Expressions.Types;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Resolver
@@ -137,7 +138,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 		/// <param name="tableNameLookup"></param>
 		private static void _evaluateExpressionTree(Expression expression, ICollection<ExpressionWhereResult> evaluationResults, Dictionary<string, string> tableNameLookup)
 		{
-			if (_hasLeft(expression))
+            if (ExpressionEvaluator.HasLeft(expression))
 			{
 				var result = _evaluate(((dynamic)expression).Right, tableNameLookup);
 
@@ -155,19 +156,6 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 		#endregion
 
 		#region Helpers
-		/// <summary>
-		/// Checks the expression to see if it has a left expression
-		/// </summary>
-		/// <param name="expression"></param>
-		/// <returns></returns>
-		private static bool _hasLeft(Expression expression)
-		{
-			return expression.NodeType == ExpressionType.And
-				|| expression.NodeType == ExpressionType.AndAlso
-				|| expression.NodeType == ExpressionType.Or
-				|| expression.NodeType == ExpressionType.OrElse;
-		}
-
 		/// <summary>
 		/// Gets the table name from an unary expression
 		/// </summary>
@@ -203,12 +191,12 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 			{
 				var dataTransform = SqlDbType.VarChar;
 				var conversionNumber = 0;
-				var cast = _isCasting(expression);
-				var convert = _isConverting(expression);
+                var cast = ExpressionEvaluator.IsCasting(expression);
+                var convert = ExpressionEvaluator.IsConverting(expression);
 
 				if (cast || convert)
 				{
-					dataTransform = _getTransformType(expression as dynamic);
+                    dataTransform = ExpressionEvaluator.GetTransformType(expression as dynamic);
 
 					if (convert)
 					{
@@ -292,7 +280,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 			result.ColumnName = columnOptions.ColumnName;
 			result.TableName = columnOptions.TableName;
 			result.CompareValue = _getValue((!(expression.Arguments[0] is MemberExpression)) ? expression.Arguments[0] as dynamic : expression.Object as dynamic);
-			result.ComparisonType = _getComparisonType(expression.Method.Name);
+            result.ComparisonType = ExpressionEvaluator.GetComparisonType(expression.Method.Name);
 			result.Transform = columnOptions.Transform;
 			result.ShouldCast = columnOptions.ShouldCast;
 
@@ -324,7 +312,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 
 			// cast as dynamic so runtime can choose which method to use
 			result.CompareValue = rightSideHasParameter ? _getColumnAndTableName(rightSide, tableNameLookup, SqlDbType.VarChar) : _getValue(leftSideHasParameter ? rightSide as dynamic : leftSide as dynamic);
-			result.ComparisonType = _getComparisonType(expression.NodeType);
+            result.ComparisonType = ExpressionEvaluator.GetComparisonType(expression.NodeType);
 			result.ShouldCast = columnOptions.ShouldCast;
 
 			return result;
@@ -340,70 +328,9 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 		{
 			var result = _evaluate(expression.Operand as dynamic, tableNameLookup);
 
-			result.ComparisonType = _getComparisonType(expression.NodeType);
+            result.ComparisonType = ExpressionEvaluator.GetComparisonType(expression.NodeType);
 
 			return result;
-		}
-		#endregion
-
-		#region Get Comparison Types
-		/// <summary>
-		/// Gets the comparison type from an expression type
-		/// </summary>
-		/// <param name="expresssionType"></param>
-		/// <returns></returns>
-		private static ComparisonType _getComparisonType(ExpressionType expresssionType)
-		{
-			switch (expresssionType)
-			{
-				case ExpressionType.Equal:
-					return ComparisonType.Equals;
-				case ExpressionType.GreaterThan:
-					return ComparisonType.GreaterThan;
-				case ExpressionType.GreaterThanOrEqual:
-					return ComparisonType.GreaterThanEquals;
-				case ExpressionType.LessThan:
-					return ComparisonType.LessThan;
-				case ExpressionType.LessThanOrEqual:
-					return ComparisonType.LessThanEquals;
-				case ExpressionType.NotEqual:
-				case ExpressionType.Not:
-					return ComparisonType.NotEqual;
-				default:
-					throw new Exception("ExpressionType not in tree");
-			}
-		}
-
-		/// <summary>
-		/// Get comparison types from Method Name
-		/// </summary>
-		/// <param name="methodName"></param>
-		/// <returns></returns>
-		private static ComparisonType _getComparisonType(string methodName)
-		{
-			switch (methodName.Replace(" ", "").ToUpper())
-			{
-				case "EQUALS":
-					return ComparisonType.Equals;
-				case "NOTEQUALS":
-					return ComparisonType.NotEqual;
-				case "LESSTHAN":
-					return ComparisonType.LessThan;
-				case "GREATERTHAN":
-					return ComparisonType.GreaterThan;
-				case "LESSTHANEQUALS":
-					return ComparisonType.LessThanEquals;
-				case "GREATERTHANEQUALS":
-					return ComparisonType.GreaterThanEquals;
-				case "CONTAINS":
-					return ComparisonType.Contains;
-				case "STARTSWITH":
-					return ComparisonType.BeginsWith;
-				case "ENDSWITH":
-					return ComparisonType.EndsWith;
-				default:
-					throw new Exception("ExpressionType not in tree");
-			}
 		}
 		#endregion
 
@@ -441,7 +368,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 		/// <returns></returns>
 		private static object _getValue(MethodCallExpression expression)
 		{
-			var isCasting = _isCasting(expression);
+            var isCasting = ExpressionEvaluator.IsCasting(expression);
 
 			var objectMember = Expression.Convert(expression, typeof(object));
 
@@ -456,7 +383,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 				return result;
 			}
 
-			var transform = _getTransformType(expression);
+            var transform = ExpressionEvaluator.GetTransformType(expression);
 
 			return new DataTransformContainer(result, transform);
 		}
@@ -469,37 +396,6 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 		private static object _getValue(UnaryExpression expression)
 		{
 			return _getValue(expression.Operand as dynamic);
-		}
-		#endregion
-
-		#region Transform Methods
-		/// <summary>
-		/// Get the transformation Type of the expression, for casting and converting
-		/// </summary>
-		/// <param name="expression"></param>
-		/// <returns></returns>
-		private static SqlDbType _getTransformType(MethodCallExpression expression)
-		{
-			return (from arg in expression.Arguments where arg.Type == typeof(SqlDbType) select ((ConstantExpression)arg).Value into value select value is SqlDbType ? (SqlDbType)value : SqlDbType.VarChar).FirstOrDefault();
-		}
-
-		/// <summary>
-		/// Check if the expression is casting any values
-		/// </summary>
-		/// <param name="expression"></param>
-		/// <returns></returns>
-		private static bool _isCasting(object expression)
-		{
-			if (!(expression is MethodCallExpression)) return false;
-
-			return ((MethodCallExpression)expression).Method.DeclaringType == typeof(Cast);
-		}
-
-		private static bool _isConverting(object expression)
-		{
-			if (!(expression is MethodCallExpression)) return false;
-
-			return ((MethodCallExpression)expression).Method.DeclaringType == typeof(Conversion);
 		}
 		#endregion
 	}

@@ -6,6 +6,7 @@
  */
 using System.Data;
 using OR_M_Data_Entities.Expressions.Resolver;
+using OR_M_Data_Entities.Expressions.Types;
 
 namespace OR_M_Data_Entities.Commands.Transform
 {

@@ -20,6 +20,12 @@ namespace OR_M_Data_Entities.Data
         {
             get { return _reader.HasRows; }
         }
+
+        [Obsolete("Use HasRows instead.  NOTE: Do not use with while loop, use foreach iteration.")]
+        public bool IsEOF
+        {
+            get { return _reader.HasRows; }
+        }
         #endregion
 
         #region Constructor

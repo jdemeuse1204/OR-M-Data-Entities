@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.Data;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -59,7 +58,7 @@ namespace OR_M_Data_Entities.Tests
         }
         #endregion
 
-        #region Save
+        #region Save And Delete
         [TestMethod]
         public void Test_Entity_Save()
         {
@@ -79,6 +78,32 @@ namespace OR_M_Data_Entities.Tests
             entityContext.SaveChanges();
 
             Assert.IsTrue(policy.Id != 0);
+        }
+
+        [TestMethod]
+        public void Test_Entity_Delete()
+        {
+            var policy = new Policy
+            {
+                CreatedBy = "James Demeuse",
+                CreatedDate = DateTime.Now,
+                UpdatedBy = "James Demeuse",
+                UpdatedDate = DateTime.Now,
+                FeeOwnerName = "James Demeuse",
+                InsuredName = "Branden Purdy",
+                County = "Minnesota",
+                PolicyDate = DateTime.Now,
+            };
+
+            entityContext.Policies.Add(policy);
+            entityContext.SaveChanges();
+
+            entityContext.Policies.Remove(policy);
+            entityContext.SaveChanges();
+
+            var item = entityContext.Policies.Where(w => w.Id == policy.Id).FirstOrDefault();
+
+            Assert.IsTrue(item == null);
         }
         #endregion
 

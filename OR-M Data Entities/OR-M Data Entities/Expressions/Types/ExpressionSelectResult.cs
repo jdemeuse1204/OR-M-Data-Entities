@@ -4,11 +4,11 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Data;
-using System.Reflection;
 
-namespace OR_M_Data_Entities.Expressions.Resolver
+namespace OR_M_Data_Entities.Expressions.Types
 {
     public class ExpressionSelectResult
     {
