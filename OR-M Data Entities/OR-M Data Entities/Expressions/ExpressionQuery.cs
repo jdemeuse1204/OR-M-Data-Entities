@@ -462,7 +462,7 @@ namespace OR_M_Data_Entities.Expressions
         public ICollection All()
         {
             // inject the generic type here
-            var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "ToList" && w.ReturnType != typeof(ICollection));
+            var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "All" && w.ReturnType != typeof(ICollection));
             var genericMethod = method.MakeGenericMethod(new[] { _returnDataType });
             var result = genericMethod.Invoke(this, null);
 

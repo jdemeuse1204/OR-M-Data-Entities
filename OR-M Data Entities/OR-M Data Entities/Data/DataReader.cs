@@ -16,8 +16,9 @@ namespace OR_M_Data_Entities.Data
         #region Properties and Fields
         private readonly SqlDataReader _reader;
 
-        public bool IsEOF {
-            get { return !_reader.HasRows; }
+        public bool HasRows 
+        {
+            get { return _reader.HasRows; }
         }
         #endregion
 
