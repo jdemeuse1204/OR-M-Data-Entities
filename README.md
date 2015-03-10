@@ -133,7 +133,7 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 
 #####Methods
 ```C#
-bool IsEOF {get;}
+bool HasRows {get;}
 T Select()
 List<T> All()
 IEnumerator<T> GetEnumerator()
@@ -152,19 +152,13 @@ IEnumerator<T> GetEnumerator()
         		
         		reader = ExecuteQuery<Contact>(builder);
         		
-        		// Example 1  (Select() and IsEOF
-        		while(!reader.IsEOF)
-        		{
-        			var item = reader.Select();
-        		}
-        		
-        		// Example 2 (Enumeration)
+        		// Iteration Example
         		foreach(var item in reader)
         		{
         		
         		}
         		
-        		// Example 3 (All)
+        		// Get All example
         		var allItems = context.All();
 		}
 	}
