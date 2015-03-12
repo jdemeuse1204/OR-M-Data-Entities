@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Tests.Context;
@@ -16,7 +17,6 @@ namespace OR_M_Data_Entities.Tests
         private readonly EntityContext entityContext = new EntityContext();
         private readonly int TestID = 63;
         #endregion
-
 
         #region Entity Context Tests
 
@@ -187,6 +187,38 @@ namespace OR_M_Data_Entities.Tests
         }
 
         [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_First_MethodCallEquals()
+        {
+            var item = sqlContext.Where<Policy>(w => w.Id.Equals(TestID)).First<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_First_MethodCallEndsWith()
+        {
+            var item = sqlContext.Where<Policy>(w => w.CreatedBy.EndsWith("Demeuse")).First<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_First_MethodCallContains()
+        {
+            var item = sqlContext.Where<Policy>(w => w.CreatedBy.Contains("Demeuse")).All<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_First_MethodCallStartsWith()
+        {
+            var item = sqlContext.Where<Policy>(w => w.CreatedBy.StartsWith("James")).First<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
         public void Test_Sql_Where_ExpressionQuery_All()
         {
             var item = sqlContext.Where<Policy>(w => w.Id == TestID).All<Policy>();
@@ -228,6 +260,37 @@ namespace OR_M_Data_Entities.Tests
                     .First<PolicyInfo>();
 
             Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_Join_ForeignKeys_First()
+        {
+            var contact = new Contact
+            {
+                FirstName = "James",
+                LastName = "Demeuse"
+            };
+
+            sqlContext.SaveChanges(contact);
+
+            var appointment = new Appointment
+            {
+                Description = "Win",
+                ContactID = contact.ID
+            };
+
+            sqlContext.SaveChanges(appointment);
+
+            var item = sqlContext.From<Contact>()
+                    .Join<Contact, Appointment>()
+                    .Where<Contact>(w => w.ID == contact.ID)
+                    .Select<Appointment>()
+                    .First<Appointment>();
+
+            Assert.IsTrue(item != null);
+
+            sqlContext.Delete(contact);
+            sqlContext.Delete(appointment);
         }
 
         [TestMethod]

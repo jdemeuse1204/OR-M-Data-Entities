@@ -9,11 +9,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Resolver;
 using OR_M_Data_Entities.Expressions.Types;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions
 {
@@ -92,9 +94,9 @@ namespace OR_M_Data_Entities.Expressions
             where TParent : class
             where TChild : class
         {
-            var join = _getJoin<TParent, TChild>();
+            var joins = _getJoins<TParent, TChild>();
 
-            _innerJoins.Add(join);
+            _innerJoins.AddRange(joins);
             return this;
         }
 
@@ -110,7 +112,7 @@ namespace OR_M_Data_Entities.Expressions
             where TParent : class
             where TChild : class
         {
-            var join = _getJoin<TParent, TChild>();
+            var join = _getJoins<TParent, TChild>();
 
             _leftJoins.Add(join);
             return this;
@@ -145,30 +147,34 @@ namespace OR_M_Data_Entities.Expressions
             return this;
         }
 
-        private ExpressionWhereResult _getJoin<TParent, TChild>()
+        private List<ExpressionWhereResult> _getJoins<TParent, TChild>()
         {
-            var compareValue = new ExpressionSelectResult();
-            var join = new ExpressionWhereResult();
+            var joins = new List<ExpressionWhereResult>();
+            var foreignKeys = DatabaseSchemata.GetForeignKeys(Activator.CreateInstance<TChild>());
 
-            // Child
-            var childKeys = DatabaseSchemata.GetPrimaryKeys(Activator.CreateInstance<TChild>());
+            if (foreignKeys.Count == 0) throw new ArgumentException("Child Table does not contain any Foreign Key(s)");
 
-            if (childKeys.Count == 0) throw new ArgumentException("Child Table does not contain primary key(s)");
+            foreach (var foreignKey in foreignKeys)
+            {
+                var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKey>();
+                var compareValue = new ExpressionSelectResult();
+                var join = new ExpressionWhereResult();
+                compareValue.ColumnName = foreignKey.Name;
+                compareValue.TableName = DatabaseSchemata.GetTableName<TChild>();
 
-            var key = childKeys.FirstOrDefault(w => w.Name.ToUpper() == "ID");
+                join.CompareValue = compareValue;
+                join.ColumnName = foreignKeyAttribute.ParentPropertyName;
+                join.TableName = DatabaseSchemata.GetTableName(foreignKeyAttribute.ParentTableType);
 
-            if (key == null) throw new ArgumentException("Could not resolve child primary key for 'ID'");
+                if (typeof (TParent) != foreignKeyAttribute.ParentTableType)
+                {
+                    throw new Exception("Foreign Key Parent Table Type does not match typeof TParent on the join.");
+                }
 
-            compareValue.ColumnName = key.Name;
-            compareValue.TableName = DatabaseSchemata.GetTableName<TChild>();
+                joins.Add(join);
+            }
 
-            // Parent
-			var childTableName = compareValue.TableName.Substring(0, compareValue.TableName.Length - 1);
-            join.CompareValue = compareValue;
-			join.ColumnName = childTableName + "ID";
-            join.TableName = DatabaseSchemata.GetTableName<TParent>();
-
-            return join;
+            return joins;
         }
 
         #region Helpers

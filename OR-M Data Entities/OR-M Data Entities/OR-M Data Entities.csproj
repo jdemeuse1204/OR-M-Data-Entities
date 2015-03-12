@@ -72,7 +72,6 @@
     <Compile Include="Entity\DbTable.cs" />
     <Compile Include="Entity\IDbTable.cs" />
     <Compile Include="Entity\SaveAction.cs" />
-    <Compile Include="Expressions\Evaluation\ExpressionEvaluator.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\Types\ExpressionWhereResult.cs" />
     <Compile Include="Expressions\Types\ExpressionResolutionResult.cs" />

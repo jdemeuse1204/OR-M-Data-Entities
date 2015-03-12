@@ -78,6 +78,12 @@ namespace OR_M_Data_Entities.Data
             throw new Exception("Cannot find PrimaryKey(s)");
         }
 
+        public static List<PropertyInfo> GetForeignKeys(object entity)
+        {
+            return entity.GetType().GetProperties().Where(w =>
+               w.GetCustomAttribute<ForeignKey>() != null).ToList();
+        }
+
         public static List<PropertyInfo> GetTableFields(object entity)
         {
             return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
