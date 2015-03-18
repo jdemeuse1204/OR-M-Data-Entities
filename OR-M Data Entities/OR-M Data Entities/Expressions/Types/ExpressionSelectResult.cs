@@ -18,6 +18,8 @@ namespace OR_M_Data_Entities.Expressions.Types
 
         public string TableName { get; set; }
 
+        public Type TableType { get; set; }
+
         public SqlDbType Transform { get; set; }
 
         public bool ShouldCast { get; set; }

@@ -157,8 +157,8 @@ namespace OR_M_Data_Entities.Commands
             _select = beginningSelectStatement;
 
             var selectAllTableNameAndFields = DatabaseSchemata.GetSelectAllFieldsAndTableName(tableType);
-            var tableName = selectAllTableNameAndFields.First().Key;
-            var fields = selectAllTableNameAndFields.First().Value;
+            var tableName = selectAllTableNameAndFields.Key;
+            var fields = selectAllTableNameAndFields.Value;
 
             foreach (var field in fields)
             {

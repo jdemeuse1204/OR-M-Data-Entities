@@ -95,12 +95,12 @@ namespace OR_M_Data_Entities.Data
             return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
         }
 
-        public static Dictionary<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(Type tableType)
+        public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(Type tableType)
         {
             var table = GetTableName(tableType);
             var fields = GetTableFields(tableType).Select(w => w.GetCustomAttribute<ColumnAttribute>() != null ? w.GetCustomAttribute<ColumnAttribute>().Name : w.Name);
 
-            return new Dictionary<string, IEnumerable<string>> {{table, fields}};
+            return new KeyValuePair<string, IEnumerable<string>>(table, fields);
         }  
     }
 }

@@ -323,9 +323,25 @@ namespace OR_M_Data_Entities.Expressions
 					continue;
 				}
 
-                _sql += string.Format("[{0}].{1} ",
+                if (item.ColumnName == "*")
+                {
+                    var tableNameAndColumns = DatabaseSchemata.GetSelectAllFieldsAndTableName(item.TableType);
+                    var tableName = tableNameAndColumns.Key;
+                    var fields = tableNameAndColumns.Value;
+
+                    foreach (var field in fields)
+                    {
+                        _sql += string.Format("[{0}].[{1}],", tableName, field);
+                    }
+
+                    _sql = _sql.TrimEnd(',');
+
+                    continue;
+                }
+
+                _sql += string.Format("[{0}].[{1}] ",
                     item.TableName,
-                    item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName));
+                    item.ColumnName == string.Format("{0}", item.ColumnName));
             }
 
             _sql += string.Format("FROM [{0}] ", _from);

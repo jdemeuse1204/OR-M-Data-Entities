@@ -44,6 +44,11 @@ namespace OR_M_Data_Entities.Data
         protected void Connect()
         {
             // Open the connection if its closed
+            if (Connection == null)
+            {
+                Connection = new SqlConnection(ConnectionString);
+            }
+
             if (Connection.State == ConnectionState.Closed)
             {
                 Connection.Open();

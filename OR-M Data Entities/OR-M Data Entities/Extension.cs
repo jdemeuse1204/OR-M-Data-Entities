@@ -157,6 +157,8 @@ namespace OR_M_Data_Entities
                 var query = genericMethod.Invoke(context, new object[] { builder });
                 var result = (query as dynamic).Select();
 
+                context.Disconnect();
+
                 autoLoad.SetValue(parent, result, null);
 
                 if (result != null)
