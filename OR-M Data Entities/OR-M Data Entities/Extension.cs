@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -27,7 +28,7 @@ namespace OR_M_Data_Entities
 		/// <typeparam name="T"></typeparam>
 		/// <param name="reader"></param>
 		/// <returns></returns>
-		public static T ToObject<T>(this SqlDataReader reader)
+		private static T _toObject<T>(this SqlDataReader reader)
 		{
             if (!reader.HasRows) return default(T);
 
@@ -70,9 +71,9 @@ namespace OR_M_Data_Entities
 		    return obj;
 		}
 
-	    public static T ToObjectRecursive<T>(this SqlDataReader reader, string connectionString)
+	    public static T ToObject<T>(this SqlDataReader reader, string connectionString)
 	    {
-	        var result = ToObject<T>(reader);
+	        var result = _toObject<T>(reader);
 
 	        if (result == null) return result;
 
@@ -102,7 +103,7 @@ namespace OR_M_Data_Entities
 
                     var listSelectBuilder = new SqlQueryBuilder();
                     listSelectBuilder.Table(listItemTable);
-                    listSelectBuilder.SelectAll();
+                    listSelectBuilder.SelectAll(listItemType);
 
                     foreach (var item in listForeignKeys)
                     {
@@ -138,7 +139,7 @@ namespace OR_M_Data_Entities
 
                 var builder = new SqlQueryBuilder();
                 builder.Table(itemTable);
-                builder.SelectAll();
+                builder.SelectAll(itemType);
 
                 foreach (var item in foreignKeys)
                 {

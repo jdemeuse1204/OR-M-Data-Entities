@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -69,16 +70,17 @@ namespace OR_M_Data_Entities.Data
         /// Converts the first row to type T
         /// </summary>
         /// <returns></returns>
-        protected T First<T>()
+        protected T First<T>() where  T : class 
         {
             var builder = new SqlQueryBuilder();
             builder.SelectTopOneAll<T>();
+            builder.Table<T>();
 
             Execute(builder);
 
             if (Reader.HasRows)
             {
-                var result = Reader.ToObjectRecursive<T>(ConnectionString);
+                var result = Reader.ToObject<T>(ConnectionString);
 
                 Reader.Close();
                 Reader.Dispose();
@@ -98,10 +100,11 @@ namespace OR_M_Data_Entities.Data
         /// Return list of items
         /// </summary>
         /// <returns>List of type T</returns>
-        public List<T> All<T>()
+        public List<T> All<T>() where T : class
         {
             var builder = new SqlQueryBuilder();
             builder.SelectAll<T>();
+            builder.Table<T>();
 
             Execute(builder);
 
@@ -109,7 +112,7 @@ namespace OR_M_Data_Entities.Data
 
             while (Reader.Read())
             {
-                result.Add(Reader.ToObjectRecursive<T>(ConnectionString));
+                result.Add(Reader.ToObject<T>(ConnectionString));
             }
 
             Reader.Close();

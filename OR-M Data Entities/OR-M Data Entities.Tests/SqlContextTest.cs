@@ -2,6 +2,7 @@
 using System.Data;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
@@ -129,6 +130,7 @@ namespace OR_M_Data_Entities.Tests
 
             Assert.IsTrue(item != null);
         }
+
         #endregion
 
         #region Data Reader
@@ -377,6 +379,20 @@ namespace OR_M_Data_Entities.Tests
                 .Where<Policy>(w => Cast.As(w.CreatedDate, SqlDbType.Date) == Cast.As(currentDateTime, SqlDbType.Date))
                 .Select<Policy>(w => Conversion.To(SqlDbType.VarChar, w.CreatedDate, 101))
                 .First<string>();
+
+            Assert.IsTrue(item != null);
+        }
+        #endregion
+
+        #region Query Builder
+        [TestMethod]
+        public void Test_Sql_QueryBuilder_All()
+        {
+            var builder = new SqlQueryBuilder();
+            builder.SelectAll(typeof(Contact));
+            builder.Table(typeof(Contact));
+
+            var item = sqlContext.ExecuteQuery<Contact>(builder);
 
             Assert.IsTrue(item != null);
         }

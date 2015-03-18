@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -42,7 +43,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        _reader.Read();
 
-            return _reader.ToObjectRecursive<T>(_connectionString);
+            return _reader.ToObject<T>(_connectionString);
 	    }
 
 	    public List<T> All()
@@ -51,7 +52,7 @@ namespace OR_M_Data_Entities.Data
 
 	        while (_reader.Read())
 	        {
-                result.Add(_reader.ToObjectRecursive<T>(_connectionString));
+                result.Add(_reader.ToObject<T>(_connectionString));
 	        }
 
             Dispose();
@@ -64,7 +65,7 @@ namespace OR_M_Data_Entities.Data
 		{
 			while (_reader.Read())
 			{
-                yield return _reader.ToObjectRecursive<T>(_connectionString);
+                yield return _reader.ToObject<T>(_connectionString);
 			}
 
             // close when done enumerating

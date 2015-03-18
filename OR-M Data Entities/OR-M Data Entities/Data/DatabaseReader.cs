@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -59,7 +60,7 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
 		protected T Select<T>()
         {
-            return Reader.ToObjectRecursive<T>(ConnectionString);
+            return Reader.ToObject<T>(ConnectionString);
         }
         #endregion
 

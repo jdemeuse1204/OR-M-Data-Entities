@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -87,6 +88,19 @@ namespace OR_M_Data_Entities.Data
         public static List<PropertyInfo> GetTableFields(object entity)
         {
             return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
-        } 
+        }
+
+        public static List<PropertyInfo> GetTableFields(Type entityType)
+        {
+            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
+        }
+
+        public static Dictionary<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(Type tableType)
+        {
+            var table = GetTableName(tableType);
+            var fields = GetTableFields(tableType).Select(w => w.GetCustomAttribute<ColumnAttribute>() != null ? w.GetCustomAttribute<ColumnAttribute>().Name : w.Name);
+
+            return new Dictionary<string, IEnumerable<string>> {{table, fields}};
+        }  
     }
 }
