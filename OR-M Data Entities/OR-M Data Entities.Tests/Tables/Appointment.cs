@@ -13,5 +13,8 @@ namespace OR_M_Data_Entities.Tests.Tables
         public int ContactID { get; set; }
 
         public string Description { get; set; }
+
+        [AutoLoad]
+        public Address Address { get; set; }
     }
 }

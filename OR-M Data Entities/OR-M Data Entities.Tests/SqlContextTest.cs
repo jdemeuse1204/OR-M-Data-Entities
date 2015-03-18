@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data;
 using System.Linq;
-using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Tests.Context;
@@ -144,11 +143,76 @@ namespace OR_M_Data_Entities.Tests
         }
 
         [TestMethod]
+        public void Test_Sql_DataReader_All_WithAutoLoad()
+        {
+            var c = new Contact
+            {
+                FirstName = "James",
+                LastName = "Demeuse"
+            };
+
+            sqlContext.SaveChanges(c);
+
+            var a1 = new Appointment
+            {
+                ContactID = c.ID,
+                Description = "Test"
+            };
+
+            var a2 = new Appointment
+            {
+                ContactID = c.ID,
+                Description = "Test"
+            };
+
+            sqlContext.SaveChanges(a1);
+            sqlContext.SaveChanges(a2);
+
+            var addy = new Address
+            {
+                Addy = "TEST ADDY",
+                AppointmentID = a1.ID
+            };
+
+            sqlContext.SaveChanges(addy);
+
+            var zip = new Zip
+            {
+                AddressID = addy.ID,
+                Zip4 = "TEST"
+            };
+
+            sqlContext.SaveChanges(zip);           
+
+            var sql = "Select * From Contacts";
+
+            var items = sqlContext.ExecuteQuery<Contact>(sql).All();
+
+            Assert.IsTrue(items != null && items.Count > 0);
+
+            sqlContext.Delete(c);
+            sqlContext.Delete(a1);
+            sqlContext.Delete(a2);
+            sqlContext.Delete(addy);
+            sqlContext.Delete(zip);
+        }
+
+        [TestMethod]
         public void Test_Sql_DataReader_Select()
         {
             var sql = "Select * From Policy";
 
             var item = sqlContext.ExecuteQuery<Policy>(sql).Select();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_DataReader_Select_WithAutoLoad()
+        {
+            var sql = "Select Top 1 * From Contacts Where ID = 27";
+
+            var item = sqlContext.ExecuteQuery<Contact>(sql).Select();
 
             Assert.IsTrue(item != null);
         }

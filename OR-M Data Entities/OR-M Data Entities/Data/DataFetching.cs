@@ -78,7 +78,7 @@ namespace OR_M_Data_Entities.Data
 
             if (Reader.HasRows)
             {
-                var result = Reader.ToObject<T>();
+                var result = Reader.ToObjectRecursive<T>(ConnectionString);
 
                 Reader.Close();
                 Reader.Dispose();
@@ -109,7 +109,7 @@ namespace OR_M_Data_Entities.Data
 
             while (Reader.Read())
             {
-                result.Add(Reader.ToObject<T>());
+                result.Add(Reader.ToObjectRecursive<T>(ConnectionString));
             }
 
             Reader.Close();

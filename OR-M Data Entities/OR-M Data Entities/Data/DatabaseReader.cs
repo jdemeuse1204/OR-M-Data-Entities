@@ -59,7 +59,7 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
 		protected T Select<T>()
         {
-            return Reader.ToObject<T>();
+            return Reader.ToObjectRecursive<T>(ConnectionString);
         }
         #endregion
 
@@ -122,21 +122,21 @@ namespace OR_M_Data_Entities.Data
 		{
 			Execute(sql);
 
-			return new DataReader<T>(Reader);
+			return new DataReader<T>(Reader, ConnectionString);
 		}
 
         public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string,object> parameters)
         {
             Execute(sql, parameters);
 
-            return new DataReader<T>(Reader);
+            return new DataReader<T>(Reader, ConnectionString);
         }
 
         public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
         {
             Execute(builder);
 
-            return new DataReader<T>(Reader);
+            return new DataReader<T>(Reader, ConnectionString);
         }
 
         private void _tryCloseReader()

@@ -156,7 +156,7 @@ namespace OR_M_Data_Entities.Expressions
 
             foreach (var foreignKey in foreignKeys)
             {
-                var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKey>();
+                var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
                 var compareValue = new ExpressionSelectResult();
                 var join = new ExpressionWhereResult();
                 compareValue.ColumnName = foreignKey.Name;
@@ -254,6 +254,8 @@ namespace OR_M_Data_Entities.Expressions
         {
             if (_select.Count == 0 ) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
 
+            // check for auto load attributes
+           
             _sql = string.Empty;
 
             var where = new List<ExpressionWhereResult>();

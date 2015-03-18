@@ -15,6 +15,7 @@ namespace OR_M_Data_Entities.Data
     {
         #region Properties and Fields
         private readonly SqlDataReader _reader;
+	    private readonly string _connectionString;
 
         public bool HasRows 
         {
@@ -29,9 +30,10 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public DataReader(SqlDataReader reader)
+        public DataReader(SqlDataReader reader, string connectionString)
 		{
 			_reader = reader;
+            _connectionString = connectionString;
 		}
         #endregion
 
@@ -40,7 +42,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        _reader.Read();
 
-            return _reader.ToObject<T>();
+            return _reader.ToObjectRecursive<T>(_connectionString);
 	    }
 
 	    public List<T> All()
@@ -49,7 +51,7 @@ namespace OR_M_Data_Entities.Data
 
 	        while (_reader.Read())
 	        {
-	            result.Add(_reader.ToObject<T>());
+                result.Add(_reader.ToObjectRecursive<T>(_connectionString));
 	        }
 
             Dispose();
@@ -62,7 +64,7 @@ namespace OR_M_Data_Entities.Data
 		{
 			while (_reader.Read())
 			{
-				yield return _reader.ToObject<T>();
+                yield return _reader.ToObjectRecursive<T>(_connectionString);
 			}
 
             // close when done enumerating

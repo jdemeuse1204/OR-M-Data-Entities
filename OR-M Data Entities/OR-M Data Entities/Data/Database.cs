@@ -61,15 +61,24 @@ namespace OR_M_Data_Entities.Data
         public void Dispose()
         {
             // disconnect our db reader
-            Reader.Close();
-            Reader.Dispose();
+            if (Reader != null)
+            {
+                Reader.Close();
+                Reader.Dispose();
+            }
 
             // dispose of our sql command
-            Command.Dispose();
+            if (Command != null)
+            {
+                Command.Dispose();
+            }
 
             // close our connection
-            Connection.Close();
-            Connection.Dispose();
+            if (Connection != null)
+            {
+                Connection.Close();
+                Connection.Dispose();
+            }
         }
     }
 }

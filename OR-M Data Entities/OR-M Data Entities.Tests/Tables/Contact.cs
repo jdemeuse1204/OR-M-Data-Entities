@@ -1,4 +1,5 @@
-﻿using OR_M_Data_Entities.Mapping;
+﻿using System.Collections.Generic;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
@@ -11,5 +12,8 @@ namespace OR_M_Data_Entities.Tests.Tables
         public string FirstName { get; set; }
 
         public string LastName { get; set; }
+
+        [AutoLoad]
+        public List<Appointment> Appointments { get; set; }
     }
 }

@@ -11,7 +11,10 @@ using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Commands;
+using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Resolver;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities
@@ -43,7 +46,8 @@ namespace OR_M_Data_Entities
 			var obj = Activator.CreateInstance<T>();
 
 			// find any unmapped attributes
-			var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
+            var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null 
+                && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
 
 			// find any columns that have the column name attribute on them,
 			// we need to swtich the column name to the one in the property
@@ -65,6 +69,101 @@ namespace OR_M_Data_Entities
 
 		    return obj;
 		}
+
+	    public static T ToObjectRecursive<T>(this SqlDataReader reader, string connectionString)
+	    {
+	        var result = ToObject<T>(reader);
+
+	        if (result == null) return result;
+
+	        using (var context = new DbSqlContext(connectionString))
+	        {
+	            _recursiveActivator(result, context);
+	        }
+
+	        return result;
+	    }
+
+        private static void _recursiveActivator(object parent, DbSqlContext context)
+        {
+            var autoLoads = parent.GetType().GetProperties().Where(w => w.GetCustomAttribute<AutoLoadAttribute>() != null).ToList();
+
+            foreach (var autoLoad in autoLoads)
+            {
+                var childInstance = Activator.CreateInstance(autoLoad.PropertyType);
+
+                if (ExpressionTypeTransform.IsList(childInstance))
+                {
+                    var listItemType = childInstance.GetType().GetGenericArguments()[0];
+                    var listItemTable = DatabaseSchemata.GetTableName(listItemType);
+                    var listItemProperties = listItemType.GetProperties();
+                    var listForeignKeys = listItemProperties.Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null
+                        && w.GetCustomAttribute<ForeignKeyAttribute>().ParentTableType == parent.GetType()).ToList();
+
+                    var listSelectBuilder = new SqlQueryBuilder();
+                    listSelectBuilder.Table(listItemTable);
+                    listSelectBuilder.SelectAll();
+
+                    foreach (var item in listForeignKeys)
+                    {
+                        var columnName = DatabaseSchemata.GetColumnName(item);
+                        var foreignKey = item.GetCustomAttribute<ForeignKeyAttribute>();
+                        var compareValue = parent.GetType().GetProperty(foreignKey.ParentPropertyName).GetValue(parent);
+                        listSelectBuilder.AddWhere(listItemTable, columnName, ComparisonType.Equals, compareValue);
+                    }
+
+                    var listMethod = context.GetType().GetMethods().First(w => w.Name == "ExecuteQuery"
+                        && w.GetParameters().Any()
+                        && w.GetParameters()[0].ParameterType == typeof(ISqlBuilder));
+
+                    var genericListMethod = listMethod.MakeGenericMethod(new[] { listItemType });
+                    var listResult = genericListMethod.Invoke(context, new object[] { listSelectBuilder });
+                    var allResults = (listResult as dynamic).All();
+
+                    foreach (var item in allResults)
+                    {
+                        _recursiveActivator(item, context);
+                        (childInstance as dynamic).Add(item);
+                    }
+
+                    autoLoad.SetValue(parent, childInstance, null);
+                    continue;
+                }
+
+                var itemType = childInstance.GetType();
+                var itemTable = DatabaseSchemata.GetTableName(itemType);
+                var itemProperties = itemType.GetProperties();
+                var foreignKeys = itemProperties.Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null
+                    && w.GetCustomAttribute<ForeignKeyAttribute>().ParentTableType == parent.GetType()).ToList();
+
+                var builder = new SqlQueryBuilder();
+                builder.Table(itemTable);
+                builder.SelectAll();
+
+                foreach (var item in foreignKeys)
+                {
+                    var columnName = DatabaseSchemata.GetColumnName(item);
+                    var foreignKey = item.GetCustomAttribute<ForeignKeyAttribute>();
+                    var compareValue = parent.GetType().GetProperty(foreignKey.ParentPropertyName).GetValue(parent);
+                    builder.AddWhere(itemTable, columnName, ComparisonType.Equals, compareValue);
+                }
+
+                var method = context.GetType().GetMethods().First(w => w.Name == "ExecuteQuery"
+                    && w.GetParameters().Any()
+                    && w.GetParameters()[0].ParameterType == typeof(ISqlBuilder));
+
+                var genericMethod = method.MakeGenericMethod(new[] { itemType });
+                var query = genericMethod.Invoke(context, new object[] { builder });
+                var result = (query as dynamic).Select();
+
+                autoLoad.SetValue(parent, result, null);
+
+                if (result != null)
+                {
+                    _recursiveActivator(result, context);
+                }
+            }
+        }
 
 		public static bool IsNumeric(this object o)
 		{

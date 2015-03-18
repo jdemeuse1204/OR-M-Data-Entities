@@ -81,12 +81,12 @@ namespace OR_M_Data_Entities.Data
         public static List<PropertyInfo> GetForeignKeys(object entity)
         {
             return entity.GetType().GetProperties().Where(w =>
-               w.GetCustomAttribute<ForeignKey>() != null).ToList();
+               w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
         }
 
         public static List<PropertyInfo> GetTableFields(object entity)
         {
-            return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
+            return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
         } 
     }
 }
