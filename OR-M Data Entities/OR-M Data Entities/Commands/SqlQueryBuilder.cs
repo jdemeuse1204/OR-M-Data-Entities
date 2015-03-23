@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
 
@@ -17,10 +16,9 @@ namespace OR_M_Data_Entities.Commands
     public sealed class SqlQueryBuilder : SqlValidation, ISqlBuilder
     {
         #region Properties
+        private string _join { get; set; }
         private string _select { get; set; }
         private string _columns { get; set; }
-        private string _from { get; set; }
-        private string _table { get; set; }
         private string _straightSelect { get; set; }
         private Dictionary<string, object> _parameters { get; set; }
         #endregion
@@ -28,10 +26,9 @@ namespace OR_M_Data_Entities.Commands
         #region Constructor
         public SqlQueryBuilder()
         {
+            _join = string.Empty;
             _select = string.Empty;
             _columns = string.Empty;
-            _from = string.Empty;
-            _table = string.Empty;
             _straightSelect = string.Empty;
             _parameters = new Dictionary<string, object>();
         }
@@ -45,13 +42,13 @@ namespace OR_M_Data_Entities.Commands
                 throw new QueryNotValidException("SELECT statement missing");
             }
 
-            if (string.IsNullOrWhiteSpace(_from) && string.IsNullOrWhiteSpace(_straightSelect))
+            if (string.IsNullOrWhiteSpace(TableName) && string.IsNullOrWhiteSpace(_straightSelect))
             {
-                throw new QueryNotValidException("FROM statement missing");
+                throw new QueryNotValidException("Table statement missing");
             }
 
             var sql = string.IsNullOrWhiteSpace(_straightSelect) ?
-                _select + _columns.TrimEnd(',') + _from + GetValidation() :
+                _select + _columns.TrimEnd(',') + string.Format(" FROM {0} ", TableName) + _join + GetValidation() :
                 _straightSelect;
 
             var cmd = new SqlCommand(sql, connection);
@@ -59,21 +56,6 @@ namespace OR_M_Data_Entities.Commands
             InsertParameters(cmd);
 
             return cmd;
-        }
-
-        public void Table(string tableName)
-        {
-            _from += string.Format(" FROM {0} ", tableName);
-        }
-
-        public void Table(Type tableType)
-        {
-            Table(DatabaseSchemata.GetTableName(tableType));
-        }
-
-        public void Table<T>()
-        {
-            Table(DatabaseSchemata.GetTableName(typeof(T)));
         }
 
         public void Select(string table, params Field[] fields)
@@ -128,11 +110,11 @@ namespace OR_M_Data_Entities.Commands
             switch (type)
             {
                 case JoinType.Equi:
-                    _from += string.Format(",{0}", childTable);
+                    _join += string.Format(",{0}", childTable);
                     AddWhere(parentTable, parentField, childTable, childField);
                     break;
                 case JoinType.Inner:
-                    _from += string.Format(" INNER JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
+                    _join += string.Format(" INNER JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
                         parentTable,
                         parentTable,
                         parentField,
@@ -140,7 +122,7 @@ namespace OR_M_Data_Entities.Commands
                         childField);
                     break;
                 case JoinType.Left:
-                    _from += string.Format(" LEFT JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
+                    _join += string.Format(" LEFT JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
                         parentTable,
                         parentTable,
                         parentField,

@@ -80,7 +80,7 @@ namespace OR_M_Data_Entities.Data
 
             if (Reader.HasRows)
             {
-                var result = Reader.ToObject<T>(ConnectionString);
+                var result = Reader.ToObject<T>();
 
                 Reader.Close();
                 Reader.Dispose();
@@ -112,7 +112,7 @@ namespace OR_M_Data_Entities.Data
 
             while (Reader.Read())
             {
-                result.Add(Reader.ToObject<T>(ConnectionString));
+                result.Add(Reader.ToObject<T>());
             }
 
             Reader.Close();

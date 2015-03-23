@@ -43,7 +43,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        _reader.Read();
 
-            return _reader.ToObject<T>(_connectionString);
+            return _reader.ToObject<T>();
 	    }
 
 	    public List<T> All()
@@ -52,7 +52,7 @@ namespace OR_M_Data_Entities.Data
 
 	        while (_reader.Read())
 	        {
-                result.Add(_reader.ToObject<T>(_connectionString));
+                result.Add(_reader.ToObject<T>());
 	        }
 
             Dispose();
@@ -65,7 +65,7 @@ namespace OR_M_Data_Entities.Data
 		{
 			while (_reader.Read())
 			{
-                yield return _reader.ToObject<T>(_connectionString);
+                yield return _reader.ToObject<T>();
 			}
 
             // close when done enumerating

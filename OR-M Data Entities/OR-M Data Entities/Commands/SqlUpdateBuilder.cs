@@ -16,14 +16,12 @@ namespace OR_M_Data_Entities.Commands
     public sealed class SqlUpdateBuilder : SqlValidation, ISqlBuilder
 	{
 		#region Properties
-		private string _table { get; set; }
 		private string _set { get; set; }
 		#endregion
 
 		#region Constructor
 		public SqlUpdateBuilder()
 		{
-			_table = string.Empty;
 			_set = string.Empty;
 		}
 		#endregion
@@ -31,7 +29,7 @@ namespace OR_M_Data_Entities.Commands
 		#region Methods
 		public SqlCommand Build(SqlConnection connection)
 		{
-			if (string.IsNullOrWhiteSpace(_table))
+			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("UPDATE table missing");
 			}
@@ -41,17 +39,12 @@ namespace OR_M_Data_Entities.Commands
 				throw new QueryNotValidException("UPDATE SET values missing");
 			}
 
-			var sql = string.Format("UPDATE {0} SET {1} {2}", _table, _set.TrimEnd(','), GetValidation());
+            var sql = string.Format("UPDATE {0} SET {1} {2}", TableName, _set.TrimEnd(','), GetValidation());
 			var cmd = new SqlCommand(sql, connection);
 
 			InsertParameters(cmd);
 
 			return cmd;
-		}
-
-		public void Table(string tableName)
-		{
-			_table = tableName;
 		}
 
 		public void AddUpdate(PropertyInfo property, object entity)
@@ -74,6 +67,15 @@ namespace OR_M_Data_Entities.Commands
 				AddParameter(value);
 			}
 		}
+
+        public void AddUpdate(string column, object newValue)
+        {
+            //string fieldName, object value
+            var data = GetNextParameter();
+            _set += string.Format("[{0}] = {1},", column, data);
+
+           AddParameter(newValue);
+        }
 		#endregion
 	}
 }

@@ -396,6 +396,37 @@ namespace OR_M_Data_Entities.Tests
 
             Assert.IsTrue(item != null);
         }
+
+        [TestMethod]
+        public void Test_Sql_QueryBuilder_All_Join()
+        {
+            var builder = new SqlQueryBuilder();
+            builder.SelectAll(typeof(Appointment));
+            builder.Table(typeof(Contact));
+            builder.AddJoin(JoinType.Inner, "Appointments", "ContactID", "Contacts", "ID");
+            builder.AddWhere("Contacts", "ID", ComparisonType.Equals, 2);
+
+            var item = sqlContext.ExecuteQuery<Appointment>(builder);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_QueryBuilder_Update()
+        {
+            var builder = new SqlUpdateBuilder();
+            var id = new Guid("f9c5b87a-48c4-41cd-b502-0c3c5be45b21");
+            var description = "HI!";
+            builder.Table(typeof(Appointment));
+            builder.AddUpdate("Description", description);
+            builder.AddWhere("Appointments", "ID", ComparisonType.Equals, id);
+
+            sqlContext.ExecuteQuery<Appointment>(builder);
+
+            var item = sqlContext.Find<Appointment>(id);
+
+            Assert.IsTrue(item != null && item.Description == description);
+        }
         #endregion
 
         #endregion

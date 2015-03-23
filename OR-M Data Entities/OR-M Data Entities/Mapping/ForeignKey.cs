@@ -13,24 +13,17 @@ namespace OR_M_Data_Entities.Mapping
     public sealed class ForeignKeyAttribute : Attribute
     {
         /// <summary>
-        /// Use for identifying the foreign key
+        /// Loads a class with the Foreign Key Property Set
         /// </summary>
-        /// <param name="parentTableType">Type</param>
-        /// <param name="parentPropertyName">string</param>
-        public ForeignKeyAttribute(Type parentTableType, string parentPropertyName)
+        /// <param name="columnName"></param>
+        public ForeignKeyAttribute(string foreignKeyColumnName)
         {
-            ParentTableType = parentTableType;
-            ParentPropertyName = parentPropertyName;
+            ForeignKeyColumnName = foreignKeyColumnName;
         }
-
-        /// <summary>
-        /// Type of the parent table
-        /// </summary>
-        public Type ParentTableType { get; private set; }
 
         /// <summary>
         /// Parent property name, not the column name if used
         /// </summary>
-        public string ParentPropertyName { get; private set; }
+        public string ForeignKeyColumnName { get; private set; }
     }
 }

@@ -13,7 +13,7 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string LastName { get; set; }
 
-        [AutoLoad]
+        [ForeignKey("ContactID")]
         public List<Appointment> Appointments { get; set; }
     }
 }

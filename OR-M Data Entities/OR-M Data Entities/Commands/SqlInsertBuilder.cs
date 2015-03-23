@@ -8,16 +8,14 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Reflection;
-using OR_M_Data_Entities.Commands.Secure;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands
 {
-    public sealed class SqlInsertBuilder : SqlSecureExecutable, ISqlBuilder
+    public sealed class SqlInsertBuilder : SqlTable, ISqlBuilder
 	{
 		#region Properties
-		private string _table { get; set; }
 		private List<InsertItem> _insertItems { get; set; }
 
 		#endregion
@@ -25,7 +23,6 @@ namespace OR_M_Data_Entities.Commands
 		#region Constructor
 		public SqlInsertBuilder()
 		{
-			_table = string.Empty;  
 			_insertItems = new List<InsertItem>();
 		}
 		#endregion
@@ -33,7 +30,7 @@ namespace OR_M_Data_Entities.Commands
 		#region Methods
 		public SqlCommand Build(SqlConnection connection)
 		{
-			if (string.IsNullOrWhiteSpace(_table))
+			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("INSERT statement needs Table Name");
 			}
@@ -93,7 +90,7 @@ namespace OR_M_Data_Entities.Commands
 		                {
 		                    // INTEGER
 		                    set += string.Format("SET {0} = (Select ISNULL(MAX({1}),0) + 1 From {2});", key,
-		                        item.DatabaseColumnName, _table);
+                                item.DatabaseColumnName, TableName);
 		                }
 
 		                fields += string.Format("[{0}],", item.DatabaseColumnName);
@@ -116,7 +113,7 @@ namespace OR_M_Data_Entities.Commands
 		    var sql = string.Format("{0} {1} INSERT INTO {2} ({3}) VALUES ({4});{5}",
 				string.IsNullOrWhiteSpace(declare) ? "" : string.Format("DECLARE {0}", declare.TrimEnd(',')),
 				set,
-				_table, fields.TrimEnd(','),
+                TableName, fields.TrimEnd(','),
 				values.TrimEnd(','),
 				string.IsNullOrWhiteSpace(identity) ? "" : string.Format("Select {0}", identity.TrimEnd(',')));
 
@@ -125,11 +122,6 @@ namespace OR_M_Data_Entities.Commands
 			InsertParameters(cmd);
 
 			return cmd;
-		}
-
-		public void Table(string tableName)
-		{
-			_table = tableName;
 		}
 
 		public void AddInsert(PropertyInfo property, object entity)

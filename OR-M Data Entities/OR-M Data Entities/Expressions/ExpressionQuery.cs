@@ -25,17 +25,16 @@ namespace OR_M_Data_Entities.Expressions
         #region Properties
         private string _from { get; set; }
         private List<object> _where { get; set; }
-        private List<object> _innerJoins { get; set; }
-        private List<object> _leftJoins { get; set; }
+        private Dictionary<string, object> _innerJoins { get; set; }
+        private Dictionary<string, object> _leftJoins { get; set; }
         private List<object> _select { get; set; }
         private string _sql { get; set; }
         private Dictionary<string, object> _parameters { get; set; }
         private int _take { get; set; }
         private readonly DataFetching _context;
         private dynamic _results { get; set; }
-        private bool _hasQueryBeenExecuted { get { return !string.IsNullOrWhiteSpace(_sql); } }
         private Type _returnDataType { get; set; }
-		private bool _distinct { get; set; }
+        private bool _distinct { get; set; }
         #endregion
 
         #region Constructor
@@ -43,14 +42,14 @@ namespace OR_M_Data_Entities.Expressions
         {
             _from = fromTable;
             _where = new List<object>();
-            _innerJoins = new List<object>();
-            _leftJoins = new List<object>();
+            _innerJoins = new Dictionary<string, object>();
+            _leftJoins = new Dictionary<string, object>();
             _select = new List<object>();
             _sql = string.Empty;
             _parameters = new Dictionary<string, object>();
             _take = -1;  // -1 is select *
             _context = context;
-			_distinct = false;
+            _distinct = false;
         }
         #endregion
 
@@ -128,6 +127,8 @@ namespace OR_M_Data_Entities.Expressions
                 _returnDataType = typeof(T);
             }
 
+            ResolveExpression();
+
             return this;
         }
 
@@ -136,11 +137,11 @@ namespace OR_M_Data_Entities.Expressions
             return Select<T>(w => w);
         }
 
-		public ExpressionQuery Distinct()
-		{
-			_distinct = true;
-			return this;
-		}
+        public ExpressionQuery Distinct()
+        {
+            _distinct = true;
+            return this;
+        }
 
         public ExpressionQuery Take(int rows)
         {
@@ -148,10 +149,13 @@ namespace OR_M_Data_Entities.Expressions
             return this;
         }
 
-        private List<ExpressionWhereResult> _getJoins<TParent, TChild>()
+        private List<ExpressionWhereResult> _getJoins<TParent, TChild>(out string joinName)
+            where TChild : class
+            where TParent : class
         {
             var joins = new List<ExpressionWhereResult>();
-            var foreignKeys = DatabaseSchemata.GetForeignKeys(Activator.CreateInstance<TChild>());
+            var foreignKeys = DatabaseSchemata.GetForeignKeys<TChild>();
+            joinName = DatabaseSchemata.GetTableName<TChild>();
 
             if (foreignKeys.Count == 0) throw new ArgumentException("Child Table does not contain any Foreign Key(s)");
 
@@ -164,13 +168,8 @@ namespace OR_M_Data_Entities.Expressions
                 compareValue.TableName = DatabaseSchemata.GetTableName<TChild>();
 
                 join.CompareValue = compareValue;
-                join.ColumnName = foreignKeyAttribute.ParentPropertyName;
-                join.TableName = DatabaseSchemata.GetTableName(foreignKeyAttribute.ParentTableType);
-
-                if (typeof (TParent) != foreignKeyAttribute.ParentTableType)
-                {
-                    throw new Exception("Foreign Key Parent Table Type does not match typeof TParent on the join.");
-                }
+                join.ColumnName = foreignKeyAttribute.ForeignKeyColumnName;
+                join.TableName = DatabaseSchemata.GetTableName(foreignKey.PropertyType);
 
                 joins.Add(join);
             }
@@ -251,12 +250,12 @@ namespace OR_M_Data_Entities.Expressions
             }
         }
 
-        private ExpressionResolutionResult ResolveExpression()
+        private void ResolveExpression()
         {
-            if (_select.Count == 0 ) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
+            if (_select.Count == 0) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
 
             // check for auto load attributes
-           
+
             _sql = string.Empty;
 
             var where = new List<ExpressionWhereResult>();
@@ -277,7 +276,7 @@ namespace OR_M_Data_Entities.Expressions
                 else
                 {
                     @innerJoin.AddRange(ResolveJoin(item as dynamic));
-                }               
+                }
             }
 
             var leftJoin = new List<ExpressionWhereResult>();
@@ -305,23 +304,23 @@ namespace OR_M_Data_Entities.Expressions
             var hasInnerJoins = innerJoin.Count > 0;
             var hasJoins = hasInnerJoins || hasLeftJoins;
             var selectModifier = _take == -1 ? string.Empty : string.Format(" TOP {0} ", _take);
-			var selectDistinctModifier = _distinct ? "DISTINCT" : "";
+            var selectDistinctModifier = _distinct ? "DISTINCT" : "";
             var validationStatements = new List<string>();
 
             // add the select modifier
-            _sql += string.Format(" SELECT {0}{1} ",selectDistinctModifier, selectModifier);
+            _sql += string.Format(" SELECT {0}{1} ", selectDistinctModifier, selectModifier);
 
             foreach (var item in @select)
             {
-				if (item.ShouldConvert)
-				{
-					_sql += string.Format("Convert({0}, [{1}].{2}, {3}) as '{2}' ",
-						item.Transform,
-						item.TableName,
-						item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName),
-						item.ConversionStyle);
-					continue;
-				}
+                if (item.ShouldConvert)
+                {
+                    _sql += string.Format("Convert({0}, [{1}].{2}, {3}) as '{2}' ",
+                        item.Transform,
+                        item.TableName,
+                        item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName),
+                        item.ConversionStyle);
+                    continue;
+                }
 
                 if (item.ColumnName == "*")
                 {
@@ -424,7 +423,7 @@ namespace OR_M_Data_Entities.Expressions
                     if (item.CompareValue is DataTransformContainer)
                     {
                         rightSide = Cast(parameter, ((DataTransformContainer)item.CompareValue).Transform);
-                        compareValue = ((DataTransformContainer) item.CompareValue).Value;
+                        compareValue = ((DataTransformContainer)item.CompareValue).Value;
                     }
 
                     _parameters.Add(parameter, compareValue);
@@ -438,8 +437,6 @@ namespace OR_M_Data_Entities.Expressions
                 _sql += string.Format(i == 0 ? " WHERE {0}" : " AND {0}",
                     validationStatements[i]);
             }
-
-            return new ExpressionResolutionResult(_sql, _parameters);
         }
 
         private string _getNextParameter()
@@ -460,22 +457,9 @@ namespace OR_M_Data_Entities.Expressions
 
         public T First<T>()
         {
-            if (_hasQueryBeenExecuted)
-            {
-                if (_results != null && _results.Count > 0)
-                {
-                    return (T)_results[0];
-                }
+            _results = new List<T>();
 
-                return default(T);
-            }
-
-            // resolve expressions and get sql
-            var result = ResolveExpression();
-            _results = new List<dynamic>();
-            _sql = result.Sql;
-
-            using (var reader = _context.ExecuteQuery<T>(result.Sql, result.Parameters))
+            using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
             {
                 var executionResult = reader.Select();
 
@@ -497,13 +481,7 @@ namespace OR_M_Data_Entities.Expressions
 
         public List<T> All<T>()
         {
-            if (_hasQueryBeenExecuted) return _results as List<T>;
-
-            // resolve expressions and get sql
-            var result = ResolveExpression();
-            _sql = result.Sql;
-
-            using (var reader = _context.ExecuteQuery<T>(result.Sql, result.Parameters))
+            using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
             {
                 _results = new List<T>();
 
@@ -518,32 +496,13 @@ namespace OR_M_Data_Entities.Expressions
 
         public IEnumerator GetEnumerator<T>()
         {
-            DataReader<T> reader = null;
+            var reader = _context.ExecuteQuery<T>(_sql, _parameters);
 
-            if (!_hasQueryBeenExecuted)
+            foreach (var item in reader)
             {
-                // resolve expressions and get sql
-                var result = ResolveExpression();
-                _results = new List<dynamic>();
-                _sql = result.Sql;
-                reader = _context.ExecuteQuery<T>(result.Sql, result.Parameters);
-            }
+                _results.Add(item);
 
-            if (reader == null)
-            {
-                foreach (var item in _results)
-                {
-                    yield return item;
-                }
-            }
-            else
-            {
-                foreach (var item in reader)
-                {
-                    _results.Add(item);
-
-                    yield return item;
-                }
+                yield return item;
             }
         }
 

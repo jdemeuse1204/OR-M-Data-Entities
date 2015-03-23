@@ -9,12 +9,11 @@ namespace OR_M_Data_Entities.Tests.Tables
         [DbGenerationOption(DbGenerationOption.Generate)]
         public Guid ID { get; set; }
 
-        [ForeignKey(typeof(Contact), "ID")]
         public int ContactID { get; set; }
 
         public string Description { get; set; }
 
-        [AutoLoad]
+        [ForeignKey("AppointmentID")]
         public Address Address { get; set; }
     }
 }

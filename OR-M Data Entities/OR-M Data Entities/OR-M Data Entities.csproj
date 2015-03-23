@@ -54,7 +54,9 @@
     <Compile Include="Commands\Support\Field.cs" />
     <Compile Include="Commands\Support\InsertItem.cs" />
     <Compile Include="Commands\Support\ISqlBuilder.cs" />
+    <Compile Include="Commands\Support\Join.cs" />
     <Compile Include="Commands\Support\KeyContainer.cs" />
+    <Compile Include="Commands\Support\SqlTable.cs" />
     <Compile Include="Commands\Support\SqlValidation.cs" />
     <Compile Include="Commands\Transform\Cast.cs" />
     <Compile Include="Commands\Transform\Conversion.cs" />
@@ -80,7 +82,6 @@
     <Compile Include="Expressions\Types\ExpressionSelectResult.cs" />
     <Compile Include="Expressions\Resolver\ExpressionTypeTransform.cs" />
     <Compile Include="Extension.cs" />
-    <Compile Include="Mapping\AutoLoad.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />
     <Compile Include="Mapping\DbGenerationOption.cs" />
@@ -98,6 +99,7 @@
     <None Include="OR-M Data Entities.licenseheader" />
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

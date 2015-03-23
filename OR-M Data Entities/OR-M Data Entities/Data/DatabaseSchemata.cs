@@ -81,18 +81,33 @@ namespace OR_M_Data_Entities.Data
 
         public static List<PropertyInfo> GetForeignKeys(object entity)
         {
-            return entity.GetType().GetProperties().Where(w =>
+            return GetForeignKeys(entity.GetType());
+        }
+
+        public static List<PropertyInfo> GetForeignKeys<T>() where T : class
+        {
+            return GetForeignKeys(typeof(T));
+        }
+
+        public static List<PropertyInfo> GetForeignKeys(Type entityType)
+        {
+            return entityType.GetProperties().Where(w =>
                w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
         }
 
         public static List<PropertyInfo> GetTableFields(object entity)
         {
-            return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
+            return GetTableFields(entity.GetType());
+        }
+
+        public static List<PropertyInfo> GetTableFields<T>() where T : class
+        {
+            return GetTableFields(typeof(T));
         }
 
         public static List<PropertyInfo> GetTableFields(Type entityType)
         {
-            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadAttribute>() == null).ToList();
+            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<ForeignKeyAttribute>() == null).ToList();
         }
 
         public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(Type tableType)
@@ -101,6 +116,11 @@ namespace OR_M_Data_Entities.Data
             var fields = GetTableFields(tableType).Select(w => w.GetCustomAttribute<ColumnAttribute>() != null ? w.GetCustomAttribute<ColumnAttribute>().Name : w.Name);
 
             return new KeyValuePair<string, IEnumerable<string>>(table, fields);
+        }
+
+        public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName<T>()
+        {
+            return GetSelectAllFieldsAndTableName(typeof(T));
         }  
     }
 }

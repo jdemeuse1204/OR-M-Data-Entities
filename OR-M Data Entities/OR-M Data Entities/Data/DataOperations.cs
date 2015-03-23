@@ -35,7 +35,7 @@ namespace OR_M_Data_Entities.Data
 
             // delete Data
             var builder = new SqlDeleteBuilder();
-            builder.Delete(tableName);
+            builder.Table(tableName);
 
             // Loop through all mapped properties
             foreach (var property in primaryKeys)

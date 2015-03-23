@@ -11,7 +11,6 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string Zip4 { get; set; }
 
-        [ForeignKey(typeof(Address), "ID")]
         public int AddressID { get; set; }
     }
 }

@@ -9,10 +9,9 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string Addy { get; set; }
 
-        [ForeignKey(typeof(Appointment), "ID")]
         public Guid AppointmentID { get; set; }
 
-        [AutoLoad]
+        [ForeignKey("AddressID")]
         public Zip ZipCode { get; set; }
     }
 }
