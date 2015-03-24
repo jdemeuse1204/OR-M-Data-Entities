@@ -9,7 +9,7 @@ using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Expressions.Resolver;
+using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
 {

@@ -10,7 +10,7 @@ using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities
 {
-    public class DbSqlContext : DataOperations
+    public class DbSqlContext : DataModifiable
     {
         #region Constructor
         public DbSqlContext(string connectionStringOrName)

@@ -14,10 +14,10 @@ namespace OR_M_Data_Entities.Data
     /// <summary>
     /// This class uses all data fetching functions to create their own functions
     /// </summary>
-    public abstract class DataOperations : DataFetching
+    public abstract class DataModifiable : DataFetching
     {
         #region Constructor
-        protected DataOperations(string connectionStringOrName)
+        protected DataModifiable(string connectionStringOrName)
             : base(connectionStringOrName)
         {
         }

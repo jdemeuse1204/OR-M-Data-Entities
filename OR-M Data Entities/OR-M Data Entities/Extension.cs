@@ -6,22 +6,33 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Commands;
-using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Resolver;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities
 {
 	public static class Extension
 	{
+        public static string GetNextParameter(this Dictionary<string,object> parameters)
+        {
+            return string.Format("@Param{0}", parameters.Count);
+        }
+
+
+        public static bool IsList(this object o)
+        {
+            return o is IList &&
+                   o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
 		/// <summary>
 		/// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
 		/// </summary>

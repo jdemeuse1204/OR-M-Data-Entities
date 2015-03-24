@@ -364,7 +364,7 @@ namespace OR_M_Data_Entities.Tests
         {
             var currentDateTime = DateTime.Now;
             var item = sqlContext.From<Policy>()
-                .Where<Policy>(w => Cast.As(w.CreatedDate, SqlDbType.Date) == Cast.As(currentDateTime, SqlDbType.Date))
+                .Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
                 .Select<Policy>()
                 .First<Policy>();
 
@@ -376,8 +376,8 @@ namespace OR_M_Data_Entities.Tests
         {
             var currentDateTime = DateTime.Now;
             var item = sqlContext.From<Policy>()
-                .Where<Policy>(w => Cast.As(w.CreatedDate, SqlDbType.Date) == Cast.As(currentDateTime, SqlDbType.Date))
-                .Select<Policy>(w => Conversion.To(SqlDbType.VarChar, w.CreatedDate, 101))
+                .Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
+                .Select<Policy>(w => DbFunctions.Convert(SqlDbType.VarChar, w.CreatedDate, 101))
                 .First<string>();
 
             Assert.IsTrue(item != null);

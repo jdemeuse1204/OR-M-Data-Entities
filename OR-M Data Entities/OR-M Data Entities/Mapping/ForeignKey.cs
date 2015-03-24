@@ -16,14 +16,17 @@ namespace OR_M_Data_Entities.Mapping
         /// Loads a class with the Foreign Key Property Set
         /// </summary>
         /// <param name="columnName"></param>
-        public ForeignKeyAttribute(string foreignKeyColumnName)
+        public ForeignKeyAttribute(string foreignKeyColumnName, string primaryKeyColumnName = "ID")
         {
             ForeignKeyColumnName = foreignKeyColumnName;
+            PrimaryKeyColumnName = primaryKeyColumnName;
         }
 
         /// <summary>
         /// Parent property name, not the column name if used
         /// </summary>
         public string ForeignKeyColumnName { get; private set; }
+
+        public string PrimaryKeyColumnName { get; private set; }
     }
 }

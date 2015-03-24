@@ -51,23 +51,28 @@
     <Compile Include="Commands\SqlInsertBuilder.cs" />
     <Compile Include="Commands\SqlQueryBuilder.cs" />
     <Compile Include="Commands\SqlUpdateBuilder.cs" />
+    <Compile Include="Commands\StatementParts\SqlColumn.cs" />
+    <Compile Include="Commands\StatementParts\SqlSelect.cs" />
+    <Compile Include="Commands\StatementParts\SqlTable.cs" />
+    <Compile Include="Commands\StatementParts\SqlTableColumnPair.cs" />
+    <Compile Include="Commands\StatementParts\SqlValue.cs" />
     <Compile Include="Commands\Support\Field.cs" />
     <Compile Include="Commands\Support\InsertItem.cs" />
     <Compile Include="Commands\Support\ISqlBuilder.cs" />
-    <Compile Include="Commands\Support\Join.cs" />
+    <Compile Include="Commands\StatementParts\SqlJoin.cs" />
     <Compile Include="Commands\Support\KeyContainer.cs" />
     <Compile Include="Commands\Support\SqlTable.cs" />
     <Compile Include="Commands\Support\SqlValidation.cs" />
-    <Compile Include="Commands\Transform\Cast.cs" />
-    <Compile Include="Commands\Transform\Conversion.cs" />
-    <Compile Include="Commands\Transform\DataTransform.cs" />
-    <Compile Include="Commands\Transform\DataTransformContainer.cs" />
+    <Compile Include="Commands\StatementParts\SqlWhere.cs" />
+    <Compile Include="Commands\Transform\DataTransformType.cs" />
+    <Compile Include="Commands\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />
     <Compile Include="Data\DatabaseEntity.cs" />
+    <Compile Include="Data\DatabaseOperations.cs" />
     <Compile Include="Data\DatabaseReader.cs" />
     <Compile Include="Data\DatabaseSchemata.cs" />
     <Compile Include="Data\DataFetching.cs" />
-    <Compile Include="Data\DataOperations.cs" />
+    <Compile Include="Data\DataModifiable.cs" />
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Entity\DbEntityContext.cs" />
@@ -75,12 +80,7 @@
     <Compile Include="Entity\IDbTable.cs" />
     <Compile Include="Entity\SaveAction.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
-    <Compile Include="Expressions\Types\ExpressionTable.cs" />
-    <Compile Include="Expressions\Types\ExpressionWhereResult.cs" />
-    <Compile Include="Expressions\Types\ExpressionResolutionResult.cs" />
-    <Compile Include="Expressions\Resolver\ExpressionResolver.cs" />
-    <Compile Include="Expressions\Types\ExpressionSelectResult.cs" />
-    <Compile Include="Expressions\Resolver\ExpressionTypeTransform.cs" />
+    <Compile Include="Expressions\ExpressionResolver.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />
@@ -99,7 +99,9 @@
     <None Include="OR-M Data Entities.licenseheader" />
     <None Include="README.md" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Expressions\Resolver\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

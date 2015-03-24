@@ -12,26 +12,27 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
+using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
-using OR_M_Data_Entities.Expressions.Types;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Expressions.Resolver
+namespace OR_M_Data_Entities.Expressions
 {
     public abstract class ExpressionResolver
     {
         #region Resolvers
-        protected static IEnumerable<ExpressionWhereResult> ResolveWhere<T>(Expression<Func<T, bool>> expression)
+        protected static IEnumerable<SqlWhere> ResolveWhere<T>(Expression<Func<T, bool>> expression)
         {
-            var evaluationResults = new List<ExpressionWhereResult>();
+            var evaluationResults = new List<SqlWhere>();
             // lambda string, tablename
-            var tableNameLookup = new Dictionary<string, ExpressionTable>();
+            var tableNameLookup = new Dictionary<string, Type>();
 
             for (var i = 0; i < expression.Parameters.Count; i++)
             {
                 var parameter = expression.Parameters[i];
 
-                tableNameLookup.Add(parameter.Name, new ExpressionTable(parameter.Type));
+                tableNameLookup.Add(parameter.Name, parameter.Type);
             }
 
             _evaluateExpressionTree(expression.Body, evaluationResults, tableNameLookup);
@@ -39,35 +40,36 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             return evaluationResults;
         }
 
-        protected static IEnumerable<ExpressionWhereResult> ResolveJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression)
+        protected static IEnumerable<SqlJoin> ResolveJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression)
         {
-            var evaluationResults = new List<ExpressionWhereResult>();
+            var evaluationResults = new List<SqlJoin>();
             // lambda string, tablename
-            var tableNameLookup = new Dictionary<string, ExpressionTable>();
+            var tableNameLookup = new Dictionary<string, Type>();
 
             for (var i = 0; i < expression.Parameters.Count; i++)
             {
                 var parameter = expression.Parameters[i];
 
-                tableNameLookup.Add(parameter.Name, new ExpressionTable(parameter.Type));
+                tableNameLookup.Add(parameter.Name, parameter.Type);
             }
 
-            _evaluateExpressionTree(expression.Body, evaluationResults, tableNameLookup);
+            // AHHHHHH TODO
+            _evaluateExpressionTree(expression.Body, null, tableNameLookup);
 
             return evaluationResults;
         }
 
-        protected static IEnumerable<ExpressionSelectResult> ResolveSelect<T>(Expression<Func<T, object>> expression)
+        protected static IEnumerable<SqlTableColumnPair> ResolveSelect<T>(Expression<Func<T, object>> expression)
         {
-            var evaluationResults = new List<ExpressionSelectResult>();
+            var evaluationResults = new List<SqlTableColumnPair>();
             // lambda string, tablename
-            var tableNameLookup = new Dictionary<string, ExpressionTable>();
+            var tableNameLookup = new Dictionary<string, Type>();
 
             for (var i = 0; i < expression.Parameters.Count; i++)
             {
                 var parameter = expression.Parameters[i];
 
-                tableNameLookup.Add(parameter.Name, new ExpressionTable(parameter.Type));
+                tableNameLookup.Add(parameter.Name, parameter.Type);
             }
 
             _evaltateSelectExpressionTree(expression.Body, evaluationResults, tableNameLookup);
@@ -83,8 +85,8 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <param name="expression"></param>
         /// <param name="evaluationResults"></param>
         /// <param name="tableNameLookup"></param>
-        private static void _evaltateSelectExpressionTree(Expression expression, ICollection<ExpressionSelectResult> evaluationResults,
-            Dictionary<string, ExpressionTable> tableNameLookup)
+        private static void _evaltateSelectExpressionTree(Expression expression, List<SqlTableColumnPair> evaluationResults,
+            Dictionary<string, Type> tableNameLookup)
         {
             switch (expression.NodeType)
             {
@@ -96,40 +98,19 @@ namespace OR_M_Data_Entities.Expressions.Resolver
                         var arg = e.Arguments[i] as MemberExpression;
                         var newExpressionColumnAndTableName = _getColumnAndTableName(arg, tableNameLookup, SqlDbType.VarChar);
 
-                        evaluationResults.Add(new ExpressionSelectResult
-                        {
-                            ColumnName = newExpressionColumnAndTableName.ColumnName,
-                            TableName = newExpressionColumnAndTableName.TableName,
-                            ColumnType = newExpressionColumnAndTableName.ColumnType,
-                            TableType = newExpressionColumnAndTableName.TableType
-                        });
+                        evaluationResults.Add(newExpressionColumnAndTableName);
                     }
                     break;
                 case ExpressionType.Convert:
-                    var convertExpressionColumnAndTableName = _getTableName((dynamic)expression, tableNameLookup);
+                    var convertExpressionColumnAndTableName = _getTableNameAndColumns((dynamic)expression, tableNameLookup);
 
-                    evaluationResults.Add(new ExpressionSelectResult
-                    {
-                        ColumnName = convertExpressionColumnAndTableName.ColumnName,
-                        TableName = convertExpressionColumnAndTableName.TableName,
-                        ColumnType = convertExpressionColumnAndTableName.ColumnType,
-                        TableType = convertExpressionColumnAndTableName.TableType
-                    });
+                    evaluationResults.AddRange(convertExpressionColumnAndTableName);
                     break;
                 case ExpressionType.Call:
 
                     var callExpressionColumnAndTableName = _getColumnAndTableName(((MethodCallExpression)expression), tableNameLookup, SqlDbType.VarChar);
 
-                    evaluationResults.Add(new ExpressionSelectResult
-                    {
-                        ColumnName = callExpressionColumnAndTableName.ColumnName,
-                        ColumnType = callExpressionColumnAndTableName.ColumnType,
-                        TableName = callExpressionColumnAndTableName.TableName,
-                        ShouldConvert = callExpressionColumnAndTableName.ShouldConvert,
-                        ConversionStyle = callExpressionColumnAndTableName.ConversionStyle,
-                        Transform = callExpressionColumnAndTableName.Transform,
-                        TableType = callExpressionColumnAndTableName.TableType
-                    });
+                    evaluationResults.Add(callExpressionColumnAndTableName);
                     break;
                 default:
                     break;
@@ -142,7 +123,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <param name="expression"></param>
         /// <param name="evaluationResults"></param>
         /// <param name="tableNameLookup"></param>
-        private static void _evaluateExpressionTree(Expression expression, ICollection<ExpressionWhereResult> evaluationResults, Dictionary<string, ExpressionTable> tableNameLookup)
+        private static void _evaluateExpressionTree(Expression expression, List<SqlWhere> evaluationResults, Dictionary<string, Type> tableNameLookup)
         {
             if (HasLeft(expression))
             {
@@ -168,22 +149,26 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <param name="expression"></param>
         /// <param name="tableNameLookup"></param>
         /// <returns></returns>
-        private static ExpressionSelectResult _getTableName(UnaryExpression expression, Dictionary<string, ExpressionTable> tableNameLookup)
+        private static IEnumerable<SqlTableColumnPair> _getTableNameAndColumns(UnaryExpression expression, Dictionary<string, Type> tableNameLookup)
         {
             var parameterExpression = expression.Operand as ParameterExpression;
 
-            return new ExpressionSelectResult
+            if (parameterExpression == null) throw new InvalidExpressionException("Unary Expression's Operand must be Parameter Expression");
+
+            return DatabaseSchemata.GetTableFields(parameterExpression.Type).Select(column => new SqlTableColumnPair
             {
-                TableName = tableNameLookup.ContainsKey(parameterExpression.Name) ? tableNameLookup[parameterExpression.Name].TableName : parameterExpression.Name,
-                TableType = tableNameLookup.ContainsKey(parameterExpression.Name) ? tableNameLookup[parameterExpression.Name].TableType : parameterExpression.Type,
-                ColumnName = "*"
-            };
+                Column = column,
+                DataType = column.GetCustomAttribute<DbTranslationAttribute>() == null ? 
+                    DatabaseSchemata.GetSqlDbType(column.PropertyType) : 
+                    column.GetCustomAttribute<DbTranslationAttribute>().Type,
+                Table = parameterExpression.Type
+            }).ToList();
         }
 
         #region Get Column and Table Name
 
-        private static ExpressionSelectResult _getColumnAndTableName(BinaryExpression expression,
-            Dictionary<string, ExpressionTable> tableNameLookup, SqlDbType transformType, bool isCasting = false,
+        private static SqlTableColumnPair _getColumnAndTableName(BinaryExpression expression,
+            Dictionary<string, Type> tableNameLookup, SqlDbType transformType, bool isCasting = false,
             bool isConverting = false, int conversionStyle = 0)
         {
             var leftSide = expression.Left;
@@ -196,17 +181,17 @@ namespace OR_M_Data_Entities.Expressions.Resolver
                 SqlDbType.VarChar, isCasting, isConverting, conversionStyle);
         }
 
-        private static ExpressionSelectResult _getColumnAndTableName(UnaryExpression expression,
-            Dictionary<string, ExpressionTable> tableNameLookup, SqlDbType transformType, bool isCasting = false,
+        private static SqlTableColumnPair _getColumnAndTableName(UnaryExpression expression,
+            Dictionary<string, Type> tableNameLookup, SqlDbType transformType, bool isCasting = false,
             bool isConverting = false, int conversionStyle = 0)
         {
             return _getColumnAndTableName(expression.Operand, tableNameLookup, transformType, isCasting,
                 isConverting, conversionStyle);
         }
 
-        private static ExpressionSelectResult _getColumnAndTableName(
+        private static SqlTableColumnPair _getColumnAndTableName(
             MethodCallExpression expression,
-            Dictionary<string, ExpressionTable> tableNameLookup,
+            Dictionary<string, Type> tableNameLookup,
             SqlDbType transformType,
             bool isCasting = false,
             bool isConverting = false,
@@ -214,8 +199,8 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         {
             var dataTransform = SqlDbType.VarChar;
             var conversionNumber = 0;
-            var cast = IsCasting(expression);
-            var convert = IsConverting(expression);
+            var cast = DatabaseOperations.IsCasting(expression);
+            var convert = DatabaseOperations.IsConverting(expression);
 
             if (cast || convert)
             {
@@ -223,7 +208,18 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 
                 if (convert)
                 {
-                    conversionNumber = Convert.ToInt32(((dynamic)expression.Arguments[2]).Value);
+                    object argValue;
+
+                    if (expression.Arguments[2] is UnaryExpression)
+                    {
+                        argValue = _getValue((dynamic) expression.Arguments[2]);
+                    }
+                    else
+                    {
+                        argValue = ((dynamic)expression.Arguments[2]).Value;
+                    }
+
+                    conversionNumber = Convert.ToInt32(argValue);
                 }
             }
 
@@ -233,34 +229,42 @@ namespace OR_M_Data_Entities.Expressions.Resolver
             return _getColumnAndTableName(evaluatedExpression, tableNameLookup, dataTransform, cast, convert, conversionNumber);
         }
 
-        private static ExpressionSelectResult _getColumnAndTableName(
+        private static SqlTableColumnPair _getColumnAndTableName(
             MemberExpression expression,
-            Dictionary<string, ExpressionTable> tableNameLookup, 
-            SqlDbType transformType, 
+            Dictionary<string, Type> tableNameLookup,
+            SqlDbType transformType,
             bool isCasting = false,
-            bool isConverting = false, 
+            bool isConverting = false,
             int conversionStyle = 0)
         {
-            return expression.Expression.NodeType == ExpressionType.Parameter
-                ? (new ExpressionSelectResult
-                {
-                    TableName = tableNameLookup.ContainsKey(((dynamic)expression.Expression).Name) ? tableNameLookup[((dynamic)expression.Expression).Name].TableName : ((dynamic)expression.Expression).Name,
-                    ColumnName = expression.Member.GetCustomAttribute<ColumnAttribute>() == null
-                            ? expression.Member.Name
-                            : expression.Member.GetCustomAttribute<ColumnAttribute>().Name,
-                    Transform = isCasting || isConverting ? transformType : expression.Member.GetCustomAttribute<DbTranslationAttribute>() == null ?
-                            ExpressionTypeTransform.GetSqlDbType(expression.Type)
-                            : expression.Member.GetCustomAttribute<DbTranslationAttribute>().Type,
-                    ShouldCast = isCasting,
-                    ColumnType = expression.Type,
-                    ShouldConvert = isConverting,
-                    ConversionStyle = conversionStyle,
-                    TableType = tableNameLookup.ContainsKey(((dynamic)expression.Expression).Name) ? tableNameLookup[((dynamic)expression.Expression).Name].TableType : expression.Expression.GetType(),
-                })
-                : _getColumnAndTableName(expression.Expression as MemberExpression, tableNameLookup, transformType, isCasting, isConverting, conversionStyle);
+            if (expression.Expression.NodeType != ExpressionType.Parameter)
+            {
+                return _getColumnAndTableName(expression.Expression as MemberExpression, tableNameLookup, transformType, isCasting, isConverting, conversionStyle);
+            }
+
+            var result = new SqlTableColumnPair();
+            result.Table = expression.Expression.Type;
+            result.Column = expression.Member;
+            result.DataType = isCasting || isConverting
+                ? transformType
+                : expression.Member.GetCustomAttribute<DbTranslationAttribute>() == null
+                    ? DatabaseSchemata.GetSqlDbType(expression.Type)
+                    : expression.Member.GetCustomAttribute<DbTranslationAttribute>().Type;
+
+            if (isCasting)
+            {
+                result.AddFunction(DbFunctions.Cast, result.DataType);
+            }
+
+            if (isConverting)
+            {
+                result.AddFunction(DbFunctions.Convert, result.DataType, conversionStyle);
+            }
+
+            return result;
         }
 
-        private static ExpressionSelectResult _getColumnAndTableName(object expression, Dictionary<string, ExpressionTable> tableNameLookup, SqlDbType transformType, bool isCasting = false, bool isConverting = false, int conversionStyle = 0)
+        private static SqlTableColumnPair _getColumnAndTableName(object expression, Dictionary<string, Type> tableNameLookup, SqlDbType transformType, bool isCasting = false, bool isConverting = false, int conversionStyle = 0)
         {
             return _getColumnAndTableName(expression as dynamic, tableNameLookup, transformType, isCasting, isConverting, conversionStyle);
         }
@@ -270,36 +274,33 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 
         #region Expression Evaluation
 
-        private static ExpressionWhereResult _evaluate(object expression, Dictionary<string, string> tableNameLookup)
+        private static SqlWhere _evaluate(object expression, Dictionary<string, string> tableNameLookup)
         {
             return _evaluate(expression as dynamic, tableNameLookup);
         }
 
-        private static ExpressionWhereResult _evaluate(MethodCallExpression expression, Dictionary<string, ExpressionTable> tableNameLookup)
+        private static SqlWhere _evaluate(MethodCallExpression expression, Dictionary<string, Type> tableNameLookup)
         {
-            var result = new ExpressionWhereResult();
-            var columnOptions = new ExpressionSelectResult();
+            var result = new SqlWhere();
+            var columnOptions = new SqlTableColumnPair();
             var argsHaveParameter = false;
 
             foreach (var arg in expression.Arguments.Where(_hasParameter))
             {
                 argsHaveParameter = true;
                 columnOptions = _getColumnAndTableName(arg, tableNameLookup, SqlDbType.VarChar);
-                result.CompareValue = _getValue(expression.Object as dynamic);
+                result.ObjectCompareValue = _getValue(expression.Object as dynamic);
                 break;
             }
 
             if (!argsHaveParameter)
             {
                 columnOptions = _getColumnAndTableName(expression.Object as dynamic, tableNameLookup, SqlDbType.VarChar);
-                result.CompareValue = _getValue(expression.Arguments[0] as dynamic);
+                result.ObjectCompareValue = _getValue(expression.Arguments[0] as dynamic);
             }
 
-            result.ColumnName = columnOptions.ColumnName;
-            result.TableName = columnOptions.TableName;
+            result.TableCompareValue = columnOptions;
             result.ComparisonType = GetComparisonType(expression.Method.Name);
-            result.Transform = columnOptions.Transform;
-            result.ShouldCast = columnOptions.ShouldCast;
 
             return result;
         }
@@ -310,19 +311,16 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <param name="expression"></param>
         /// <param name="tableNameLookup"></param>
         /// <returns></returns>
-        private static ExpressionWhereResult _evaluate(BinaryExpression expression, Dictionary<string, ExpressionTable> tableNameLookup)
+        private static SqlWhere _evaluate(BinaryExpression expression, Dictionary<string, Type> tableNameLookup)
         {
-            var result = new ExpressionWhereResult();
+            var result = new SqlWhere();
 
             // Get column options (Column Name, Table Name, Transform Type)
             var columnOptions = _getColumnAndTableName(expression, tableNameLookup, SqlDbType.VarChar);
 
-            result.ColumnName = columnOptions.ColumnName;
-            result.TableName = columnOptions.TableName;
-            result.Transform = columnOptions.Transform;
-            result.CompareValue = GetCompareValue(expression, tableNameLookup, SqlDbType.VarChar);
+            result.TableCompareValue = columnOptions;
+            result.ObjectCompareValue = GetCompareValue(expression, tableNameLookup, SqlDbType.VarChar);
             result.ComparisonType = GetComparisonType(expression.NodeType);
-            result.ShouldCast = columnOptions.ShouldCast;
 
             return result;
         }
@@ -333,7 +331,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <param name="expression"></param>
         /// <param name="tableNameLookup"></param>
         /// <returns></returns>
-        private static ExpressionWhereResult _evaluate(UnaryExpression expression, Dictionary<string, ExpressionTable> tableNameLookup)
+        private static SqlWhere _evaluate(UnaryExpression expression, Dictionary<string, Type> tableNameLookup)
         {
             var result = _evaluate(expression.Operand as dynamic, tableNameLookup);
 
@@ -343,7 +341,7 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         }
         #endregion
 
-        private static object GetCompareValue(BinaryExpression expression, Dictionary<string, ExpressionTable> tableNameLookup,
+        private static object GetCompareValue(BinaryExpression expression, Dictionary<string, Type> tableNameLookup,
            SqlDbType transformType)
         {
             var leftSideHasParameter = _hasParameter(expression.Left);
@@ -389,24 +387,32 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         /// <returns></returns>
         private static object _getValue(MethodCallExpression expression)
         {
-            var isCasting = IsCasting(expression);
-
+            var isCasting = DatabaseOperations.IsCasting(expression);
+            var isConverting = DatabaseOperations.IsConverting(expression);
             var objectMember = Expression.Convert(expression, typeof(object));
 
             var getterLambda = Expression.Lambda<Func<object>>(objectMember);
-
+   
             var getter = getterLambda.Compile();
 
             var result = getter();
 
-            if (!isCasting)
-            {
-                return result;
-            }
+            if (!isCasting && !isConverting) return result;
 
             var transform = GetTransformType(expression);
+            var transformResult = new SqlValue(result, transform);
 
-            return new DataTransformContainer(result, transform);
+            if (isConverting)
+            {
+                transformResult.AddFunction(DbFunctions.Convert);
+            }
+
+            if (isCasting)
+            {
+                transformResult.AddFunction(DbFunctions.Cast);
+            }
+
+            return transformResult;
         }
 
         /// <summary>
@@ -451,22 +457,6 @@ namespace OR_M_Data_Entities.Expressions.Resolver
         private static bool _hasParameter(MemberExpression expression)
         {
             return _hasParameter(expression.Expression as dynamic);
-        }
-        #endregion
-
-        #region Cast and Convert
-        public static bool IsConverting(object expression)
-        {
-            if (!(expression is MethodCallExpression)) return false;
-
-            return ((MethodCallExpression)expression).Method.DeclaringType == typeof(Conversion);
-        }
-
-        public static bool IsCasting(object expression)
-        {
-            if (!(expression is MethodCallExpression)) return false;
-
-            return ((MethodCallExpression)expression).Method.DeclaringType == typeof(Cast);
         }
         #endregion
 

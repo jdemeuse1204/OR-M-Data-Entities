@@ -1,11 +1,11 @@
 ﻿using System;
 using OR_M_Data_Entities.Data;
 
-namespace OR_M_Data_Entities.Expressions.Types
+namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public class ExpressionTable
+    public sealed class SqlTable
     {
-        public ExpressionTable(Type tableType)
+        public SqlTable(Type tableType)
         {
             TableName = DatabaseSchemata.GetTableName(tableType);
             TableType = tableType;

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
@@ -16,7 +17,51 @@ namespace OR_M_Data_Entities.Data
 {
     public static class DatabaseSchemata
     {
-        public static bool IsPrimaryKey(PropertyInfo column)
+        public static SqlDbType GetSqlDbType(Type type)
+        {
+            var name = type.Name;
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                name = type.GetGenericArguments()[0].Name;
+            }
+
+            switch (name.ToUpper())
+            {
+                case "INT64":
+                    return SqlDbType.BigInt;
+                case "INT32":
+                    return SqlDbType.Int;
+                case "BYTE":
+                    return SqlDbType.TinyInt;
+                case "BOOLEAN":
+                    return SqlDbType.Bit;
+                case "STRING":
+                    return SqlDbType.VarChar;
+                case "DATETIME":
+                    return SqlDbType.DateTime;
+                case "DATETIMEOFFSET":
+                    return SqlDbType.DateTimeOffset;
+                case "DECIMAL":
+                    return SqlDbType.Decimal;
+                case "SINGLE":
+                    return SqlDbType.Real;
+                case "INT16":
+                    return SqlDbType.SmallInt;
+                case "TIMESPAN":
+                    return SqlDbType.Time;
+                case "GUID":
+                    return SqlDbType.UniqueIdentifier;
+                case "XML":
+                    return SqlDbType.Xml;
+                case "DOUBLE":
+                    return SqlDbType.Float;
+                default:
+                    throw new Exception("Type not recognized!");
+            }
+        }
+
+        public static bool IsPrimaryKey(MemberInfo column)
         {
             return column.Name.ToUpper() == "ID"
                 || GetColumnName(column).ToUpper() == "ID"
@@ -47,7 +92,7 @@ namespace OR_M_Data_Entities.Data
             return dbGenerationColumn == null ? DbGenerationOption.IdentitySpecification : dbGenerationColumn.Option;
         }
 
-        public static string GetColumnName(PropertyInfo column)
+        public static string GetColumnName(MemberInfo column)
         {
             var columnAttribute = column.GetCustomAttribute<ColumnAttribute>();
 
@@ -66,7 +111,12 @@ namespace OR_M_Data_Entities.Data
 
         public static List<PropertyInfo> GetPrimaryKeys(object entity)
         {
-            var keyList = entity.GetType().GetProperties().Where(w =>
+            return GetPrimaryKeys(entity.GetType());
+        }
+
+        public static List<PropertyInfo> GetPrimaryKeys(Type type)
+        {
+            var keyList = type.GetProperties().Where(w =>
                (w.GetCustomAttribute<SearchablePrimaryKeyAttribute>() != null
                && w.GetCustomAttribute<SearchablePrimaryKeyAttribute>().IsPrimaryKey)
                || (w.Name.ToUpper() == "ID")).ToList();
@@ -77,6 +127,11 @@ namespace OR_M_Data_Entities.Data
             }
 
             throw new Exception("Cannot find PrimaryKey(s)");
+        }
+
+        public static PropertyInfo GetPrimaryKeyByName(string name, Type type)
+        {
+            return GetPrimaryKeys(type).FirstOrDefault(w => String.Equals(w.Name, name, StringComparison.CurrentCultureIgnoreCase));
         }
 
         public static List<PropertyInfo> GetForeignKeys(object entity)
@@ -108,6 +163,11 @@ namespace OR_M_Data_Entities.Data
         public static List<PropertyInfo> GetTableFields(Type entityType)
         {
             return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<ForeignKeyAttribute>() == null).ToList();
+        }
+
+        public static PropertyInfo GetTableFieldByName(string name, Type type)
+        {
+            return GetTableFields(type).FirstOrDefault(w => String.Equals(w.Name, name, StringComparison.CurrentCultureIgnoreCase));
         }
 
         public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(Type tableType)
