@@ -5,12 +5,14 @@
  * (c) 2015 James Demeuse
  */
 
+using OR_M_Data_Entities.Commands.StatementParts;
+
 namespace OR_M_Data_Entities.Commands.Support
 {
 	/// <summary>
 	/// Builds the WHERE statement for queries
 	/// </summary>
-	public abstract class SqlValidation : SqlTable
+	public abstract class SqlValidation : SqlFromTable
 	{
 		#region Properties
 		private string _where { get; set; }

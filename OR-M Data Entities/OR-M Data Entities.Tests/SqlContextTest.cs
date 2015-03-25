@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -277,6 +278,24 @@ namespace OR_M_Data_Entities.Tests
         }
 
         [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_All_MethodCallIn()
+        {
+            var lst = new List<int> {45, 46};
+
+            var item = sqlContext.Where<Policy>(w => lst.Contains(w.Id)).All<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_All_GreaterThan()
+        {
+            var item = sqlContext.Where<Policy>(w => w.Id >= 50).All<Policy>();
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
         public void Test_Sql_Where_ExpressionQuery_First_MethodCallStartsWith()
         {
             var item = sqlContext.Where<Policy>(w => w.CreatedBy.StartsWith("James")).First<Policy>();
@@ -314,6 +333,21 @@ namespace OR_M_Data_Entities.Tests
             var item = sqlContext.Where<Policy>(w => w.Id == TestID).Distinct().First<Policy>();
 
             Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_Sql_Where_ExpressionQuery_ForEach()
+        {
+            var count = 0;
+            foreach(var item in sqlContext.Where<Policy>(w => w.Id == TestID).Distinct())
+            {
+                if (item != null)
+                {
+                    count++;
+                }
+            }
+
+            Assert.IsTrue(count > 0);
         }
 
         [TestMethod]

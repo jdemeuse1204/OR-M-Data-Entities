@@ -30,7 +30,6 @@ namespace OR_M_Data_Entities.Expressions
         private Dictionary<string, object> _parameters { get; set; }
         private int _take { get; set; }
         private readonly DataFetching _context;
-        private dynamic _results { get; set; }
         private Type _returnDataType { get; set; }
         private bool _distinct { get; set; }
         #endregion
@@ -92,7 +91,7 @@ namespace OR_M_Data_Entities.Expressions
             where TParent : class
             where TChild : class
         {
-            var joins = _getJoins<TParent, TChild>();
+            var joins = _getJoins<TParent, TChild>(JoinType.Inner);
 
             _innerJoins.AddRange(joins);
             return this;
@@ -110,7 +109,7 @@ namespace OR_M_Data_Entities.Expressions
             where TParent : class
             where TChild : class
         {
-            var join = _getJoins<TParent, TChild>();
+            var join = _getJoins<TParent, TChild>(JoinType.Left);
 
             _leftJoins.Add(join);
             return this;
@@ -124,8 +123,6 @@ namespace OR_M_Data_Entities.Expressions
             {
                 _returnDataType = typeof(T);
             }
-
-            ResolveExpression();
 
             return this;
         }
@@ -147,12 +144,12 @@ namespace OR_M_Data_Entities.Expressions
             return this;
         }
 
-        private List<SqlJoin> _getJoins<TParent, TChild>()
+        private List<SqlJoin> _getJoins<TParent, TChild>(JoinType joinType)
             where TChild : class
             where TParent : class
         {
             var joins = new List<SqlJoin>();
-            var foreignKeys = DatabaseSchemata.GetForeignKeys<TChild>();
+            var foreignKeys = DatabaseSchemata.GetForeignKeys<TParent>();
 
             if (foreignKeys.Count == 0) throw new ArgumentException("Child Table does not contain any Foreign Key(s)");
 
@@ -164,7 +161,7 @@ namespace OR_M_Data_Entities.Expressions
                 join.ParentEntity = new SqlTableColumnPair
                 {
                     Table = typeof(TParent),
-                    Column = DatabaseSchemata.GetPrimaryKeyByName(foreignKeyAttribute.PrimaryKeyColumnName, typeof(TParent))
+                    Column = DatabaseSchemata.GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, typeof(TParent))
                 };
 
                 join.JoinEntity = new SqlTableColumnPair
@@ -173,84 +170,15 @@ namespace OR_M_Data_Entities.Expressions
                     Column = DatabaseSchemata.GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, typeof(TChild))
                 };
 
+                join.Type = joinType;
+
                 joins.Add(join);
             }
 
             return joins;
         }
 
-        #region Helpers
-        private string _enumerateList(ICollection list)
-        {
-            var result = "";
-
-            foreach (var item in list)
-            {
-                var parameter = _parameters.GetNextParameter();
-                _parameters.Add(parameter, item);
-
-                result += parameter + ",";
-            }
-
-            return result.TrimEnd(',');
-        }
-
-        private string _getComparisonString(SqlWhere where)
-        {
-            if (where.ComparisonType == ComparisonType.Contains)
-            {
-                return where.ObjectCompareValue.IsList() ? " {0} IN ({1}) " : " {0} LIKE {1}";
-            }
-
-            switch (where.ComparisonType)
-            {
-                case ComparisonType.BeginsWith:
-                case ComparisonType.EndsWith:
-                    return " {0} LIKE {1}";
-                case ComparisonType.Equals:
-                    return "{0} = {1}";
-                case ComparisonType.EqualsIgnoreCase:
-                    return "";
-                case ComparisonType.EqualsTruncateTime:
-                    return "";
-                case ComparisonType.GreaterThan:
-                    return "{0} > {1}";
-                case ComparisonType.GreaterThanEquals:
-                    return "{0} >= {1}";
-                case ComparisonType.LessThan:
-                    return "{0} < {1}";
-                case ComparisonType.LessThanEquals:
-                    return "{0} <= {1}";
-                case ComparisonType.NotEqual:
-                    return "{0} != {1}";
-                default:
-                    throw new ArgumentOutOfRangeException("comparison");
-            }
-        }
         #endregion
-
-        #endregion
-
-        private object _resolveCompareValue(SqlWhere where)
-        {
-            if (where.ComparisonType == ComparisonType.Contains
-                && where.ObjectCompareValue.IsList())
-            {
-                return where.ObjectCompareValue;
-            }
-
-            switch (where.ComparisonType)
-            {
-                case ComparisonType.Contains:
-                    return "%" + Convert.ToString(where.ObjectCompareValue) + "%";
-                case ComparisonType.BeginsWith:
-                    return Convert.ToString(where.ObjectCompareValue) + "%";
-                case ComparisonType.EndsWith:
-                    return "%" + Convert.ToString(where.ObjectCompareValue);
-                default:
-                    return where.ObjectCompareValue;
-            }
-        }
 
         private void ResolveExpression()
         {
@@ -260,6 +188,7 @@ namespace OR_M_Data_Entities.Expressions
 
             _sql = string.Empty;
 
+            // Turn the Where Lambda Statements into Sql
             var where = new List<SqlWhere>();
 
             foreach (var resolution in _where.Select(item => ResolveWhere(item as dynamic)))
@@ -267,34 +196,37 @@ namespace OR_M_Data_Entities.Expressions
                 @where.AddRange(resolution);
             }
 
+            // Turn the Inner Join Lambda Statements into Sql
             var innerJoin = new List<SqlJoin>();
 
-            foreach (var item in _innerJoins)
+            foreach (var resolution in _innerJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Inner)))
             {
-                if (item is SqlJoin)
+                if (resolution is SqlJoin)
                 {
-                    @innerJoin.Add(item as SqlJoin);
+                    @innerJoin.Add(resolution);
                 }
                 else
                 {
-                    @innerJoin.AddRange(ResolveJoin(item as dynamic));
+                    @innerJoin.AddRange(resolution);
                 }
             }
 
+            // Turn the Left Join Lambda Statements into Sql
             var leftJoin = new List<SqlJoin>();
 
-            foreach (var item in _leftJoins)
+            foreach (var resolution in _leftJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Left)))
             {
-                if (item is SqlJoin)
+                if (resolution is SqlJoin)
                 {
-                    @leftJoin.Add(item as SqlJoin);
+                    @leftJoin.Add(resolution);
                 }
                 else
                 {
-                    @leftJoin.AddRange(ResolveJoin(item as dynamic));
+                    @leftJoin.AddRange(resolution);
                 }
             }
 
+            // Turn the Select Lambda Statements into Sql
             var select = new List<SqlTableColumnPair>();
 
             foreach (var resolution in _select.Select(item => ResolveSelect(item as dynamic)))
@@ -302,81 +234,38 @@ namespace OR_M_Data_Entities.Expressions
                 @select.AddRange(resolution);
             }
 
-            var hasLeftJoins = leftJoin.Count > 0;
-            var hasInnerJoins = innerJoin.Count > 0;
-            var hasJoins = hasInnerJoins || hasLeftJoins;
             var selectTopModifier = _take == -1 ? string.Empty : string.Format(" TOP {0} ", _take);
             var selectDistinctModifier = _distinct ? "DISTINCT" : string.Empty;
-            var validationStatements = new List<string>();
 
             // add the select modifier
             _sql += string.Format(" SELECT {0}{1} ", selectDistinctModifier, selectTopModifier);
 
-            foreach (var item in @select)
-            {
-                _sql += string.Format("{0},", item.GetSelectColumnTextWithAlias());
-            }
+            var selectText = @select.Aggregate(string.Empty, (current, item) => current + string.Format("{0},", item.GetSelectColumnTextWithAlias()));
 
             // trim the ending comma
-            _sql = _sql.TrimEnd(',');
+            _sql += selectText.TrimEnd(',');
 
             _sql += string.Format(" FROM [{0}] ", _from);
 
-            foreach (var item in @innerJoin)
+            var innerJoinText = @innerJoin.Aggregate(string.Empty, (current, item) => current + item.GetJoinText());
+
+            if (!string.IsNullOrWhiteSpace(innerJoinText))
             {
-                _sql += item.GetJoinText();
+                _sql += innerJoinText;
             }
 
-            foreach (var item in @leftJoin)
+            var leftJoinText = @leftJoin.Aggregate(string.Empty, (current, item) => current + item.GetJoinText());
+
+            if (!string.IsNullOrWhiteSpace(leftJoinText))
             {
-                _sql += item.GetJoinText();
+                _sql += leftJoinText;
             }
 
-            foreach (var item in @where)
-            {
-                //var partOfValidation = _getComparisonString(item);
-                //var leftSide = !item.ShouldCast
-                //    ? string.Format(" [{0}].[{1}] ",
-                //        item.TableName,
-                //        item.ColumnName)
-                //    : Cast(item);
+            var validationStatements = @where.Select(item => item.GetWhereText(_parameters)).ToList();
 
-                //var rightSide = "";
+            var finalValidationStatement = validationStatements.Aggregate(string.Empty, (current, validationStatement) => current + string.Format(string.IsNullOrWhiteSpace(current) ? " WHERE {0}" : " AND {0}", validationStatement));
 
-                //if (item.CompareValue is ExpressionSelectResult)
-                //{
-                //    var compareValue = item.CompareValue as ExpressionSelectResult;
-                //    rightSide = !compareValue.ShouldCast
-                //        ? string.Format("[{0}].[{1}]", compareValue.TableName, compareValue.ColumnName)
-                //        : Cast(compareValue, false);
-                //}
-                //else if (ExpressionTypeTransform.IsList(item.CompareValue))
-                //{
-                //    rightSide = _enumerateList(item.CompareValue as ICollection);
-                //}
-                //else
-                //{
-                //    var parameter = _getNextParameter();
-                //    var compareValue = _resolveCompareValue(item);
-                //    rightSide = parameter;
-
-                //    if (item.CompareValue is DataTransformContainer)
-                //    {
-                //        rightSide = Cast(parameter, ((DataTransformContainer)item.CompareValue).Transform);
-                //        compareValue = ((DataTransformContainer)item.CompareValue).Value;
-                //    }
-
-                //    _parameters.Add(parameter, compareValue);
-                //}
-
-                validationStatements.Add(item.GetWhereText(_parameters));
-            }
-
-            for (var i = 0; i < validationStatements.Count; i++)
-            {
-                _sql += string.Format(i == 0 ? " WHERE {0}" : " AND {0}",
-                    validationStatements[i]);
-            }
+            _sql += finalValidationStatement;
         }
 
         #region Data Retrieval
@@ -392,15 +281,11 @@ namespace OR_M_Data_Entities.Expressions
 
         public T First<T>()
         {
-            _results = new List<T>();
+            ResolveExpression();
 
             using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
             {
-                var executionResult = reader.Select();
-
-                _results.Add(executionResult);
-
-                return executionResult;
+                return reader.Select();
             }
         }
 
@@ -416,29 +301,21 @@ namespace OR_M_Data_Entities.Expressions
 
         public List<T> All<T>()
         {
+            ResolveExpression();
+
             using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
             {
-                _results = new List<T>();
-
-                foreach (var item in reader)
-                {
-                    _results.Add(item);
-                }
-
-                return _results;
+                return reader.Cast<T>().ToList();
             }
         }
 
         public IEnumerator GetEnumerator<T>()
         {
+            ResolveExpression();
+
             var reader = _context.ExecuteQuery<T>(_sql, _parameters);
 
-            foreach (var item in reader)
-            {
-                _results.Add(item);
-
-                yield return item;
-            }
+            return reader.Cast<T>().GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

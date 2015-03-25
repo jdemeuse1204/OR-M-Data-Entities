@@ -10,7 +10,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Commands.Support
+namespace OR_M_Data_Entities.Commands.StatementParts
 {
 	public sealed class InsertItem
 	{

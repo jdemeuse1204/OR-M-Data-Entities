@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +12,7 @@ using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public class SqlSelect : IEnumerable<SqlColumn>
+    public sealed class SqlSelect : IEnumerable<SqlColumn>
     {
         private readonly List<SqlColumn> _list;
         public IEnumerable<SqlColumn> Columns { get { return _list; } }

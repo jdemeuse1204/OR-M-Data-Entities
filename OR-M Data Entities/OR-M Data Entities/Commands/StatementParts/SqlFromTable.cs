@@ -1,14 +1,21 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+
+using System;
 using OR_M_Data_Entities.Commands.Secure;
 using OR_M_Data_Entities.Data;
 
-namespace OR_M_Data_Entities.Commands.Support
+namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public abstract class SqlTable : SqlSecureExecutable
+    public abstract class SqlFromTable : SqlSecureExecutable
     {
         protected string TableName { get; set; }
 
-        protected SqlTable()
+        protected SqlFromTable()
         {
             TableName = string.Empty;
         }

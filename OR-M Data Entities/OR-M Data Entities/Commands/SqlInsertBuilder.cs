@@ -8,12 +8,13 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Reflection;
+using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands
 {
-    public sealed class SqlInsertBuilder : SqlTable, ISqlBuilder
+    public sealed class SqlInsertBuilder : SqlFromTable, ISqlBuilder
 	{
 		#region Properties
 		private List<InsertItem> _insertItems { get; set; }

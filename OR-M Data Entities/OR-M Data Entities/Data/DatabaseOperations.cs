@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * (c) 2015 James Demeuse
+ */
+using System;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
@@ -66,14 +72,14 @@ namespace OR_M_Data_Entities.Data
         {
             if (where.ComparisonType == ComparisonType.Contains)
             {
-                return where.ObjectCompareValue.IsList() ? "IN" : "LIKE}";
+                return where.ObjectCompareValue.IsList() ? "IN" : "LIKE";
             }
 
             switch (where.ComparisonType)
             {
                 case ComparisonType.BeginsWith:
                 case ComparisonType.EndsWith:
-                    return "LIKE}";
+                    return "LIKE";
                 case ComparisonType.Equals:
                     return "=";
                 case ComparisonType.EqualsIgnoreCase:
@@ -83,7 +89,7 @@ namespace OR_M_Data_Entities.Data
                 case ComparisonType.GreaterThan:
                     return ">";
                 case ComparisonType.GreaterThanEquals:
-                    return ">=}";
+                    return ">=";
                 case ComparisonType.LessThan:
                     return "<";
                 case ComparisonType.LessThanEquals:
