@@ -61,6 +61,7 @@
     <Compile Include="Commands\Support\ISqlBuilder.cs" />
     <Compile Include="Commands\StatementParts\SqlJoin.cs" />
     <Compile Include="Commands\Support\KeyContainer.cs" />
+    <Compile Include="Commands\Support\SqlFunctionTextBuilder.cs" />
     <Compile Include="Commands\Support\SqlTable.cs" />
     <Compile Include="Commands\Support\SqlValidation.cs" />
     <Compile Include="Commands\StatementParts\SqlWhere.cs" />

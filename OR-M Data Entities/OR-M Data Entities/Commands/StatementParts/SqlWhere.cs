@@ -36,7 +36,7 @@ namespace OR_M_Data_Entities.Commands.StatementParts
                 var sqlValue = (SqlValue) ObjectCompareValue;
 
                 parameters.Add(nextParameter, sqlValue.Value);
-                compareString = sqlValue.GetValueText(nextParameter);
+                compareString = sqlValue.GetValueText(parameters);
             }
             else
             {

@@ -404,12 +404,13 @@ namespace OR_M_Data_Entities.Expressions
 
             if (isConverting)
             {
-                transformResult.AddFunction(DbFunctions.Convert);
+                // only from where statement
+                transformResult.AddFunction(DbFunctions.Convert, transform, 1);
             }
 
             if (isCasting)
             {
-                transformResult.AddFunction(DbFunctions.Cast);
+                transformResult.AddFunction(DbFunctions.Cast, transform);
             }
 
             return transformResult;

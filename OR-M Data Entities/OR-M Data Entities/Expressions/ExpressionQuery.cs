@@ -320,7 +320,7 @@ namespace OR_M_Data_Entities.Expressions
             // trim the ending comma
             _sql = _sql.TrimEnd(',');
 
-            _sql += string.Format("FROM [{0}] ", _from);
+            _sql += string.Format(" FROM [{0}] ", _from);
 
             foreach (var item in @innerJoin)
             {

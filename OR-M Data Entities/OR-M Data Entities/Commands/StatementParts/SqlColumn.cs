@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Reflection;
+using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public class SqlColumn
+    public class SqlColumn : SqlFunctionTextBuilder
     {
         #region Constructor
         public SqlColumn(MemberInfo columnInfo)
@@ -17,7 +16,6 @@ namespace OR_M_Data_Entities.Commands.StatementParts
 
         public SqlColumn()
         {
-            _functionList = new Dictionary<int, object[]>();
         }
         #endregion
 
@@ -25,25 +23,9 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         public MemberInfo Column { get; set; }
 
         public SqlDbType DataType { get; set; }
-
-        private readonly Dictionary<int, object[]> _functionList;
-        public IEnumerable<KeyValuePair<int, object[]>> FunctionList
-        {
-            get { return _functionList; }
-        }
         #endregion
 
         #region Methods
-        public void AddFunction(Func<object, SqlDbType, object> function, SqlDbType dataType)
-        {
-            _functionList.Add(_functionList.Count + 1, new object[] { function, dataType });
-        }
-
-        public void AddFunction(Func<SqlDbType, object, int?, object> function, SqlDbType dataType, int? style)
-        {
-            _functionList.Add(_functionList.Count + 1, new object[] { function, dataType, style });
-        }
-
         public string GetColumnName()
         {
             return DatabaseSchemata.GetColumnName(Column);
@@ -64,7 +46,7 @@ namespace OR_M_Data_Entities.Commands.StatementParts
             var columnName = GetColumnName();
             var result = string.Format("[{0}].[{1}]", tableName, columnName);
 
-            foreach (var function in _functionList)
+            foreach (var function in FunctionList)
             {
                 var functionName = ((dynamic)function.Value[0]).Method.Name.ToUpper();
                 var alias = (includeAlias ? string.Format(" as '{0}'", columnName) : string.Empty);

@@ -1,17 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data;
+using OR_M_Data_Entities.Commands.Support;
 
 namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public class SqlValue
+    public class SqlValue : SqlFunctionTextBuilder
     {
         #region Constructor
         public SqlValue(object value, SqlDbType dataType)
         {
             Value = value;
             DataType = dataType;
-            _functionList = new Dictionary<int, object>();
         }
         #endregion
 
@@ -19,33 +18,43 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         public object Value { get; set; }
 
         public SqlDbType DataType { get; set; }
-
-        private readonly Dictionary<int, object> _functionList;
-        public IEnumerable<KeyValuePair<int, object>> FunctionList
-        {
-            get { return _functionList; }
-        }
         #endregion
 
         #region Methods
-        public void AddFunction(Func<object, SqlDbType, object> function)
-        {
-            _functionList.Add(_functionList.Count + 1, function);
-        }
 
-        public void AddFunction(Func<SqlDbType, object, int?, object> function)
+        public string GetValueText(Dictionary<string, object> parameters)
         {
-            _functionList.Add(_functionList.Count + 1, function);
-        }
+            var result = string.Empty;
+            var parameter = parameters.GetNextParameter();
 
-        public string GetValueText(string parameterName)
-        {
-            var result = string.Format("{0}", parameterName);
-
-            foreach (var function in _functionList)
+            if (Value is SqlTableColumnPair)
             {
-                var name = function.Value;
-                result = string.Format("{0}{1}{2}", "", result, "");
+                result = ((SqlTableColumnPair)Value).GetSelectColumnText();
+            }
+            else
+            {
+                result = parameter;
+                parameters.Add(parameter, Value);
+            }
+
+            foreach (var function in FunctionList)
+            {
+                var functionName = ((dynamic)function.Value[0]).Method.Name.ToUpper();
+
+                switch ((string)functionName)
+                {
+                    case "CAST":
+                        result = string.Format(" CAST({0} as {1})",
+                            result,
+                            function.Value[1]);
+                        break;
+                    case "CONVERT":
+                        result = string.Format("CONVERT({0},{1},{2})",
+                            function.Value[1],
+                            result,
+                            (function.Value[2] == null ? string.Empty : function.Value[2].ToString()));
+                        break;
+                }
             }
 
             return result;

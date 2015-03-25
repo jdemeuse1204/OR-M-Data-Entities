@@ -29,7 +29,7 @@ namespace OR_M_Data_Entities.Data
                 String.Equals(methodCallExpression.Method.Name, methodName, StringComparison.CurrentCultureIgnoreCase);
         }
 
-        public static string GetComparisonString(SqlWhere where)
+        public static string GetComparisonStringWithFormatValues(SqlWhere where)
         {
             if (where.ComparisonType == ComparisonType.Contains)
             {
@@ -57,6 +57,39 @@ namespace OR_M_Data_Entities.Data
                     return "{0} <= {1}";
                 case ComparisonType.NotEqual:
                     return "{0} != {1}";
+                default:
+                    throw new ArgumentOutOfRangeException("comparison");
+            }
+        }
+
+        public static string GetComparisonString(SqlWhere where)
+        {
+            if (where.ComparisonType == ComparisonType.Contains)
+            {
+                return where.ObjectCompareValue.IsList() ? "IN" : "LIKE}";
+            }
+
+            switch (where.ComparisonType)
+            {
+                case ComparisonType.BeginsWith:
+                case ComparisonType.EndsWith:
+                    return "LIKE}";
+                case ComparisonType.Equals:
+                    return "=";
+                case ComparisonType.EqualsIgnoreCase:
+                    return "";
+                case ComparisonType.EqualsTruncateTime:
+                    return "";
+                case ComparisonType.GreaterThan:
+                    return ">";
+                case ComparisonType.GreaterThanEquals:
+                    return ">=}";
+                case ComparisonType.LessThan:
+                    return "<";
+                case ComparisonType.LessThanEquals:
+                    return "<=";
+                case ComparisonType.NotEqual:
+                    return "!=";
                 default:
                     throw new ArgumentOutOfRangeException("comparison");
             }
