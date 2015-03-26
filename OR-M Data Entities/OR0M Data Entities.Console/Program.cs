@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Data;
+using System.Data.SqlClient;
+using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -11,11 +14,34 @@ namespace OR0M_Data_Entities.Console
         static void Main(string[] args)
         {
             var context = new SqlContext();
+
+            var testItem = context.From<Contact>().Select<Contact>().Join<Contact,Appointment>((p,c) => p.ID == c.ContactID).First<Contact>();
+
             var currentDateTime = DateTime.Now;
-            var item = context.From<Policy>()
+            
+            var totalMilliseconds = 0d;
+            var max = 1000;
+            var ct = 0;
+
+            for (var i = 0; i < max; i++)
+            {
+                var start = DateTime.Now;
+                var item = context.From<Policy>()
                 .Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
                 .Select<Policy>(w => DbFunctions.Convert(SqlDbType.VarChar, w.CreatedDate, 101))
                 .First<string>();
+                var end = DateTime.Now;
+
+                totalMilliseconds += (end - start).TotalMilliseconds;
+                ct++;
+            }
+
+            var final = totalMilliseconds/ct;
+
+            if (final != 0)
+            {
+                
+            }
         }
 
         //static void RecursiveActivator(object parent, DbSqlContext context)

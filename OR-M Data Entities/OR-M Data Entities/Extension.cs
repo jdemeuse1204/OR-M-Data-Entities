@@ -8,13 +8,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
@@ -25,12 +26,17 @@ namespace OR_M_Data_Entities
             return string.Format("@Param{0}", parameters.Count);
         }
 
-
         public static bool IsList(this object o)
         {
             return o is IList &&
                    o.GetType().IsGenericType &&
                    o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
+        public static bool IsList(this Type type)
+        {
+            return type.IsGenericType &&
+                   type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
 		/// <summary>
@@ -54,47 +60,54 @@ namespace OR_M_Data_Entities
 		        return reader.ToObject();
 		    }
 
-			// Create instance
-			var obj = Activator.CreateInstance<T>();
-
-			// find any unmapped attributes
-            var properties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null 
-                && w.GetCustomAttribute<ForeignKeyAttribute>() == null).ToList();
-
-			// find any columns that have the column name attribute on them,
-			// we need to swtich the column name to the one in the property
-			var columnRenameProperties = obj.GetType().GetProperties().Where(w => w.GetCustomAttribute<ColumnAttribute>() != null).Select(w => w.Name).ToList();
-
-		    for (var i = 0; i < properties.Count; i++)
-		    {
-		        var property = properties[i];
-		        var columnName = property.Name;
-
-		        if (columnRenameProperties.Contains(columnName))
-		        {
-		            columnName = property.GetCustomAttribute<ColumnAttribute>().Name;
-		        }
-
-		        var dbValue = reader[columnName];
-		        DatabaseEntity.SetPropertyValue(obj, property.Name, dbValue is DBNull ? null : dbValue);
-		    }
-
-		    return obj;
+            return reader.GetObjectFromReader<T>();
 		}
 
-	    private static T ToObjectX<T>(this SqlDataReader reader, string connectionString)
+	    private static T GetObjectFromReader<T>(this SqlDataReader reader)
 	    {
-            var result = ToObject<T>(reader);
+            // Create instance
+            var instance = Activator.CreateInstance<T>();
 
-	        if (result == null) return result;
+            // find any unmapped attributes
+            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
 
-	        using (var context = new DbSqlContext(connectionString))
-	        {
-	            //_recursiveActivator(result, context);
-	        }
+            foreach (var property in properties)
+            {
+                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+                var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
 
-	        return result;
+                instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
+            }
+
+	        return instance;
 	    }
+
+        private static void _setPropertyValue(this object entity, PropertyInfo property, object value)
+        {
+            var propertyType = property.PropertyType;
+
+            //Nullable properties have to be treated differently, since we 
+            //  use their underlying property to set the value in the object
+            if (propertyType.IsGenericType
+                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                //if it's null, just set the value from the reserved word null, and return
+                if (value == null)
+                {
+                    property.SetValue(entity, null, null);
+                    return;
+                }
+
+                //Get the underlying type property instead of the nullable generic
+                propertyType = new NullableConverter(property.PropertyType).UnderlyingType;
+            }
+
+            //use the converter to get the correct value
+            property.SetValue(
+                entity,
+                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
+                null);
+        }
 
         //private static void _recursiveActivator(object parent, DbSqlContext context)
         //{

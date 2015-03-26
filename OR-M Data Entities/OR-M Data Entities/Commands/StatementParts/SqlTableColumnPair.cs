@@ -9,7 +9,7 @@ using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Commands.StatementParts
 {
-    public sealed class SqlTableColumnPair : SqlColumn
+    public sealed class SqlTableColumnPair : SqlColumn, IEquatable<SqlTableColumnPair>
     {
         public Type Table { get; set; }
 
@@ -26,6 +26,11 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         public string GetSelectColumnTextWithAlias()
         {
             return GetColumnTextWithAlias(GetTableName());
+        }
+
+        public bool Equals(SqlTableColumnPair other)
+        {
+            return Table == other.Table && Column == other.Column;
         }
     }
 }

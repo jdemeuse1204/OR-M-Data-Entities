@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Commands;
+using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -150,6 +152,21 @@ namespace OR_M_Data_Entities.Data
                w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
         }
 
+        public static bool HasForeignKeys<T>()
+        {
+            return HasForeignKeys(typeof(T));
+        }
+
+        public static bool HasForeignKeys(Type entityType)
+        {
+            return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
+        }
+
+        public static bool HasForeignKeys(object entity)
+        {
+            return HasForeignKeys(entity.GetType());
+        }
+
         public static List<PropertyInfo> GetTableFields(object entity)
         {
             return GetTableFields(entity.GetType());
@@ -181,6 +198,85 @@ namespace OR_M_Data_Entities.Data
         public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName<T>()
         {
             return GetSelectAllFieldsAndTableName(typeof(T));
-        }  
+        }
+
+        public static List<SqlTableColumnPair> GetTableColumnPairsFromTable(Type type)
+        {
+            return GetTableFields(type).Select(w => new SqlTableColumnPair
+            {
+                Column = w,
+                Table = type,
+                DataType = GetSqlDbType(w.PropertyType)
+            }).ToList();
+        } 
+
+        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive<T>(out List<Type> distinctTableTypes) where T : class
+        {
+            return GetForeignKeyJoinsRecursive(typeof(T), out distinctTableTypes);
+        }
+
+        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive(object entity, out List<Type> distinctTableTypes)
+        {
+            return GetForeignKeyJoinsRecursive(entity.GetType(), out distinctTableTypes);
+        }
+
+        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive(Type type, out List<Type> distinctTableTypes)
+        {
+            var result = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
+            distinctTableTypes = new List<Type>();
+
+            _addForeignKeyJoinsRecursive(result, type, distinctTableTypes);
+
+            return result;
+        }
+
+        private static void _addForeignKeyJoinsRecursive(Dictionary<KeyValuePair<Type, Type>, SqlJoin> result, Type type, List<Type> distinctTableTypes)
+        {
+            var foreignKeys = GetForeignKeys(type);
+
+            foreach (var foreignKey in foreignKeys)
+            {
+                var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
+                var fkPropertyType = foreignKey.PropertyType.IsList()
+                    ? foreignKey.PropertyType.GetGenericArguments()[0]
+                    : foreignKey.PropertyType;
+                var key = new KeyValuePair<Type, Type>(type, fkPropertyType);
+
+                // make sure the join isnt already added
+                if (result.ContainsKey(key)) continue;
+
+                if (!distinctTableTypes.Contains(type))
+                {
+                    distinctTableTypes.Add(type);
+                }
+
+                if (!distinctTableTypes.Contains(fkPropertyType))
+                {
+                    distinctTableTypes.Add(fkPropertyType);
+                }
+
+                result.Add(key, new SqlJoin
+                {
+                    ParentEntity = new SqlTableColumnPair
+                    {
+                        Table = type,
+                        Column = GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, type)
+                    },
+
+                    JoinEntity = new SqlTableColumnPair
+                    {
+                        Table = fkPropertyType,
+                        Column = GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType)
+                    },
+
+                    Type = JoinType.Inner
+                });
+
+                if (HasForeignKeys(fkPropertyType))
+                {
+                    _addForeignKeyJoinsRecursive(result, fkPropertyType, distinctTableTypes);
+                }
+            }
+        }
     }
 }

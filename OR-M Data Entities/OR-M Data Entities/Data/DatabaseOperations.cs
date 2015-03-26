@@ -5,6 +5,8 @@
  * (c) 2015 James Demeuse
  */
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
@@ -15,6 +17,7 @@ namespace OR_M_Data_Entities.Data
     public static class DatabaseOperations
     {
         #region Casting and Converting
+
         public static bool IsCasting(object expression)
         {
             return _isTransform(expression, "Cast");
@@ -32,7 +35,7 @@ namespace OR_M_Data_Entities.Data
             var methodCallExpression = (MethodCallExpression)expression;
 
             return methodCallExpression.Method.DeclaringType == typeof(DbFunctions) &&
-                String.Equals(methodCallExpression.Method.Name, methodName, StringComparison.CurrentCultureIgnoreCase);
+                   String.Equals(methodCallExpression.Method.Name, methodName, StringComparison.CurrentCultureIgnoreCase);
         }
 
         public static string GetComparisonStringWithFormatValues(SqlWhere where)

@@ -197,32 +197,47 @@ namespace OR_M_Data_Entities.Expressions
             }
 
             // Turn the Inner Join Lambda Statements into Sql
-            var innerJoin = new List<SqlJoin>();
+            var innerJoin = new Dictionary<KeyValuePair<Type,Type>,SqlJoin>();
 
             foreach (var resolution in _innerJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Inner)))
             {
                 if (resolution is SqlJoin)
                 {
-                    @innerJoin.Add(resolution);
+                    innerJoin.Add(
+                        new KeyValuePair<Type, Type>(
+                            ((SqlJoin)resolution).ParentEntity.Table,
+                            ((SqlJoin)resolution).JoinEntity.Table), 
+                        resolution);
                 }
                 else
                 {
-                    @innerJoin.AddRange(resolution);
+                    foreach (var item in resolution)
+                    {
+                        innerJoin.Add(item.Key, item.Value);
+                    }
                 }
             }
 
             // Turn the Left Join Lambda Statements into Sql
-            var leftJoin = new List<SqlJoin>();
+            var leftJoin = new Dictionary<KeyValuePair<Type,Type>,SqlJoin>();
 
             foreach (var resolution in _leftJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Left)))
             {
                 if (resolution is SqlJoin)
                 {
-                    @leftJoin.Add(resolution);
+                    leftJoin.Add(
+                        new KeyValuePair<Type, Type>(
+                            ((SqlJoin)resolution).ParentEntity.Table,
+                            ((SqlJoin)resolution).JoinEntity.Table), 
+                        resolution);
                 }
                 else
                 {
-                    @leftJoin.AddRange(resolution);
+                    // REMOVE ME DAMMIT!
+                    foreach (var item in resolution)
+                    {
+                        leftJoin.Add(item.Key, item.Value);
+                    }
                 }
             }
 
@@ -232,6 +247,29 @@ namespace OR_M_Data_Entities.Expressions
             foreach (var resolution in _select.Select(item => ResolveSelect(item as dynamic)))
             {
                 @select.AddRange(resolution);
+            }
+
+
+            var distinctTypes = select.Select(w => w.Table).Distinct().ToList();
+
+            var typeHasForeignKeys = DatabaseSchemata.HasForeignKeys(distinctTypes.First());
+
+            // Resolve Joins And Selects for FKs
+            // make sure all joins and fields are incorporated into sql
+            if (distinctTypes.Count == 1 && typeHasForeignKeys)
+            {
+                List<Type> distinctSelectTypes;
+                var foreignKeyJoins = DatabaseSchemata.GetForeignKeyJoinsRecursive(distinctTypes.First(), out distinctSelectTypes);
+
+                foreach (var keyJoin in foreignKeyJoins.Where(keyJoin => !innerJoin.ContainsKey(keyJoin.Key)))
+                {
+                    innerJoin.Add(keyJoin.Key, keyJoin.Value);
+                }
+
+                foreach (var distinctSelectType in distinctSelectTypes)
+                {
+                    select.AddRange(DatabaseSchemata.GetTableColumnPairsFromTable(distinctSelectType).Where(w => !select.Contains(w)).ToList());
+                }
             }
 
             var selectTopModifier = _take == -1 ? string.Empty : string.Format(" TOP {0} ", _take);
@@ -247,14 +285,14 @@ namespace OR_M_Data_Entities.Expressions
 
             _sql += string.Format(" FROM [{0}] ", _from);
 
-            var innerJoinText = @innerJoin.Aggregate(string.Empty, (current, item) => current + item.GetJoinText());
+            var innerJoinText = @innerJoin.Aggregate(string.Empty, (current, item) => current + item.Value.GetJoinText());
 
             if (!string.IsNullOrWhiteSpace(innerJoinText))
             {
                 _sql += innerJoinText;
             }
 
-            var leftJoinText = @leftJoin.Aggregate(string.Empty, (current, item) => current + item.GetJoinText());
+            var leftJoinText = @leftJoin.Aggregate(string.Empty, (current, item) => current + item.Value.GetJoinText());
 
             if (!string.IsNullOrWhiteSpace(leftJoinText))
             {

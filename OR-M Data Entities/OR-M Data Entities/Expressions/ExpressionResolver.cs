@@ -31,9 +31,9 @@ namespace OR_M_Data_Entities.Expressions
             return evaluationResults;
         }
 
-        protected static IEnumerable<SqlJoin> ResolveJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression, JoinType joinType)
+        protected static Dictionary<KeyValuePair<Type, Type>, SqlJoin> ResolveJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression, JoinType joinType)
         {
-            var evaluationResults = new List<SqlJoin>();
+            var evaluationResults = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
 
             _evaluateJoinExpressionTree(expression.Body, evaluationResults, joinType);
 
@@ -112,21 +112,33 @@ namespace OR_M_Data_Entities.Expressions
             }
         }
 
-        private static void _evaluateJoinExpressionTree(Expression expression, List<SqlJoin> evaluationResults, JoinType joinType)
+        private static void _evaluateJoinExpressionTree(Expression expression, Dictionary<KeyValuePair<Type, Type>, SqlJoin> evaluationResults, JoinType joinType)
         {
             if (HasLeft(expression))
             {
                 var result = _evaluateJoin(((dynamic)expression).Right, joinType);
+                var key = new KeyValuePair<Type, Type>(
+                    ((SqlJoin) result).ParentEntity.Table,
+                    ((SqlJoin) result).JoinEntity.Table);
 
-                evaluationResults.Add(result);
+                if (!evaluationResults.ContainsKey(key))
+                {
+                    evaluationResults.Add(key, result);
+                }
 
                 _evaluateJoinExpressionTree(((BinaryExpression)expression).Left, evaluationResults, joinType);
             }
             else
             {
                 var result = _evaluateJoin((dynamic)expression, joinType);
+                var key = new KeyValuePair<Type, Type>(
+                    ((SqlJoin)result).ParentEntity.Table,
+                    ((SqlJoin)result).JoinEntity.Table);
 
-                evaluationResults.Add(result);
+                if (!evaluationResults.ContainsKey(key))
+                {
+                    evaluationResults.Add(key, result);
+                }
             }
         }
         #endregion

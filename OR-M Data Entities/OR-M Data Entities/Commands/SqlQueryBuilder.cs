@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
 
@@ -16,7 +17,7 @@ namespace OR_M_Data_Entities.Commands
     public sealed class SqlQueryBuilder : SqlValidation, ISqlBuilder
     {
         #region Properties
-        private string _join { get; set; }
+        private Dictionary<string, QueryBuilderJoin> _joins { get; set; } 
         private string _select { get; set; }
         private string _columns { get; set; }
         private string _straightSelect { get; set; }
@@ -26,11 +27,11 @@ namespace OR_M_Data_Entities.Commands
         #region Constructor
         public SqlQueryBuilder()
         {
-            _join = string.Empty;
             _select = string.Empty;
             _columns = string.Empty;
             _straightSelect = string.Empty;
             _parameters = new Dictionary<string, object>();
+            _joins = new Dictionary<string, QueryBuilderJoin>();
         }
         #endregion
 
@@ -47,8 +48,10 @@ namespace OR_M_Data_Entities.Commands
                 throw new QueryNotValidException("Table statement missing");
             }
 
+            var joinSql = _joins.Aggregate(string.Empty, (current, @join) => current + @join.Value.GetJoinText());
+
             var sql = string.IsNullOrWhiteSpace(_straightSelect) ?
-                _select + _columns.TrimEnd(',') + string.Format(" FROM {0} ", TableName) + _join + GetValidation() :
+                _select + _columns.TrimEnd(',') + string.Format(" FROM {0} ", TableName) + joinSql + GetValidation() :
                 _straightSelect;
 
             var cmd = new SqlCommand(sql, connection);
@@ -107,27 +110,47 @@ namespace OR_M_Data_Entities.Commands
 
         public void AddJoin(JoinType type, string parentTable, string parentField, string childTable, string childField)
         {
+            var joinKey = parentTable + childField;
+
+            if (_joins.ContainsKey(joinKey)) return;
+
             switch (type)
             {
                 case JoinType.Equi:
-                    _join += string.Format(",{0}", childTable);
-                    AddWhere(parentTable, parentField, childTable, childField);
+
+                    _joins.Add(joinKey, new QueryBuilderJoin
+                    {
+                        JoinColumnName = childField,
+                        JoinTableName = childTable,
+                        ParentColumnName = parentField,
+                        ParentTableName = parentTable,
+                        Type = type
+                    });
+
                     break;
                 case JoinType.Inner:
-                    _join += string.Format(" INNER JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
-                        parentTable,
-                        parentTable,
-                        parentField,
-                        childTable,
-                        childField);
+
+                    _joins.Add(joinKey, new QueryBuilderJoin
+                    {
+                        JoinColumnName = childField,
+                        JoinTableName = childTable,
+                        ParentColumnName = parentField,
+                        ParentTableName = parentTable,
+                        Type = type
+                    });
+
                     break;
                 case JoinType.Left:
-                    _join += string.Format(" LEFT JOIN [{0}] On [{1}].[{2}] = [{3}].[{4}] ",
-                        parentTable,
-                        parentTable,
-                        parentField,
-                        childTable,
-                        childField);
+
+                    _joins.Add(joinKey, new QueryBuilderJoin
+                    {
+                        JoinColumnName = childField,
+                        JoinTableName = childTable,
+                        ParentColumnName = parentField,
+                        ParentTableName = parentTable,
+                        Type = type
+                    });
+
                     break;
             }
         }
@@ -136,7 +159,44 @@ namespace OR_M_Data_Entities.Commands
         #region Helpers
         private void _createSelectStatement(Type tableType, string beginningSelectStatement)
         {
+            _select = string.Empty;
             _select = beginningSelectStatement;
+
+            if (DatabaseSchemata.HasForeignKeys(tableType))
+            {
+                List<Type> distinctTables;
+                var allJoinsFromForeignKeys = DatabaseSchemata.GetForeignKeyJoinsRecursive(tableType, out distinctTables);
+                
+                foreach (var allJoinsFromForeignKey in allJoinsFromForeignKeys)
+                {
+                    var key = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Key.Key) +
+                              DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Key.Value);
+                    // add joins
+                    _joins.Add(key, new QueryBuilderJoin
+                    {
+                        ParentTableName = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Value.ParentEntity.Table),
+                        ParentColumnName = DatabaseSchemata.GetColumnName(allJoinsFromForeignKey.Value.ParentEntity.Column),
+
+                        JoinTableName = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Value.JoinEntity.Table),
+                        JoinColumnName = DatabaseSchemata.GetColumnName(allJoinsFromForeignKey.Value.JoinEntity.Column),
+
+                        Type = allJoinsFromForeignKey.Value.Type
+                    });
+                }
+
+                foreach (var table in distinctTables)
+                {
+                    var tableNameAndColumnNames = DatabaseSchemata.GetSelectAllFieldsAndTableName(table);
+                    var tName = tableNameAndColumnNames.Key;
+                    var columns = tableNameAndColumnNames.Value;
+
+                    _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}],", tName, column));
+                }
+                
+                _select = _select.TrimEnd(',');
+
+                return;
+            }
 
             var selectAllTableNameAndFields = DatabaseSchemata.GetSelectAllFieldsAndTableName(tableType);
             var tableName = selectAllTableNameAndFields.Key;
@@ -150,5 +210,45 @@ namespace OR_M_Data_Entities.Commands
             _select = _select.TrimEnd(',');
         }
         #endregion
+    }
+
+    class QueryBuilderJoin
+    {
+        public string ParentTableName { get; set; }
+
+        public string ParentColumnName { get; set; }
+
+        public string JoinTableName { get; set; }
+
+        public string JoinColumnName { get; set; }
+
+        public JoinType Type { get; set; }
+
+        public string GetJoinText()
+        {
+            switch (Type)
+            {
+                case JoinType.Equi:
+                    return string.Format("[{0}].[{1}] = [{2}].[{3}]", 
+                        ParentTableName, 
+                        ParentColumnName, 
+                        JoinTableName,
+                        JoinColumnName);
+                case JoinType.Inner:
+                    return string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ", 
+                        JoinTableName,
+                        JoinColumnName, 
+                        ParentTableName, 
+                        ParentColumnName);
+                case JoinType.Left:
+                    return string.Format(" LEFT JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ", 
+                        JoinTableName,
+                        JoinColumnName, 
+                        ParentTableName, 
+                        ParentColumnName);
+                default:
+                    return string.Empty;
+            }
+        }
     }
 }

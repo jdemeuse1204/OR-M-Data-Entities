@@ -90,5 +90,32 @@ namespace OR_M_Data_Entities.Data
                 propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
                 null);
         }
+
+        public static void SetPropertyValue(object entity, PropertyInfo property, object value)
+        {
+            var propertyType = property.PropertyType;
+
+            //Nullable properties have to be treated differently, since we 
+            //  use their underlying property to set the value in the object
+            if (propertyType.IsGenericType
+                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                //if it's null, just set the value from the reserved word null, and return
+                if (value == null)
+                {
+                    property.SetValue(entity, null, null);
+                    return;
+                }
+
+                //Get the underlying type property instead of the nullable generic
+                propertyType = new NullableConverter(property.PropertyType).UnderlyingType;
+            }
+
+            //use the converter to get the correct value
+            property.SetValue(
+                entity,
+                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
+                null);
+        }
     }
 }

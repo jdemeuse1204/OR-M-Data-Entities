@@ -5,7 +5,7 @@
  * (c) 2015 James Demeuse
  */
 
-namespace OR_M_Data_Entities.Mapping
+namespace OR_M_Data_Entities.Mapping.Base
 {
 	public enum SearchablePrimaryKeyType
 	{
