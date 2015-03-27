@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Data;
-using System.Data.SqlClient;
-using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
-using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -16,6 +13,11 @@ namespace OR0M_Data_Entities.Console
             var context = new SqlContext();
 
             var testItem = context.From<Contact>().Select<Contact>().Join<Contact,Appointment>((p,c) => p.ID == c.ContactID).First<Contact>();
+
+            if (testItem != null)
+            {
+                
+            }
 
             var currentDateTime = DateTime.Now;
             
@@ -30,6 +32,12 @@ namespace OR0M_Data_Entities.Console
                 .Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
                 .Select<Policy>(w => DbFunctions.Convert(SqlDbType.VarChar, w.CreatedDate, 101))
                 .First<string>();
+
+                if (item != null)
+                {
+                    
+                }
+
                 var end = DateTime.Now;
 
                 totalMilliseconds += (end - start).TotalMilliseconds;

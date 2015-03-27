@@ -14,6 +14,7 @@ using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -68,13 +69,17 @@ namespace OR_M_Data_Entities
             // Create instance
             var instance = Activator.CreateInstance<T>();
 
+	        var tableName = DatabaseSchemata.GetTableName<T>();
+
             // find any unmapped attributes
             var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
 
             foreach (var property in properties)
             {
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-                var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
+
+                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
 
                 instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
             }

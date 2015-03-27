@@ -82,6 +82,16 @@
     <Compile Include="Entity\SaveAction.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Types\Base\ISqlExpressionResolvable.cs" />
+    <Compile Include="Expressions\Types\Base\SqlExpressionResult.cs" />
+    <Compile Include="Expressions\Types\ForeignKeySelectExpression.cs" />
+    <Compile Include="Expressions\Types\ForeignKeySelectJoinExpression.cs" />
+    <Compile Include="Expressions\Types\ForeignKeySelectWhereExpression.cs" />
+    <Compile Include="Expressions\Types\ForeignKeySelectWhereJoinExpression.cs" />
+    <Compile Include="Expressions\Types\SelectExpression.cs" />
+    <Compile Include="Expressions\Types\SelectJoinExpression.cs" />
+    <Compile Include="Expressions\Types\SelectWhereExpression.cs" />
+    <Compile Include="Expressions\Types\SelectWhereJoinExpression.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
@@ -101,9 +111,7 @@
     <None Include="OR-M Data Entities.licenseheader" />
     <None Include="README.md" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Expressions\Resolver\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

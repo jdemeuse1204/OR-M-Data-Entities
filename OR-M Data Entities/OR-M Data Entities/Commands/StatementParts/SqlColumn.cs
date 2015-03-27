@@ -50,12 +50,14 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         public string _getColumnText(string tableName, bool includeAlias)
         {
             var columnName = GetColumnName();
-            var result = string.Format("[{0}].[{1}]", tableName, columnName);
+            var aliasText = string.Format("{0}{1}", tableName, columnName);
+            var alias = (includeAlias ? string.Format(" as [{0}]", aliasText) : string.Empty);
+            var result = string.Format("[{0}].[{1}]{2}", tableName, columnName, alias);
 
             foreach (var function in FunctionList)
             {
                 var functionName = ((dynamic)function.Value[0]).Method.Name.ToUpper();
-                var alias = (includeAlias ? string.Format(" as '{0}'", columnName) : string.Empty);
+                
 
                 switch ((string)functionName)
                 {
