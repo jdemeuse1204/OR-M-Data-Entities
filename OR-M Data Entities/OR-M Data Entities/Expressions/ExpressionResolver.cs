@@ -15,6 +15,7 @@ using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions
@@ -22,7 +23,7 @@ namespace OR_M_Data_Entities.Expressions
     public abstract class ExpressionResolver
     {
         #region Resolvers
-        protected static IEnumerable<SqlWhere> ResolveWhere<T>(Expression<Func<T, bool>> expression)
+        protected static IEnumerable<SqlWhere> GetWheres<T>(Expression<Func<T, bool>> expression)
         {
             var evaluationResults = new List<SqlWhere>();
 
@@ -31,16 +32,12 @@ namespace OR_M_Data_Entities.Expressions
             return evaluationResults;
         }
 
-        protected static Dictionary<KeyValuePair<Type, Type>, SqlJoin> ResolveJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression, JoinType joinType)
+        protected static void GetJoins<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression, JoinType joinType, SqlJoinCollection evaluationResults)
         {
-            var evaluationResults = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
-
             _evaluateJoinExpressionTree(expression.Body, evaluationResults, joinType);
-
-            return evaluationResults;
         }
 
-        protected static IEnumerable<SqlTableColumnPair> ResolveSelect<T>(Expression<Func<T, object>> expression)
+        protected static IEnumerable<SqlTableColumnPair> GetSelects<T>(Expression<Func<T, object>> expression)
         {
             var evaluationResults = new List<SqlTableColumnPair>();
 
@@ -112,33 +109,21 @@ namespace OR_M_Data_Entities.Expressions
             }
         }
 
-        private static void _evaluateJoinExpressionTree(Expression expression, Dictionary<KeyValuePair<Type, Type>, SqlJoin> evaluationResults, JoinType joinType)
+        private static void _evaluateJoinExpressionTree(Expression expression, SqlJoinCollection evaluationResults, JoinType joinType)
         {
             if (HasLeft(expression))
             {
                 var result = _evaluateJoin(((dynamic)expression).Right, joinType);
-                var key = new KeyValuePair<Type, Type>(
-                    ((SqlJoin) result).ParentEntity.Table,
-                    ((SqlJoin) result).JoinEntity.Table);
 
-                if (!evaluationResults.ContainsKey(key))
-                {
-                    evaluationResults.Add(key, result);
-                }
+                evaluationResults.Add(result);
 
                 _evaluateJoinExpressionTree(((BinaryExpression)expression).Left, evaluationResults, joinType);
             }
             else
             {
                 var result = _evaluateJoin((dynamic)expression, joinType);
-                var key = new KeyValuePair<Type, Type>(
-                    ((SqlJoin)result).ParentEntity.Table,
-                    ((SqlJoin)result).JoinEntity.Table);
 
-                if (!evaluationResults.ContainsKey(key))
-                {
-                    evaluationResults.Add(key, result);
-                }
+                evaluationResults.Add(result);
             }
         }
         #endregion

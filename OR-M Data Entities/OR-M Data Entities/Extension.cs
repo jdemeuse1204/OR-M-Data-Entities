@@ -40,13 +40,14 @@ namespace OR_M_Data_Entities
                    type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
-		/// <summary>
-		/// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="reader"></param>
-		/// <returns></returns>
-        public static T ToObject<T>(this SqlDataReader reader)
+	    /// <summary>
+	    /// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
+	    /// </summary>
+	    /// <typeparam name="T"></typeparam>
+	    /// <param name="reader"></param>
+	    /// <param name="dataReaderLoadType"></param>
+	    /// <returns></returns>
+	    public static T ToObject<T>(this SqlDataReader reader)
 		{
             if (!reader.HasRows) return default(T);
 
@@ -61,10 +62,10 @@ namespace OR_M_Data_Entities
 		        return reader.ToObject();
 		    }
 
-            return reader.GetObjectFromReader<T>();
+            return reader.GetObjectFromReader<T>(DatabaseSchemata.HasForeignKeys<T>() ? DataReaderLoadType.TableColumnLoad : DataReaderLoadType.ColumnLoad);
 		}
 
-	    private static T GetObjectFromReader<T>(this SqlDataReader reader)
+	    private static T GetObjectFromReader<T>(this SqlDataReader reader, DataReaderLoadType dataReaderLoadType)
 	    {
             // Create instance
             var instance = Activator.CreateInstance<T>();
@@ -79,7 +80,9 @@ namespace OR_M_Data_Entities
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
                 // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+                var dbValue = reader[dataReaderLoadType == DataReaderLoadType.ColumnLoad ?
+                    (columnAttribute != null ? columnAttribute.Name : property.Name) :  
+                    tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
 
                 instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
             }

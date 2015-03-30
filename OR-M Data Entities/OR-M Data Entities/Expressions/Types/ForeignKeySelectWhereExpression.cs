@@ -2,9 +2,15 @@
 
 namespace OR_M_Data_Entities.Expressions.Types
 {
-    public class ForeignKeySelectWhereExpression : ISqlExpressionResolvable
+    public class ForeignKeySelectWhereExpression : SqlExpressionResolvableBase
     {
-        public string Resolve()
+        public ForeignKeySelectWhereExpression(ExpressionQuery query)
+            : base(query)
+        {
+            
+        }
+
+        public override void Resolve()
         {
             throw new System.NotImplementedException();
         }

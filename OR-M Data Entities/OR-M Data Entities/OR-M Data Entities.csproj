@@ -75,6 +75,7 @@
     <Compile Include="Data\DataFetching.cs" />
     <Compile Include="Data\DataModifiable.cs" />
     <Compile Include="Data\DataReader.cs" />
+    <Compile Include="Data\DataReaderLoadType.cs" />
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Entity\DbEntityContext.cs" />
     <Compile Include="Entity\DbTable.cs" />
@@ -82,8 +83,8 @@
     <Compile Include="Entity\SaveAction.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\ExpressionResolver.cs" />
-    <Compile Include="Expressions\Types\Base\ISqlExpressionResolvable.cs" />
-    <Compile Include="Expressions\Types\Base\SqlExpressionResult.cs" />
+    <Compile Include="Expressions\Support\SqlJoinCollection.cs" />
+    <Compile Include="Expressions\Types\Base\SqlExpressionResolvableBase.cs" />
     <Compile Include="Expressions\Types\ForeignKeySelectExpression.cs" />
     <Compile Include="Expressions\Types\ForeignKeySelectJoinExpression.cs" />
     <Compile Include="Expressions\Types\ForeignKeySelectWhereExpression.cs" />

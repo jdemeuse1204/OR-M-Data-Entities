@@ -12,6 +12,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
+using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -208,29 +209,28 @@ namespace OR_M_Data_Entities.Data
                 Table = type,
                 DataType = GetSqlDbType(w.PropertyType)
             }).ToList();
-        } 
-
-        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive<T>(out List<Type> distinctTableTypes) where T : class
-        {
-            return GetForeignKeyJoinsRecursive(typeof(T), out distinctTableTypes);
         }
 
-        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive(object entity, out List<Type> distinctTableTypes)
+        public static SqlJoinCollection GetForeignKeyJoinsRecursive<T>() where T : class
         {
-            return GetForeignKeyJoinsRecursive(entity.GetType(), out distinctTableTypes);
+            return GetForeignKeyJoinsRecursive(typeof(T));
         }
 
-        public static Dictionary<KeyValuePair<Type, Type>, SqlJoin> GetForeignKeyJoinsRecursive(Type type, out List<Type> distinctTableTypes)
+        public static SqlJoinCollection GetForeignKeyJoinsRecursive(object entity)
         {
-            var result = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
-            distinctTableTypes = new List<Type>();
+            return GetForeignKeyJoinsRecursive(entity.GetType());
+        }
 
-            _addForeignKeyJoinsRecursive(result, type, distinctTableTypes);
+        public static SqlJoinCollection GetForeignKeyJoinsRecursive(Type type)
+        {
+            var result = new SqlJoinCollection();
+
+            _addForeignKeyJoinsRecursive(result, type);
 
             return result;
         }
 
-        private static void _addForeignKeyJoinsRecursive(Dictionary<KeyValuePair<Type, Type>, SqlJoin> result, Type type, List<Type> distinctTableTypes)
+        private static void _addForeignKeyJoinsRecursive(SqlJoinCollection result, Type type)
         {
             var foreignKeys = GetForeignKeys(type);
 
@@ -245,17 +245,7 @@ namespace OR_M_Data_Entities.Data
                 // make sure the join isnt already added
                 if (result.ContainsKey(key)) continue;
 
-                if (!distinctTableTypes.Contains(type))
-                {
-                    distinctTableTypes.Add(type);
-                }
-
-                if (!distinctTableTypes.Contains(fkPropertyType))
-                {
-                    distinctTableTypes.Add(fkPropertyType);
-                }
-
-                result.Add(key, new SqlJoin
+                result.Add(new SqlJoin
                 {
                     ParentEntity = new SqlTableColumnPair
                     {
@@ -274,7 +264,7 @@ namespace OR_M_Data_Entities.Data
 
                 if (HasForeignKeys(fkPropertyType))
                 {
-                    _addForeignKeyJoinsRecursive(result, fkPropertyType, distinctTableTypes);
+                    _addForeignKeyJoinsRecursive(result, fkPropertyType);
                 }
             }
         }

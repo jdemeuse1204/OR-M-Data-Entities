@@ -2,9 +2,15 @@
 
 namespace OR_M_Data_Entities.Expressions.Types
 {
-    public class SelectExpression : ISqlExpressionResolvable
+    public class SelectExpression : SqlExpressionResolvableBase
     {
-        public string Resolve()
+        public SelectExpression(ExpressionQuery query)
+            : base(query)
+        {
+            
+        }
+
+        public override void Resolve()
         {
             throw new System.NotImplementedException();
         }

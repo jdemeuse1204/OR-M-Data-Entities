@@ -14,6 +14,8 @@ using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Types;
+using OR_M_Data_Entities.Expressions.Types.Base;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions
@@ -21,54 +23,58 @@ namespace OR_M_Data_Entities.Expressions
     public sealed class ExpressionQuery : ExpressionResolver, IEnumerable
     {
         #region Properties
-        private string _from { get; set; }
-        private List<object> _where { get; set; }
-        private List<object> _innerJoins { get; set; }
-        private List<object> _leftJoins { get; set; }
-        private List<object> _select { get; set; }
-        private string _sql { get; set; }
-        private Dictionary<string, object> _parameters { get; set; }
-        private int _take { get; set; }
+        public string FromTableName { get; private set; }
+        public List<object> WheresList { get; private set; }
+        public List<object> InnerJoinsList { get; private set; }
+        public List<object> LeftJoinsList { get; private set; }
+        public List<object> SelectsList { get; private set; }
+        public int TakeTopRows { get; private set; }
+        public Type ReturnDataType { get; private set; }
+        public bool IsDistinct { get; private set; }
+
+        public string Sql { get; set; }
+        public Dictionary<string, object> Parameters { get; set; }
+        #endregion
+
+        #region Fields
         private readonly DataFetching _context;
-        private Type _returnDataType { get; set; }
-        private bool _distinct { get; set; }
         #endregion
 
         #region Constructor
         public ExpressionQuery(string fromTable, DataFetching context)
         {
-            _from = fromTable;
-            _where = new List<object>();
-            _innerJoins = new List<object>();
-            _leftJoins = new List<object>();
-            _select = new List<object>();
-            _sql = string.Empty;
-            _parameters = new Dictionary<string, object>();
-            _take = -1;  // -1 is select *
+            FromTableName = fromTable;
+            WheresList = new List<object>();
+            InnerJoinsList = new List<object>();
+            LeftJoinsList = new List<object>();
+            SelectsList = new List<object>();
+            Sql = string.Empty;
+            Parameters = new Dictionary<string, object>();
+            TakeTopRows = -1;  // -1 is select *
             _context = context;
-            _distinct = false;
+            IsDistinct = false;
         }
         #endregion
 
         #region Add To Expression List
         private void AddWhereExpression<T>(Expression<Func<T, bool>> whereExpression)
         {
-            _where.Add(whereExpression);
+            WheresList.Add(whereExpression);
         }
 
         private void AddInnerJoinExpression<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
         {
-            _innerJoins.Add(joinExpression);
+            InnerJoinsList.Add(joinExpression);
         }
 
         private void AddLeftJoinExpression<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
         {
-            _leftJoins.Add(joinExpression);
+            LeftJoinsList.Add(joinExpression);
         }
 
         private void AddSelectExpression<T>(Expression<Func<T, object>> selectExpression)
         {
-            _select.Add(selectExpression);
+            SelectsList.Add(selectExpression);
         }
         #endregion
 
@@ -93,7 +99,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var joins = _getJoins<TParent, TChild>(JoinType.Inner);
 
-            _innerJoins.AddRange(joins);
+            InnerJoinsList.AddRange(joins);
             return this;
         }
 
@@ -111,7 +117,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var join = _getJoins<TParent, TChild>(JoinType.Left);
 
-            _leftJoins.Add(join);
+            LeftJoinsList.Add(join);
             return this;
         }
 
@@ -119,10 +125,12 @@ namespace OR_M_Data_Entities.Expressions
         {
             AddSelectExpression(result);
 
-            if (_returnDataType == null)
+            if (ReturnDataType != null)
             {
-                _returnDataType = typeof(T);
+                throw new Exception("Cannot return multiple types");
             }
+
+            ReturnDataType = typeof(T);
 
             return this;
         }
@@ -134,13 +142,13 @@ namespace OR_M_Data_Entities.Expressions
 
         public ExpressionQuery Distinct()
         {
-            _distinct = true;
+            IsDistinct = true;
             return this;
         }
 
         public ExpressionQuery Take(int rows)
         {
-            _take = rows;
+            TakeTopRows = rows;
             return this;
         }
 
@@ -180,33 +188,91 @@ namespace OR_M_Data_Entities.Expressions
 
         #endregion
 
+        private SqlExpressionResolvableBase _getExpressionType()
+        {
+            // Check for foreign keys
+            if (DatabaseSchemata.HasForeignKeys(ReturnDataType))
+            {
+                if (_hasJoins())
+                {
+                    if (WheresList.Count > 0)
+                    {
+                        return _createExpressionType<ForeignKeySelectWhereJoinExpression>();
+                    }
+
+                    return _createExpressionType<ForeignKeySelectJoinExpression>();
+                }
+
+                if (WheresList.Count > 0)
+                {
+                    return _createExpressionType<ForeignKeySelectWhereExpression>();
+                }
+
+                return _createExpressionType<ForeignKeySelectExpression>();
+            }
+
+            // no foreign keys exist
+            if (_hasJoins())
+            {
+                if (WheresList.Count > 0)
+                {
+                    return _createExpressionType<SelectWhereJoinExpression>();
+                }
+
+                return _createExpressionType<SelectJoinExpression>();
+            }
+
+            if (WheresList.Count > 0)
+            {
+                return _createExpressionType<SelectWhereExpression>();
+            }
+
+            return _createExpressionType<SelectExpression>();
+        }
+
+        private bool _hasJoins()
+        {
+            return InnerJoinsList.Count != 0 || LeftJoinsList.Count != 0;
+        }
+
+        private T _createExpressionType<T>() where T : SqlExpressionResolvableBase
+        {
+            return Activator.CreateInstance(typeof(T), new object[] { this }) as T;
+        }
+
         private void ResolveExpression()
         {
-            if (_select.Count == 0) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
+            if (SelectsList.Count == 0) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
 
-            // check for auto load attributes
+            // get the expression type            
+            var expression = _getExpressionType();
 
-            _sql = string.Empty;
+            // resolve the expression
+            expression.Resolve();
+
+            // END OF CODE
+
+
 
             // Turn the Where Lambda Statements into Sql
             var where = new List<SqlWhere>();
 
-            foreach (var resolution in _where.Select(item => ResolveWhere(item as dynamic)))
+            foreach (var resolution in WheresList.Select(item => GetWheres(item as dynamic)))
             {
                 @where.AddRange(resolution);
             }
 
             // Turn the Inner Join Lambda Statements into Sql
-            var innerJoin = new Dictionary<KeyValuePair<Type,Type>,SqlJoin>();
+            var innerJoin = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
 
-            foreach (var resolution in _innerJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Inner)))
+            foreach (var resolution in InnerJoinsList.Select(item => item is SqlJoin ? item : GetJoins(item as dynamic, JoinType.Inner)))
             {
                 if (resolution is SqlJoin)
                 {
                     innerJoin.Add(
                         new KeyValuePair<Type, Type>(
                             ((SqlJoin)resolution).ParentEntity.Table,
-                            ((SqlJoin)resolution).JoinEntity.Table), 
+                            ((SqlJoin)resolution).JoinEntity.Table),
                         resolution);
                 }
                 else
@@ -219,16 +285,16 @@ namespace OR_M_Data_Entities.Expressions
             }
 
             // Turn the Left Join Lambda Statements into Sql
-            var leftJoin = new Dictionary<KeyValuePair<Type,Type>,SqlJoin>();
+            var leftJoin = new Dictionary<KeyValuePair<Type, Type>, SqlJoin>();
 
-            foreach (var resolution in _leftJoins.Select(item => item is SqlJoin ? item : ResolveJoin(item as dynamic, JoinType.Left)))
+            foreach (var resolution in LeftJoinsList.Select(item => item is SqlJoin ? item : GetJoins(item as dynamic, JoinType.Left)))
             {
                 if (resolution is SqlJoin)
                 {
                     leftJoin.Add(
                         new KeyValuePair<Type, Type>(
                             ((SqlJoin)resolution).ParentEntity.Table,
-                            ((SqlJoin)resolution).JoinEntity.Table), 
+                            ((SqlJoin)resolution).JoinEntity.Table),
                         resolution);
                 }
                 else
@@ -244,7 +310,7 @@ namespace OR_M_Data_Entities.Expressions
             // Turn the Select Lambda Statements into Sql
             var select = new List<SqlTableColumnPair>();
 
-            foreach (var resolution in _select.Select(item => ResolveSelect(item as dynamic)))
+            foreach (var resolution in SelectsList.Select(item => GetSelects(item as dynamic)))
             {
                 @select.AddRange(resolution);
             }
@@ -272,38 +338,38 @@ namespace OR_M_Data_Entities.Expressions
                 }
             }
 
-            var selectTopModifier = _take == -1 ? string.Empty : string.Format(" TOP {0} ", _take);
-            var selectDistinctModifier = _distinct ? "DISTINCT" : string.Empty;
+            var selectTopModifier = TakeTopRows == -1 ? string.Empty : string.Format(" TOP {0} ", TakeTopRows);
+            var selectDistinctModifier = IsDistinct ? "DISTINCT" : string.Empty;
 
             // add the select modifier
-            _sql += string.Format(" SELECT {0}{1} ", selectDistinctModifier, selectTopModifier);
+            Sql += string.Format(" SELECT {0}{1} ", selectDistinctModifier, selectTopModifier);
 
             var selectText = @select.Aggregate(string.Empty, (current, item) => current + string.Format("{0},", item.GetSelectColumnTextWithAlias()));
 
             // trim the ending comma
-            _sql += selectText.TrimEnd(',');
+            Sql += selectText.TrimEnd(',');
 
-            _sql += string.Format(" FROM [{0}] ", _from);
+            Sql += string.Format(" FROM [{0}] ", FromTableName);
 
             var innerJoinText = @innerJoin.Aggregate(string.Empty, (current, item) => current + item.Value.GetJoinText());
 
             if (!string.IsNullOrWhiteSpace(innerJoinText))
             {
-                _sql += innerJoinText;
+                Sql += innerJoinText;
             }
 
             var leftJoinText = @leftJoin.Aggregate(string.Empty, (current, item) => current + item.Value.GetJoinText());
 
             if (!string.IsNullOrWhiteSpace(leftJoinText))
             {
-                _sql += leftJoinText;
+                Sql += leftJoinText;
             }
 
-            var validationStatements = @where.Select(item => item.GetWhereText(_parameters)).ToList();
+            var validationStatements = @where.Select(item => item.GetWhereText(Parameters)).ToList();
 
             var finalValidationStatement = validationStatements.Aggregate(string.Empty, (current, validationStatement) => current + string.Format(string.IsNullOrWhiteSpace(current) ? " WHERE {0}" : " AND {0}", validationStatement));
 
-            _sql += finalValidationStatement;
+            Sql += finalValidationStatement;
         }
 
         #region Data Retrieval
@@ -312,7 +378,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             // inject the generic type here
             var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "First" && w.ReturnParameter != null && w.ReturnParameter.ParameterType.Name == "T");
-            var genericMethod = method.MakeGenericMethod(new[] { _returnDataType });
+            var genericMethod = method.MakeGenericMethod(new[] { ReturnDataType });
 
             return genericMethod.Invoke(this, null);
         }
@@ -321,7 +387,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             ResolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Select();
             }
@@ -331,7 +397,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             // inject the generic type here
             var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "All" && w.ReturnType != typeof(ICollection));
-            var genericMethod = method.MakeGenericMethod(new[] { _returnDataType });
+            var genericMethod = method.MakeGenericMethod(new[] { ReturnDataType });
             var result = genericMethod.Invoke(this, null);
 
             return result as dynamic;
@@ -341,7 +407,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             ResolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(_sql, _parameters))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Cast<T>().ToList();
             }
@@ -351,7 +417,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             ResolveExpression();
 
-            var reader = _context.ExecuteQuery<T>(_sql, _parameters);
+            var reader = _context.ExecuteQuery<T>(Sql, Parameters);
 
             return reader.Cast<T>().GetEnumerator();
         }
@@ -360,7 +426,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             // inject the generic type here
             var method = typeof(ExpressionQuery).GetMethod("GetEnumerator");
-            var genericMethod = method.MakeGenericMethod(new[] { _returnDataType });
+            var genericMethod = method.MakeGenericMethod(new[] { ReturnDataType });
 
             return (IEnumerator)genericMethod.Invoke(this, null);
         }
