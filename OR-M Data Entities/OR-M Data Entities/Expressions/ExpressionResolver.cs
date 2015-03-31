@@ -37,10 +37,8 @@ namespace OR_M_Data_Entities.Expressions
             _evaluateJoinExpressionTree(expression.Body, evaluationResults, joinType);
         }
 
-        protected static IEnumerable<SqlTableColumnPair> GetSelects<T>(Expression<Func<T, object>> expression)
+        protected static IEnumerable<SqlTableColumnPair> GetSelects<T>(Expression<Func<T, object>> expression, List<SqlTableColumnPair> evaluationResults)
         {
-            var evaluationResults = new List<SqlTableColumnPair>();
-
             _evaltateSelectExpressionTree(expression.Body, evaluationResults);
 
             return evaluationResults;

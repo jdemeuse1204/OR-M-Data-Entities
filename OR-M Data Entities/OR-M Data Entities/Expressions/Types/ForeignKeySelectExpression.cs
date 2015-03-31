@@ -1,7 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Expressions.Types.Base;
 
 namespace OR_M_Data_Entities.Expressions.Types
@@ -14,7 +13,7 @@ namespace OR_M_Data_Entities.Expressions.Types
 
         }
 
-        public override void Resolve()
+        public override SqlExpressionType Resolve()
         {
             // Turn the Select Lambda Statements into Sql
             var selects = ResolveSelectsList();
@@ -47,6 +46,8 @@ namespace OR_M_Data_Entities.Expressions.Types
             {
                 Query.Sql += innerJoinText;
             }
+
+            return SqlExpressionType.ForeignKeySelect;
         }
     }
 }

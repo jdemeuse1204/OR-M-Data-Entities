@@ -20,6 +20,20 @@ namespace OR_M_Data_Entities.Data
 {
     public static class DatabaseSchemata
     {
+        public static bool UseTableColumnFetch(SqlExpressionType expressionType)
+        {
+            switch (expressionType)
+            {
+                case SqlExpressionType.ForeignKeySelect:
+                case SqlExpressionType.ForeignKeySelectJoin:
+                case SqlExpressionType.ForeignKeySelectWhere:
+                case SqlExpressionType.ForeignKeySelectWhereJoin:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         public static SqlDbType GetSqlDbType(Type type)
         {
             var name = type.Name;
@@ -230,6 +244,11 @@ namespace OR_M_Data_Entities.Data
             return result;
         }
 
+        public static void GetForeignKeyJoinsRecursive(Type type, SqlJoinCollection joins)
+        {
+            _addForeignKeyJoinsRecursive(joins, type);
+        }
+
         private static void _addForeignKeyJoinsRecursive(SqlJoinCollection result, Type type)
         {
             var foreignKeys = GetForeignKeys(type);
@@ -243,7 +262,18 @@ namespace OR_M_Data_Entities.Data
                 var key = new KeyValuePair<Type, Type>(type, fkPropertyType);
 
                 // make sure the join isnt already added
-                if (result.ContainsKey(key)) continue;
+                var hasFKs = HasForeignKeys(fkPropertyType);
+
+                if (result.ContainsKey(key))
+                {
+                    if (!hasFKs)
+                    {
+                        continue;
+                    }
+
+                    _addForeignKeyJoinsRecursive(result, fkPropertyType);
+                    continue;
+                }
 
                 result.Add(new SqlJoin
                 {

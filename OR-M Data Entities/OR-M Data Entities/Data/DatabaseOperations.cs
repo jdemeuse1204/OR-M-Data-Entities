@@ -11,6 +11,7 @@ using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
+using OR_M_Data_Entities.Expressions.Support;
 
 namespace OR_M_Data_Entities.Data
 {

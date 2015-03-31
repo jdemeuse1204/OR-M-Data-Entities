@@ -4,7 +4,10 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
@@ -49,32 +52,43 @@ namespace OR_M_Data_Entities.Commands.StatementParts
 
         public string _getColumnText(string tableName, bool includeAlias)
         {
+            var functionsCount = FunctionList.Count();
             var columnName = GetColumnName();
             var aliasText = string.Format("{0}{1}", tableName, columnName);
             var alias = (includeAlias ? string.Format(" as [{0}]", aliasText) : string.Empty);
-            var result = string.Format("[{0}].[{1}]{2}", tableName, columnName, alias);
+
+            if (functionsCount == 0)
+            {
+                return string.Format("[{0}].[{1}]{2}", tableName, columnName, alias);
+            }
+
+            var result = string.Format("[{0}].[{1}]", tableName, columnName);
+            var index = 0;
 
             foreach (var function in FunctionList)
             {
-                var functionName = ((dynamic)function.Value[0]).Method.Name.ToUpper();
-                
+               
+                var functionName = ((dynamic) function.Value[0]).Method.Name.ToUpper();
+                var functionAlias = index == functionsCount - 1 ? alias : "";
 
-                switch ((string)functionName)
+                switch ((string) functionName)
                 {
                     case "CAST":
-                        result = string.Format(" CAST({0} as {1}) {2}",
+                        result = string.Format(" CAST({0} as {1}){2}",
                             result,
                             function.Value[1],
-                            alias);
+                            functionAlias);
                         break;
                     case "CONVERT":
-                        result = string.Format("CONVERT({0},{1},{2}) {3}",
+                        result = string.Format("CONVERT({0},{1},{2}){3}",
                             function.Value[1],
                             result,
                             (function.Value[2] == null ? string.Empty : function.Value[2].ToString()),
-                            alias);
+                            functionAlias);
                         break;
                 }
+
+                index++;
             }
 
             return result;

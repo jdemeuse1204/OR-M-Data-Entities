@@ -12,7 +12,11 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new SqlContext();
 
-            var testItem = context.From<Contact>().Select<Contact>().Join<Contact,Appointment>((p,c) => p.ID == c.ContactID).First<Contact>();
+            var testItem =
+                context.From<Contact>()
+                    .Select<Contact>()
+                    .Join<Contact, Appointment>((p, c) => p.ID == c.ContactID)
+                    .First<Contact>();
 
             if (testItem != null)
             {

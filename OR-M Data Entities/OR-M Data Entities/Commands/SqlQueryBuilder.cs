@@ -164,27 +164,28 @@ namespace OR_M_Data_Entities.Commands
 
             if (DatabaseSchemata.HasForeignKeys(tableType))
             {
-                List<Type> distinctTables;
-                var allJoinsFromForeignKeys = DatabaseSchemata.GetForeignKeyJoinsRecursive(tableType, out distinctTables);
-                
-                foreach (var allJoinsFromForeignKey in allJoinsFromForeignKeys)
+                var allJoinsFromForeignKeys = DatabaseSchemata.GetForeignKeyJoinsRecursive(tableType);
+
+                for (var i = 0; i < allJoinsFromForeignKeys.Keys.Count(); i++)
                 {
-                    var key = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Key.Key) +
-                              DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Key.Value);
-                    // add joins
+                    var composite = allJoinsFromForeignKeys.GetKey(i);
+                    var key = DatabaseSchemata.GetTableName(composite.Key) +
+                              DatabaseSchemata.GetTableName(composite.Value);
+                    var join = allJoinsFromForeignKeys.GetJoin(i);
+
                     _joins.Add(key, new QueryBuilderJoin
                     {
-                        ParentTableName = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Value.ParentEntity.Table),
-                        ParentColumnName = DatabaseSchemata.GetColumnName(allJoinsFromForeignKey.Value.ParentEntity.Column),
+                        ParentTableName = DatabaseSchemata.GetTableName(join.ParentEntity.Table),
+                        ParentColumnName = DatabaseSchemata.GetColumnName(join.ParentEntity.Column),
 
-                        JoinTableName = DatabaseSchemata.GetTableName(allJoinsFromForeignKey.Value.JoinEntity.Table),
-                        JoinColumnName = DatabaseSchemata.GetColumnName(allJoinsFromForeignKey.Value.JoinEntity.Column),
+                        JoinTableName = DatabaseSchemata.GetTableName(join.JoinEntity.Table),
+                        JoinColumnName = DatabaseSchemata.GetColumnName(join.JoinEntity.Column),
 
-                        Type = allJoinsFromForeignKey.Value.Type
+                        Type = join.Type
                     });
                 }
 
-                foreach (var table in distinctTables)
+                foreach (var table in allJoinsFromForeignKeys.SelectedTypes)
                 {
                     var tableNameAndColumnNames = DatabaseSchemata.GetSelectAllFieldsAndTableName(table);
                     var tName = tableNameAndColumnNames.Key;

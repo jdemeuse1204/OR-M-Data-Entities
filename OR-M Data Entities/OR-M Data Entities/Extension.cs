@@ -20,9 +20,9 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
-	public static class Extension
-	{
-        public static string GetNextParameter(this Dictionary<string,object> parameters)
+    public static class Extension
+    {
+        public static string GetNextParameter(this Dictionary<string, object> parameters)
         {
             return string.Format("@Param{0}", parameters.Count);
         }
@@ -40,37 +40,37 @@ namespace OR_M_Data_Entities
                    type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
-	    /// <summary>
-	    /// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
-	    /// </summary>
-	    /// <typeparam name="T"></typeparam>
-	    /// <param name="reader"></param>
-	    /// <param name="dataReaderLoadType"></param>
-	    /// <returns></returns>
-	    public static T ToObject<T>(this SqlDataReader reader)
-		{
+        /// <summary>
+        /// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="reader"></param>
+        /// <param name="dataReaderLoadType"></param>
+        /// <returns></returns>
+        public static T ToObject<T>(this SqlDataReader reader, bool useTableColumnFetch = false)
+        {
             if (!reader.HasRows) return default(T);
 
-		    if (typeof (T).IsValueType
-				|| typeof(T) == typeof(string))
-		    {
-		        return (T)reader[0];
-		    }
+            if (typeof(T).IsValueType
+                || typeof(T) == typeof(string))
+            {
+                return (T)reader[0];
+            }
 
             if (typeof(T) == typeof(IDynamicMetaObjectProvider))
-		    {
-		        return reader.ToObject();
-		    }
+            {
+                return reader.ToObject();
+            }
 
-            return reader.GetObjectFromReader<T>(DatabaseSchemata.HasForeignKeys<T>() ? DataReaderLoadType.TableColumnLoad : DataReaderLoadType.ColumnLoad);
-		}
+            return reader.GetObjectFromReader<T>(useTableColumnFetch);
+        }
 
-	    private static T GetObjectFromReader<T>(this SqlDataReader reader, DataReaderLoadType dataReaderLoadType)
-	    {
+        private static T GetObjectFromReader<T>(this SqlDataReader reader, bool useTableColumnFetch)
+        {
             // Create instance
             var instance = Activator.CreateInstance<T>();
 
-	        var tableName = DatabaseSchemata.GetTableName<T>();
+            var tableName = DatabaseSchemata.GetTableName<T>();
 
             // find any unmapped attributes
             var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
@@ -80,15 +80,15 @@ namespace OR_M_Data_Entities
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
                 // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[dataReaderLoadType == DataReaderLoadType.ColumnLoad ?
-                    (columnAttribute != null ? columnAttribute.Name : property.Name) :  
+                var dbValue = reader[!useTableColumnFetch ?
+                    (columnAttribute != null ? columnAttribute.Name : property.Name) :
                     tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
 
                 instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
             }
 
-	        return instance;
-	    }
+            return instance;
+        }
 
         private static void _setPropertyValue(this object entity, PropertyInfo property, object value)
         {
@@ -204,50 +204,50 @@ namespace OR_M_Data_Entities
         //    }
         //}
 
-		public static bool IsNumeric(this object o)
-		{
-			var result = 0L;
+        public static bool IsNumeric(this object o)
+        {
+            var result = 0L;
 
-			return long.TryParse(o.ToString(), out result);
-		}
+            return long.TryParse(o.ToString(), out result);
+        }
 
-		/// <summary>
-		/// Turns the DataReader into an object and converts the types for you
-		/// </summary>
-		/// <param name="reader"></param>
-		/// <returns></returns>
-		public static dynamic ToObject(this SqlDataReader reader)
-		{
-			if (!reader.HasRows)
-			{
-				return null;
-			}
+        /// <summary>
+        /// Turns the DataReader into an object and converts the types for you
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static dynamic ToObject(this SqlDataReader reader)
+        {
+            if (!reader.HasRows)
+            {
+                return null;
+            }
 
-			var result = new ExpandoObject() as IDictionary<string, Object>;
+            var result = new ExpandoObject() as IDictionary<string, Object>;
 
-			var rec = (IDataRecord)reader;
+            var rec = (IDataRecord)reader;
 
-			for (var i = 0; i < rec.FieldCount; i++)
-			{
-				result.Add(rec.GetName(i), rec.GetValue(i));
-			}
+            for (var i = 0; i < rec.FieldCount; i++)
+            {
+                result.Add(rec.GetName(i), rec.GetValue(i));
+            }
 
-			return result;
-		}
-	}
+            return result;
+        }
+    }
 
-	public static class StringExtension
-	{
-		public static string ReplaceFirst(this string text, string search, string replace)
-		{
-			var pos = text.IndexOf(search);
+    public static class StringExtension
+    {
+        public static string ReplaceFirst(this string text, string search, string replace)
+        {
+            var pos = text.IndexOf(search);
 
-			if (pos < 0)
-			{
-				return text;
-			}
+            if (pos < 0)
+            {
+                return text;
+            }
 
-			return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
-		}
-	}
+            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+        }
+    }
 }

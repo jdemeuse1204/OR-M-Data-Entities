@@ -110,7 +110,7 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReader();
         }
 
-        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
+        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching, bool useTableColumnFetch = false)
             where T : class
         {
             return fetching.From<T>().Where(propertyLambda);
@@ -118,25 +118,25 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Query Execution
-        public DataReader<T> ExecuteQuery<T>(string sql)
+        public DataReader<T> ExecuteQuery<T>(string sql, bool userTableColumnFetch = false)
 		{
 			Execute(sql);
 
-			return new DataReader<T>(Reader, ConnectionString);
+            return new DataReader<T>(Reader, userTableColumnFetch);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string,object> parameters)
+        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, bool useTableColumnFetch = false)
         {
             Execute(sql, parameters);
 
-            return new DataReader<T>(Reader, ConnectionString);
+            return new DataReader<T>(Reader, useTableColumnFetch);
         }
 
-        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
+        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder, bool useTableColumnFetch = false)
         {
             Execute(builder);
 
-            return new DataReader<T>(Reader, ConnectionString);
+            return new DataReader<T>(Reader, useTableColumnFetch);
         }
 
         private void _tryCloseReader()

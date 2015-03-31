@@ -8,15 +8,22 @@ namespace OR_M_Data_Entities.Expressions.Types.Base
 {
     public abstract class SqlExpressionResolvableBase : ExpressionResolver
     {
-        public abstract void Resolve();
+        #region Abstract Methods
+        public abstract SqlExpressionType Resolve();
+        #endregion
 
+        #region Fields
         protected readonly ExpressionQuery Query;
+        #endregion
 
+        #region Constructor
         protected SqlExpressionResolvableBase(ExpressionQuery query)
         {
             Query = query;
         }
+        #endregion
 
+        #region Methods
         protected List<SqlWhere> ResolveWheresList()
         {
             var where = new List<SqlWhere>();
@@ -33,17 +40,17 @@ namespace OR_M_Data_Entities.Expressions.Types.Base
         {
             var select = new List<SqlTableColumnPair>();
 
-            foreach (var resolution in Query.SelectsList.Select(item => GetSelects(item as dynamic)))
+            foreach (var resolution in Query.SelectsList)
             {
-                @select.AddRange(resolution);
+                GetSelects(resolution as dynamic, select);
             }
 
             return select;
         }
 
-        protected SqlJoinCollection ResolveInnerJoinsList()
+        protected SqlJoinCollection ResolveJoinsList()
         {
-            var leftJoinCollection = new SqlJoinCollection();
+            var joinCollection = new SqlJoinCollection();
 
             foreach (var leftJoin in Query.LeftJoinsList)
             {
@@ -51,19 +58,12 @@ namespace OR_M_Data_Entities.Expressions.Types.Base
 
                 if (join != null)
                 {
-                    leftJoinCollection.Add(join);
+                    joinCollection.Add(join);
                     continue;
                 }
 
-                GetJoins(leftJoin as dynamic, JoinType.Left, leftJoinCollection);
+                GetJoins(leftJoin as dynamic, JoinType.Left, joinCollection);
             }
-
-            return leftJoinCollection;
-        }
-
-        protected SqlJoinCollection ResolveLeftJoinsList()
-        {
-            var innerJoinCollection = new SqlJoinCollection();
 
             foreach (var innerJoin in Query.InnerJoinsList)
             {
@@ -71,14 +71,16 @@ namespace OR_M_Data_Entities.Expressions.Types.Base
 
                 if (join != null)
                 {
-                    innerJoinCollection.Add(join);
+                    joinCollection.Add(join);
                     continue;
                 }
 
-                GetJoins(innerJoin as dynamic, JoinType.Inner, innerJoinCollection);
+                GetJoins(innerJoin as dynamic, JoinType.Inner, joinCollection);
             }
 
-            return innerJoinCollection;
-        } 
+
+            return joinCollection;
+        }
+        #endregion
     }
 }
