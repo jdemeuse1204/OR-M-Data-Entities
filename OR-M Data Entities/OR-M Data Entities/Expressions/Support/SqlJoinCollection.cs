@@ -42,9 +42,65 @@ namespace OR_M_Data_Entities.Expressions.Support
             return _collection;
         }
 
-        public bool ContainsKey(KeyValuePair<Type, Type> key)
+        public SqlJoinCollectionKeyMatchType ContainsKey(KeyValuePair<Type, Type> key)
         {
-            return _keys.Contains(key) || _keys.Contains(new KeyValuePair<Type, Type>(key.Value, key.Key));
+            if (_keys.Contains(key))
+            {
+                return SqlJoinCollectionKeyMatchType.AsIs;
+            }
+
+            return _keys.Contains(new KeyValuePair<Type, Type>(key.Value, key.Key)) ? 
+                SqlJoinCollectionKeyMatchType.Inverse : 
+                SqlJoinCollectionKeyMatchType.NoMatch;
+        }
+
+        public void Remove(KeyValuePair<Type, Type> key)
+        {
+            var matchType = ContainsKey(key);
+            var index = -1;
+
+            if (matchType == SqlJoinCollectionKeyMatchType.NoMatch)
+            {
+                throw new Exception("Key cannot be found!");
+            }
+
+            if (matchType == SqlJoinCollectionKeyMatchType.AsIs)
+            {
+                index = _keys.IndexOf(key);
+                _distinctTypes.Remove(key.Value);
+            }
+
+            if (matchType == SqlJoinCollectionKeyMatchType.Inverse)
+            {
+                index = _keys.IndexOf(new KeyValuePair<Type, Type>(key.Value, key.Key));
+                _distinctTypes.Remove(key.Key);
+            }
+
+            _keys.RemoveAt(index);
+            _collection.RemoveAt(index);
+        }
+
+        public void ChangeJoinType(KeyValuePair<Type, Type> key, JoinType newJoinType)
+        {
+            var matchType = ContainsKey(key);
+            var index = -1;
+
+            if (matchType == SqlJoinCollectionKeyMatchType.NoMatch)
+            {
+                throw new Exception("Key cannot be found!");
+            }
+
+            if (matchType == SqlJoinCollectionKeyMatchType.AsIs)
+            {
+                index = _keys.IndexOf(key);
+            }
+
+            if (matchType == SqlJoinCollectionKeyMatchType.Inverse)
+            {
+                index = _keys.IndexOf(new KeyValuePair<Type, Type>(key.Value, key.Key));
+            }
+
+            _collection[index].Type = newJoinType;
         }
 
         public void Add(SqlJoin join)
@@ -59,7 +115,7 @@ namespace OR_M_Data_Entities.Expressions.Support
 
                 var index = _keys.IndexOf(key);
 
-                // inner joins should always overwrite left joins
+                // inner joins should always overwrite left joins, except if the FK can be null
                 if (_collection[index].Type == JoinType.Left)
                 {
                     _collection[index].Type = join.Type;

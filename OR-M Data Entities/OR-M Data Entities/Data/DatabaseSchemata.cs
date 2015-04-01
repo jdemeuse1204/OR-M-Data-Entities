@@ -225,6 +225,25 @@ namespace OR_M_Data_Entities.Data
             }).ToList();
         }
 
+        public static IEnumerable<Type> GetForeignKeyTypes<T>()
+        {
+            return GetForeignKeyTypes(typeof (T));
+        }
+
+        public static IEnumerable<Type> GetForeignKeyTypes(object entity)
+        {
+            return GetForeignKeyTypes(entity.GetType());
+        }
+
+        public static IEnumerable<Type> GetForeignKeyTypes(Type type)
+        {
+            var result = new List<Type>();
+
+            _addForeignKeyTypesRecursive(result,type);
+
+            return result;
+        } 
+
         public static SqlJoinCollection GetForeignKeyJoinsRecursive<T>() where T : class
         {
             return GetForeignKeyJoinsRecursive(typeof(T));
@@ -249,6 +268,26 @@ namespace OR_M_Data_Entities.Data
             _addForeignKeyJoinsRecursive(joins, type);
         }
 
+        private static void _addForeignKeyTypesRecursive(List<Type> result, Type type)
+        {
+            var foreignKeys = GetForeignKeys(type);
+
+            foreach (var fkPropertyType in foreignKeys.Select(foreignKey => foreignKey.PropertyType.IsList()
+                ? foreignKey.PropertyType.GetGenericArguments()[0]
+                : foreignKey.PropertyType))
+            {
+                if (!result.Contains(fkPropertyType))
+                {
+                    result.Add(fkPropertyType);
+                }
+
+                if (HasForeignKeys(fkPropertyType))
+                {
+                    _addForeignKeyTypesRecursive(result, fkPropertyType);
+                }
+            }
+        }
+
         private static void _addForeignKeyJoinsRecursive(SqlJoinCollection result, Type type)
         {
             var foreignKeys = GetForeignKeys(type);
@@ -263,9 +302,16 @@ namespace OR_M_Data_Entities.Data
 
                 // make sure the join isnt already added
                 var hasFKs = HasForeignKeys(fkPropertyType);
+                var matchResult = result.ContainsKey(key);
 
-                if (result.ContainsKey(key))
+                if (matchResult == SqlJoinCollectionKeyMatchType.AsIs ||
+                    matchResult == SqlJoinCollectionKeyMatchType.Inverse)
                 {
+                    if (foreignKeyAttribute.IsNullable)
+                    {
+                        result.ChangeJoinType(key,JoinType.Left);
+                    }
+
                     if (!hasFKs)
                     {
                         continue;
@@ -289,7 +335,7 @@ namespace OR_M_Data_Entities.Data
                         Column = GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType)
                     },
 
-                    Type = JoinType.Inner
+                    Type = foreignKeyAttribute.IsNullable ? JoinType.Left : JoinType.Inner
                 });
 
                 if (HasForeignKeys(fkPropertyType))

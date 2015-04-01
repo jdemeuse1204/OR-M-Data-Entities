@@ -15,7 +15,6 @@ namespace OR0M_Data_Entities.Console
             var testItem =
                 context.From<Contact>()
                     .Select<Contact>()
-                    .Join<Contact, Appointment>((p, c) => p.ID == c.ContactID)
                     .First<Contact>();
 
             if (testItem != null)
@@ -32,10 +31,13 @@ namespace OR0M_Data_Entities.Console
             for (var i = 0; i < max; i++)
             {
                 var start = DateTime.Now;
-                var item = context.From<Policy>()
-                .Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
-                .Select<Policy>(w => DbFunctions.Convert(SqlDbType.VarChar, w.CreatedDate, 101))
-                .First<string>();
+                var item = context.From<Contact>()
+                    .Select<Contact>()
+                    .First<Contact>();
+                //    context.From<Policy>()
+                //.Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
+                //.Select<Policy>()
+                //.First<Policy>();
 
                 if (item != null)
                 {

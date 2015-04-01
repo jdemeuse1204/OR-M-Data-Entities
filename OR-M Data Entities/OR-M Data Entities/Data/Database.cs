@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Data
         protected string ConnectionString { get; private set; }
         protected SqlConnection Connection { get; set; }
         protected SqlCommand Command { get; set; }
-        protected SqlDataReader Reader { get; set; }
+        protected PeekDataReader Reader { get; set; }
 
         protected Database(string connectionStringOrName)
         {

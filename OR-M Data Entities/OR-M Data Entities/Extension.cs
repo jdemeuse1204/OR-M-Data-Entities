@@ -20,6 +20,21 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
+    public static class PeekDataReaderExtensions
+    {
+        
+    }
+
+    public static class SqlDataReaderExtensions
+    {
+        
+    }
+
+    public static class IDataReaderExtensions
+    {
+        
+    }
+
     public static class Extension
     {
         public static string GetNextParameter(this Dictionary<string, object> parameters)
@@ -40,14 +55,7 @@ namespace OR_M_Data_Entities
                    type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
-        /// <summary>
-        /// Converts a SqlDataReader to an object.  The return column names must match the properties names for it to work
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="reader"></param>
-        /// <param name="dataReaderLoadType"></param>
-        /// <returns></returns>
-        public static T ToObject<T>(this SqlDataReader reader, bool useTableColumnFetch = false)
+        private static T ToObject<T>(this PeekDataReader reader)
         {
             if (!reader.HasRows) return default(T);
 
@@ -62,18 +70,27 @@ namespace OR_M_Data_Entities
                 return reader.ToObject();
             }
 
-            return reader.GetObjectFromReader<T>(useTableColumnFetch);
+            return DatabaseSchemata.HasForeignKeys<T>() ? 
+                reader.GetObjectFromReaderWithForeignKeys<T>(useTableColumnFetch) : 
+                reader.GetObjectFromReader<T>(useTableColumnFetch);
         }
 
-        private static T GetObjectFromReader<T>(this SqlDataReader reader, bool useTableColumnFetch)
+        public static T ToObject<T>(this IDataReader reader)
         {
-            // Create instance
-            var instance = Activator.CreateInstance<T>();
+            if (reader is PeekDataReader)
+            {
+                return ((PeekDataReader)reader).GetObjectFromReaderWithForeignKeys<T>();
+            }
 
-            var tableName = DatabaseSchemata.GetTableName<T>();
+            return ((SqlDataReader)reader).GetObjectFromReader<T>();
+        }
+
+        private static object Load(this PeekDataReader reader, bool useTableColumnFetch, object instance)
+        {
+            var tableName = DatabaseSchemata.GetTableName(instance);
 
             // find any unmapped attributes
-            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+            var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
 
             foreach (var property in properties)
             {
@@ -88,6 +105,57 @@ namespace OR_M_Data_Entities
             }
 
             return instance;
+        }
+
+        private static T GetObjectFromReader<T>(this SqlDataReader reader)
+        {
+            // Create instance
+            var instance = Activator.CreateInstance<T>();
+
+            // find any unmapped attributes
+            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+
+            foreach (var property in properties)
+            {
+                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+                var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
+
+                instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
+            }
+
+            return instance;
+        }
+
+        private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
+        {
+            // Create instance
+            var instance = Activator.CreateInstance<T>();
+
+            _recursiveLoad(reader, instance);
+
+            return instance;
+        }
+
+        private static void _recursiveLoad(PeekDataReader reader, object instance)
+        {
+            var allTypes = DatabaseSchemata.GetForeignKeyTypes(instance);
+            var allObjects = new List<dynamic>();
+
+            foreach (var child in allTypes.Select(Activator.CreateInstance))
+            {
+                // make sure we dont add duplicates
+                reader.Load(true, child);
+
+                allObjects.Add(child);
+                // need to check if we have data in the next record
+            }
+
+            // need to add our list of dynamic objects to the parent
+
+            // load the final object
+            reader.Load(true, instance);
         }
 
         private static void _setPropertyValue(this object entity, PropertyInfo property, object value)

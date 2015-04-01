@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Data
     /// <summary>
     /// All data reading methods in this class do not require a READ before data can be retreived
     /// </summary>
-    public abstract class DataFetching : DatabaseReader
+    public abstract class DataFetching : DatabaseReading
     {
         protected DataFetching(string connectionStringOrName)
             : base(connectionStringOrName)

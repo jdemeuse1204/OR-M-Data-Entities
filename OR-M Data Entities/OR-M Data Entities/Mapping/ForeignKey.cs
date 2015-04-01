@@ -13,11 +13,21 @@ namespace OR_M_Data_Entities.Mapping
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public sealed class ForeignKeyAttribute : NonSelectableAttribute
     {
-        /// <summary>
-        /// Loads a class with the Foreign Key Property Set
-        /// </summary>
-        /// <param name="columnName"></param>
-        public ForeignKeyAttribute(string foreignKeyColumnName, string primaryKeyColumnName = "ID")
+        public ForeignKeyAttribute(string foreignKeyColumnName, string primaryKeyColumnName = "ID", bool isNullable = false)
+        {
+            ForeignKeyColumnName = foreignKeyColumnName;
+            PrimaryKeyColumnName = primaryKeyColumnName;
+            IsNullable = isNullable;
+        }
+
+        public ForeignKeyAttribute(string foreignKeyColumnName, bool isNullable)
+        {
+            ForeignKeyColumnName = foreignKeyColumnName;
+            PrimaryKeyColumnName = "ID";
+            IsNullable = isNullable;
+        }
+
+        public ForeignKeyAttribute(string foreignKeyColumnName, string primaryKeyColumnName)
         {
             ForeignKeyColumnName = foreignKeyColumnName;
             PrimaryKeyColumnName = primaryKeyColumnName;
@@ -29,5 +39,7 @@ namespace OR_M_Data_Entities.Mapping
         public string ForeignKeyColumnName { get; private set; }
 
         public string PrimaryKeyColumnName { get; private set; }
+
+        public bool IsNullable { get; private set; }
     }
 }

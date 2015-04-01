@@ -16,10 +16,10 @@ namespace OR_M_Data_Entities.Data
     /// <summary>
     /// All data reading methods in this class require a READ before data can be retreived
     /// </summary>
-    public abstract class DatabaseReader : Database
+    public abstract class DatabaseReading : Database
     {
         #region Constructor
-        protected DatabaseReader(string connectionStringOrName)
+        protected DatabaseReading(string connectionStringOrName)
             : base(connectionStringOrName)
         {
         }
