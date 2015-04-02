@@ -83,6 +83,7 @@
     <Compile Include="Entity\SaveAction.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Support\ForeignKeyDetail.cs" />
     <Compile Include="Expressions\Support\SqlExpressionType.cs" />
     <Compile Include="Expressions\Support\SqlJoinCollection.cs" />
     <Compile Include="Expressions\Support\SqlJoinCollectionKeyMatchType.cs" />

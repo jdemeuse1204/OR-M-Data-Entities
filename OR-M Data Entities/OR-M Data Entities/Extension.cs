@@ -15,6 +15,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -22,40 +23,26 @@ namespace OR_M_Data_Entities
 {
     public static class PeekDataReaderExtensions
     {
-        
-    }
-
-    public static class SqlDataReaderExtensions
-    {
-        
-    }
-
-    public static class IDataReaderExtensions
-    {
-        
-    }
-
-    public static class Extension
-    {
-        public static string GetNextParameter(this Dictionary<string, object> parameters)
+        public static dynamic ToObject(this PeekDataReader reader)
         {
-            return string.Format("@Param{0}", parameters.Count);
+            if (!reader.HasRows)
+            {
+                return null;
+            }
+
+            var result = new ExpandoObject() as IDictionary<string, Object>;
+
+            var rec = (IDataRecord)reader;
+
+            for (var i = 0; i < rec.FieldCount; i++)
+            {
+                result.Add(rec.GetName(i), rec.GetValue(i));
+            }
+
+            return result;
         }
 
-        public static bool IsList(this object o)
-        {
-            return o is IList &&
-                   o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        public static bool IsList(this Type type)
-        {
-            return type.IsGenericType &&
-                   type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-
-        private static T ToObject<T>(this PeekDataReader reader)
+        public static T ToObject<T>(this PeekDataReader reader)
         {
             if (!reader.HasRows) return default(T);
 
@@ -70,22 +57,12 @@ namespace OR_M_Data_Entities
                 return reader.ToObject();
             }
 
-            return DatabaseSchemata.HasForeignKeys<T>() ? 
-                reader.GetObjectFromReaderWithForeignKeys<T>(useTableColumnFetch) : 
-                reader.GetObjectFromReader<T>(useTableColumnFetch);
+            return DatabaseSchemata.HasForeignKeys<T>() ?
+                reader.GetObjectFromReaderWithForeignKeys<T>() :
+                reader.GetObjectFromReader<T>();
         }
 
-        public static T ToObject<T>(this IDataReader reader)
-        {
-            if (reader is PeekDataReader)
-            {
-                return ((PeekDataReader)reader).GetObjectFromReaderWithForeignKeys<T>();
-            }
-
-            return ((SqlDataReader)reader).GetObjectFromReader<T>();
-        }
-
-        private static object Load(this PeekDataReader reader, bool useTableColumnFetch, object instance)
+        private static object Load(this PeekDataReader reader, object instance)
         {
             var tableName = DatabaseSchemata.GetTableName(instance);
 
@@ -97,17 +74,15 @@ namespace OR_M_Data_Entities
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
                 // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[!useTableColumnFetch ?
-                    (columnAttribute != null ? columnAttribute.Name : property.Name) :
-                    tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
 
-                instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
+                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
             }
 
             return instance;
         }
 
-        private static T GetObjectFromReader<T>(this SqlDataReader reader)
+        private static T GetObjectFromReader<T>(this PeekDataReader reader)
         {
             // Create instance
             var instance = Activator.CreateInstance<T>();
@@ -122,7 +97,7 @@ namespace OR_M_Data_Entities
                 // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
                 var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
 
-                instance._setPropertyValue(property, dbValue is DBNull ? null : dbValue);
+                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
             }
 
             return instance;
@@ -132,33 +107,148 @@ namespace OR_M_Data_Entities
         {
             // Create instance
             var instance = Activator.CreateInstance<T>();
+            var tableName = DatabaseSchemata.GetTableName<T>();
+            var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
+            var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
+            var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
 
-            _recursiveLoad(reader, instance);
+            // load the instance
+            reader.Load(instance);
+
+            var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
+
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
 
             return instance;
         }
 
-        private static void _recursiveLoad(PeekDataReader reader, object instance)
+        private static void _recursiveLoad(PeekDataReader reader, object childInstance, IEnumerable<ForeignKeyDetail> foreignKeys)
         {
-            var allTypes = DatabaseSchemata.GetForeignKeyTypes(instance);
-            var allObjects = new List<dynamic>();
-
-            foreach (var child in allTypes.Select(Activator.CreateInstance))
+            foreach (var foreignKey in foreignKeys)
             {
-                // make sure we dont add duplicates
-                reader.Load(true, child);
+                var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
+                var propertyInstance = property.GetValue(childInstance);
 
-                allObjects.Add(child);
-                // need to check if we have data in the next record
+                if (foreignKey.IsList)
+                {
+                    if (propertyInstance == null)
+                    {
+                        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
+                        property.SetValue(childInstance, propertyInstance);
+                    }
+
+                    var listItem = Activator.CreateInstance(foreignKey.Type);
+
+                    reader.Load(listItem);
+
+                    if (!(bool)propertyInstance.GetType().GetMethod("Contains").Invoke(propertyInstance, new[] { listItem }))
+                    {
+                        // secondary method to create list item
+                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes);
+
+                        propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
+                    }
+
+                    continue;
+                }
+
+                propertyInstance = Activator.CreateInstance(foreignKey.Type);
+
+                reader.Load(propertyInstance);
+
+                _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes);
+
+                property.SetValue(childInstance, propertyInstance);
             }
-
-            // need to add our list of dynamic objects to the parent
-
-            // load the final object
-            reader.Load(true, instance);
         }
 
-        private static void _setPropertyValue(this object entity, PropertyInfo property, object value)
+        private static void _load(PeekDataReader reader, object instance, IEnumerable<ForeignKeyDetail> foreignKeys, string primaryKeyLookUpName, object pkValue)
+        {
+            foreach (var foreignKey in foreignKeys)
+            {
+                var childInstance = Activator.CreateInstance(foreignKey.Type);
+                // make sure we dont add duplicates
+                reader.Load(childInstance);
+
+                if (foreignKey.IsList)
+                {
+                    var listInstance = Activator.CreateInstance(foreignKey.ListType);
+
+                    if (
+                        !(bool)
+                            listInstance.GetType()
+                                .GetMethod("Contains")
+                                .Invoke(listInstance, new[] {childInstance}))
+                    {
+                        // go down each FK tree and create the child instance
+                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
+
+                        listInstance.GetType().GetMethod("Add").Invoke(listInstance, new[] {childInstance});
+
+                        instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, listInstance);
+                    }
+                   continue;
+                }
+
+                instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
+            }
+
+            // make sure we can peek
+            if (!reader.Peek()) return;
+
+            // if one column doesnt match then we do not have a match
+            if (!pkValue.Equals(reader[primaryKeyLookUpName]))
+            {
+                return;
+            }
+
+            // read the next row
+            reader.Read();
+
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
+        }
+    }
+
+    public static class SqlCommandExtensions
+    {
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
+        {
+            return new PeekDataReader(cmd.ExecuteReader());
+        }
+    }
+
+    public static class DictionaryExtensions
+    {
+        public static string GetNextParameter(this Dictionary<string, object> parameters)
+        {
+            return string.Format("@Param{0}", parameters.Count);
+        }
+    }
+
+    public static class ListExtensions
+    {
+        public static bool IsList(this object o)
+        {
+            return o is IList &&
+                   o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
+        public static bool IsList(this Type type)
+        {
+            return type.IsGenericType &&
+                   type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+    }
+
+    public static class ObjectExtensions
+    {
+        public static void SetPropertyInfoValue(this object entity, string propertyName, object value)
+        {
+            entity.SetPropertyInfoValue(entity.GetType().GetProperty(propertyName), value);
+        }
+
+        public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)
         {
             var propertyType = property.PropertyType;
 
@@ -184,123 +274,15 @@ namespace OR_M_Data_Entities
                 propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
                 null);
         }
+    }
 
-        //private static void _recursiveActivator(object parent, DbSqlContext context)
-        //{
-        //    var autoLoads = parent.GetType().GetProperties().Where(w => w.GetCustomAttribute<AutoLoadAttribute>() != null).ToList();
-
-        //    foreach (var autoLoad in autoLoads)
-        //    {
-        //        var childInstance = Activator.CreateInstance(autoLoad.PropertyType);
-
-        //        if (ExpressionTypeTransform.IsList(childInstance))
-        //        {
-        //            var listItemType = childInstance.GetType().GetGenericArguments()[0];
-        //            var listItemTable = DatabaseSchemata.GetTableName(listItemType);
-        //            var listItemProperties = listItemType.GetProperties();
-        //            var listForeignKeys = listItemProperties.Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null
-        //                && w.GetCustomAttribute<ForeignKeyAttribute>().ParentTableType == parent.GetType()).ToList();
-
-        //            var listSelectBuilder = new SqlQueryBuilder();
-        //            listSelectBuilder.Table(listItemTable);
-        //            listSelectBuilder.SelectAll(listItemType);
-
-        //            foreach (var item in listForeignKeys)
-        //            {
-        //                var columnName = DatabaseSchemata.GetColumnName(item);
-        //                var foreignKey = item.GetCustomAttribute<ForeignKeyAttribute>();
-        //                var compareValue = parent.GetType().GetProperty(foreignKey.ParentPropertyName).GetValue(parent);
-        //                listSelectBuilder.AddWhere(listItemTable, columnName, ComparisonType.Equals, compareValue);
-        //            }
-
-        //            var listMethod = context.GetType().GetMethods().First(w => w.Name == "ExecuteQuery"
-        //                && w.GetParameters().Any()
-        //                && w.GetParameters()[0].ParameterType == typeof(ISqlBuilder));
-
-        //            var genericListMethod = listMethod.MakeGenericMethod(new[] { listItemType });
-        //            var listResult = genericListMethod.Invoke(context, new object[] { listSelectBuilder });
-        //            var allResults = (listResult as dynamic).All();
-
-        //            (listResult as dynamic).Dispose();
-        //            context.Disconnect();
-
-        //            foreach (var item in allResults)
-        //            {
-        //                _recursiveActivator(item, context);
-        //                (childInstance as dynamic).Add(item);
-        //            }
-
-        //            autoLoad.SetValue(parent, childInstance, null);
-        //            continue;
-        //        }
-
-        //        var itemType = childInstance.GetType();
-        //        var itemTable = DatabaseSchemata.GetTableName(itemType);
-        //        var itemProperties = itemType.GetProperties();
-        //        var foreignKeys = itemProperties.Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null
-        //            && w.GetCustomAttribute<ForeignKeyAttribute>().ParentTableType == parent.GetType()).ToList();
-
-        //        var builder = new SqlQueryBuilder();
-        //        builder.Table(itemTable);
-        //        builder.SelectAll(itemType);
-
-        //        foreach (var item in foreignKeys)
-        //        {
-        //            var columnName = DatabaseSchemata.GetColumnName(item);
-        //            var foreignKey = item.GetCustomAttribute<ForeignKeyAttribute>();
-        //            var compareValue = parent.GetType().GetProperty(foreignKey.ParentPropertyName).GetValue(parent);
-        //            builder.AddWhere(itemTable, columnName, ComparisonType.Equals, compareValue);
-        //        }
-
-        //        var method = context.GetType().GetMethods().First(w => w.Name == "ExecuteQuery"
-        //            && w.GetParameters().Any()
-        //            && w.GetParameters()[0].ParameterType == typeof(ISqlBuilder));
-
-        //        var genericMethod = method.MakeGenericMethod(new[] { itemType });
-        //        var query = genericMethod.Invoke(context, new object[] { builder });
-        //        var result = (query as dynamic).Select();
-
-        //        (query as dynamic).Dispose();
-        //        context.Disconnect();
-
-        //        autoLoad.SetValue(parent, result, null);
-
-        //        if (result != null)
-        //        {
-        //            _recursiveActivator(result, context);
-        //        }
-        //    }
-        //}
-
+    public static class NumberExtensions
+    {
         public static bool IsNumeric(this object o)
         {
             var result = 0L;
 
             return long.TryParse(o.ToString(), out result);
-        }
-
-        /// <summary>
-        /// Turns the DataReader into an object and converts the types for you
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <returns></returns>
-        public static dynamic ToObject(this SqlDataReader reader)
-        {
-            if (!reader.HasRows)
-            {
-                return null;
-            }
-
-            var result = new ExpandoObject() as IDictionary<string, Object>;
-
-            var rec = (IDataRecord)reader;
-
-            for (var i = 0; i < rec.FieldCount; i++)
-            {
-                result.Add(rec.GetName(i), rec.GetValue(i));
-            }
-
-            return result;
         }
     }
 
@@ -308,7 +290,7 @@ namespace OR_M_Data_Entities
     {
         public static string ReplaceFirst(this string text, string search, string replace)
         {
-            var pos = text.IndexOf(search);
+            var pos = text.IndexOf(search, StringComparison.Ordinal);
 
             if (pos < 0)
             {

@@ -15,5 +15,8 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         [ForeignKey("ContactID", true)]
         public List<Appointment> Appointments { get; set; }
+
+        [ForeignKey("ContactID", true)]
+        public Name Name { get; set; }
     }
 }

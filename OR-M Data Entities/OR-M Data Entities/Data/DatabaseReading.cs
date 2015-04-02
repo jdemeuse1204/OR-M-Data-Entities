@@ -75,7 +75,7 @@ namespace OR_M_Data_Entities.Data
             Command = builder.Build(Connection);
 
             Connect();
-            Reader = Command.ExecuteReader();
+            Reader = Command.ExecuteReaderWithPeeking();
         }
 
         /// <summary>
@@ -91,7 +91,7 @@ namespace OR_M_Data_Entities.Data
             Command = new SqlCommand(sql, Connection);
 
             Connect();
-            Reader = Command.ExecuteReader();
+            Reader = Command.ExecuteReaderWithPeeking();
         }
 
         protected void Execute(string sql, Dictionary<string, object> parameters)
@@ -107,10 +107,10 @@ namespace OR_M_Data_Entities.Data
             }
 
             Connect();
-            Reader = Command.ExecuteReader();
+            Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching, bool useTableColumnFetch = false)
+        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
             where T : class
         {
             return fetching.From<T>().Where(propertyLambda);
@@ -118,25 +118,25 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Query Execution
-        public DataReader<T> ExecuteQuery<T>(string sql, bool userTableColumnFetch = false)
+        public DataReader<T> ExecuteQuery<T>(string sql)
 		{
 			Execute(sql);
 
-            return new DataReader<T>(Reader, userTableColumnFetch);
+            return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, bool useTableColumnFetch = false)
+        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
         {
             Execute(sql, parameters);
 
-            return new DataReader<T>(Reader, useTableColumnFetch);
+            return new DataReader<T>(Reader);
         }
 
-        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder, bool useTableColumnFetch = false)
+        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
         {
             Execute(builder);
 
-            return new DataReader<T>(Reader, useTableColumnFetch);
+            return new DataReader<T>(Reader);
         }
 
         private void _tryCloseReader()

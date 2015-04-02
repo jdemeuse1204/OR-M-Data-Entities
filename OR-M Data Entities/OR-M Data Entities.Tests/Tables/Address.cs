@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
@@ -12,6 +13,6 @@ namespace OR_M_Data_Entities.Tests.Tables
         public Guid AppointmentID { get; set; }
 
         [ForeignKey("AddressID")]
-        public Zip ZipCode { get; set; }
+        public List<Zip> ZipCode { get; set; }
     }
 }

@@ -8,15 +8,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 
 namespace OR_M_Data_Entities.Data
 {
 	public sealed class DataReader<T> : IEnumerable, IDisposable
     {
         #region Properties and Fields
-        private readonly SqlDataReader _reader;
-        private bool _useTableColumnFetch { get; set; }
+        private readonly PeekDataReader _reader;
 
         public bool HasRows 
         {
@@ -31,10 +29,9 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public DataReader(SqlDataReader reader, bool useTableColumnFetch = false)
+        public DataReader(PeekDataReader reader)
 		{
 			_reader = reader;
-            _useTableColumnFetch = useTableColumnFetch;
 		}
         #endregion
 
@@ -43,7 +40,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        _reader.Read();
 
-            return _reader.ToObject<T>(_useTableColumnFetch);
+            return _reader.ToObject<T>();
 	    }
 
 	    public List<T> All()
@@ -52,7 +49,7 @@ namespace OR_M_Data_Entities.Data
 
 	        while (_reader.Read())
 	        {
-                result.Add(_reader.ToObject<T>(_useTableColumnFetch));
+                result.Add(_reader.ToObject<T>());
 	        }
 
             Dispose();
@@ -65,7 +62,7 @@ namespace OR_M_Data_Entities.Data
 		{
 			while (_reader.Read())
 			{
-                yield return _reader.ToObject<T>(_useTableColumnFetch);
+                yield return _reader.ToObject<T>();
 			}
 
             // close when done enumerating

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Data.SqlClient;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -7,15 +8,16 @@ namespace OR_M_Data_Entities.Data
     {
         #region Fields
         private readonly IDataReader _wrappedReader;
-        private bool _wasPeeked;
         private bool _lastResult;
         #endregion
 
         #region Properties
         public int Depth { get; private set; }
-        public bool IsClosed { get; private set; }
-        public int RecordsAffected { get; private set; }
         public int FieldCount { get; private set; }
+        public int RecordsAffected { get; private set; }
+        public bool IsClosed { get; private set; }
+        public bool HasRows { get; private set; }
+        public bool WasPeeked { get; private set; }
 
         public object this[int i]
         {
@@ -39,9 +41,10 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(IDataReader wrappedReader)
+        public PeekDataReader(SqlDataReader wrappedReader)
         {
             _wrappedReader = wrappedReader;
+            HasRows = wrappedReader.HasRows;
         }
         #endregion
 
@@ -49,23 +52,23 @@ namespace OR_M_Data_Entities.Data
         public bool Peek()
         {
             // If the previous operation was a peek, do not move...
-            if (_wasPeeked)
+            if (WasPeeked)
             {
                 return _lastResult;
             }
 
             // This is the first peek for the current position, so read and tag
             var result = Read();
-            _wasPeeked = true;
+            WasPeeked = true;
             return result;
         }
 
         public bool Read()
         {
             // If last operation was a peek, do not actually read
-            if (_wasPeeked)
+            if (WasPeeked)
             {
-                _wasPeeked = false;
+                WasPeeked = false;
                 return _lastResult;
             }
 
@@ -76,17 +79,17 @@ namespace OR_M_Data_Entities.Data
 
         public void Close()
         {
-            throw new NotImplementedException();
+            _wrappedReader.Close();
         }
 
         public DataTable GetSchemaTable()
         {
-            throw new NotImplementedException();
+            return _wrappedReader.GetSchemaTable();
         }
 
         public bool NextResult()
         {
-            _wasPeeked = false;
+            WasPeeked = false;
             return _wrappedReader.NextResult();
         }
 

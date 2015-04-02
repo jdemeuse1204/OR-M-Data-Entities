@@ -131,6 +131,11 @@ namespace OR_M_Data_Entities.Data
             return GetPrimaryKeys(entity.GetType());
         }
 
+        public static List<PropertyInfo> GetPrimaryKeys<T>()
+        {
+            return GetPrimaryKeys(typeof(T));
+        }
+
         public static List<PropertyInfo> GetPrimaryKeys(Type type)
         {
             var keyList = type.GetProperties().Where(w =>
@@ -156,7 +161,7 @@ namespace OR_M_Data_Entities.Data
             return GetForeignKeys(entity.GetType());
         }
 
-        public static List<PropertyInfo> GetForeignKeys<T>() where T : class
+        public static List<PropertyInfo> GetForeignKeys<T>()
         {
             return GetForeignKeys(typeof(T));
         }
@@ -225,22 +230,23 @@ namespace OR_M_Data_Entities.Data
             }).ToList();
         }
 
-        public static IEnumerable<Type> GetForeignKeyTypes<T>()
+        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes<T>()
         {
             return GetForeignKeyTypes(typeof (T));
         }
 
-        public static IEnumerable<Type> GetForeignKeyTypes(object entity)
+        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(object entity)
         {
             return GetForeignKeyTypes(entity.GetType());
         }
 
-        public static IEnumerable<Type> GetForeignKeyTypes(Type type)
+        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(Type type)
         {
-            var result = new List<Type>();
+            var result = new List<ForeignKeyDetail>();
+            var resultingTypes = new List<ForeignKeyDetail>();
 
-            _addForeignKeyTypesRecursive(result,type);
-
+            _addForeignKeyTypesRecursive(result, type, resultingTypes);
+            
             return result;
         } 
 
@@ -268,22 +274,73 @@ namespace OR_M_Data_Entities.Data
             _addForeignKeyJoinsRecursive(joins, type);
         }
 
-        private static void _addForeignKeyTypesRecursive(List<Type> result, Type type)
+        private static void _addForeignKeyTypesRecursive(List<ForeignKeyDetail> result, Type type, List<ForeignKeyDetail> resultingTypes)
         {
             var foreignKeys = GetForeignKeys(type);
 
-            foreach (var fkPropertyType in foreignKeys.Select(foreignKey => foreignKey.PropertyType.IsList()
-                ? foreignKey.PropertyType.GetGenericArguments()[0]
-                : foreignKey.PropertyType))
+            foreach (var foreignKey in foreignKeys)
             {
-                if (!result.Contains(fkPropertyType))
+                if (resultingTypes.Select(w => w.Type).Contains(foreignKey.PropertyType))
                 {
-                    result.Add(fkPropertyType);
+                    continue;
+                }
+
+                var isList = foreignKey.PropertyType.IsList();
+                var fkPropertyType = isList
+                    ? foreignKey.PropertyType.GetGenericArguments()[0]
+                    : foreignKey.PropertyType;
+                
+                if (!result.Select(w => w.Type).Contains(fkPropertyType))
+                {
+                    var fkDetail = new ForeignKeyDetail
+                    {
+                        Type = fkPropertyType,
+                        ParentType = type,
+                        IsList = isList,
+                        ListType = isList ? foreignKey.PropertyType : null,
+                        PropertyName = foreignKey.Name,
+                        ChildTypes = new List<ForeignKeyDetail>()
+                    };
+
+                    _getChildren(fkDetail.ChildTypes, fkPropertyType);
+
+                    resultingTypes.AddRange(fkDetail.ChildTypes);
+
+                    result.Add(fkDetail);
                 }
 
                 if (HasForeignKeys(fkPropertyType))
                 {
-                    _addForeignKeyTypesRecursive(result, fkPropertyType);
+                    _addForeignKeyTypesRecursive(result, fkPropertyType, resultingTypes);
+                }
+            }
+        }
+
+        private static void _getChildren(List<ForeignKeyDetail> result, Type type)
+        {
+            var foreignKeys = GetForeignKeys(type);
+
+            foreach (var foreignKey in foreignKeys)
+            {
+                var isList = foreignKey.PropertyType.IsList();
+                var fkPropertyType = isList
+                    ? foreignKey.PropertyType.GetGenericArguments()[0]
+                    : foreignKey.PropertyType;
+                var fkDetail = new ForeignKeyDetail
+                {
+                    Type = fkPropertyType,
+                    ParentType = type,
+                    IsList = isList,
+                    ListType = isList ? foreignKey.PropertyType : null,
+                    PropertyName = foreignKey.Name,
+                    ChildTypes = new List<ForeignKeyDetail>()
+                };
+
+                result.Add(fkDetail);
+
+                if (HasForeignKeys(fkPropertyType))
+                {
+                    _getChildren(fkDetail.ChildTypes, fkPropertyType);
                 }
             }
         }

@@ -267,7 +267,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var expressionType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, DatabaseSchemata.UseTableColumnFetch(expressionType)))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Select();
             }
@@ -287,7 +287,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var expressionType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, DatabaseSchemata.UseTableColumnFetch(expressionType)))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Cast<T>().ToList();
             }
