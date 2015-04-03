@@ -73,8 +73,10 @@ namespace OR_M_Data_Entities.Data
                     return SqlDbType.Xml;
                 case "DOUBLE":
                     return SqlDbType.Float;
+                case "BYTE[]":
+                    return SqlDbType.Binary;
                 default:
-                    throw new Exception("Type not recognized!");
+                    throw new Exception(string.Format("Type of {0} not recognized!", name));
             }
         }
 
@@ -139,8 +141,8 @@ namespace OR_M_Data_Entities.Data
         public static List<PropertyInfo> GetPrimaryKeys(Type type)
         {
             var keyList = type.GetProperties().Where(w =>
-               (w.GetCustomAttribute<SearchablePrimaryKeyAttribute>() != null
-               && w.GetCustomAttribute<SearchablePrimaryKeyAttribute>().IsPrimaryKey)
+               (w.GetCustomAttributes<SearchablePrimaryKeyAttribute>() != null
+               && w.GetCustomAttributes<SearchablePrimaryKeyAttribute>().Any(x => x.IsPrimaryKey))
                || (w.Name.ToUpper() == "ID")).ToList();
 
             if (keyList.Count != 0)
@@ -243,12 +245,12 @@ namespace OR_M_Data_Entities.Data
         public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(Type type)
         {
             var result = new List<ForeignKeyDetail>();
-            var resultingTypes = new List<ForeignKeyDetail>();
+            var resultingTypes = new List<PulledForeignKeyDetail>();
 
             _addForeignKeyTypesRecursive(result, type, resultingTypes);
             
             return result;
-        } 
+        }
 
         public static SqlJoinCollection GetForeignKeyJoinsRecursive<T>() where T : class
         {
@@ -274,13 +276,36 @@ namespace OR_M_Data_Entities.Data
             _addForeignKeyJoinsRecursive(joins, type);
         }
 
-        private static void _addForeignKeyTypesRecursive(List<ForeignKeyDetail> result, Type type, List<ForeignKeyDetail> resultingTypes)
+        private static string[] _primaryKeyColumnNamesWithTableName(Type type)
+        {
+            var keyList = type.GetProperties().Where(w =>
+              (w.GetCustomAttributes<SearchablePrimaryKeyAttribute>() != null
+              && w.GetCustomAttributes<SearchablePrimaryKeyAttribute>().Any(x => x.IsPrimaryKey))
+              || (w.Name.ToUpper() == "ID")).ToList();
+
+            var tableName = GetTableName(type);
+            var result = new string[keyList.Count];
+
+            for (var i = 0; i < keyList.Count; i++)
+            {
+                var propertyInfo = keyList[i];
+                var columnAttribute = propertyInfo.GetCustomAttribute<ColumnAttribute>();
+
+                result[i] = string.Format("{0}{1}", tableName, columnAttribute == null ? propertyInfo.Name : columnAttribute.Name);
+            }
+
+            return result;
+        }
+
+        private static void _addForeignKeyTypesRecursive(List<ForeignKeyDetail> result, Type type, List<PulledForeignKeyDetail> resultingTypes)
         {
             var foreignKeys = GetForeignKeys(type);
 
             foreach (var foreignKey in foreignKeys)
             {
-                if (resultingTypes.Select(w => w.Type).Contains(foreignKey.PropertyType))
+                var pulledForeignKeyDetail = new PulledForeignKeyDetail(foreignKey);
+
+                if (resultingTypes.Contains(pulledForeignKeyDetail))
                 {
                     continue;
                 }
@@ -299,12 +324,14 @@ namespace OR_M_Data_Entities.Data
                         IsList = isList,
                         ListType = isList ? foreignKey.PropertyType : null,
                         PropertyName = foreignKey.Name,
-                        ChildTypes = new List<ForeignKeyDetail>()
+                        ChildTypes = new List<ForeignKeyDetail>(),
+                        PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
+                        KeysSelected = new List<object[]>()
                     };
 
-                    _getChildren(fkDetail.ChildTypes, fkPropertyType);
+                    _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
 
-                    resultingTypes.AddRange(fkDetail.ChildTypes);
+                    resultingTypes.Add(pulledForeignKeyDetail);
 
                     result.Add(fkDetail);
                 }
@@ -316,7 +343,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private static void _getChildren(List<ForeignKeyDetail> result, Type type)
+        private static void _getChildren(List<ForeignKeyDetail> result, Type type, List<PulledForeignKeyDetail> resultingTypes)
         {
             var foreignKeys = GetForeignKeys(type);
 
@@ -338,9 +365,11 @@ namespace OR_M_Data_Entities.Data
 
                 result.Add(fkDetail);
 
+                resultingTypes.Add(new PulledForeignKeyDetail(foreignKey));
+
                 if (HasForeignKeys(fkPropertyType))
                 {
-                    _getChildren(fkDetail.ChildTypes, fkPropertyType);
+                    _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
                 }
             }
         }
@@ -378,18 +407,25 @@ namespace OR_M_Data_Entities.Data
                     continue;
                 }
 
+                var joinEntityColumn = GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType);
+                var parentEntityColumn = GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, type);
+
+                if (joinEntityColumn == null) throw new Exception(string.Format("Cannot Find Column {0} from Type {1}", foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType.Name));
+
+                if (parentEntityColumn == null) throw new Exception(string.Format("Cannot Find Column {0} from Type {1}", foreignKeyAttribute.PrimaryKeyColumnName, type.Name));
+
                 result.Add(new SqlJoin
                 {
                     ParentEntity = new SqlTableColumnPair
                     {
                         Table = type,
-                        Column = GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, type)
+                        Column = parentEntityColumn
                     },
 
                     JoinEntity = new SqlTableColumnPair
                     {
                         Table = fkPropertyType,
-                        Column = GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType)
+                        Column = joinEntityColumn
                     },
 
                     Type = foreignKeyAttribute.IsNullable ? JoinType.Left : JoinType.Inner

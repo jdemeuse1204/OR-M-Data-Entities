@@ -265,7 +265,7 @@ namespace OR_M_Data_Entities.Expressions
 
         public T First<T>()
         {
-            var expressionType = _resolveExpression();
+            _resolveExpression();
 
             using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
@@ -285,7 +285,7 @@ namespace OR_M_Data_Entities.Expressions
 
         public List<T> All<T>()
         {
-            var expressionType = _resolveExpression();
+             _resolveExpression();
 
             using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {

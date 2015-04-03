@@ -15,6 +15,10 @@ namespace OR_M_Data_Entities.Expressions.Support
 
         public Type ListType { get; set; }
 
+        public string[] PrimaryKeyDatabaseNames { get; set; }
+
+        public List<object[]> KeysSelected { get; set; }
+
         public List<ForeignKeyDetail> ChildTypes { get; set; }
     }
 }

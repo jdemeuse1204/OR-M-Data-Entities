@@ -62,25 +62,53 @@ namespace OR_M_Data_Entities
 				reader.GetObjectFromReader<T>();
 		}
 
-		private static object Load(this PeekDataReader reader, object instance)
+		private static object LoadChild(this PeekDataReader reader, object instance, ForeignKeyDetail foreignKeyDetail)
 		{
 			var tableName = DatabaseSchemata.GetTableName(instance);
 
 			// find any unmapped attributes
 			var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+            var pks = new object[foreignKeyDetail.PrimaryKeyDatabaseNames.Count()];
 
 			foreach (var property in properties)
 			{
 				var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
 				// need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-				var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+                var tableColumnName = tableName + (columnAttribute != null ? columnAttribute.Name : property.Name);
+
+                var dbValue = reader[tableColumnName];
+
+			    if (foreignKeyDetail.PrimaryKeyDatabaseNames.Contains(tableColumnName))
+			    {
+			        pks[pks.Count()] = dbValue;
+			    }
 
 				instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
 			}
 
 			return instance;
 		}
+
+        private static object Load(this PeekDataReader reader, object instance)
+        {
+            var tableName = DatabaseSchemata.GetTableName(instance);
+
+            // find any unmapped attributes
+            var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+
+            foreach (var property in properties)
+            {
+                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+
+                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+            }
+
+            return instance;
+        }
 
 		private static T GetObjectFromReader<T>(this PeekDataReader reader)
 		{
@@ -139,7 +167,8 @@ namespace OR_M_Data_Entities
 
 					var listItem = Activator.CreateInstance(foreignKey.Type);
 
-					reader.Load(listItem);
+                    // fix pk distinction, if the pk is already loaded do not reload!
+                    reader.Load(listItem, foreignKey);
 
 					if (!(bool)propertyInstance.GetType().GetMethod("Contains").Invoke(propertyInstance, new[] { listItem }))
 					{
@@ -170,37 +199,51 @@ namespace OR_M_Data_Entities
 				// make sure we dont add duplicates
 				reader.Load(childInstance);
 
+                var singleInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
+
 				if (foreignKey.IsList)
 				{
-					var listInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
 					var wasListInstanceCreated = false;
 
-					if (listInstance == null)
+                    if (singleInstance == null)
 					{
 						wasListInstanceCreated = true;
-						listInstance = Activator.CreateInstance(foreignKey.ListType); ;
+                        singleInstance = Activator.CreateInstance(foreignKey.ListType); ;
 					}
-
+                    
+                    // cannot use contains, have to track the last keys selected compared to
+                    // the current key(s) selected.  Store them in the mapper List<ForeignKeyDetail>
 					if (
 						!(bool)
-							listInstance.GetType()
+                            singleInstance.GetType()
 								.GetMethod("Contains")
-								.Invoke(listInstance, new[] { childInstance }))
+                                .Invoke(singleInstance, new[] { childInstance }))
 					{
 						// go down each FK tree and create the child instance
 						_recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
 
-						listInstance.GetType().GetMethod("Add").Invoke(listInstance, new[] { childInstance });
+                        singleInstance.GetType().GetMethod("Add").Invoke(singleInstance, new[] { childInstance });
 
 						if (wasListInstanceCreated)
 						{
-							instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, listInstance);
+                            instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, singleInstance);
 						}
 					}
 					continue;
 				}
 
-				instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
+                if (singleInstance != null)
+                {
+                    childInstance = singleInstance;
+                }
+
+                // go down each FK tree and create the child instance
+                _recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
+
+			    if (singleInstance == null)
+			    {
+			        instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
+			    }
 			}
 
 			// make sure we can peek

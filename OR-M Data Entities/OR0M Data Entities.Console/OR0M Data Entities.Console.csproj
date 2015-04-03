@@ -41,26 +41,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Address.cs" />
-    <Compile Include="AncillaryProduct.cs" />
-    <Compile Include="AncillaryProduct_Vendor.cs" />
-    <Compile Include="aspnet_Role.cs" />
-    <Compile Include="County.cs" />
-    <Compile Include="Order.cs" />
-    <Compile Include="OrderAddress.cs" />
-    <Compile Include="Product.cs" />
-    <Compile Include="ProductType.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="State.cs" />
-    <Compile Include="Vendor.cs" />
-    <Compile Include="VendorAddress.cs" />
-    <Compile Include="VendorFeeByProduct.cs" />
-    <Compile Include="VendorOrderStatus.cs" />
-    <Compile Include="VendorPortalAccount.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
+    <None Include="App.config">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OR-M Data Entities.Tests\OR-M Data Entities.Tests.csproj">
