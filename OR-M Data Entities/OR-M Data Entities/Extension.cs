@@ -21,283 +21,293 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
-    public static class PeekDataReaderExtensions
-    {
-        public static dynamic ToObject(this PeekDataReader reader)
-        {
-            if (!reader.HasRows)
-            {
-                return null;
-            }
+	public static class PeekDataReaderExtensions
+	{
+		public static dynamic ToObject(this PeekDataReader reader)
+		{
+			if (!reader.HasRows)
+			{
+				return null;
+			}
 
-            var result = new ExpandoObject() as IDictionary<string, Object>;
+			var result = new ExpandoObject() as IDictionary<string, Object>;
 
-            var rec = (IDataRecord)reader;
+			var rec = (IDataRecord)reader;
 
-            for (var i = 0; i < rec.FieldCount; i++)
-            {
-                result.Add(rec.GetName(i), rec.GetValue(i));
-            }
+			for (var i = 0; i < rec.FieldCount; i++)
+			{
+				result.Add(rec.GetName(i), rec.GetValue(i));
+			}
 
-            return result;
-        }
+			return result;
+		}
 
-        public static T ToObject<T>(this PeekDataReader reader)
-        {
-            if (!reader.HasRows) return default(T);
+		public static T ToObject<T>(this PeekDataReader reader)
+		{
+			if (!reader.HasRows) return default(T);
 
-            if (typeof(T).IsValueType
-                || typeof(T) == typeof(string))
-            {
-                return (T)reader[0];
-            }
+			if (typeof(T).IsValueType
+				|| typeof(T) == typeof(string))
+			{
+				return (T)reader[0];
+			}
 
-            if (typeof(T) == typeof(IDynamicMetaObjectProvider))
-            {
-                return reader.ToObject();
-            }
+			if (typeof(T) == typeof(IDynamicMetaObjectProvider))
+			{
+				return reader.ToObject();
+			}
 
-            return DatabaseSchemata.HasForeignKeys<T>() ?
-                reader.GetObjectFromReaderWithForeignKeys<T>() :
-                reader.GetObjectFromReader<T>();
-        }
+			return DatabaseSchemata.HasForeignKeys<T>() ?
+				reader.GetObjectFromReaderWithForeignKeys<T>() :
+				reader.GetObjectFromReader<T>();
+		}
 
-        private static object Load(this PeekDataReader reader, object instance)
-        {
-            var tableName = DatabaseSchemata.GetTableName(instance);
+		private static object Load(this PeekDataReader reader, object instance)
+		{
+			var tableName = DatabaseSchemata.GetTableName(instance);
 
-            // find any unmapped attributes
-            var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+			// find any unmapped attributes
+			var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
 
-            foreach (var property in properties)
-            {
-                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+			foreach (var property in properties)
+			{
+				var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
-                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+				// need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+				var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
 
-                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-            }
+				instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+			}
 
-            return instance;
-        }
+			return instance;
+		}
 
-        private static T GetObjectFromReader<T>(this PeekDataReader reader)
-        {
-            // Create instance
-            var instance = Activator.CreateInstance<T>();
+		private static T GetObjectFromReader<T>(this PeekDataReader reader)
+		{
+			// Create instance
+			var instance = Activator.CreateInstance<T>();
 
-            // find any unmapped attributes
-            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+			// find any unmapped attributes
+			var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
 
-            foreach (var property in properties)
-            {
-                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+			foreach (var property in properties)
+			{
+				var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
-                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
+				// need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+				var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
 
-                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-            }
+				instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+			}
 
-            return instance;
-        }
+			return instance;
+		}
 
-        private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
-        {
-            // Create instance
-            var instance = Activator.CreateInstance<T>();
-            var tableName = DatabaseSchemata.GetTableName<T>();
-            var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
-            var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
-            var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
+		private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
+		{
+			// Create instance
+			var instance = Activator.CreateInstance<T>();
+			var tableName = DatabaseSchemata.GetTableName<T>();
+			var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
+			var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
+			var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
 
-            // load the instance
-            reader.Load(instance);
+			// load the instance
+			reader.Load(instance);
 
-            var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
+			var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
+			_load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
 
-            return instance;
-        }
+			return instance;
+		}
 
-        private static void _recursiveLoad(PeekDataReader reader, object childInstance, IEnumerable<ForeignKeyDetail> foreignKeys)
-        {
-            foreach (var foreignKey in foreignKeys)
-            {
-                var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
-                var propertyInstance = property.GetValue(childInstance);
+		private static void _recursiveLoad(PeekDataReader reader, object childInstance, IEnumerable<ForeignKeyDetail> foreignKeys)
+		{
+			foreach (var foreignKey in foreignKeys)
+			{
+				var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
+				var propertyInstance = property.GetValue(childInstance);
 
-                if (foreignKey.IsList)
-                {
-                    if (propertyInstance == null)
-                    {
-                        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
-                        property.SetValue(childInstance, propertyInstance);
-                    }
+				if (foreignKey.IsList)
+				{
+					if (propertyInstance == null)
+					{
+						propertyInstance = Activator.CreateInstance(foreignKey.ListType);
+						property.SetValue(childInstance, propertyInstance);
+					}
 
-                    var listItem = Activator.CreateInstance(foreignKey.Type);
+					var listItem = Activator.CreateInstance(foreignKey.Type);
 
-                    reader.Load(listItem);
+					reader.Load(listItem);
 
-                    if (!(bool)propertyInstance.GetType().GetMethod("Contains").Invoke(propertyInstance, new[] { listItem }))
-                    {
-                        // secondary method to create list item
-                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes);
+					if (!(bool)propertyInstance.GetType().GetMethod("Contains").Invoke(propertyInstance, new[] { listItem }))
+					{
+						// secondary method to create list item
+						_recursiveLoad(reader, listItem, foreignKey.ChildTypes);
 
-                        propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
-                    }
+						propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
+					}
 
-                    continue;
-                }
+					continue;
+				}
 
-                propertyInstance = Activator.CreateInstance(foreignKey.Type);
+				propertyInstance = Activator.CreateInstance(foreignKey.Type);
 
-                reader.Load(propertyInstance);
+				reader.Load(propertyInstance);
 
-                _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes);
+				_recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes);
 
-                property.SetValue(childInstance, propertyInstance);
-            }
-        }
+				property.SetValue(childInstance, propertyInstance);
+			}
+		}
 
-        private static void _load(PeekDataReader reader, object instance, IEnumerable<ForeignKeyDetail> foreignKeys, string primaryKeyLookUpName, object pkValue)
-        {
-            foreach (var foreignKey in foreignKeys)
-            {
-                var childInstance = Activator.CreateInstance(foreignKey.Type);
-                // make sure we dont add duplicates
-                reader.Load(childInstance);
+		private static void _load(PeekDataReader reader, object instance, IEnumerable<ForeignKeyDetail> foreignKeys, string primaryKeyLookUpName, object pkValue)
+		{
+			foreach (var foreignKey in foreignKeys)
+			{
+				var childInstance = Activator.CreateInstance(foreignKey.Type);
+				// make sure we dont add duplicates
+				reader.Load(childInstance);
 
-                if (foreignKey.IsList)
-                {
-                    var listInstance = Activator.CreateInstance(foreignKey.ListType);
+				if (foreignKey.IsList)
+				{
+					var listInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
+					var wasListInstanceCreated = false;
 
-                    if (
-                        !(bool)
-                            listInstance.GetType()
-                                .GetMethod("Contains")
-                                .Invoke(listInstance, new[] {childInstance}))
-                    {
-                        // go down each FK tree and create the child instance
-                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
+					if (listInstance == null)
+					{
+						wasListInstanceCreated = true;
+						listInstance = Activator.CreateInstance(foreignKey.ListType); ;
+					}
 
-                        listInstance.GetType().GetMethod("Add").Invoke(listInstance, new[] {childInstance});
+					if (
+						!(bool)
+							listInstance.GetType()
+								.GetMethod("Contains")
+								.Invoke(listInstance, new[] { childInstance }))
+					{
+						// go down each FK tree and create the child instance
+						_recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
 
-                        instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, listInstance);
-                    }
-                   continue;
-                }
+						listInstance.GetType().GetMethod("Add").Invoke(listInstance, new[] { childInstance });
 
-                instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
-            }
+						if (wasListInstanceCreated)
+						{
+							instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, listInstance);
+						}
+					}
+					continue;
+				}
 
-            // make sure we can peek
-            if (!reader.Peek()) return;
+				instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
+			}
 
-            // if one column doesnt match then we do not have a match
-            if (!pkValue.Equals(reader[primaryKeyLookUpName]))
-            {
-                return;
-            }
+			// make sure we can peek
+			if (!reader.Peek()) return;
 
-            // read the next row
-            reader.Read();
+			// if one column doesnt match then we do not have a match
+			if (!pkValue.Equals(reader[primaryKeyLookUpName]))
+			{
+				return;
+			}
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
-        }
-    }
+			// read the next row
+			reader.Read();
 
-    public static class SqlCommandExtensions
-    {
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
-        {
-            return new PeekDataReader(cmd.ExecuteReader());
-        }
-    }
+			_load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
+		}
+	}
 
-    public static class DictionaryExtensions
-    {
-        public static string GetNextParameter(this Dictionary<string, object> parameters)
-        {
-            return string.Format("@Param{0}", parameters.Count);
-        }
-    }
+	public static class SqlCommandExtensions
+	{
+		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
+		{
+			return new PeekDataReader(cmd.ExecuteReader());
+		}
+	}
 
-    public static class ListExtensions
-    {
-        public static bool IsList(this object o)
-        {
-            return o is IList &&
-                   o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
+	public static class DictionaryExtensions
+	{
+		public static string GetNextParameter(this Dictionary<string, object> parameters)
+		{
+			return string.Format("@Param{0}", parameters.Count);
+		}
+	}
 
-        public static bool IsList(this Type type)
-        {
-            return type.IsGenericType &&
-                   type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
-        }
-    }
+	public static class ListExtensions
+	{
+		public static bool IsList(this object o)
+		{
+			return o is IList &&
+				   o.GetType().IsGenericType &&
+				   o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+		}
 
-    public static class ObjectExtensions
-    {
-        public static void SetPropertyInfoValue(this object entity, string propertyName, object value)
-        {
-            entity.SetPropertyInfoValue(entity.GetType().GetProperty(propertyName), value);
-        }
+		public static bool IsList(this Type type)
+		{
+			return type.IsGenericType &&
+				   type.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+		}
+	}
 
-        public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)
-        {
-            var propertyType = property.PropertyType;
+	public static class ObjectExtensions
+	{
+		public static void SetPropertyInfoValue(this object entity, string propertyName, object value)
+		{
+			entity.SetPropertyInfoValue(entity.GetType().GetProperty(propertyName), value);
+		}
 
-            //Nullable properties have to be treated differently, since we 
-            //  use their underlying property to set the value in the object
-            if (propertyType.IsGenericType
-                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                //if it's null, just set the value from the reserved word null, and return
-                if (value == null)
-                {
-                    property.SetValue(entity, null, null);
-                    return;
-                }
+		public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)
+		{
+			var propertyType = property.PropertyType;
 
-                //Get the underlying type property instead of the nullable generic
-                propertyType = new NullableConverter(property.PropertyType).UnderlyingType;
-            }
+			//Nullable properties have to be treated differently, since we 
+			//  use their underlying property to set the value in the object
+			if (propertyType.IsGenericType
+				&& propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+			{
+				//if it's null, just set the value from the reserved word null, and return
+				if (value == null)
+				{
+					property.SetValue(entity, null, null);
+					return;
+				}
 
-            //use the converter to get the correct value
-            property.SetValue(
-                entity,
-                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
-                null);
-        }
-    }
+				//Get the underlying type property instead of the nullable generic
+				propertyType = new NullableConverter(property.PropertyType).UnderlyingType;
+			}
 
-    public static class NumberExtensions
-    {
-        public static bool IsNumeric(this object o)
-        {
-            var result = 0L;
+			//use the converter to get the correct value
+			property.SetValue(
+				entity,
+				propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
+				null);
+		}
+	}
 
-            return long.TryParse(o.ToString(), out result);
-        }
-    }
+	public static class NumberExtensions
+	{
+		public static bool IsNumeric(this object o)
+		{
+			var result = 0L;
 
-    public static class StringExtension
-    {
-        public static string ReplaceFirst(this string text, string search, string replace)
-        {
-            var pos = text.IndexOf(search, StringComparison.Ordinal);
+			return long.TryParse(o.ToString(), out result);
+		}
+	}
 
-            if (pos < 0)
-            {
-                return text;
-            }
+	public static class StringExtension
+	{
+		public static string ReplaceFirst(this string text, string search, string replace)
+		{
+			var pos = text.IndexOf(search, StringComparison.Ordinal);
 
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
-        }
-    }
+			if (pos < 0)
+			{
+				return text;
+			}
+
+			return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+		}
+	}
 }
