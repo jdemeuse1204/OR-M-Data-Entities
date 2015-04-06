@@ -62,31 +62,6 @@ namespace OR_M_Data_Entities
 				reader.GetObjectFromReader<T>();
 		}
 
-
-
-		private static bool IsInstanceLoaded(this PeekDataReader reader, ForeignKeyDetail currentForeignKeyDetail, ForeignKeyDetail parentForeignKeyDetail)
-		{
-            // need to compare the parent and the current 
-		    var currentCompositeHash = currentForeignKeyDetail.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
-            var parentCompositeHash = parentForeignKeyDetail.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
-            var containsParentCompositeHash = currentForeignKeyDetail.KeysSelectedHashCodeList.ContainsKey(parentCompositeHash);
-
-		    if (!containsParentCompositeHash)
-		    {
-                currentForeignKeyDetail.KeysSelectedHashCodeList.Add(parentCompositeHash, new List<int>());
-		    }
-
-		    var containsCurrentCompositeHash =
-		        currentForeignKeyDetail.KeysSelectedHashCodeList[parentCompositeHash].Contains(currentCompositeHash);
-
-		    if (!containsCurrentCompositeHash)
-		    {
-                currentForeignKeyDetail.KeysSelectedHashCodeList[parentCompositeHash].Add(currentCompositeHash);
-		    }
-
-            return containsParentCompositeHash && containsCurrentCompositeHash;
-		}
-
         private static object Load(this PeekDataReader reader, object instance)
         {
             var tableName = DatabaseSchemata.GetTableName(instance);
@@ -136,14 +111,14 @@ namespace OR_M_Data_Entities
 			var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
 			var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
 			var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
-		    var keysLoaded = new Dictionary<int, List<int>>(); //<level, hashcode>
+            var objectMapNodes = new List<ObjectMapNode>();
 
 			// load the instance
 			reader.Load(instance);
 
 			var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, keysLoaded);
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes);
 
 			return instance;
 		}
@@ -152,31 +127,34 @@ namespace OR_M_Data_Entities
             PeekDataReader reader, 
             object childInstance, 
             IEnumerable<ForeignKeyDetail> foreignKeys, 
-            Dictionary<int, List<int>> keysLoaded,//<level, hashcodes>
-            bool areRowKeysDifferent,
-            int level)
+            List<ObjectMapNode> objectMapNodes,
+            int lastCompositeKey)
 		{
-            // dont want to do multiple checks in loop
-            if (!keysLoaded.ContainsKey(level))
-			{
-			    keysLoaded.Add(level, new List<int>());
-			}
-
 			foreach (var foreignKey in foreignKeys)
 			{
                 var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
                 var propertyInstance = property.GetValue(childInstance);
-                var hash = foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
-			    var containsHash = keysLoaded[level].Contains(hash);
+                var currentCompositeKey = foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
+			    var node = new ObjectMapNode(lastCompositeKey);
+			    var index = objectMapNodes.IndexOf(node);
+                var canAddObject = index == -1;
 
-			    if (!containsHash)
+                // need to make sure the object has not been mapped
+			    if (canAddObject)
 			    {
-                    keysLoaded[level].Add(hash);
+                    // last key not in list, need to add it and current
+			        node.CurrentKeyHashCodeList.Add(currentCompositeKey);
+                    objectMapNodes.Add(node);
+			    }
+			    else
+			    {
+			        node = objectMapNodes[index];
+                    canAddObject = !node.CurrentKeyHashCodeList.Contains(currentCompositeKey);
 
-			        if (!areRowKeysDifferent)
-			        {
-			            areRowKeysDifferent = true;
-			        }
+                    if (canAddObject)
+                    {
+                        node.CurrentKeyHashCodeList.Add(currentCompositeKey);
+                    }
 			    }
 			    
 				if (foreignKey.IsList)
@@ -188,23 +166,18 @@ namespace OR_M_Data_Entities
 				        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
 				        property.SetValue(childInstance, propertyInstance);
 
-                        level++;
-
 				        reader.Load(listItem);
 
-                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
                         propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
 				    }
 				    else
 				    {
-				        if (areRowKeysDifferent)
+				        if (canAddObject)
 				        {
-                            // needs to be added
-                            level++;
-
                             reader.Load(listItem);
 
-                            _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                            _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
                             propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
 				        }
 				        else
@@ -218,8 +191,7 @@ namespace OR_M_Data_Entities
                                     .GetMethod("get_Item")
                                     .Invoke(propertyInstance, new object[] { count - 1 });
 
-                                level++;
-                                _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                                _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
                             }
 				        }
 				    }
@@ -232,14 +204,12 @@ namespace OR_M_Data_Entities
 			        propertyInstance = Activator.CreateInstance(foreignKey.Type);
                     property.SetValue(childInstance, propertyInstance);
 
-                    level++;
                     reader.Load(propertyInstance);
-                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
 			    }
 			    else
 			    {
-                    level++;
-                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
 			    }
 			}
 		}
@@ -249,17 +219,31 @@ namespace OR_M_Data_Entities
             object instance, 
             IEnumerable<ForeignKeyDetail> foreignKeys, 
             string primaryKeyLookUpName, 
-            object pkValue,
-            Dictionary<int, List<int>> keysLoaded)
+            object pkValue, 
+            List<ObjectMapNode> objectMapNodes)
 		{
 			foreach (var foreignKey in foreignKeys)
 			{
 				var childInstance = Activator.CreateInstance(foreignKey.Type);
                 var singleInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
+                var currentCompositeKey = foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
+			    var node = new ObjectMapNode(0);
+			    var index = objectMapNodes.IndexOf(node);
 
 			    if (singleInstance == null)
 			    {
                     reader.Load(childInstance);
+			    }
+
+			    if (index == -1)
+			    {
+			        node.CurrentKeyHashCodeList.Add(currentCompositeKey);
+
+			        objectMapNodes.Add(node);
+			    }
+			    else
+			    {
+			        node = objectMapNodes[index];
 			    }
 
 				if (foreignKey.IsList)
@@ -281,7 +265,7 @@ namespace OR_M_Data_Entities
                                 .Invoke(singleInstance, new[] { childInstance }))
 					{
 						// go down each FK tree and create the child instance
-                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes, keysLoaded, false, 1);
+                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
 
                         singleInstance.GetType().GetMethod("Add").Invoke(singleInstance, new[] { childInstance });
 
@@ -293,7 +277,7 @@ namespace OR_M_Data_Entities
 					continue;
 				}
 
-                _recursiveLoad(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, keysLoaded, false, 1);
+                _recursiveLoad(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
 
 			    if (singleInstance == null)
 			    {
@@ -313,7 +297,7 @@ namespace OR_M_Data_Entities
 			// read the next row
 			reader.Read();
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, keysLoaded);
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes);
 		}
 	}
 
