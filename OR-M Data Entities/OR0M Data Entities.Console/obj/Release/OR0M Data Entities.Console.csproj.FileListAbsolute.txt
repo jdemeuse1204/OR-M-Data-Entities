@@ -1,6 +1,9 @@
-C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\OR0M Data Entities.Console.exe.config
+C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
+C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.exe
+C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.pdb
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Test.mdf
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Test_log.ldf
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\OR0M Data Entities.Console.exe.config
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\OR0M Data Entities.Console.exe
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\OR0M Data Entities.Console.pdb
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\OR-M Data Entities.dll
@@ -10,6 +13,3 @@ C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Da
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.exe
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.pdb
-C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
-C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.exe
-C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.pdb

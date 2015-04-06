@@ -17,7 +17,8 @@ namespace OR_M_Data_Entities.Expressions.Support
 
         public string[] PrimaryKeyDatabaseNames { get; set; }
 
-        public List<object[]> KeysSelected { get; set; }
+        // <ParentHashCode, CurrentHashCode>
+        public Dictionary<int, List<int>> KeysSelectedHashCodeList { get; set; }
 
         public List<ForeignKeyDetail> ChildTypes { get; set; }
     }

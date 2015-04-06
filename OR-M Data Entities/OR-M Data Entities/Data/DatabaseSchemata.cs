@@ -326,7 +326,7 @@ namespace OR_M_Data_Entities.Data
                         PropertyName = foreignKey.Name,
                         ChildTypes = new List<ForeignKeyDetail>(),
                         PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
-                        KeysSelected = new List<object[]>()
+                        KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
                     };
 
                     _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
@@ -360,7 +360,9 @@ namespace OR_M_Data_Entities.Data
                     IsList = isList,
                     ListType = isList ? foreignKey.PropertyType : null,
                     PropertyName = foreignKey.Name,
-                    ChildTypes = new List<ForeignKeyDetail>()
+                    ChildTypes = new List<ForeignKeyDetail>(),
+                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
+                    KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
                 };
 
                 result.Add(fkDetail);

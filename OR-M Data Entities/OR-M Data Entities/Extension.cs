@@ -62,32 +62,29 @@ namespace OR_M_Data_Entities
 				reader.GetObjectFromReader<T>();
 		}
 
-		private static object LoadChild(this PeekDataReader reader, object instance, ForeignKeyDetail foreignKeyDetail)
+
+
+		private static bool IsInstanceLoaded(this PeekDataReader reader, ForeignKeyDetail currentForeignKeyDetail, ForeignKeyDetail parentForeignKeyDetail)
 		{
-			var tableName = DatabaseSchemata.GetTableName(instance);
+            // need to compare the parent and the current 
+		    var currentCompositeHash = currentForeignKeyDetail.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
+            var parentCompositeHash = parentForeignKeyDetail.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
+            var containsParentCompositeHash = currentForeignKeyDetail.KeysSelectedHashCodeList.ContainsKey(parentCompositeHash);
 
-			// find any unmapped attributes
-			var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
-            var pks = new object[foreignKeyDetail.PrimaryKeyDatabaseNames.Count()];
+		    if (!containsParentCompositeHash)
+		    {
+                currentForeignKeyDetail.KeysSelectedHashCodeList.Add(parentCompositeHash, new List<int>());
+		    }
 
-			foreach (var property in properties)
-			{
-				var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+		    var containsCurrentCompositeHash =
+		        currentForeignKeyDetail.KeysSelectedHashCodeList[parentCompositeHash].Contains(currentCompositeHash);
 
-				// need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var tableColumnName = tableName + (columnAttribute != null ? columnAttribute.Name : property.Name);
+		    if (!containsCurrentCompositeHash)
+		    {
+                currentForeignKeyDetail.KeysSelectedHashCodeList[parentCompositeHash].Add(currentCompositeHash);
+		    }
 
-                var dbValue = reader[tableColumnName];
-
-			    if (foreignKeyDetail.PrimaryKeyDatabaseNames.Contains(tableColumnName))
-			    {
-			        pks[pks.Count()] = dbValue;
-			    }
-
-				instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-			}
-
-			return instance;
+            return containsParentCompositeHash && containsCurrentCompositeHash;
 		}
 
         private static object Load(this PeekDataReader reader, object instance)
@@ -139,67 +136,131 @@ namespace OR_M_Data_Entities
 			var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
 			var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
 			var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
+		    var keysLoaded = new Dictionary<int, List<int>>(); //<level, hashcode>
 
 			// load the instance
 			reader.Load(instance);
 
 			var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
 
-			_load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, keysLoaded);
 
 			return instance;
 		}
 
-		private static void _recursiveLoad(PeekDataReader reader, object childInstance, IEnumerable<ForeignKeyDetail> foreignKeys)
+		private static void _recursiveLoad(
+            PeekDataReader reader, 
+            object childInstance, 
+            IEnumerable<ForeignKeyDetail> foreignKeys, 
+            Dictionary<int, List<int>> keysLoaded,//<level, hashcodes>
+            bool areRowKeysDifferent,
+            int level)
 		{
+            // dont want to do multiple checks in loop
+            if (!keysLoaded.ContainsKey(level))
+			{
+			    keysLoaded.Add(level, new List<int>());
+			}
+
 			foreach (var foreignKey in foreignKeys)
 			{
-				var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
-				var propertyInstance = property.GetValue(childInstance);
+                var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
+                var propertyInstance = property.GetValue(childInstance);
+                var hash = foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
+			    var containsHash = keysLoaded[level].Contains(hash);
 
+			    if (!containsHash)
+			    {
+                    keysLoaded[level].Add(hash);
+
+			        if (!areRowKeysDifferent)
+			        {
+			            areRowKeysDifferent = true;
+			        }
+			    }
+			    
 				if (foreignKey.IsList)
 				{
-					if (propertyInstance == null)
-					{
-						propertyInstance = Activator.CreateInstance(foreignKey.ListType);
-						property.SetValue(childInstance, propertyInstance);
-					}
+                    var listItem = Activator.CreateInstance(foreignKey.Type);
 
-					var listItem = Activator.CreateInstance(foreignKey.Type);
+				    if (propertyInstance == null)
+				    {
+				        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
+				        property.SetValue(childInstance, propertyInstance);
 
-                    // fix pk distinction, if the pk is already loaded do not reload!
-                    reader.Load(listItem, foreignKey);
+                        level++;
 
-					if (!(bool)propertyInstance.GetType().GetMethod("Contains").Invoke(propertyInstance, new[] { listItem }))
-					{
-						// secondary method to create list item
-						_recursiveLoad(reader, listItem, foreignKey.ChildTypes);
+				        reader.Load(listItem);
 
-						propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
-					}
+                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                        propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
+				    }
+				    else
+				    {
+				        if (areRowKeysDifferent)
+				        {
+                            // needs to be added
+                            level++;
 
+                            reader.Load(listItem);
+
+                            _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                            propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
+				        }
+				        else
+				        {
+				            // find last loaded item
+                            var count = (int)propertyInstance.GetType().GetMethod("get_Count").Invoke(propertyInstance, null);
+
+                            if (count != 0)
+                            {
+                                listItem = propertyInstance.GetType()
+                                    .GetMethod("get_Item")
+                                    .Invoke(propertyInstance, new object[] { count - 1 });
+
+                                level++;
+                                _recursiveLoad(reader, listItem, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+                            }
+				        }
+				    }
+                    
 					continue;
 				}
 
-				propertyInstance = Activator.CreateInstance(foreignKey.Type);
+			    if (propertyInstance == null)
+			    {
+			        propertyInstance = Activator.CreateInstance(foreignKey.Type);
+                    property.SetValue(childInstance, propertyInstance);
 
-				reader.Load(propertyInstance);
-
-				_recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes);
-
-				property.SetValue(childInstance, propertyInstance);
+                    level++;
+                    reader.Load(propertyInstance);
+                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+			    }
+			    else
+			    {
+                    level++;
+                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, keysLoaded, areRowKeysDifferent, level);
+			    }
 			}
 		}
 
-		private static void _load(PeekDataReader reader, object instance, IEnumerable<ForeignKeyDetail> foreignKeys, string primaryKeyLookUpName, object pkValue)
+        private static void _load(
+            PeekDataReader reader, 
+            object instance, 
+            IEnumerable<ForeignKeyDetail> foreignKeys, 
+            string primaryKeyLookUpName, 
+            object pkValue,
+            Dictionary<int, List<int>> keysLoaded)
 		{
 			foreach (var foreignKey in foreignKeys)
 			{
 				var childInstance = Activator.CreateInstance(foreignKey.Type);
-				// make sure we dont add duplicates
-				reader.Load(childInstance);
-
                 var singleInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
+
+			    if (singleInstance == null)
+			    {
+                    reader.Load(childInstance);
+			    }
 
 				if (foreignKey.IsList)
 				{
@@ -220,7 +281,7 @@ namespace OR_M_Data_Entities
                                 .Invoke(singleInstance, new[] { childInstance }))
 					{
 						// go down each FK tree and create the child instance
-						_recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
+                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes, keysLoaded, false, 1);
 
                         singleInstance.GetType().GetMethod("Add").Invoke(singleInstance, new[] { childInstance });
 
@@ -232,13 +293,7 @@ namespace OR_M_Data_Entities
 					continue;
 				}
 
-                if (singleInstance != null)
-                {
-                    childInstance = singleInstance;
-                }
-
-                // go down each FK tree and create the child instance
-                _recursiveLoad(reader, childInstance, foreignKey.ChildTypes);
+                _recursiveLoad(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, keysLoaded, false, 1);
 
 			    if (singleInstance == null)
 			    {
@@ -258,7 +313,7 @@ namespace OR_M_Data_Entities
 			// read the next row
 			reader.Read();
 
-			_load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue);
+            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, keysLoaded);
 		}
 	}
 
