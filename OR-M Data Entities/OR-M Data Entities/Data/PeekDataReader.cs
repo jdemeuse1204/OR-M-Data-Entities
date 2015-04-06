@@ -45,6 +45,7 @@ namespace OR_M_Data_Entities.Data
         {
             _wrappedReader = wrappedReader;
             HasRows = wrappedReader.HasRows;
+            FieldCount = wrappedReader.FieldCount;
         }
         #endregion
 

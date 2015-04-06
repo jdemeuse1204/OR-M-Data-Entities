@@ -62,13 +62,49 @@ namespace OR_M_Data_Entities.Data
             return rowsAffected > 0;
         }
 
-        /// <summary>
-        /// Saves changes to the database.  If there is a PK match values will be updated,
-        /// otherwise record will be inserted
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="entity"></param>
         public virtual void SaveChanges<T>(T entity)
+            where T : class
+        {
+            if (DatabaseSchemata.HasForeignKeys<T>())
+            {
+                _saveChangesWithForeignKeys(entity);
+            }
+
+            _saveChangesWithNoForeignKeys(entity);
+        }
+
+        private void _saveChangesWithForeignKeys<T>(T entity) where T : class
+        {
+            // make sure FKs have values before saving, if they dont you need to throw an error
+
+            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity))
+            {
+                var foreignKeyValue = foreignKey.GetValue(entity);
+
+                if (foreignKeyValue.IsList())
+                {
+                    foreach (var item in (foreignKeyValue as dynamic))
+                    {
+                        if (DatabaseSchemata.HasForeignKeys(item))
+                        {
+                            _saveChangesWithForeignKeys(item);
+                        }
+
+                        _saveChangesWithNoForeignKeys(item);
+                    }
+                    continue;
+                }
+
+                if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
+                {
+                    _saveChangesWithForeignKeys(foreignKeyValue);
+                }
+
+                _saveChangesWithNoForeignKeys(foreignKeyValue);
+            }
+        }
+
+        private void _saveChangesWithNoForeignKeys<T>(T entity)
             where T : class
         {
             // Check to see if the PK is defined
@@ -81,7 +117,7 @@ namespace OR_M_Data_Entities.Data
             var tableColumns = DatabaseSchemata.GetTableFields(entity);
 
             // check to see whether we have an insert or update
-            var state = DatabaseEntity.GetState(entity,primaryKeys);
+            var state = DatabaseEntity.GetState(entity, primaryKeys);
 
             // Update Or Insert data
             switch (state)
