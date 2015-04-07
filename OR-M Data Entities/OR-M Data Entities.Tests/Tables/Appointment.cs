@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
@@ -14,6 +15,6 @@ namespace OR_M_Data_Entities.Tests.Tables
         public string Description { get; set; }
 
         [ForeignKey("AppointmentID")]
-        public Address Address { get; set; }
+        public List<Address> Address { get; set; }
     }
 }

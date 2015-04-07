@@ -61,8 +61,10 @@
     <Compile Include="Tables\Contact.cs" />
     <Compile Include="Tables\Linking.cs" />
     <Compile Include="Tables\Name.cs" />
+    <Compile Include="Tables\PhoneNumber.cs" />
     <Compile Include="Tables\Policy.cs" />
     <Compile Include="Tables\PolicyInfo.cs" />
+    <Compile Include="Tables\StateCode.cs" />
     <Compile Include="Tables\Zip.cs" />
   </ItemGroup>
   <ItemGroup>

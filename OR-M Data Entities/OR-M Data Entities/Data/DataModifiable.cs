@@ -6,8 +6,12 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities.Commands;
+using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -67,19 +71,64 @@ namespace OR_M_Data_Entities.Data
         {
             if (DatabaseSchemata.HasForeignKeys<T>())
             {
-                _saveChangesWithForeignKeys(entity);
+                var savableObjects = new List<ForeignKeySaveNode> {new ForeignKeySaveNode(null, entity, null)};
+                _analyzeChangesWithForeignKeys(entity, savableObjects);
+
+                foreach (var savableObject in savableObjects)
+                {
+                    _saveChangesWithNoForeignKeys(savableObject.Value);
+
+                    // insert keys into parent
+                    _setValue(savableObject.Parent, savableObject.Value);
+                }
+
+                // loop through the saved list in reverse and set all ids that came in from saving
+                _setKeysWithForeignKeysAfterSave(entity);
+                return;
             }
 
             _saveChangesWithNoForeignKeys(entity);
         }
 
-        private void _saveChangesWithForeignKeys<T>(T entity) where T : class
+        private void _setValue(object parent, object child)
+        {
+            var foreignKeyProperty =
+                DatabaseSchemata.GetForeignKeys(parent)
+                    .First(
+                        w =>
+                            (w.PropertyType.IsList()
+                                ? w.PropertyType.GetGenericArguments()[0]
+                                : w.PropertyType) == child.GetType());
+
+            var childProperties = child.GetType().GetProperties();
+            var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
+            var childProperty = childProperties.FirstOrDefault(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
+
+            if (childProperty != null)
+            {
+                //// correct FK
+                //var pkValue = parent.GetType().GetProperty(foreignKeyAttribute.PrimaryKeyColumnName).GetValue(parent);
+
+                //DatabaseEntity.SetPropertyValue(child, childProperty, pkValue);
+            }
+            else
+            {
+                // check for backwards FK
+            }
+        }
+
+        private void _setKeysWithForeignKeysAfterSave<T>(T entity)
+            where T : class
         {
             // make sure FKs have values before saving, if they dont you need to throw an error
-
             foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity))
             {
                 var foreignKeyValue = foreignKey.GetValue(entity);
+
+                if (foreignKeyValue == null)
+                {
+                    throw new Exception(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
+                }
 
                 if (foreignKeyValue.IsList())
                 {
@@ -87,25 +136,78 @@ namespace OR_M_Data_Entities.Data
                     {
                         if (DatabaseSchemata.HasForeignKeys(item))
                         {
-                            _saveChangesWithForeignKeys(item);
+                            // set object here
+                            _setValue(entity, item);
+                            _setKeysWithForeignKeysAfterSave(item);
                         }
-
-                        _saveChangesWithNoForeignKeys(item);
+                        else
+                        {
+                            _setValue(entity, item);
+                        }
                     }
                     continue;
                 }
 
                 if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
                 {
-                    _saveChangesWithForeignKeys(foreignKeyValue);
+                    // set object here
+                    _setValue(entity, foreignKeyValue);
+                    _setKeysWithForeignKeysAfterSave(foreignKeyValue as dynamic);
+                }
+            }
+        }
+
+        private void _analyzeChangesWithForeignKeys<T>(T entity, List<ForeignKeySaveNode> savableObjects)
+            where T : class
+        {
+            // make sure FKs have values before saving, if they dont you need to throw an error
+            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity))
+            {
+                var index = 0;
+                var foreignKeyValue = foreignKey.GetValue(entity);
+
+                if (foreignKeyValue == null)
+                {
+                    throw new Exception(string.Format("SAVE CANCELLED!  Reason: Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
                 }
 
-                _saveChangesWithNoForeignKeys(foreignKeyValue);
+                // doesnt have dependencies
+                if (foreignKeyValue.IsList())
+                {
+                    foreach (var item in (foreignKeyValue as dynamic))
+                    {
+                        index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
+
+                        if (DatabaseSchemata.HasForeignKeyDependencies(item))
+                        {
+                            savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, item, foreignKeyValue));
+                        }
+                        else
+                        {
+                            savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, foreignKeyValue)); 
+                        }
+
+                        if (DatabaseSchemata.HasForeignKeys(item))
+                        {
+                            _analyzeChangesWithForeignKeys(item, savableObjects);
+                        }
+                    }
+                    continue;
+                }
+
+                index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
+
+                savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));
+
+                // has dependencies
+                if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
+                {
+                    _analyzeChangesWithForeignKeys(foreignKeyValue as dynamic, savableObjects);
+                }
             }
         }
 
         private void _saveChangesWithNoForeignKeys<T>(T entity)
-            where T : class
         {
             // Check to see if the PK is defined
             var tableName = DatabaseSchemata.GetTableName(entity);

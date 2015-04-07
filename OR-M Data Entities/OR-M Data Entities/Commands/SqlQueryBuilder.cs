@@ -191,7 +191,7 @@ namespace OR_M_Data_Entities.Commands
                     var tName = tableNameAndColumnNames.Key;
                     var columns = tableNameAndColumnNames.Value;
 
-                    _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}],", tName, column));
+                    _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}] as [{2}],", tName, column, string.Format("{0}{1}",tName,column)));
                 }
                 
                 _select = _select.TrimEnd(',');

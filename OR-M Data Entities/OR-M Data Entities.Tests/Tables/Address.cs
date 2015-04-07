@@ -12,6 +12,11 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public Guid AppointmentID { get; set; }
 
+        public int StateID { get; set; }
+
+        [ForeignKey("StateID")]
+        public StateCode State { get; set; }
+
         [ForeignKey("AddressID")]
         public List<Zip> ZipCode { get; set; }
     }

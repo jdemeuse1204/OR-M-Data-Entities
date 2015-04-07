@@ -13,10 +13,15 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string LastName { get; set; }
 
-        [ForeignKey("ContactID", true)]
+        public int PhoneID { get; set; }
+
+        [ForeignKey("PhoneID")]
+        public PhoneNumber Number { get; set; }
+
+        [ForeignKey("ContactID")]
         public List<Appointment> Appointments { get; set; }
 
-        [ForeignKey("ContactID", true)]
-        public Name Name { get; set; }
+        [ForeignKey("ContactID")]
+        public List<Name> Name { get; set; }
     }
 }

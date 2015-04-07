@@ -230,7 +230,7 @@ namespace OR_M_Data_Entities
 			    var node = new ObjectMapNode(0);
 			    var index = objectMapNodes.IndexOf(node);
 
-			    if (singleInstance == null)
+			    if (singleInstance == null || singleInstance.IsList())
 			    {
                     reader.Load(childInstance);
 			    }

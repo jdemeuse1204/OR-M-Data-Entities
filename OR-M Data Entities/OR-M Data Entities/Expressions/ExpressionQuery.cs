@@ -166,11 +166,12 @@ namespace OR_M_Data_Entities.Expressions
             {
                 var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
                 var join = new SqlJoin();
+                var parentPrimaryKey = DatabaseSchemata.GetPrimaryKeys(typeof (TParent)).First();
 
                 join.ParentEntity = new SqlTableColumnPair
                 {
                     Table = typeof(TParent),
-                    Column = DatabaseSchemata.GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, typeof(TParent))
+                    Column = DatabaseSchemata.GetTableFieldByName(parentPrimaryKey.Name, typeof(TParent))
                 };
 
                 join.JoinEntity = new SqlTableColumnPair

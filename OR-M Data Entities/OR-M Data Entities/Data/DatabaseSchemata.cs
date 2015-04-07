@@ -174,6 +174,22 @@ namespace OR_M_Data_Entities.Data
                w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
         }
 
+        public static List<ForeignKeyAttribute> GetForeignKeyAttributes(Type entityType)
+        {
+            return entityType.GetProperties().Where(w =>
+               w.GetCustomAttribute<ForeignKeyAttribute>() != null).Select(w => w.GetCustomAttribute<ForeignKeyAttribute>()).ToList();
+        }
+
+        public static List<ForeignKeyAttribute> GetForeignKeyAttributes(object entity)
+        {
+            return GetForeignKeyAttributes(entity.GetType());
+        }
+
+        public static List<ForeignKeyAttribute> GetForeignKeyAttributes<T>()
+        {
+            return GetForeignKeyAttributes(typeof(T));
+        }
+
         public static bool HasForeignKeys<T>()
         {
             return HasForeignKeys(typeof(T));
@@ -187,6 +203,21 @@ namespace OR_M_Data_Entities.Data
         public static bool HasForeignKeys(object entity)
         {
             return HasForeignKeys(entity.GetType());
+        }
+
+        public static bool HasForeignKeyDependencies(object entity)
+        {
+            return HasForeignKeys(entity) && GetForeignKeys(entity).Any(w => !w.PropertyType.IsList());
+        }
+
+        public static bool HasForeignKeyDependencies(Type type)
+        {
+            return HasForeignKeys(type) && GetForeignKeys(type).Any(w => !w.PropertyType.IsList());
+        }
+
+        public static bool HasForeignKeyDependencies<T>()
+        {
+            return HasForeignKeys(typeof(T)) && GetForeignKeys(typeof(T)).Any(w => !w.PropertyType.IsList());
         }
 
         public static List<PropertyInfo> GetTableFields(object entity)
@@ -382,8 +413,9 @@ namespace OR_M_Data_Entities.Data
 
             foreach (var foreignKey in foreignKeys)
             {
+                var isList = foreignKey.PropertyType.IsList();
                 var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
-                var fkPropertyType = foreignKey.PropertyType.IsList()
+                var fkPropertyType = isList
                     ? foreignKey.PropertyType.GetGenericArguments()[0]
                     : foreignKey.PropertyType;
                 var key = new KeyValuePair<Type, Type>(type, fkPropertyType);
@@ -395,10 +427,6 @@ namespace OR_M_Data_Entities.Data
                 if (matchResult == SqlJoinCollectionKeyMatchType.AsIs ||
                     matchResult == SqlJoinCollectionKeyMatchType.Inverse)
                 {
-                    if (foreignKeyAttribute.IsNullable)
-                    {
-                        result.ChangeJoinType(key,JoinType.Left);
-                    }
 
                     if (!hasFKs)
                     {
@@ -409,12 +437,12 @@ namespace OR_M_Data_Entities.Data
                     continue;
                 }
 
-                var joinEntityColumn = GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType);
-                var parentEntityColumn = GetTableFieldByName(foreignKeyAttribute.PrimaryKeyColumnName, type);
+                var joinEntityColumn = isList ? GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType) : GetPrimaryKeys(fkPropertyType).First();
+                var parentEntityColumn = isList ? GetPrimaryKeys(type).First() : GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, type);
 
-                if (joinEntityColumn == null) throw new Exception(string.Format("Cannot Find Column {0} from Type {1}", foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType.Name));
+                if (joinEntityColumn == null) throw new Exception(string.Format("Could not resolve foreign key(s) for Type Type {0}", fkPropertyType.Name));
 
-                if (parentEntityColumn == null) throw new Exception(string.Format("Cannot Find Column {0} from Type {1}", foreignKeyAttribute.PrimaryKeyColumnName, type.Name));
+                if (parentEntityColumn == null) throw new Exception(string.Format("Could not resolve foreign key(s) for Type Type {0}", type.Name));
 
                 result.Add(new SqlJoin
                 {
@@ -430,7 +458,7 @@ namespace OR_M_Data_Entities.Data
                         Column = joinEntityColumn
                     },
 
-                    Type = foreignKeyAttribute.IsNullable ? JoinType.Left : JoinType.Inner
+                    Type = JoinType.Inner
                 });
 
                 if (HasForeignKeys(fkPropertyType))

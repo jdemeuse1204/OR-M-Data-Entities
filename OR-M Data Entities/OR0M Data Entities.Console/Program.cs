@@ -11,11 +11,13 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new SqlContext();
             var s = DateTime.Now;
-            var testItem =
-                context.From<Contact>()
-                    .Select<Contact>()
-                    .Where<Contact>(w => w.ID == 16)
-                    .First<Contact>();
+            var testItem = new Contact();
+            //context.From<Contact>()
+            //    .Select<Contact>()
+            //    .Where<Contact>(w => w.ID == 16)
+            //    .First<Contact>();
+
+            //context.Find<Contact>(16); 
 
             var e = DateTime.Now;
 
@@ -32,7 +34,11 @@ namespace OR0M_Data_Entities.Console
 
             var testAddress = new Address
             {
-                Addy = "JUST ADDED!"
+                Addy = "JUST ADDED!",
+                State = new StateCode
+                {
+                    Value = "MI"
+                }
             };
 
             var testZip = new Zip
@@ -41,15 +47,23 @@ namespace OR0M_Data_Entities.Console
                 Zip4 = "WIN!"
             };
 
-             testAddress.ZipCode = new List<Zip>();
+            testAddress.ZipCode = new List<Zip>();
             testAddress.ZipCode.Add(testZip);
-            testAppointment.Address = testAddress;
+            testAppointment.Address = new List<Address> { testAddress };
             testSave.Appointments = new List<Appointment>();
-            testSave.Name = new Name
-            {
-                Value = "sldfljklsdf"
+            testSave.Name = new List<Name>
+            { 
+                new Name
+                {
+                    Value = "sldfljklsdf"
+                }
             };
             testSave.Appointments.Add(testAppointment);
+
+            testSave.Number = new PhoneNumber
+            {
+                Phone = "(414) 530-3086"
+            };
 
             context.SaveChanges(testSave);
 
@@ -63,7 +77,7 @@ namespace OR0M_Data_Entities.Console
 
             if (tt.Minutes != 0)
             {
-                
+
             }
 
             if (testItem != null)
