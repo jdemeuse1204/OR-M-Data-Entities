@@ -2,23 +2,29 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
+using System.Collections;
 using System.Collections.Generic;
 
 namespace OR_M_Data_Entities.Commands.Support
 {
-	public sealed class KeyContainer
+    public sealed class KeyContainer : IEnumerable<KeyValuePair<string, object>>
 	{
-		public KeyContainer()
+        #region Constructor
+        public KeyContainer()
 		{
 			_container = new Dictionary<string, object>();
 		}
+        #endregion
 
-		private Dictionary<string, object> _container { get; set; }
+        #region Properties
+        private Dictionary<string, object> _container { get; set; }
+        #endregion
 
-		public void Add(string columnName, object value)
+        #region Methods
+        public void Add(string columnName, object value)
 		{
 			_container.Add(columnName, value);
 		}
@@ -26,6 +32,12 @@ namespace OR_M_Data_Entities.Commands.Support
 		public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
 		{
 			return _container.GetEnumerator();
-		}
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+        #endregion
 	}
 }

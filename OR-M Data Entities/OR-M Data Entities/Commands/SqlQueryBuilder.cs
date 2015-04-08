@@ -2,13 +2,14 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data;
 
@@ -213,6 +214,7 @@ namespace OR_M_Data_Entities.Commands
         #endregion
     }
 
+    #region helpers
     class QueryBuilderJoin
     {
         public string ParentTableName { get; set; }
@@ -252,4 +254,5 @@ namespace OR_M_Data_Entities.Commands
             }
         }
     }
+    #endregion
 }

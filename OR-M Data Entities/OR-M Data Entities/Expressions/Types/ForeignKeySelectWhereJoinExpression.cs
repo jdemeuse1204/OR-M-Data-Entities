@@ -1,11 +1,17 @@
-﻿using System.Linq;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System.Linq;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Expressions.Types.Base;
 
 namespace OR_M_Data_Entities.Expressions.Types
 {
-    public class ForeignKeySelectWhereJoinExpression : SqlExpressionResolvableBase
+    public sealed class ForeignKeySelectWhereJoinExpression : SqlExpressionResolvableBase
     {
         public ForeignKeySelectWhereJoinExpression(ExpressionQuery query)
             : base(query)

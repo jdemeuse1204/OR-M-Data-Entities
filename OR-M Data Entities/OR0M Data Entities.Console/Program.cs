@@ -10,6 +10,14 @@ namespace OR0M_Data_Entities.Console
         static void Main(string[] args)
         {
             var context = new SqlContext();
+
+            var parent = context.Find<Parent>(1);
+
+            if (parent != null)
+            {
+                
+            }
+
             var s = DateTime.Now;
             var testItem = new Contact();
             //context.From<Contact>()

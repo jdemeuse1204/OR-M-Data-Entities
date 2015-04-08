@@ -2,10 +2,10 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
-using OR_M_Data_Entities.Commands.StatementParts;
+using OR_M_Data_Entities.Commands.Secure.StatementParts;
 
 namespace OR_M_Data_Entities.Commands.Support
 {
@@ -70,10 +70,10 @@ namespace OR_M_Data_Entities.Commands.Support
 					startComparisonType = "'%";
 					comparisonType = "LIKE";
 					break;
-				case ComparisonType.EqualsIgnoreCase:
+				case ComparisonType.EqualsIgnoreCase:  // not used
 					startValidationString = " {0} [{1}].[{2}] {3} {4}{5}{6} ";
 					break;
-				case ComparisonType.EqualsTruncateTime:
+				case ComparisonType.EqualsTruncateTime: // not used
 					startValidationString = " {0} Cast([{1}].[{2}] as date) {3} Cast({4}{5}{6} as date)";
 					break;
 				case ComparisonType.GreaterThan:

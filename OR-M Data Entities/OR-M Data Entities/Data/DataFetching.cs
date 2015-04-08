@@ -2,7 +2,7 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System;
@@ -20,11 +20,14 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReading
     {
+        #region Constructor
         protected DataFetching(string connectionStringOrName)
             : base(connectionStringOrName)
         {
         }
+        #endregion
 
+        #region Identity
         /// <summary>
         /// Used with insert statements only, gets the value if the id's that were inserted
         /// </summary>
@@ -53,8 +56,9 @@ namespace OR_M_Data_Entities.Data
 
             return new KeyContainer();
         }
+        #endregion
 
-		#region First
+        #region First
         protected T First<T>(Expression<Func<T, bool>> propertyLambda)
             where T : class
         {

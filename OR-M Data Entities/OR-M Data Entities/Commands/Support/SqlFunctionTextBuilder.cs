@@ -2,8 +2,9 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -13,7 +14,6 @@ namespace OR_M_Data_Entities.Commands.Support
     public abstract class SqlFunctionTextBuilder
     {
         #region Constructor
-
         protected SqlFunctionTextBuilder()
         {
             _functionList = new Dictionary<int, object[]>();

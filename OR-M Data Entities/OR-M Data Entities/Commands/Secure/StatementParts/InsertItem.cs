@@ -2,7 +2,7 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System.Data;
@@ -10,8 +10,11 @@ using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Commands.StatementParts
+namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
+    /// <summary>
+    /// Used with ISqlBuilder for data insertion into the specified table
+    /// </summary>
 	public sealed class InsertItem
 	{
 		#region Properties
@@ -36,7 +39,8 @@ namespace OR_M_Data_Entities.Commands.StatementParts
 		public bool TranslateDataType { get; private set; }
 		#endregion
 
-		public InsertItem(PropertyInfo property, object entity)
+        #region Constructor
+        public InsertItem(PropertyInfo property, object entity)
 		{
 			PropertyName = property.Name;
             DatabaseColumnName = DatabaseSchemata.GetColumnName(property);
@@ -84,6 +88,7 @@ namespace OR_M_Data_Entities.Commands.StatementParts
 					SqlDataTypeString = "uniqueidentifier";
 					break;
 			}
-		}
-	}
+        }
+        #endregion
+    }
 }

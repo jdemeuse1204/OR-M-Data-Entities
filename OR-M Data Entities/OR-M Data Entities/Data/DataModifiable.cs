@@ -2,7 +2,7 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System;
@@ -16,7 +16,7 @@ using OR_M_Data_Entities.Mapping;
 namespace OR_M_Data_Entities.Data
 {
     /// <summary>
-    /// This class uses all data fetching functions to create their own functions
+    /// This class uses DataFetching functions to Save, Delete, and Find
     /// </summary>
     public abstract class DataModifiable : DataFetching
     {
@@ -276,7 +276,7 @@ namespace OR_M_Data_Entities.Data
 
         #region Helpers
         /// <summary>
-        /// Analyzes the objec to be saved to make sure all foreign keys have a object to be saved.  
+        /// Analyzes the object to be saved to make sure all foreign keys have a object to be saved.  
         /// Save is cancelled if there are errors.  Also creates the save order based on the foreign keys
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -302,6 +302,8 @@ namespace OR_M_Data_Entities.Data
                 {
                     foreach (var item in (foreignKeyValue as dynamic))
                     {
+                        // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
+                        // the value property
                         index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
 
                         savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, entity));
@@ -315,6 +317,8 @@ namespace OR_M_Data_Entities.Data
                 else
                 {
                     // must be saved before the parent
+                    // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
+                    // the value property
                     index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
 
                     savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));

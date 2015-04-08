@@ -2,7 +2,7 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System;
@@ -11,13 +11,16 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
-using OR_M_Data_Entities.Commands.StatementParts;
+using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
+    /// <summary>
+    /// This class is used to get schema information
+    /// </summary>
     public static class DatabaseSchemata
     {
         public static bool UseTableColumnFetch(SqlExpressionType expressionType)

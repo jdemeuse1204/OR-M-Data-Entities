@@ -2,17 +2,19 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using OR_M_Data_Entities.Data;
 
-namespace OR_M_Data_Entities.Commands.StatementParts
+namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
     public sealed class SqlWhere
     {
+        #region Properties and Fields
         public SqlTableColumnPair TableCompareValue { get; set; }
 
         private object _objectCompareValue;
@@ -23,7 +25,9 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         }
 
         public ComparisonType ComparisonType { get; set; }
+        #endregion
 
+        #region Methods
         public string GetWhereText(Dictionary<string, object> parameters)
         {
             var nextParameter = parameters.GetNextParameter();
@@ -96,5 +100,6 @@ namespace OR_M_Data_Entities.Commands.StatementParts
                     return ObjectCompareValue;
             }
         }
+        #endregion
     }
 }

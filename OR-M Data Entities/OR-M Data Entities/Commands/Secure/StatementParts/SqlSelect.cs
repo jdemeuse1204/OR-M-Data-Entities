@@ -2,29 +2,35 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Data;
 
-namespace OR_M_Data_Entities.Commands.StatementParts
+namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
     public sealed class SqlSelect : IEnumerable<SqlColumn>
     {
+        #region Properties and Fields
         private readonly List<SqlColumn> _list;
         public IEnumerable<SqlColumn> Columns { get { return _list; } }
 
         public SqlTable Table { get; set; }
+        #endregion
 
+        #region Constructor
         public SqlSelect(Type tableType)
         {
             Table = new SqlTable(tableType);
             _list = new List<SqlColumn>();
         }
+        #endregion
 
+        #region Methods
         public void SelectAll()
         {
             foreach (var sqlColumn in DatabaseSchemata.GetTableFields(Table.TableType))
@@ -54,5 +60,6 @@ namespace OR_M_Data_Entities.Commands.StatementParts
         {
             return GetEnumerator();
         }
+        #endregion
     }
 }

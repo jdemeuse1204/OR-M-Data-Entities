@@ -2,22 +2,25 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System;
 using OR_M_Data_Entities.Data;
 
-namespace OR_M_Data_Entities.Commands.StatementParts
+namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
     public sealed class SqlJoin : IEquatable<SqlJoin>
     {
+        #region Properties
         public SqlTableColumnPair ParentEntity { get; set; }
 
         public SqlTableColumnPair JoinEntity { get; set; }
 
         public JoinType Type { get; set; }
+        #endregion
 
+        #region Methods
         public string GetJoinText()
         {
             var parentTableName = DatabaseSchemata.GetTableName(ParentEntity.Table);
@@ -49,8 +52,9 @@ namespace OR_M_Data_Entities.Commands.StatementParts
                     return "";
             }
         }
+        #endregion
 
-
+        #region IEquatable
         public bool Equals(SqlJoin other)
         {
             //Check whether the compared object is null.
@@ -77,5 +81,6 @@ namespace OR_M_Data_Entities.Commands.StatementParts
             //Calculate the hash code for the product.
             return hashProductName ^ hashProductCode;
         }
+        #endregion
     }
 }

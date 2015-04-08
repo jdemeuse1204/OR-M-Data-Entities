@@ -1,9 +1,18 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Data;
 using System.Data.SqlClient;
 
 namespace OR_M_Data_Entities.Data
 {
+    /// <summary>
+    /// Custom data reader to allow for peeking at the next row without losing the positing in the current read
+    /// </summary>
     public sealed class PeekDataReader : IDataReader
     {
         #region Fields
@@ -12,11 +21,11 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Properties
-        public int Depth { get; private set; }
-        public int FieldCount { get; private set; }
-        public int RecordsAffected { get; private set; }
-        public bool IsClosed { get; private set; }
+        public int Depth { get { return _wrappedReader.Depth; } }
+        public int RecordsAffected { get { return _wrappedReader.RecordsAffected; } }
+        public bool IsClosed { get { return _wrappedReader.IsClosed; } }
         public bool HasRows { get; private set; }
+        public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
 
         public object this[int i]

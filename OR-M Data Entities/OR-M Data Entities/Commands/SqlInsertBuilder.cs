@@ -2,13 +2,13 @@
  * OR-M Data Entities v1.2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * (c) 2015 James Demeuse
+ * Copyright (c) 2015 James Demeuse
  */
 
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Reflection;
-using OR_M_Data_Entities.Commands.StatementParts;
+using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Mapping;
 
@@ -18,7 +18,6 @@ namespace OR_M_Data_Entities.Commands
 	{
 		#region Properties
 		private List<InsertItem> _insertItems { get; set; }
-
 		#endregion
 
 		#region Constructor
