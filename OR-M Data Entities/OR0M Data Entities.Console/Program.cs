@@ -73,6 +73,14 @@ namespace OR0M_Data_Entities.Console
                     .Where<Contact>(w => w.ID == testSave.ID)
                     .First<Contact>();
 
+            context.Delete(testSave);
+
+            testItem =
+               context.From<Contact>()
+                   .Select<Contact>()
+                   .Where<Contact>(w => w.ID == testSave.ID)
+                   .First<Contact>();
+
             var tt = e - s;
 
             if (tt.Minutes != 0)

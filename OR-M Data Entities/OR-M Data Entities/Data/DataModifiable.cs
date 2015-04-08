@@ -27,71 +27,46 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
 
-        #region Methods
-        public virtual bool Delete<T>(T entity)
-            where T : class
-        {
-            // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableName(entity);
-
-            // ID is the default primary key name
-            var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
-
-            // delete Data
-            var builder = new SqlDeleteBuilder();
-            builder.Table(tableName);
-
-            // Loop through all mapped properties
-            foreach (var property in primaryKeys)
-            {
-                var value = property.GetValue(entity);
-                var columnName = DatabaseSchemata.GetColumnName(property);
-                builder.AddWhere(tableName, columnName, ComparisonType.Equals, value);
-            }
-
-            // Execute the insert statement
-            Execute(builder);
-
-            if (!Reader.HasRows) return false;
-
-            Read();
-
-            var rowsAffected = Reader.GetInt32(0);
-
-            // close our readers
-            Reader.Close();
-            Reader.Dispose();
-
-            // return if anything was deleted
-            return rowsAffected > 0;
-        }
-
+        #region Save Methods
         public virtual void SaveChanges<T>(T entity)
             where T : class
         {
             if (DatabaseSchemata.HasForeignKeys<T>())
             {
-                var savableObjects = new List<ForeignKeySaveNode> {new ForeignKeySaveNode(null, entity, null)};
-                _analyzeChangesWithForeignKeys(entity, savableObjects);
+                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+
+                // creates the save order based on the primary and foreign keys
+                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
 
                 foreach (var savableObject in savableObjects)
                 {
-                    _saveChangesWithNoForeignKeys(savableObject.Value);
+                    var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
 
-                    // insert keys into parent
-                    _setValue(savableObject.Parent, savableObject.Value);
+                    if (isList)
+                    {
+                        // relationship is one-many.  Need to set the foreign key before saving
+                        _setValue(savableObject.Parent, savableObject.Value);
+                    }
+
+                    _saveObjectToDatabase(savableObject.Value);
+
+                    if (!isList)
+                    {
+                        // relationship is one-one.  Need to set the foreign key after saving
+                        _setValue(savableObject.Parent, savableObject.Value);
+                    }
                 }
 
-                // loop through the saved list in reverse and set all ids that came in from saving
-                _setKeysWithForeignKeysAfterSave(entity);
                 return;
             }
 
-            _saveChangesWithNoForeignKeys(entity);
+            _saveObjectToDatabase(entity);
         }
 
         private void _setValue(object parent, object child)
         {
+            if (parent == null) return;
+
             var foreignKeyProperty =
                 DatabaseSchemata.GetForeignKeys(parent)
                     .First(
@@ -100,114 +75,25 @@ namespace OR_M_Data_Entities.Data
                                 ? w.PropertyType.GetGenericArguments()[0]
                                 : w.PropertyType) == child.GetType());
 
-            var childProperties = child.GetType().GetProperties();
             var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
-            var childProperty = childProperties.FirstOrDefault(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
 
-            if (childProperty != null)
+            if (foreignKeyProperty.PropertyType.IsList())
             {
-                //// correct FK
-                //var pkValue = parent.GetType().GetProperty(foreignKeyAttribute.PrimaryKeyColumnName).GetValue(parent);
+                var parentPrimaryKey = DatabaseSchemata.GetPrimaryKeys(parent).First();
+                var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
 
-                //DatabaseEntity.SetPropertyValue(child, childProperty, pkValue);
+                DatabaseEntity.SetPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
             }
             else
             {
-                // check for backwards FK
+                var childPrimaryKey = DatabaseSchemata.GetPrimaryKeys(child).First();
+                var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
+
+                DatabaseEntity.SetPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
             }
         }
 
-        private void _setKeysWithForeignKeysAfterSave<T>(T entity)
-            where T : class
-        {
-            // make sure FKs have values before saving, if they dont you need to throw an error
-            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity))
-            {
-                var foreignKeyValue = foreignKey.GetValue(entity);
-
-                if (foreignKeyValue == null)
-                {
-                    throw new Exception(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
-                }
-
-                if (foreignKeyValue.IsList())
-                {
-                    foreach (var item in (foreignKeyValue as dynamic))
-                    {
-                        if (DatabaseSchemata.HasForeignKeys(item))
-                        {
-                            // set object here
-                            _setValue(entity, item);
-                            _setKeysWithForeignKeysAfterSave(item);
-                        }
-                        else
-                        {
-                            _setValue(entity, item);
-                        }
-                    }
-                    continue;
-                }
-
-                if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
-                {
-                    // set object here
-                    _setValue(entity, foreignKeyValue);
-                    _setKeysWithForeignKeysAfterSave(foreignKeyValue as dynamic);
-                }
-            }
-        }
-
-        private void _analyzeChangesWithForeignKeys<T>(T entity, List<ForeignKeySaveNode> savableObjects)
-            where T : class
-        {
-            // make sure FKs have values before saving, if they dont you need to throw an error
-            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity))
-            {
-                var index = 0;
-                var foreignKeyValue = foreignKey.GetValue(entity);
-
-                if (foreignKeyValue == null)
-                {
-                    throw new Exception(string.Format("SAVE CANCELLED!  Reason: Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
-                }
-
-                // doesnt have dependencies
-                if (foreignKeyValue.IsList())
-                {
-                    foreach (var item in (foreignKeyValue as dynamic))
-                    {
-                        index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
-
-                        if (DatabaseSchemata.HasForeignKeyDependencies(item))
-                        {
-                            savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, item, foreignKeyValue));
-                        }
-                        else
-                        {
-                            savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, foreignKeyValue)); 
-                        }
-
-                        if (DatabaseSchemata.HasForeignKeys(item))
-                        {
-                            _analyzeChangesWithForeignKeys(item, savableObjects);
-                        }
-                    }
-                    continue;
-                }
-
-                index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
-
-                savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));
-
-                // has dependencies
-                if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
-                {
-                    _analyzeChangesWithForeignKeys(foreignKeyValue as dynamic, savableObjects);
-                }
-            }
-        }
-
-        private void _saveChangesWithNoForeignKeys<T>(T entity)
+        private void _saveObjectToDatabase<T>(T entity)
         {
             // Check to see if the PK is defined
             var tableName = DatabaseSchemata.GetTableName(entity);
@@ -279,7 +165,73 @@ namespace OR_M_Data_Entities.Data
             Reader.Close();
             Reader.Dispose();
         }
+        #endregion
 
+        #region Delete Methods
+        public virtual bool Delete<T>(T entity)
+            where T : class
+        {
+            if (!DatabaseSchemata.HasForeignKeys<T>()) return _deleteObjectFromDatabase(entity);
+
+            var result = true;
+            var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+
+            // creates the save order based on the primary and foreign keys
+            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+
+            // need to reverse the save order for a delete
+            savableObjects.Reverse();
+
+            foreach (var savableObject in savableObjects)
+            {
+                if (!_deleteObjectFromDatabase(savableObject.Value))
+                {
+                    result = false;
+                }
+            }
+
+            return result;
+        }
+
+        private bool _deleteObjectFromDatabase<T>(T entity)
+        {
+            // Check to see if the PK is defined
+            var tableName = DatabaseSchemata.GetTableName(entity);
+
+            // ID is the default primary key name
+            var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
+
+            // delete Data
+            var builder = new SqlDeleteBuilder();
+            builder.Table(tableName);
+
+            // Loop through all mapped properties
+            foreach (var property in primaryKeys)
+            {
+                var value = property.GetValue(entity);
+                var columnName = DatabaseSchemata.GetColumnName(property);
+                builder.AddWhere(tableName, columnName, ComparisonType.Equals, value);
+            }
+
+            // Execute the insert statement
+            Execute(builder);
+
+            if (!Reader.HasRows) return false;
+
+            Read();
+
+            var rowsAffected = Reader.GetInt32(0);
+
+            // close our readers
+            Reader.Close();
+            Reader.Dispose();
+
+            // return if anything was deleted
+            return rowsAffected > 0;
+        }
+        #endregion
+
+        #region Find Method
         /// <summary>
         /// Finds a data object by looking for PK matches
         /// </summary>
@@ -319,6 +271,61 @@ namespace OR_M_Data_Entities.Data
             }
 
             return Select<T>();
+        }
+        #endregion
+
+        #region Helpers
+        /// <summary>
+        /// Analyzes the objec to be saved to make sure all foreign keys have a object to be saved.  
+        /// Save is cancelled if there are errors.  Also creates the save order based on the foreign keys
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entity"></param>
+        /// <param name="savableObjects"></param>
+        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity, List<ForeignKeySaveNode> savableObjects)
+            where T : class
+        {
+            // make sure FKs have values before saving, if they dont you need to throw an error
+            // we want to look at one-one relationships before one-many
+            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity).OrderBy(w => w.PropertyType.IsList()))
+            {
+                var index = 0;
+                var foreignKeyValue = foreignKey.GetValue(entity);
+
+                if (foreignKeyValue == null)
+                {
+                    throw new Exception(string.Format("SAVE CANCELLED!  Reason: Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
+                }
+
+                // doesnt have dependencies
+                if (foreignKeyValue.IsList())
+                {
+                    foreach (var item in (foreignKeyValue as dynamic))
+                    {
+                        index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
+
+                        savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, entity));
+
+                        if (DatabaseSchemata.HasForeignKeys(item))
+                        {
+                            _analyzeObjectWithForeignKeysAndGetModificationOrder(item, savableObjects);
+                        }
+                    }
+                }
+                else
+                {
+                    // must be saved before the parent
+                    index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
+
+                    savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));
+
+                    // has dependencies
+                    if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
+                    {
+                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects);
+                    }
+                }
+            }
         }
         #endregion
     }

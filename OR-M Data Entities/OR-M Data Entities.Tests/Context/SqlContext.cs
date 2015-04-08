@@ -2,8 +2,8 @@
 {
     public class SqlContext : DbSqlContext
     {
-        public SqlContext() 
-            : base("local")
+        public SqlContext()
+            : base("sqlExpress")
         {
         }
     }

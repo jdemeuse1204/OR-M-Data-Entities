@@ -205,19 +205,34 @@ namespace OR_M_Data_Entities.Data
             return HasForeignKeys(entity.GetType());
         }
 
-        public static bool HasForeignKeyDependencies(object entity)
+        public static bool HasForeignListKeys(object entity)
         {
-            return HasForeignKeys(entity) && GetForeignKeys(entity).Any(w => !w.PropertyType.IsList());
+            return GetForeignKeys(entity).Any(w => w.PropertyType.IsList());
         }
 
-        public static bool HasForeignKeyDependencies(Type type)
+        public static bool HasForeignListKeys(Type type)
         {
-            return HasForeignKeys(type) && GetForeignKeys(type).Any(w => !w.PropertyType.IsList());
+            return GetForeignKeys(type).Any(w => w.PropertyType.IsList());
         }
 
-        public static bool HasForeignKeyDependencies<T>()
+        public static bool HasForeignListKeys<T>()
         {
-            return HasForeignKeys(typeof(T)) && GetForeignKeys(typeof(T)).Any(w => !w.PropertyType.IsList());
+            return GetForeignKeys(typeof(T)).Any(w => w.PropertyType.IsList());
+        }
+
+        public static bool HasForeignNonListKeys(object entity)
+        {
+            return GetForeignKeys(entity).Any(w => !w.PropertyType.IsList());
+        }
+
+        public static bool HasForeignNonListKeys(Type type)
+        {
+            return GetForeignKeys(type).Any(w => !w.PropertyType.IsList());
+        }
+
+        public static bool HasForeignNonListKeys<T>()
+        {
+            return GetForeignKeys(typeof(T)).Any(w => !w.PropertyType.IsList());
         }
 
         public static List<PropertyInfo> GetTableFields(object entity)
