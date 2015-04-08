@@ -201,7 +201,7 @@ See _Performing Queries Using ExpressionQuery_ Section (Below)
 
 ######1.	ColumnAttribute : SearchablePrimaryKeyAttribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Properties or Fields
 ```C#
@@ -217,7 +217,7 @@ public class Contact
 
 ######2.	DbGenerationOptionAttribute : Attribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Properties or Fields
 ```C#
@@ -241,7 +241,7 @@ public class Contact
 
 ######3.	DbTranslationAttribute : Attribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Properties or Fields
 ```C#
@@ -257,7 +257,7 @@ public class Contact
 
 ######4.	KeyAttribute : SearchablePrimaryKeyAttribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Properties or Fields
 ```C#
@@ -279,7 +279,7 @@ public class Contact
 
 ######5.	TableAttribute : Attribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Class
 ```C#
@@ -292,9 +292,9 @@ public class Contact
 #####Notes: Needed if you wish to make your class name different than your database table name
 <br><br>
 
-######6.	UnmappedAttribute : Attribute
+######6.	UnmappedAttribute : NonSelectableAttribute
 
-#####Namespace: Mapping.Expressions<br>
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
 #####Usage: Properties or Fields
 ```C#
@@ -308,6 +308,33 @@ public class Contact
 ```
 #####Notes: Needed if you wish to keep this property from being pushed or pulled from the database
 <br><br>
+
+######7.	ForeignKeyAttribute : NonSelectableAttribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Usage: Properties or Fields
+```C#
+public class Contact
+{
+	public int Id {get;set;}
+	
+	public int AddressID {get;set;}
+	
+	// Assumes a one-one relationship between Contact and Address. 
+	// Looks for the AddressID in the Contact Class
+	[ForeignKey("AddressID")]
+	public Address Address {get;set;}
+	
+	// Assumes a one-many relationship between Contact and PhoneNumber. 
+	// Looks for the ContactID in the PhoneNumber table
+	[ForeignKey("ContactID")]
+	public List<PhoneNumber> PhoneNumbers {get;set;}
+}
+```
+#####Notes: Whether or not your foreign key object is a list or not will determine the relationship.  A List assumes a one-many relationship and a class reference assumes a one-one relationship.
+<br><br>
+
 
 
 ####Performing Queries Using ExpressionQuery:
