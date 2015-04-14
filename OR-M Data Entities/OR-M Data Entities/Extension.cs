@@ -58,9 +58,9 @@ namespace OR_M_Data_Entities
 				return reader.ToObject();
 			}
 
-            return reader.DataQueryType == DataQueryType.ForeignKeys ?
-				reader.GetObjectFromReaderWithForeignKeys<T>() :
-				reader.GetObjectFromReader<T>();
+		    return default(T);// reader.DataQueryType == DataQueryType.ForeignKeys ?
+				//reader.GetObjectFromReaderWithForeignKeys<T>() :
+				//reader.GetObjectFromReader<T>();
 		}
 
         private static object Load(this PeekDataReader reader, object instance, string tableName)
@@ -305,11 +305,19 @@ namespace OR_M_Data_Entities
 		}
 	}
 
+    public static class PropertyInfoExtensions
+    {
+        public static Type GetPropertyType(this PropertyInfo info)
+        {
+            return info.PropertyType.IsList() ? info.PropertyType.GetGenericArguments()[0] : info.PropertyType;
+        }
+    }
+
 	public static class SqlCommandExtensions
 	{
-		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IPayload dataQueryType)
+		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IBuilder dataQueryType)
 		{
-            return new PeekDataReader(cmd.ExecuteReader(), dataQueryType);
+            return new PeekDataReader(null);
 		}
 	}
 

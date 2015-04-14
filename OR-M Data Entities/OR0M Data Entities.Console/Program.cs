@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
+using OR_M_Data_Entities.Data.PayloadOperations;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -9,6 +11,10 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
+
+            var x = new ObjectSelectBuilder(new SqlConnection(""));
+            //x.Select<Parent>();
+            x.Select<Contact>();
             var context = new SqlContext();
 
             var parent = context.Find<Parent>(1);

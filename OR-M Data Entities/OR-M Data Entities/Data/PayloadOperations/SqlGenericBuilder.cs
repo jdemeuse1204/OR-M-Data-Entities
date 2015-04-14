@@ -3,9 +3,9 @@ using OR_M_Data_Entities.Data.PayloadOperations.Payloads;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations
 {
-    public class SqlInsertPayload : SqlPayload
+    public class SqlGenericBuilder : SqlQueryBuilder
     {
-        public SqlInsertPayload(SqlConnection connection) : base(connection)
+        public SqlGenericBuilder(SqlConnection connection) : base(connection)
         {
         }
 

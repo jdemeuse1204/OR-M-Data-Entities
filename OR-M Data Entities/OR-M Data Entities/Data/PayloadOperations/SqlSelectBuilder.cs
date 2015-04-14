@@ -3,10 +3,9 @@ using OR_M_Data_Entities.Data.PayloadOperations.Payloads;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations
 {
-    public class ObjectDeletePayload : ObjectPayload
+    public class SqlSelectBuilder : SqlQueryBuilder
     {
-        public ObjectDeletePayload(SqlConnection connection)
-            : base(connection)
+        public SqlSelectBuilder(SqlConnection connection) : base(connection)
         {
         }
 

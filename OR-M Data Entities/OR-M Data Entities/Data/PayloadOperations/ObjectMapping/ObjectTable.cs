@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping
 {
@@ -12,6 +11,8 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping
 
         public string TableName { get; set; }
 
-        public List<PropertyInfo> Columns { get; set; } 
+        public List<ObjectColumn> Columns { get; set; }
+
+        public bool HasAlias { get { return TableName == null ? TableName == Alias : TableName.Equals(Alias); } }
     }
 }

@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Data
         #region Fields
         private readonly IDataReader _wrappedReader;
         private bool _lastResult;
-        public IPayload Payload { get; private set; }
+        public IBuilder Payload { get; private set; }
         #endregion
 
         #region Properties
@@ -51,9 +51,9 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(IPayload payload)
+        public PeekDataReader(IBuilder payload)
         {
-            var cmd = payload.ExecutePayload();
+            var cmd = payload.ExecuteBuilder();
             var wrappedReader = cmd.ExecuteReader();
 
             _wrappedReader = wrappedReader;
