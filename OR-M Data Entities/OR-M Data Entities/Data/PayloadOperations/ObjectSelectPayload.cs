@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping;
 using OR_M_Data_Entities.Data.PayloadOperations.Payloads;
 
@@ -14,7 +16,10 @@ namespace OR_M_Data_Entities.Data.PayloadOperations
             ObjectDetails = new List<ObjectDetail>();
         }
 
-        public void Select<T>()
+        public void Select<T>(Expression<Func<T, object>> result)
+        {
+            if ()
+        }
 
         public override string Resolve()
         {
