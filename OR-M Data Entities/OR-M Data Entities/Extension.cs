@@ -15,6 +15,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
@@ -306,7 +307,7 @@ namespace OR_M_Data_Entities
 
 	public static class SqlCommandExtensions
 	{
-		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, DataQueryType dataQueryType)
+		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IPayload dataQueryType)
 		{
             return new PeekDataReader(cmd.ExecuteReader(), dataQueryType);
 		}
