@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping
 {
-    public class ObjectDetail
+    public class ObjectTable
     {
         public Type Type { get; set; }
 
@@ -12,6 +12,6 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping
 
         public string TableName { get; set; }
 
-        public List<MemberInfo> Columns { get; set; } 
+        public List<PropertyInfo> Columns { get; set; } 
     }
 }

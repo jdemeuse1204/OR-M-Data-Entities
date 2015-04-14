@@ -78,7 +78,7 @@
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Data\PayloadOperations\ObjectDeletePayload.cs" />
     <Compile Include="Data\PayloadOperations\ObjectInsertPayload.cs" />
-    <Compile Include="Data\PayloadOperations\ObjectMapping\ObjectDetail.cs" />
+    <Compile Include="Data\PayloadOperations\ObjectMapping\ObjectTable.cs" />
     <Compile Include="Data\PayloadOperations\ObjectSelectPayload.cs" />
     <Compile Include="Data\PayloadOperations\ObjectUpdatePayload.cs" />
     <Compile Include="Data\PayloadOperations\Payloads\Base\IPayload.cs" />
