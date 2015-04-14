@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
+using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Expressions.Support
 {
@@ -29,7 +30,8 @@ namespace OR_M_Data_Entities.Expressions.Support
         {
             get { return _distinctTypes; }
         }
-        private Dictionary<string , Type> _distinctTypes { get; set; } 
+        private Dictionary<string , Type> _distinctTypes { get; set; }
+        private Dictionary<string,string> _tableRenames { get; set; } 
         #endregion
 
         #region Constructor
@@ -39,6 +41,7 @@ namespace OR_M_Data_Entities.Expressions.Support
             _collection = new List<SqlJoin>();
             _keys = new List<KeyValuePair<Type, Type>>();
             _distinctTypes = new Dictionary<string , Type>();
+            _tableRenames = new Dictionary<string, string>();
         }
         #endregion
 
@@ -67,6 +70,8 @@ namespace OR_M_Data_Entities.Expressions.Support
                 join.ParentEntity.Table,
                 join.JoinEntity.Table);
 
+            var joinTableName = DatabaseSchemata.GetTableName(join.JoinEntity.Table);
+
             if (_keys.Contains(key))
             {
                 if (join.Type == JoinType.Left) return;
@@ -80,9 +85,17 @@ namespace OR_M_Data_Entities.Expressions.Support
                 }
             }
 
-            if (join.JoinEntityTableName != null && !_distinctTypes.ContainsKey(join.JoinEntityTableName))
+            if (join.JoinEntity.TableNameAlias != null)
             {
-                _distinctTypes.Add(join.JoinEntityTableName, join.JoinEntity.Table);
+                if (!_tableRenames.ContainsKey(joinTableName))
+                {
+                    _tableRenames.Add(joinTableName, join.JoinEntity.TableNameAlias);
+                }
+
+                if (!_distinctTypes.ContainsKey(join.JoinEntity.TableNameAlias))
+                {
+                    _distinctTypes.Add(join.JoinEntity.TableNameAlias, join.JoinEntity.Table);
+                }
             }
 
             _collection.Add(join);
@@ -91,6 +104,22 @@ namespace OR_M_Data_Entities.Expressions.Support
 
         public string GetSql()
         {
+            foreach (var join in _collection)
+            {
+                var joinTableName = DatabaseSchemata.GetTableName(join.JoinEntity.Table);
+                var parentTableName = DatabaseSchemata.GetTableName(join.ParentEntity.Table);
+
+                if (_tableRenames.ContainsKey(joinTableName))
+                {
+                    join.JoinEntity.TableNameAlias = _tableRenames[joinTableName];
+                }
+
+                if (_tableRenames.ContainsKey(parentTableName))
+                {
+                    join.ParentEntity.TableNameAlias = _tableRenames[parentTableName];
+                }
+            }
+
             return _collection.Aggregate(string.Empty, (current, @join) => current + @join.GetJoinText());
         }
 

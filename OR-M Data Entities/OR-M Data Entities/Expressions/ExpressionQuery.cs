@@ -167,15 +167,13 @@ namespace OR_M_Data_Entities.Expressions
                 var join = new SqlJoin();
                 var parentPrimaryKey = DatabaseSchemata.GetPrimaryKeys(typeof (TParent)).First();
 
-                join.ParentEntity = new SqlTableColumnPair
+                join.ParentEntity = new SqlTableColumnPair(typeof(TParent))
                 {
-                    Table = typeof(TParent),
                     Column = DatabaseSchemata.GetTableFieldByName(parentPrimaryKey.Name, typeof(TParent))
                 };
 
-                join.JoinEntity = new SqlTableColumnPair
+                join.JoinEntity = new SqlTableColumnPair(typeof(TChild))
                 {
-                    Table = typeof(TChild),
                     Column = DatabaseSchemata.GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, typeof(TChild))
                 };
 

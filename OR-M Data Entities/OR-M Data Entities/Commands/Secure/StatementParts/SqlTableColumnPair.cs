@@ -12,16 +12,25 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
     public sealed class SqlTableColumnPair : SqlColumn, IEquatable<SqlTableColumnPair>
     {
+        public SqlTableColumnPair(Type tableType)
+        {
+            Table = tableType;
+            TableNameAlias = string.Empty;
+            TableName = DatabaseSchemata.GetTableName(Table);
+        }
+
         #region Properties
-        public Type Table { get; set; }
+        public Type Table { get; private set; }
 
         public string TableNameAlias { get; set; }
+
+        public string TableName { get; private set; }
         #endregion
 
         #region Methods
         public string GetTableName()
         {
-            return string.IsNullOrWhiteSpace(TableNameAlias) ? DatabaseSchemata.GetTableName(Table) : TableNameAlias;
+            return string.IsNullOrWhiteSpace(TableNameAlias) ? TableName : TableNameAlias;
         }
 
         public string GetSelectColumnText()

@@ -139,13 +139,12 @@ namespace OR_M_Data_Entities.Expressions
 
             if (parameterExpression == null) throw new InvalidExpressionException("Unary Expression's Operand must be Parameter Expression");
 
-            return DatabaseSchemata.GetTableFields(parameterExpression.Type).Select(column => new SqlTableColumnPair
+            return DatabaseSchemata.GetTableFields(parameterExpression.Type).Select(column => new SqlTableColumnPair(parameterExpression.Type)
             {
                 Column = column,
                 DataType = column.GetCustomAttribute<DbTranslationAttribute>() == null ? 
                     DatabaseSchemata.GetSqlDbType(column.PropertyType) : 
-                    column.GetCustomAttribute<DbTranslationAttribute>().Type,
-                Table = parameterExpression.Type
+                    column.GetCustomAttribute<DbTranslationAttribute>().Type
             }).ToList();
         }
 
@@ -223,8 +222,7 @@ namespace OR_M_Data_Entities.Expressions
                 return _getColumnAndTableName(expression.Expression as MemberExpression, transformType, isCasting, isConverting, conversionStyle);
             }
 
-            var result = new SqlTableColumnPair();
-            result.Table = expression.Expression.Type;
+            var result = new SqlTableColumnPair(expression.Expression.Type);
             result.Column = expression.Member;
             result.DataType = isCasting || isConverting
                 ? transformType
@@ -262,7 +260,7 @@ namespace OR_M_Data_Entities.Expressions
         private static SqlJoin _evaluateJoin(MethodCallExpression expression, JoinType joinType)
         {
             var result = new SqlJoin();
-            var columnOptions = new SqlTableColumnPair();
+            SqlTableColumnPair columnOptions = null;
             var argsHaveParameter = false;
 
             foreach (var arg in expression.Arguments.Where(_hasParameter))
@@ -319,7 +317,7 @@ namespace OR_M_Data_Entities.Expressions
         private static SqlWhere _evaluateWhere(MethodCallExpression expression)
         {
             var result = new SqlWhere();
-            var columnOptions = new SqlTableColumnPair();
+            SqlTableColumnPair columnOptions = null;
             var argsHaveParameter = false;
 
             foreach (var arg in expression.Arguments.Where(_hasParameter))
