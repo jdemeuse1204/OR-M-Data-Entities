@@ -72,11 +72,11 @@ namespace OR_M_Data_Entities.Data
 		protected void Execute(ISqlBuilder builder)
         {
             _tryCloseReader();
+            DataQueryType queryType;
 
-            Command = builder.Build(Connection);
-
+            Command = builder.Build(Connection, out queryType);
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(queryType);
         }
 
         /// <summary>
@@ -92,10 +92,10 @@ namespace OR_M_Data_Entities.Data
             Command = new SqlCommand(sql, Connection);
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(DataQueryType.NoForeignKeys);
         }
 
-        protected void Execute(string sql, Dictionary<string, object> parameters)
+        protected void Execute(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
         {
             _tryCloseReader();
 
@@ -108,7 +108,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(dataQueryType);
         }
 
         protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
@@ -126,9 +126,9 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
+        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
         {
-            Execute(sql, parameters);
+            Execute(sql, parameters, dataQueryType);
 
             return new DataReader<T>(Reader);
         }

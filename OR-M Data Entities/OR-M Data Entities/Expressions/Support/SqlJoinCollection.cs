@@ -22,13 +22,14 @@ namespace OR_M_Data_Entities.Expressions.Support
         public IEnumerable<KeyValuePair<Type, Type>> Keys 
         {
             get { return _keys; }
-        } 
+        }
 
-        public IEnumerable<Type> SelectedTypes 
+        // JoinEntityTableName, Type
+        public IEnumerable<KeyValuePair<string, Type>> SelectedTypes 
         {
             get { return _distinctTypes; }
         }
-        private List<Type> _distinctTypes { get; set; } 
+        private Dictionary<string , Type> _distinctTypes { get; set; } 
         #endregion
 
         #region Constructor
@@ -37,7 +38,7 @@ namespace OR_M_Data_Entities.Expressions.Support
         {
             _collection = new List<SqlJoin>();
             _keys = new List<KeyValuePair<Type, Type>>();
-            _distinctTypes = new List<Type>();
+            _distinctTypes = new Dictionary<string , Type>();
         }
         #endregion
 
@@ -60,55 +61,6 @@ namespace OR_M_Data_Entities.Expressions.Support
                 SqlJoinCollectionKeyMatchType.NoMatch;
         }
 
-        public void Remove(KeyValuePair<Type, Type> key)
-        {
-            var matchType = ContainsKey(key);
-            var index = -1;
-
-            if (matchType == SqlJoinCollectionKeyMatchType.NoMatch)
-            {
-                throw new Exception("Key cannot be found!");
-            }
-
-            if (matchType == SqlJoinCollectionKeyMatchType.AsIs)
-            {
-                index = _keys.IndexOf(key);
-                _distinctTypes.Remove(key.Value);
-            }
-
-            if (matchType == SqlJoinCollectionKeyMatchType.Inverse)
-            {
-                index = _keys.IndexOf(new KeyValuePair<Type, Type>(key.Value, key.Key));
-                _distinctTypes.Remove(key.Key);
-            }
-
-            _keys.RemoveAt(index);
-            _collection.RemoveAt(index);
-        }
-
-        public void ChangeJoinType(KeyValuePair<Type, Type> key, JoinType newJoinType)
-        {
-            var matchType = ContainsKey(key);
-            var index = -1;
-
-            if (matchType == SqlJoinCollectionKeyMatchType.NoMatch)
-            {
-                throw new Exception("Key cannot be found!");
-            }
-
-            if (matchType == SqlJoinCollectionKeyMatchType.AsIs)
-            {
-                index = _keys.IndexOf(key);
-            }
-
-            if (matchType == SqlJoinCollectionKeyMatchType.Inverse)
-            {
-                index = _keys.IndexOf(new KeyValuePair<Type, Type>(key.Value, key.Key));
-            }
-
-            _collection[index].Type = newJoinType;
-        }
-
         public void Add(SqlJoin join)
         {
             var key = new KeyValuePair<Type, Type>(
@@ -128,14 +80,9 @@ namespace OR_M_Data_Entities.Expressions.Support
                 }
             }
 
-            if (!_distinctTypes.Contains(join.ParentEntity.Table))
+            if (join.JoinEntityTableName != null && !_distinctTypes.ContainsKey(join.JoinEntityTableName))
             {
-                _distinctTypes.Add(join.ParentEntity.Table);
-            }
-
-            if (!_distinctTypes.Contains(join.JoinEntity.Table))
-            {
-                _distinctTypes.Add(join.JoinEntity.Table);
+                _distinctTypes.Add(join.JoinEntityTableName, join.JoinEntity.Table);
             }
 
             _collection.Add(join);

@@ -14,12 +14,14 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
     {
         #region Properties
         public Type Table { get; set; }
+
+        public string TableNameAlias { get; set; }
         #endregion
 
         #region Methods
         public string GetTableName()
         {
-            return DatabaseSchemata.GetTableName(Table);
+            return string.IsNullOrWhiteSpace(TableNameAlias) ? DatabaseSchemata.GetTableName(Table) : TableNameAlias;
         }
 
         public string GetSelectColumnText()

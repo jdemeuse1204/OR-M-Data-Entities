@@ -3,7 +3,7 @@
     public class SqlContext : DbSqlContext
     {
         public SqlContext()
-            : base("sqlExpress")
+            : base("local")
         {
         }
     }

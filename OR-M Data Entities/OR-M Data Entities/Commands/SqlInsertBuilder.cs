@@ -10,6 +10,7 @@ using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands
@@ -28,8 +29,10 @@ namespace OR_M_Data_Entities.Commands
 		#endregion
 
 		#region Methods
-		public SqlCommand Build(SqlConnection connection)
+		public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
 		{
+            dataQueryType = DataQueryType.NoForeignKeys;
+
 			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("INSERT statement needs Table Name");

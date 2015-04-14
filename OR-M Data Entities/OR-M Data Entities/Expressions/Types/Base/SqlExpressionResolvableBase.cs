@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Support;
 
 namespace OR_M_Data_Entities.Expressions.Types.Base
@@ -15,7 +16,7 @@ namespace OR_M_Data_Entities.Expressions.Types.Base
     public abstract class SqlExpressionResolvableBase : ExpressionResolver
     {
         #region Abstract Methods
-        public abstract SqlExpressionType Resolve();
+        public abstract DataQueryType Resolve();
         #endregion
 
         #region Fields

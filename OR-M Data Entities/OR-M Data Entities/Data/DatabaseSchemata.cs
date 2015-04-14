@@ -271,19 +271,20 @@ namespace OR_M_Data_Entities.Data
             return GetSelectAllFieldsAndTableName(typeof(T));
         }
 
-        public static List<SqlTableColumnPair> GetTableColumnPairsFromTable(Type type)
+        public static List<SqlTableColumnPair> GetTableColumnPairsFromTable(Type type, string tableName)
         {
             return GetTableFields(type).Select(w => new SqlTableColumnPair
             {
                 Column = w,
                 Table = type,
-                DataType = GetSqlDbType(w.PropertyType)
+                DataType = GetSqlDbType(w.PropertyType),
+                TableNameAlias = tableName ?? GetTableName(type)
             }).ToList();
         }
 
         public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes<T>()
         {
-            return GetForeignKeyTypes(typeof (T));
+            return GetForeignKeyTypes(typeof(T));
         }
 
         public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(object entity)
@@ -297,7 +298,7 @@ namespace OR_M_Data_Entities.Data
             var resultingTypes = new List<PulledForeignKeyDetail>();
 
             _addForeignKeyTypesRecursive(result, type, resultingTypes);
-            
+
             return result;
         }
 
@@ -325,14 +326,13 @@ namespace OR_M_Data_Entities.Data
             _addForeignKeyJoinsRecursive(joins, type);
         }
 
-        private static string[] _primaryKeyColumnNamesWithTableName(Type type)
+        private static string[] _primaryKeyColumnNamesWithTableName(Type type, string tableName)
         {
             var keyList = type.GetProperties().Where(w =>
               (w.GetCustomAttributes<SearchablePrimaryKeyAttribute>() != null
               && w.GetCustomAttributes<SearchablePrimaryKeyAttribute>().Any(x => x.IsPrimaryKey))
               || (w.Name.ToUpper() == "ID")).ToList();
 
-            var tableName = GetTableName(type);
             var result = new string[keyList.Count];
 
             for (var i = 0; i < keyList.Count; i++)
@@ -363,27 +363,24 @@ namespace OR_M_Data_Entities.Data
                 var fkPropertyType = isList
                     ? foreignKey.PropertyType.GetGenericArguments()[0]
                     : foreignKey.PropertyType;
-                
-                if (!result.Select(w => w.Type).Contains(fkPropertyType))
+
+                var fkDetail = new ForeignKeyDetail
                 {
-                    var fkDetail = new ForeignKeyDetail
-                    {
-                        Type = fkPropertyType,
-                        ParentType = type,
-                        IsList = isList,
-                        ListType = isList ? foreignKey.PropertyType : null,
-                        PropertyName = foreignKey.Name,
-                        ChildTypes = new List<ForeignKeyDetail>(),
-                        PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
-                        KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
-                    };
+                    Type = fkPropertyType,
+                    ParentType = type,
+                    IsList = isList,
+                    ListType = isList ? foreignKey.PropertyType : null,
+                    PropertyName = foreignKey.Name,
+                    ChildTypes = new List<ForeignKeyDetail>(),
+                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
+                    KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
+                };
 
-                    _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
+                _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
 
-                    resultingTypes.Add(pulledForeignKeyDetail);
+                resultingTypes.Add(pulledForeignKeyDetail);
 
-                    result.Add(fkDetail);
-                }
+                result.Add(fkDetail);
 
                 if (HasForeignKeys(fkPropertyType))
                 {
@@ -410,7 +407,7 @@ namespace OR_M_Data_Entities.Data
                     ListType = isList ? foreignKey.PropertyType : null,
                     PropertyName = foreignKey.Name,
                     ChildTypes = new List<ForeignKeyDetail>(),
-                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
+                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
                     KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
                 };
 
@@ -436,25 +433,6 @@ namespace OR_M_Data_Entities.Data
                 var fkPropertyType = isList
                     ? foreignKey.PropertyType.GetGenericArguments()[0]
                     : foreignKey.PropertyType;
-                var key = new KeyValuePair<Type, Type>(type, fkPropertyType);
-
-                // make sure the join isnt already added
-                var hasFKs = HasForeignKeys(fkPropertyType);
-                var matchResult = result.ContainsKey(key);
-
-                if (matchResult == SqlJoinCollectionKeyMatchType.AsIs ||
-                    matchResult == SqlJoinCollectionKeyMatchType.Inverse)
-                {
-
-                    if (!hasFKs)
-                    {
-                        continue;
-                    }
-
-                    _addForeignKeyJoinsRecursive(result, fkPropertyType);
-                    continue;
-                }
-
                 var joinEntityColumn = isList ? GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, fkPropertyType) : GetPrimaryKeys(fkPropertyType).First();
                 var parentEntityColumn = isList ? GetPrimaryKeys(type).First() : GetTableFieldByName(foreignKeyAttribute.ForeignKeyColumnName, type);
 
@@ -475,7 +453,7 @@ namespace OR_M_Data_Entities.Data
                         Table = fkPropertyType,
                         Column = joinEntityColumn
                     },
-
+                    JoinEntityTableName = foreignKey.Name,
                     Type = JoinType.Inner
                 });
 

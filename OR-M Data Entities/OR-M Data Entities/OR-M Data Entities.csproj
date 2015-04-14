@@ -74,6 +74,7 @@
     <Compile Include="Data\DatabaseSchemata.cs" />
     <Compile Include="Data\DataFetching.cs" />
     <Compile Include="Data\DataModifiable.cs" />
+    <Compile Include="Data\DataQueryType.cs" />
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />

@@ -27,8 +27,10 @@ namespace OR_M_Data_Entities.Commands
 		#endregion
 
 		#region Methods
-		public SqlCommand Build(SqlConnection connection)
+		public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
 		{
+            dataQueryType = DataQueryType.NoForeignKeys;
+
 			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("UPDATE table missing");

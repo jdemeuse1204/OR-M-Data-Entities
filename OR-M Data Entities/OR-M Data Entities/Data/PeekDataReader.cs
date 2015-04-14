@@ -27,6 +27,7 @@ namespace OR_M_Data_Entities.Data
         public bool HasRows { get; private set; }
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
+        public DataQueryType DataQueryType { get; private set; }
 
         public object this[int i]
         {
@@ -50,11 +51,12 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(SqlDataReader wrappedReader)
+        public PeekDataReader(SqlDataReader wrappedReader, DataQueryType dataQueryType)
         {
             _wrappedReader = wrappedReader;
             HasRows = wrappedReader.HasRows;
             FieldCount = wrappedReader.FieldCount;
+            DataQueryType = dataQueryType;
         }
         #endregion
 

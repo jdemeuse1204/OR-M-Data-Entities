@@ -13,13 +13,22 @@ namespace OR0M_Data_Entities.Console
 
             var parent = context.Find<Parent>(1);
 
+            var name = context.Find<Name>(2);
+
+            name = context.From<Name>().Where<Name>(w => w.ID == 7).Select<Name>().First<Name>();
+
+            if (name != null)
+            {
+                
+            }
+
             if (parent != null)
             {
                 
             }
 
             var s = DateTime.Now;
-            var testItem = new Contact();
+            var testItem = context.Find<Contact>(1); //new Contact();
             //context.From<Contact>()
             //    .Select<Contact>()
             //    .Where<Contact>(w => w.ID == 16)

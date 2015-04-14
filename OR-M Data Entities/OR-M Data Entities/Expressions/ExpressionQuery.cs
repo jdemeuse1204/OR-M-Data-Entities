@@ -14,7 +14,6 @@ using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Expressions.Types;
 using OR_M_Data_Entities.Expressions.Types.Base;
 using OR_M_Data_Entities.Mapping;
@@ -242,7 +241,7 @@ namespace OR_M_Data_Entities.Expressions
             return Activator.CreateInstance(typeof(T), new object[] { this }) as T;
         }
 
-        private SqlExpressionType _resolveExpression()
+        private DataQueryType _resolveExpression()
         {
             if (SelectsList.Count == 0) throw new ArgumentException("No columns selected, please use .Select<T>() to select columns.");
 
@@ -266,9 +265,9 @@ namespace OR_M_Data_Entities.Expressions
 
         public T First<T>()
         {
-            _resolveExpression();
+            var queryType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType))
             {
                 return reader.Select();
             }
@@ -286,9 +285,9 @@ namespace OR_M_Data_Entities.Expressions
 
         public List<T> All<T>()
         {
-             _resolveExpression();
+            var queryType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType))
             {
                 return reader.Cast<T>().ToList();
             }
@@ -296,9 +295,9 @@ namespace OR_M_Data_Entities.Expressions
 
         public IEnumerator GetEnumerator<T>()
         {
-            _resolveExpression();
+            var queryType = _resolveExpression();
 
-            var reader = _context.ExecuteQuery<T>(Sql, Parameters);
+            var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType);
 
             return reader.Cast<T>().GetEnumerator();
         }

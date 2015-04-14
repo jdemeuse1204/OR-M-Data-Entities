@@ -5,7 +5,7 @@
  * Copyright (c) 2015 James Demeuse
  */
 using System.Linq;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Types.Base;
 
 namespace OR_M_Data_Entities.Expressions.Types
@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Expressions.Types
             
         }
 
-        public override SqlExpressionType Resolve()
+        public override DataQueryType Resolve()
         {
             // Turn the Select Lambda Statements into Sql
             var selects = ResolveSelectsList();
@@ -30,7 +30,7 @@ namespace OR_M_Data_Entities.Expressions.Types
             // add the select modifier
             Query.Sql += string.Format(" SELECT {0}{1} ", selectDistinctModifier, selectTopModifier);
 
-            var selectText = selects.Aggregate(string.Empty, (current, item) => current + string.Format("{0},", item.GetSelectColumnTextWithAlias()));
+            var selectText = selects.Aggregate(string.Empty, (current, item) => current + string.Format("{0},", item.GetSelectColumnText()));
 
             // trim the ending comma
             Query.Sql += selectText.TrimEnd(',');
@@ -53,7 +53,7 @@ namespace OR_M_Data_Entities.Expressions.Types
 
             Query.Sql += finalValidationStatement;
 
-            return SqlExpressionType.SelectWhereJoin;
+            return DataQueryType.NoForeignKeys;
         }
     }
 }

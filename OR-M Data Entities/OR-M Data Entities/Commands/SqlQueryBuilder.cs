@@ -22,6 +22,7 @@ namespace OR_M_Data_Entities.Commands
         private string _select { get; set; }
         private string _columns { get; set; }
         private string _straightSelect { get; set; }
+        private Type _tableType { get; set; }
         private Dictionary<string, object> _parameters { get; set; }
         #endregion
 
@@ -33,12 +34,17 @@ namespace OR_M_Data_Entities.Commands
             _straightSelect = string.Empty;
             _parameters = new Dictionary<string, object>();
             _joins = new Dictionary<string, QueryBuilderJoin>();
+            _tableType = null;
         }
         #endregion
 
         #region Methods
-        public SqlCommand Build(SqlConnection connection)
+        public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
         {
+            dataQueryType = _tableType != null
+                ? DatabaseSchemata.HasForeignKeys(_tableType) ? DataQueryType.ForeignKeys : DataQueryType.NoForeignKeys
+                : DataQueryType.NoForeignKeys;
+
             if (string.IsNullOrWhiteSpace(_select) && string.IsNullOrWhiteSpace(_straightSelect))
             {
                 throw new QueryNotValidException("SELECT statement missing");
@@ -71,25 +77,35 @@ namespace OR_M_Data_Entities.Commands
                 var alias = string.IsNullOrWhiteSpace(field.Alias) ? "" : string.Format(" AS {0}", field.Alias);
                 _columns += string.Format("[{0}].[{1}]{2},", table, field.ColumnName, alias);
             }
+
+            _tableType = null;
         }
 
         public void SelectAll(Type tableType)
         {
+            _tableType = tableType;
+
             _createSelectStatement(tableType, " SELECT ");
         }
 
         public void SelectAll<T>() where T : class
         {
+            _tableType = typeof(T);
+
             SelectAll(typeof(T));
         }
 
         public void SelectTopOneAll(Type tableType)
         {
+            _tableType = tableType;
+
             _createSelectStatement(tableType, " SELECT TOP 1 ");
         }
 
         public void SelectTopOneAll<T>() where T : class
         {
+            _tableType = typeof (T);
+
             _createSelectStatement(typeof(T), " SELECT TOP 1 ");
         }
 
@@ -102,6 +118,8 @@ namespace OR_M_Data_Entities.Commands
                 var alias = string.IsNullOrWhiteSpace(field.Alias) ? "" : string.Format(" AS {0}", field.Alias);
                 _columns += string.Format("[{0}].[{1}]{2},", table, field.ColumnName, alias);
             }
+
+            _tableType = null;
         }
 
         public void Select(string sql)
@@ -167,34 +185,36 @@ namespace OR_M_Data_Entities.Commands
             {
                 var allJoinsFromForeignKeys = DatabaseSchemata.GetForeignKeyJoinsRecursive(tableType);
 
-                for (var i = 0; i < allJoinsFromForeignKeys.Keys.Count(); i++)
+                foreach (var foreignKey in allJoinsFromForeignKeys)
                 {
-                    var composite = allJoinsFromForeignKeys.GetKey(i);
-                    var key = DatabaseSchemata.GetTableName(composite.Key) +
-                              DatabaseSchemata.GetTableName(composite.Value);
-                    var join = allJoinsFromForeignKeys.GetJoin(i);
-
-                    _joins.Add(key, new QueryBuilderJoin
+                    _joins.Add(foreignKey.JoinEntityTableName, new QueryBuilderJoin
                     {
-                        ParentTableName = DatabaseSchemata.GetTableName(join.ParentEntity.Table),
-                        ParentColumnName = DatabaseSchemata.GetColumnName(join.ParentEntity.Column),
+                        ParentTableName = DatabaseSchemata.GetTableName(foreignKey.ParentEntity.Table),
+                        ParentColumnName = DatabaseSchemata.GetColumnName(foreignKey.ParentEntity.Column),
 
-                        JoinTableName = DatabaseSchemata.GetTableName(join.JoinEntity.Table),
-                        JoinColumnName = DatabaseSchemata.GetColumnName(join.JoinEntity.Column),
+                        JoinTableName = DatabaseSchemata.GetTableName(foreignKey.JoinEntity.Table),
+                        JoinColumnName = DatabaseSchemata.GetColumnName(foreignKey.JoinEntity.Column),
 
-                        Type = join.Type
+                        JoinTableAlias = foreignKey.JoinEntityTableName,
+
+                        Type = foreignKey.Type
                     });
                 }
 
-                foreach (var table in allJoinsFromForeignKeys.SelectedTypes)
+                var allJoinsFromForeignKeysAndParent =
+                    allJoinsFromForeignKeys.SelectedTypes as Dictionary<string, Type>;
+
+                allJoinsFromForeignKeysAndParent.Add(DatabaseSchemata.GetTableName(tableType), tableType);
+
+                foreach (var table in allJoinsFromForeignKeysAndParent)
                 {
-                    var tableNameAndColumnNames = DatabaseSchemata.GetSelectAllFieldsAndTableName(table);
-                    var tName = tableNameAndColumnNames.Key;
+                    var tableNameAndColumnNames = DatabaseSchemata.GetSelectAllFieldsAndTableName(table.Value);
+                    var tName = table.Key;
                     var columns = tableNameAndColumnNames.Value;
 
                     _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}] as [{2}],", tName, column, string.Format("{0}{1}",tName,column)));
                 }
-                
+
                 _select = _select.TrimEnd(',');
 
                 return;
@@ -227,8 +247,37 @@ namespace OR_M_Data_Entities.Commands
 
         public JoinType Type { get; set; }
 
+        public string JoinTableAlias { get; set; }
+
         public string GetJoinText()
         {
+            if (!string.IsNullOrWhiteSpace(JoinTableAlias))
+            {
+                const string joinText = " {0} JOIN {1} as {2} On [{4}].[{5}] = [{2}].[{3}] ";
+
+                switch (Type)
+                {
+                    case JoinType.Inner:
+                        return string.Format(joinText,
+                            "INNER",
+                            JoinTableName,
+                            JoinTableAlias,
+                            JoinColumnName,
+                            ParentTableName,
+                            ParentColumnName);
+                    case JoinType.Left:
+                        return string.Format(joinText,
+                            "LEFT",
+                            JoinTableName,
+                            JoinTableAlias,
+                            JoinColumnName,
+                            ParentTableName,
+                            ParentColumnName);
+                    default:
+                        return string.Empty;
+                }
+            }
+
             switch (Type)
             {
                 case JoinType.Equi:

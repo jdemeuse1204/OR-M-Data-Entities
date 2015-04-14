@@ -6,7 +6,6 @@
  */
 using System.Linq;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Expressions.Types.Base;
 
 namespace OR_M_Data_Entities.Expressions.Types
@@ -19,7 +18,7 @@ namespace OR_M_Data_Entities.Expressions.Types
             
         }
 
-        public override SqlExpressionType Resolve()
+        public override DataQueryType Resolve()
         {
             // Turn the Select Lambda Statements into Sql
             var selects = ResolveSelectsList();
@@ -30,7 +29,7 @@ namespace OR_M_Data_Entities.Expressions.Types
 
             foreach (var distinctSelectType in foreignKeyJoins.SelectedTypes)
             {
-                selects.AddRange(DatabaseSchemata.GetTableColumnPairsFromTable(distinctSelectType).Where(w => !selects.Contains(w)).ToList());
+                selects.AddRange(DatabaseSchemata.GetTableColumnPairsFromTable(distinctSelectType.Value, distinctSelectType.Key).Where(w => !selects.Contains(w)).ToList());
             }
 
             var selectTopModifier = Query.TakeTopRows == -1 ? string.Empty : string.Format(" TOP {0} ", Query.TakeTopRows);
@@ -62,7 +61,7 @@ namespace OR_M_Data_Entities.Expressions.Types
 
             Query.Sql += finalValidationStatement;
 
-            return SqlExpressionType.ForeignKeySelectWhere;
+            return DataQueryType.ForeignKeys;
         }
     }
 }
