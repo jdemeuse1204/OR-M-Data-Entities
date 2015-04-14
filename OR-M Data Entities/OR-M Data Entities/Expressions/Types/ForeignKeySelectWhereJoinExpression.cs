@@ -28,6 +28,8 @@ namespace OR_M_Data_Entities.Expressions.Types
             // make sure all joins and fields are incorporated into sql
             DatabaseSchemata.GetForeignKeyJoinsRecursive(Query.ReturnDataType, joins);
 
+            var foreignKeyJoins = DatabaseSchemata.GetForeignKeyJoinsRecursive(Query.ReturnDataType);
+
             foreach (var distinctSelectType in joins.SelectedTypes)
             {
                 selects.AddRange(DatabaseSchemata.GetTableColumnPairsFromTable(distinctSelectType.Value, distinctSelectType.Key).Where(w => !selects.Contains(w)).ToList());
@@ -55,6 +57,12 @@ namespace OR_M_Data_Entities.Expressions.Types
             }
 
             var where = ResolveWheresList();
+
+            foreach (var sqlWhere in @where.Where(sqlWhere => foreignKeyJoins.TableRenames.ContainsKey(sqlWhere.TableCompareValue.TableName)))
+            {
+                sqlWhere.TableCompareValue.TableNameAlias =
+                    foreignKeyJoins.TableRenames[sqlWhere.TableCompareValue.TableName];
+            }
 
             var validationStatements = where.Select(item => item.GetWhereText(Query.Parameters)).ToList();
 

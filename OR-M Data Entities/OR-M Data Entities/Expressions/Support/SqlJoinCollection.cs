@@ -32,6 +32,11 @@ namespace OR_M_Data_Entities.Expressions.Support
         }
         private Dictionary<string , Type> _distinctTypes { get; set; }
         private Dictionary<string,string> _tableRenames { get; set; } 
+
+        public IReadOnlyDictionary<string, string> TableRenames 
+        {
+            get { return _tableRenames;  }
+        } 
         #endregion
 
         #region Constructor

@@ -55,6 +55,12 @@ namespace OR_M_Data_Entities.Expressions.Types
 
             var where = ResolveWheresList();
 
+            foreach (var sqlWhere in @where.Where(sqlWhere => foreignKeyJoins.TableRenames.ContainsKey(sqlWhere.TableCompareValue.TableName)))
+            {
+                sqlWhere.TableCompareValue.TableNameAlias =
+                    foreignKeyJoins.TableRenames[sqlWhere.TableCompareValue.TableName];
+            }
+
             var validationStatements = where.Select(item => item.GetWhereText(Query.Parameters)).ToList();
 
             var finalValidationStatement = validationStatements.Aggregate(string.Empty, (current, validationStatement) => current + string.Format(string.IsNullOrWhiteSpace(current) ? " WHERE {0}" : " AND {0}", validationStatement));

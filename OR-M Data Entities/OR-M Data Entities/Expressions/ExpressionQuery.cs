@@ -125,7 +125,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             AddSelectExpression(result);
 
-            if (ReturnDataType != null)
+            if (ReturnDataType != null && ReturnDataType != typeof(T))
             {
                 throw new Exception("Cannot return multiple types");
             }
