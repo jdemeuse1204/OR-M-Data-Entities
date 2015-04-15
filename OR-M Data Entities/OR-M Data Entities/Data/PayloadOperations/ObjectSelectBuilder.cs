@@ -75,28 +75,6 @@ namespace OR_M_Data_Entities.Data.PayloadOperations
             var hasJoins = _hasJoins();
             var hasWheres = _hasWheres();
 
-            // Check for foreign keys
-            if (DatabaseSchemata.HasForeignKeys(Map.BaseType))
-            {
-                if (hasJoins)
-                {
-                    if (hasWheres)
-                    {
-                        return _createInstance<ForeignKeySelectWhereJoinResolver>();
-                    }
-
-                    return _createInstance<ForeignKeySelectJoinResolver>();
-                }
-
-                if (hasWheres)
-                {
-                    return _createInstance<ForeignKeySelectWhereResolver>();
-                }
-
-                return _createInstance<ForeignKeySelectResolver>();
-            }
-
-            // no foreign keys exist
             if (hasJoins)
             {
                 if (hasWheres)

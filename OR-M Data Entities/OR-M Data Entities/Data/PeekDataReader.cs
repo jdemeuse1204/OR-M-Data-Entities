@@ -7,6 +7,7 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
+using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
 using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 
 namespace OR_M_Data_Entities.Data
@@ -19,8 +20,7 @@ namespace OR_M_Data_Entities.Data
         #region Fields
         private readonly IDataReader _wrappedReader;
         private bool _lastResult;
-        public IBuilder Payload { get; private set; }
-        private string _sql { get; set; }
+        public ObjectMap Map { get; private set; } // for foreign keys so we know how to read the data back
         #endregion
 
         #region Properties
@@ -53,15 +53,10 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(SqlCommand cmd, IBuilder payload)
+        public PeekDataReader(SqlCommand cmd, ObjectMap map)
+            : this(cmd)
         {
-            var container = payload.Build();
-            var wrappedReader = cmd.ExecuteReader();
-
-            _wrappedReader = wrappedReader;
-            HasRows = wrappedReader.HasRows;
-            FieldCount = wrappedReader.FieldCount;
-            Payload = payload;
+            Map = map;
         }
 
         public PeekDataReader(SqlCommand cmd)
@@ -71,7 +66,6 @@ namespace OR_M_Data_Entities.Data
             _wrappedReader = wrappedReader;
             HasRows = wrappedReader.HasRows;
             FieldCount = wrappedReader.FieldCount;
-            Payload = null;
         }
         #endregion
 

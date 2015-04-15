@@ -13,6 +13,13 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base
         public bool HasForeignKeys { get; private set; }
         public int? Rows { get; set; }
 
+        public string FromTableName()
+        {
+            var table = Tables.First(w => w.Type == BaseType);
+
+            return table.HasAlias ? table.Alias : table.TableName;
+        }
+
         public IEnumerable<ObjectTable> Tables
         {
             get { return _tables; }
@@ -25,10 +32,50 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base
             HasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
             BaseType = type;
             var table = new ObjectTable(type, tableName, tableName);
-            _tables = new List<ObjectTable>
+
+            if (_tables == null)
             {
-                table
-            };
+                _tables = new List<ObjectTable>();
+            }
+
+            _tables.Add(table);
+
+            if (!HasForeignKeys) return;
+
+            _selectRecursive(type, table);
+        }
+
+        public void AddSingleTable(Type type)
+        {
+            var tableName = DatabaseSchemata.GetTableName(type);
+            var table = new ObjectTable(type, tableName, tableName);
+
+            if (_tables == null)
+            {
+                _tables = new List<ObjectTable>();
+            }
+
+            _tables.Add(table);
+        }
+
+        public bool HasTable(string alias)
+        {
+            return Tables.Any(w => w.HasAlias && w.Alias.Equals(alias));
+        }
+
+        public void AddAllTables(Type type)
+        {
+            var tableName = DatabaseSchemata.GetTableName(type);
+            HasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+
+            var table = new ObjectTable(type, tableName, tableName);
+
+            if (_tables == null)
+            {
+                _tables = new List<ObjectTable>();
+            }
+
+            _tables.Add(table);
 
             if (!HasForeignKeys) return;
 
@@ -45,10 +92,10 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base
 
                 if (foreignKey.PropertyType.IsList())
                 {
-                    var childColumn = table.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
                     var column = parentTable.Columns.First(w => w.IsKey);
+                    var childColumn = table.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
 
-                    childColumn.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(column, JoinType.Inner));
+                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Inner));
                 }
                 else
                 {

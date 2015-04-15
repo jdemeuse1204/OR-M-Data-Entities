@@ -70,7 +70,7 @@ namespace OR_M_Data_Entities.Data
         /// Execute the SqlBuilder on the database
         /// </summary>
         /// <param name="builder"></param>
-		protected void Execute(ISqlBuilder builder)
+		protected void Execute(OR_M_Data_Entities.Commands.Support.ISqlBuilder builder)
         {
             _tryCloseReader();
             DataQueryType queryType;
@@ -84,10 +84,18 @@ namespace OR_M_Data_Entities.Data
         {
             _tryCloseReader();
 
-            Command = new SqlCommand("", Connection);
+            var buildContainer = builder.Build();
+
+            Command = new SqlCommand(buildContainer.Sql, Connection);
+
+            foreach (var item in buildContainer.Parameters)
+            {
+                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Key;
+                Command.Parameters[item.Key].Value = item.Value;
+            }
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(builder.Map);
         }
 
         /// <summary>
@@ -106,7 +114,7 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void Execute(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
+        protected void Execute(string sql, Dictionary<string, object> parameters)
         {
             _tryCloseReader();
 
@@ -137,14 +145,21 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
+        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
         {
-            Execute(sql, parameters, dataQueryType);
+            Execute(sql, parameters);
 
             return new DataReader<T>(Reader);
         }
 
-        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
+        public DataReader<T> ExecuteQuery<T>(OR_M_Data_Entities.Commands.Support.ISqlBuilder builder)
+        {
+            Execute(builder);
+
+            return new DataReader<T>(Reader);
+        }
+
+        public DataReader<T> ExecuteQuery<T>(IBuilder builder)
         {
             Execute(builder);
 

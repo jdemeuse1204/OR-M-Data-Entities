@@ -13,11 +13,12 @@ namespace OR0M_Data_Entities.Console
 
             var x = new ObjectSelectBuilder();
             //x.Select<Parent>();
-            x.SelectAll<Contact>();
-            x.AddWhere<Contact>(w => w.ID == 1 && w.FirstName == "Winning");
-            x.AddInnerJoin<Contact, Appointment>((p, c) => p.ID == c.ContactID);
+            x.SelectAll<Zip>();
+            x.AddLeftJoin<Zip, Address>((p, c) => p.AddressID == c.ID);
             x.Build();
             var context = new SqlContext();
+            var reader = context.ExecuteQuery<Zip>(x);
+            var itemX = reader.Select();
 
             var parent = context.Find<Parent>(1);
 

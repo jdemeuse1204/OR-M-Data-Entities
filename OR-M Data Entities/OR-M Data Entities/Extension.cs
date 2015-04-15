@@ -15,6 +15,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
 using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 using OR_M_Data_Entities.Expressions.Support;
 using OR_M_Data_Entities.Mapping;
@@ -58,9 +59,9 @@ namespace OR_M_Data_Entities
 				return reader.ToObject();
 			}
 
-		    return default(T);// reader.DataQueryType == DataQueryType.ForeignKeys ?
-				//reader.GetObjectFromReaderWithForeignKeys<T>() :
-				//reader.GetObjectFromReader<T>();
+		    return reader.Map != null ?
+				reader.GetObjectFromReaderWithForeignKeys<T>() :
+				reader.GetObjectFromReader<T>();
 		}
 
         private static object Load(this PeekDataReader reader, object instance, string tableName)
@@ -320,9 +321,9 @@ namespace OR_M_Data_Entities
             return new PeekDataReader(cmd);
 		}
 
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IBuilder builder)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, ObjectMap map)
         {
-            return new PeekDataReader(cmd, builder);
+            return new PeekDataReader(cmd, map);
         }
 	}
 

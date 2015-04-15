@@ -267,7 +267,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var queryType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Select();
             }
@@ -287,7 +287,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var queryType = _resolveExpression();
 
-            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType))
+            using (var reader = _context.ExecuteQuery<T>(Sql, Parameters))
             {
                 return reader.Cast<T>().ToList();
             }
@@ -297,7 +297,7 @@ namespace OR_M_Data_Entities.Expressions
         {
             var queryType = _resolveExpression();
 
-            var reader = _context.ExecuteQuery<T>(Sql, Parameters, queryType);
+            var reader = _context.ExecuteQuery<T>(Sql, Parameters);
 
             return reader.Cast<T>().GetEnumerator();
         }

@@ -288,14 +288,16 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.LambdaResolution
 
             if (leftTable == null)
             {
-                throw new Exception(string.Format("Could not find Table from type of {0}",
-                    left.Type.Name));
+                map.AddSingleTable(left.Expression.Type);
+
+                leftTable = map.Tables.FirstOrDefault(w => w.Type == left.Expression.Type);
             }
 
             if (rightTable == null)
             {
-                throw new Exception(string.Format("Could not find Table from type of {0}",
-                    right.Type.Name));
+                map.AddSingleTable(right.Expression.Type);
+
+                rightTable = map.Tables.FirstOrDefault(w => w.Type == right.Expression.Type);
             }
 
             var leftColumnName = DatabaseSchemata.GetColumnName(left.Member);
