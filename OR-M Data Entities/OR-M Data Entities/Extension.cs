@@ -315,10 +315,15 @@ namespace OR_M_Data_Entities
 
 	public static class SqlCommandExtensions
 	{
-		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IBuilder dataQueryType)
+		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
 		{
-            return new PeekDataReader(null);
+            return new PeekDataReader(cmd);
 		}
+
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, IBuilder builder)
+        {
+            return new PeekDataReader(cmd, builder);
+        }
 	}
 
 	public static class DictionaryExtensions

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using OR_M_Data_Entities.Data.PayloadOperations;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
@@ -12,9 +11,12 @@ namespace OR0M_Data_Entities.Console
         static void Main(string[] args)
         {
 
-            var x = new ObjectSelectBuilder(new SqlConnection(""));
+            var x = new ObjectSelectBuilder();
             //x.Select<Parent>();
-            x.Select<Contact>();
+            x.SelectAll<Contact>();
+            x.AddWhere<Contact>(w => w.ID == 1 && w.FirstName == "Winning");
+            x.AddInnerJoin<Contact, Appointment>((p, c) => p.ID == c.ContactID);
+            x.Build();
             var context = new SqlContext();
 
             var parent = context.Find<Parent>(1);

@@ -1,12 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
+using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
+using OR_M_Data_Entities.Data.PayloadOperations.QueryResolution.Base;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations.QueryResolution
 {
-    class ForeignKeySelectWhereResolver
+    public class ForeignKeySelectWhereResolver : Resolver
     {
+        public ForeignKeySelectWhereResolver(ObjectMap map)
+            : base(map)
+        {
+        }
+
+        public override BuildContainer Resolve()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

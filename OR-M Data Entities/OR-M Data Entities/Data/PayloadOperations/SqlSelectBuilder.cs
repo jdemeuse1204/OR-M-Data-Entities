@@ -1,15 +1,11 @@
-﻿using System.Data.SqlClient;
-using OR_M_Data_Entities.Data.PayloadOperations.Payloads;
+﻿using OR_M_Data_Entities.Data.PayloadOperations.Payloads;
+using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 
 namespace OR_M_Data_Entities.Data.PayloadOperations
 {
     public class SqlSelectBuilder : SqlQueryBuilder
     {
-        public SqlSelectBuilder(SqlConnection connection) : base(connection)
-        {
-        }
-
-        public override string Resolve()
+        public override BuildContainer Build()
         {
             throw new System.NotImplementedException();
         }

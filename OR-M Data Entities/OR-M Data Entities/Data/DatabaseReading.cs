@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands.Support;
+using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
@@ -79,6 +80,16 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking(null);
         }
 
+        protected void Execute(IBuilder builder)
+        {
+            _tryCloseReader();
+
+            Command = new SqlCommand("", Connection);
+
+            Connect();
+            Reader = Command.ExecuteReaderWithPeeking();
+        }
+
         /// <summary>
         /// Execute sql statement without sql builder on the database, this should be used for any stored
         /// procedures.  NOTE:  This does not use SqlSecureExecutable to ensure only safe sql strings
@@ -92,7 +103,7 @@ namespace OR_M_Data_Entities.Data
             Command = new SqlCommand(sql, Connection);
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking(null);
+            Reader = Command.ExecuteReaderWithPeeking();
         }
 
         protected void Execute(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
