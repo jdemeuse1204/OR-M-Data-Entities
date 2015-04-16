@@ -35,7 +35,9 @@ namespace OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping
 
         public string GetSelectColumns()
         {
-            return Columns.Aggregate(string.Empty, (current, column) => current + string.Format("[{0}].[{1}],", column.TableAlias, column.Name));
+			return Columns.Aggregate(string.Empty, (current, column) => current + string.Format("[{0}].[{1}] as [{0}{1}],", 
+				column.HasAlias ? column.TableAlias : column.TableName, 
+				column.Name));
         }
 
         public string GetJoins()

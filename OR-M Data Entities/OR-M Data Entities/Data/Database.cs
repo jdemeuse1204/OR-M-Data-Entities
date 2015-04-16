@@ -13,7 +13,7 @@ using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class Database : ExpressionResolver, IDisposable
+    public abstract class Database : IDisposable
     {
         protected string ConnectionString { get; private set; }
         protected SqlConnection Connection { get; set; }

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands.Support;
+using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
 using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
 using OR_M_Data_Entities.Expressions;
 
@@ -80,24 +81,6 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking(null);
         }
 
-        protected void Execute(IBuilder builder)
-        {
-            _tryCloseReader();
-
-            var buildContainer = builder.Build();
-
-            Command = new SqlCommand(buildContainer.Sql, Connection);
-
-            foreach (var item in buildContainer.Parameters)
-            {
-                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Key;
-                Command.Parameters[item.Key].Value = item.Value;
-            }
-
-            Connect();
-            Reader = Command.ExecuteReaderWithPeeking(builder.Map);
-        }
-
         /// <summary>
         /// Execute sql statement without sql builder on the database, this should be used for any stored
         /// procedures.  NOTE:  This does not use SqlSecureExecutable to ensure only safe sql strings
@@ -114,7 +97,7 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void Execute(string sql, Dictionary<string, object> parameters)
+        protected void Execute(string sql, Dictionary<string, object> parameters, ObjectMap map)
         {
             _tryCloseReader();
 
@@ -127,14 +110,13 @@ namespace OR_M_Data_Entities.Data
             }
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking(null);
+			Reader = Command.ExecuteReaderWithPeeking(map);
         }
 
-        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
-            where T : class
-        {
-            return fetching.From<T>().Where(propertyLambda);
-        }
+		protected void Execute(string sql, Dictionary<string, object> parameters)
+		{
+			Execute(sql, parameters, null);
+		}
         #endregion
 
         #region Query Execution
@@ -145,21 +127,19 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
-        {
-            Execute(sql, parameters);
+		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, ObjectMap map)
+		{
+			Execute(sql, parameters, map);
 
-            return new DataReader<T>(Reader);
-        }
+			return new DataReader<T>(Reader);
+		}
+
+		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
+		{
+			return ExecuteQuery<T>(sql, parameters, null);
+		}
 
         public DataReader<T> ExecuteQuery<T>(OR_M_Data_Entities.Commands.Support.ISqlBuilder builder)
-        {
-            Execute(builder);
-
-            return new DataReader<T>(Reader);
-        }
-
-        public DataReader<T> ExecuteQuery<T>(IBuilder builder)
         {
             Execute(builder);
 

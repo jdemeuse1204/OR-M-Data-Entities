@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using OR_M_Data_Entities;
 using OR_M_Data_Entities.Data.PayloadOperations;
 using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
@@ -10,34 +11,40 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
+            var context = new DbSqlContext("arvixe");
 
-            var x = new ObjectSelectBuilder();
-            //x.Select<Parent>();
-            x.SelectAll<Zip>();
-            x.AddLeftJoin<Zip, Address>((p, c) => p.AddressID == c.ID);
-            x.Build();
-            var context = new SqlContext();
-            var reader = context.ExecuteQuery<Zip>(x);
-            var itemX = reader.Select();
+			var reader = context.SelectAll<Contact>().Take(1).Where<Contact>(w => w.ID == 1).First<Contact>();
 
-            var parent = context.Find<Parent>(1);
+			// change underlying layer.... insert should not have All<T> or First<T> functions available
+			context.Update<Contact>().Set<Contact>(w => w.ID = 1);
+
+			context.Delete<Contact>().Where<Contact>(w => w.ID == 1);
+
+			context.Insert<Contact>().Value<Contact>(w => w.FirstName = "WINNING");
+
+			if (reader != null)
+			{
+
+			}
+
+           // var parent = context.Find<Parent>(1);
 
             var name = context.Find<Name>(2);
 
-            name = context.From<Name>().Where<Name>(w => w.ID == 7).Select<Name>().First<Name>();
+			name = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).First<Name>();
 
             if (name != null)
             {
                 
             }
 
-            if (parent != null)
-            {
+			//if (parent != null)
+			//{
                 
-            }
+			//}
 
             var s = DateTime.Now;
-            var testItem = context.Find<Contact>(1); //new Contact();
+            var testItem = new Contact();
             //context.From<Contact>()
             //    .Select<Contact>()
             //    .Where<Contact>(w => w.ID == 16)
@@ -94,16 +101,14 @@ namespace OR0M_Data_Entities.Console
             context.SaveChanges(testSave);
 
             testItem =
-                context.From<Contact>()
-                    .Select<Contact>()
+                context.SelectAll<Contact>()
                     .Where<Contact>(w => w.ID == testSave.ID)
                     .First<Contact>();
 
             context.Delete(testSave);
 
             testItem =
-               context.From<Contact>()
-                   .Select<Contact>()
+			   context.SelectAll<Contact>()
                    .Where<Contact>(w => w.ID == testSave.ID)
                    .First<Contact>();
 
@@ -128,9 +133,8 @@ namespace OR0M_Data_Entities.Console
             for (var i = 0; i < max; i++)
             {
                 var start = DateTime.Now;
-                var item = context.From<Contact>()
-                    .Select<Contact>()
-                    .Where<Contact>(w => w.ID == 16)
+				var item = context.SelectAll<Contact>()
+                    .Where<Contact>(w => w.ID == 1)
                     .First<Contact>();
                 //    context.From<Policy>()
                 //.Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))

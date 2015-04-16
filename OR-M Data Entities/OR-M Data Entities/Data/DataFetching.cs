@@ -11,6 +11,7 @@ using System.Data;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Support;
+using OR_M_Data_Entities.Data.PayloadOperations;
 using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
@@ -59,15 +60,12 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region First
-        protected T First<T>(Expression<Func<T, bool>> propertyLambda)
+        protected T First<T>(Expression<Func<T, bool>> expression)
             where T : class
         {
-			var result = Execute(propertyLambda, this);
+			var where = Where<T>(expression);
 
-            // Select All
-            result.Select<T>();
-
-            return result.First<T>();
+            return where.First<T>();
         }
 
         /// <summary>
@@ -76,26 +74,9 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
         protected T First<T>() where  T : class 
         {
-            var builder = new SqlQueryBuilder();
-            builder.SelectTopOneAll<T>();
-            builder.Table<T>();
+			var select = SelectAll<T>();
 
-            Execute(builder);
-
-            if (Reader.HasRows)
-            {
-                var result = Reader.ToObject<T>();
-
-                Reader.Close();
-                Reader.Dispose();
-
-                return result;
-            }
-
-            Reader.Close();
-            Reader.Dispose();
-
-            return default(T);
+			return select.First<T>();
         }
 		#endregion
 
@@ -106,39 +87,47 @@ namespace OR_M_Data_Entities.Data
         /// <returns>List of type T</returns>
         public List<T> All<T>() where T : class
         {
-            var builder = new SqlQueryBuilder();
-            builder.SelectAll<T>();
-            builder.Table<T>();
+			var select = SelectAll<T>();
 
-            Execute(builder);
-
-            var result = new List<T>();
-
-            while (Reader.Read())
-            {
-                result.Add(Reader.ToObject<T>());
-            }
-
-            Reader.Close();
-            Reader.Dispose();
-
-            return result;
+            return select.All<T>();
         }
 
-        public ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : class
+        public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
         {
-            var result = Execute(propertyLambda, this);
+			var select = SelectAll<T>();
 
-            // Select All
-            result.Select<T>();
-
-            return result;
+            return select.Where<T>(expression);
         }
 
-        public ExpressionQuery From<T>() where T : class
-        {
-            return new ExpressionQuery(DatabaseSchemata.GetTableName<T>(), this);
-        }
+		public ExpressionSelectQuery SelectAll<T>() where T : class
+		{
+			var select = new ExpressionSelectQuery(null, this);
+
+			select.SelectAll<T>();
+
+			return select;
+		}
+
+		public ExpressionUpdateSetQuery Update<T>() where T : class
+		{
+			var update = new ExpressionUpdateQuery(null, this);
+
+			return update.Update<T>();
+		}
+
+		public ExpressionDeleteWhereQuery Delete<T>() where T : class
+		{
+			var delete = new ExpressionDeleteQuery(null, this);
+
+			return delete.Delete<T>();
+		}
+
+		public ExpressionInsertValueQuery Insert<T>() where T : class
+		{
+			var insert = new ExpressionInsertQuery(null, this);
+
+			return insert.Insert<T>();
+		}
 		#endregion
 	}
 }

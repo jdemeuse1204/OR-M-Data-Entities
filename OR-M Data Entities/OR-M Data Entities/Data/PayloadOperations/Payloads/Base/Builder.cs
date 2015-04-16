@@ -2,9 +2,9 @@
 
 namespace OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base
 {
-    public interface IBuilder
+    public abstract class Builder
     {
-        ObjectMap Map { get; set; }
-        BuildContainer Build();
+        public ObjectMap Map { get; protected set; }
+        protected abstract BuildContainer Build();
     }
 }
