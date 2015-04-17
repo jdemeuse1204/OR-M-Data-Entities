@@ -40,9 +40,26 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
 
         public string GetSelectColumns()
         {
-            return Columns.Where(w => w.IsSelected).Aggregate(string.Empty, (current, column) => current + string.Format("[{0}].[{1}] as [{0}{1}],",
-                column.HasAlias ? column.TableAlias : column.TableName,
-                column.Name));
+            // if we are returning a dynamic result we need to only return the column name,
+            // the reader will handle the reading correctly.  The only way for a column to be renamed is through returning a dynamic
+            return Columns.Where(w => w.IsSelected)
+                .Aggregate(string.Empty, (current, column) => current + string.Format("[{0}].[{1}] as [{2}{3}],",
+                    column.HasTableAlias
+                        ? string.IsNullOrWhiteSpace(column.TableAlias) ? column.TableName : column.TableAlias
+                        : column.TableName,
+                    column.Name,
+                    column.HasColumnAlias ? string.Empty : column.HasTableAlias ? column.TableAlias : column.TableName,
+                    column.HasColumnAlias ? column.ColumnAlias : column.Name));
+        }
+
+        public string GetSelectColumnsUnAliased()
+        {
+            return Columns.Where(w => w.IsSelected)
+                .Aggregate(string.Empty, (current, column) => current + string.Format("[{0}].[{1}],",
+                    column.HasTableAlias
+                        ? string.IsNullOrWhiteSpace(column.TableAlias) ? column.TableName : column.TableAlias
+                        : column.TableName,
+                    column.Name));
         }
 
         public string GetJoins()
@@ -56,6 +73,22 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
             foreach (var column in Columns.Where(w => w.HasWheres))
             {
                 column.GetWhereContainer(whereContainer);
+            }
+        }
+
+        public void UnSelectAll()
+        {
+            foreach (var column in Columns)
+            {
+                column.IsSelected = false;
+            }
+        }
+
+        public void SelectAll()
+        {
+            foreach (var column in Columns)
+            {
+                column.IsSelected = true;
             }
         }
         #endregion

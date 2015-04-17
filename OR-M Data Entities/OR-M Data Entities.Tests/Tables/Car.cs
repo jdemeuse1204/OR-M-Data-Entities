@@ -2,6 +2,15 @@
 {
     public class Car
     {
+        public Car()
+        {
+        }
+
+        public Car(string make)
+        {
+            Make = make;
+        }
+
         public int ID { get; set; }
 
         public string Name { get; set; }

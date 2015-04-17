@@ -10,11 +10,11 @@ namespace OR_M_Data_Entities.Expressions
 {
     public class ExpressionSelectQuery : ExpressionQuery
     {
-		public ExpressionSelectQuery(ObjectMap map, DataFetching context)
-			: base(context)
-		{
-			Map = map;
-		}
+        public ExpressionSelectQuery(ObjectMap map, DataFetching context)
+            : base(context)
+        {
+            Map = map;
+        }
 
         public ExpressionWhereJoinQuery SelectAll<T>() where T : class
         {
@@ -26,7 +26,43 @@ namespace OR_M_Data_Entities.Expressions
 
             Table<T>();
 
-			return new ExpressionWhereJoinQuery(Map, Context);
+            return new ExpressionWhereJoinQuery(Map, Context);
+        }
+
+        public ExpressionWhereJoinQuery Select<T>(Expression<Func<T, object>> selector) where T : class
+        {
+            // rename for asethetics
+            if (Map != null && Map.BaseType != null && Map.BaseType == typeof(T))
+            {
+                throw new Exception("Cannot return more than one data type, please use Include<T> to return data");
+            }
+
+            Table<T>();
+
+            // unselect all because we are using the expression to select what we want to return
+            foreach (var table in Map.Tables)
+            {
+                table.UnSelectAll();
+            }
+            
+            Map.DataReturnType = ObjectMapReturnType.Dynamic;
+
+            LambdaResolver.ResolveSelectExpression(selector, Map);
+
+            return new ExpressionWhereJoinQuery(Map, Context);
+        }
+
+        public ExpressionWhereJoinQuery Include<T>(Expression<Func<T, object>> selector) where T : class
+        {
+            // rename for asethetics
+            if (Map != null && Map.BaseType != null && Map.BaseType == typeof(T) && Map.DataReturnType != ObjectMapReturnType.Dynamic)
+            {
+                throw new Exception("Cannot return more than one data type, please use Include<T> to return data");
+            }
+
+            LambdaResolver.ResolveSelectExpression(selector, Map);
+
+            return new ExpressionWhereJoinQuery(Map, Context);
         }
 
         public ExpressionWhereJoinQuery Include<T>() where T : class
@@ -36,11 +72,18 @@ namespace OR_M_Data_Entities.Expressions
             return new ExpressionWhereJoinQuery(Map, Context);
         }
 
-		public ExpressionSelectQuery Take(int rows)
+        public ExpressionWhereJoinQuery Distinct()
+        {
+            Map.IsDistinct = true;
+
+            return new ExpressionWhereJoinQuery(Map, Context);
+        }
+
+        public ExpressionSelectQuery Take(int rows)
         {
             Map.Rows = rows;
 
-			return new ExpressionSelectQuery(Map, Context);
+            return new ExpressionSelectQuery(Map, Context);
         }
 
         public ExpressionJoinQuery InnerJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> expression)
@@ -61,11 +104,11 @@ namespace OR_M_Data_Entities.Expressions
             return new ExpressionJoinQuery(Map, Context);
         }
 
-		public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
-		{
-			LambdaResolver.ResolveWhereExpression(expression, Map);
+        public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
+        {
+            LambdaResolver.ResolveWhereExpression(expression, Map);
 
-			return new ExpressionWhereQuery(Map, Context);
-		}
+            return new ExpressionWhereQuery(Map, Context);
+        }
     }
 }

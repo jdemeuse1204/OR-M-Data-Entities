@@ -81,6 +81,7 @@
     <Compile Include="Expressions\Operations\ObjectFunctions\ObjectFunctionTextBuilder.cs" />
     <Compile Include="Expressions\ExpressionJoinQuery.cs" />
     <Compile Include="Expressions\Operations\ObjectMapping\Base\ObjectMap.cs" />
+    <Compile Include="Expressions\Operations\ObjectMapping\Base\ObjectMapReturnType.cs" />
     <Compile Include="Expressions\Operations\ObjectMapping\ObjectColumn.cs" />
     <Compile Include="Expressions\Operations\ObjectMapping\ObjectTable.cs" />
     <Compile Include="Expressions\ExpressionSelectQuery.cs" />

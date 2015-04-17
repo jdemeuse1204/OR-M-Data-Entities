@@ -19,7 +19,7 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReading
     {
-        public object _lock = new object();
+        protected object Lock = new object();
 
         #region Constructor
         protected DataFetching(string connectionStringOrName)
@@ -63,11 +63,22 @@ namespace OR_M_Data_Entities.Data
         public T First<T>(Expression<Func<T, bool>> expression)
             where T : class
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var where = Where<T>(expression);
 
                 return where.First<T>();
+            }
+        }
+
+        public T FirstOrDefault<T>(Expression<Func<T, bool>> expression)
+            where T : class
+        {
+            lock (Lock)
+            {
+                var where = Where<T>(expression);
+
+                return where.FirstOrDefault<T>();
             }
         }
 
@@ -77,11 +88,21 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
         public T First<T>() where T : class 
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var select = SelectAll<T>();
 
                 return select.First<T>();
+            }
+        }
+
+        public T FirstOrDefault<T>() where T : class
+        {
+            lock (Lock)
+            {
+                var select = SelectAll<T>();
+
+                return select.FirstOrDefault<T>();
             }
         }
 		#endregion
@@ -91,13 +112,13 @@ namespace OR_M_Data_Entities.Data
         /// Return list of items
         /// </summary>
         /// <returns>List of type T</returns>
-        public List<T> All<T>() where T : class
+        public List<T> ToList<T>() where T : class
         {
-		    lock (_lock)
+		    lock (Lock)
 		    {
 		        var select = SelectAll<T>();
 
-		        return select.All<T>();
+                return select.ToList<T>();
 		    }
         }
         #endregion
@@ -105,7 +126,7 @@ namespace OR_M_Data_Entities.Data
         #region ExpressionQuery
         public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var select = SelectAll<T>();
 
@@ -115,7 +136,7 @@ namespace OR_M_Data_Entities.Data
 
 		public ExpressionSelectQuery SelectAll<T>() where T : class
 		{
-		    lock (_lock)
+		    lock (Lock)
 		    {
 		        var select = new ExpressionSelectQuery(null, this);
 
@@ -125,9 +146,21 @@ namespace OR_M_Data_Entities.Data
 		    }
 		}
 
+        public ExpressionSelectQuery Select<T>(Expression<Func<T, object>> selector) where T : class
+        {
+            lock (Lock)
+            {
+                var select = new ExpressionSelectQuery(null, this);
+
+                select.Select<T>(selector);
+
+                return select;
+            }
+        }
+
         public T Find<T>(params object[] pks) where T : class
         {
-            lock (_lock)
+            lock (Lock)
             {
                 var find = new ExpressionFindQuery(null, this);
 

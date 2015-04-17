@@ -36,14 +36,29 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        public T Select()
+        public T FirstOrDefault()
 	    {
 	        _reader.Read();
 
-            return _reader.ToObject<T>();
+            var result = _reader.ToObject<T>();
+
+            Dispose();
+
+            return result == null ? default(T) : result;
 	    }
 
-	    public List<T> All()
+        public T First()
+        {
+            _reader.Read();
+
+            var result = _reader.ToObject<T>();
+
+            Dispose();
+
+            return result;
+        }
+
+	    public List<T> ToList()
 	    {
 	        var result = new List<T>();
 

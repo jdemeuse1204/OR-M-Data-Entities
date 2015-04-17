@@ -12,47 +12,77 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
 
-            var lst = new List<string> {"James", "Megan"};
+            var lst = new List<string> { "James", "Megan" };
 
-            var reader =
-                context.SelectAll<Person>()
+            var areader =
+                context.Select<Person>(w => new
+                {
+                    Name = w.FirstName,
+                    Trim = w.LastName
+                })
+                .Include<Car>(w => new
+                {
+                    Test = w.ID
+                })
                     .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
                     .Where<Person>(w => w.FirstName.Equals("James"))
-                    .All<dynamic>();
+                    .ToList<dynamic>();
 
-			if (reader != null)
-			{
+            var reader =
+                context.SelectAll<Person>().Include<Car>()
+                    .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
+                    .Where<Person>(w => w.FirstName.Equals("James"))
+                    .ToList<dynamic>();
 
-			}
+            var sreader =
+                context.Select<Person>(w => w.FirstName)
+                    .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
+                    .Where<Person>(w => w.FirstName.Equals("James"))
+                    .ToList<string>();
 
-            var val = context.ExecuteQuery<int>("Select 1 From Car").Select();
+            var treader =
+                context.Select<Person>(w => new Car
+                {
+                    Name = w.FirstName,
+                    Trim = w.LastName
+                })
+                    .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
+                    .Where<Person>(w => w.FirstName.Equals("James"))
+                    .ToList<Car>();
+
+            if (reader != null && treader != null && sreader != null && areader != null)
+            {
+
+            }
+
+            var val = context.ExecuteQuery<int>("Select 1 From Car").First();
 
             if (val == 1)
             {
-                
+
             }
 
-           // var parent = context.Find<Parent>(1);
+            // var parent = context.Find<Parent>(1);
             var c = context.Find<Contact>(1);
 
             if (c != null)
             {
-                
+
             }
 
             var name = context.Find<Name>(2);
 
-			var names = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).All<Name>().Select(w => new Car{ Name = w.Value});
+            var names = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).ToList<Name>().Select(w => new Car { Name = w.Value });
 
             if (name != null)
             {
-                
+
             }
 
-			//if (parent != null)
-			//{
-                
-			//}
+            //if (parent != null)
+            //{
+
+            //}
 
             var s = DateTime.Now;
             var testItem = new Contact();
@@ -95,13 +125,14 @@ namespace OR0M_Data_Entities.Console
             testAddress.ZipCode.Add(testZip);
             testAppointment.Address = new List<Address> { testAddress };
             testSave.Appointments = new List<Appointment>();
-            testSave.Name = new List<Name>
-            { 
-                new Name
-                {
-                    Value = "sldfljklsdf"
-                }
-            };
+            testSave.Name = null;
+            //    new List<Name>
+            //{ 
+            //    new Name
+            //    {
+            //        Value = "sldfljklsdf"
+            //    }
+            //};
             testSave.Appointments.Add(testAppointment);
 
             testSave.Number = new PhoneNumber
@@ -119,7 +150,7 @@ namespace OR0M_Data_Entities.Console
             context.Delete(testSave);
 
             testItem =
-			   context.SelectAll<Contact>()
+               context.SelectAll<Contact>()
                    .Where<Contact>(w => w.ID == testSave.ID)
                    .First<Contact>();
 
@@ -144,7 +175,7 @@ namespace OR0M_Data_Entities.Console
             for (var i = 0; i < max; i++)
             {
                 var start = DateTime.Now;
-				var item = context.SelectAll<Contact>()
+                var item = context.SelectAll<Contact>()
                     .Where<Contact>(w => w.ID == 1)
                     .First<Contact>();
                 //    context.From<Policy>()

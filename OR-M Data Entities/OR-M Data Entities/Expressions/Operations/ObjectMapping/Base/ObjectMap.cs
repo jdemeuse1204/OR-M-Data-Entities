@@ -4,15 +4,18 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
 {
-    public class ObjectMap
+    public class ObjectMap : Builder
     {
         public Type BaseType { get; private set; }
-        public bool HasForeignKeys { get; private set; }
+        public ObjectMapReturnType DataReturnType { get; set; }
         public int? Rows { get; set; }
+        public bool IsDistinct { get; set; }
+        public int MemberInitCount { get; set; } // if returning a concrete type and not a dynamic this must be set to 1
 
         public string FromTableName()
         {
@@ -30,7 +33,8 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
         public ObjectMap(Type type)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
-            HasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            var hasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            DataReturnType = hasForeignKeys ? ObjectMapReturnType.ForeignKeys : ObjectMapReturnType.Basic;
             BaseType = type;
             var table = new ObjectTable(type, tableName, tableName, true, true);
 
@@ -41,7 +45,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
 
             _tables.Add(table);
 
-            if (!HasForeignKeys) return;
+            if (!hasForeignKeys) return;
 
             _selectRecursive(type, table);
         }
@@ -67,9 +71,10 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
         public void AddAllTables(Type type)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
-            HasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            var hasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            DataReturnType = hasForeignKeys ? ObjectMapReturnType.ForeignKeys : ObjectMapReturnType.Basic;
 
-            var table = new ObjectTable(type, tableName, tableName, false, HasForeignKeys);
+            var table = new ObjectTable(type, tableName, tableName, false, hasForeignKeys);
 
             if (_tables == null)
             {
@@ -78,7 +83,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
 
             _tables.Add(table);
 
-            if (!HasForeignKeys) return;
+            if (!hasForeignKeys) return;
 
             _selectRecursive(type, table);
         }
@@ -96,13 +101,15 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
                     var column = parentTable.Columns.First(w => w.IsKey);
                     var childColumn = table.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
 
-                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Inner));
+                    // can be one or none to many
+                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Left));
                 }
                 else
                 {
                     var column = parentTable.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
                     var childColumn = table.Columns.First(w => w.IsKey);
 
+                    // must exist
                     column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Inner)); 
                 }
 
@@ -113,6 +120,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
                     _selectRecursive(propertyType, table);
                 }
             }
+        }
+
+        protected override BuildContainer Build()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -27,11 +27,9 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
             _evaluateJoinExpressionTree(expression.Body, joinType, map);
         }
 
-        protected static IEnumerable<SqlTableColumnPair> GetSelects<T>(Expression<Func<T, object>> expression, List<SqlTableColumnPair> evaluationResults)
+        public static void ResolveSelectExpression<T>(Expression<Func<T, object>> selector, ObjectMap map)
         {
-            _evaltateSelectExpressionTree(expression.Body, evaluationResults);
-
-            return evaluationResults;
+            _evaltateSelectExpressionTree(selector.Body, map);
         }
         #endregion
 
@@ -42,31 +40,96 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
         /// <param name="expression"></param>
         /// <param name="evaluationResults"></param>
         /// <param name="tableNameLookup"></param>
-        private static void _evaltateSelectExpressionTree(Expression expression, List<SqlTableColumnPair> evaluationResults)
+        private static void _evaltateSelectExpressionTree(Expression expression, ObjectMap map)
         {
             switch (expression.NodeType)
             {
                 case ExpressionType.New:
-                    var e = expression as NewExpression;
+                    var newExpression = expression as NewExpression;
 
-                    for (var i = 0; i < e.Arguments.Count; i++)
+                    for (var i = 0; i < newExpression.Arguments.Count; i++)
                     {
-                        //var arg = e.Arguments[i] as MemberExpression;
-                        //var newExpressionColumnAndTableName = _getColumnAndTableName(arg, SqlDbType.VarChar, null);
+                        var arg = newExpression.Arguments[i] as MemberExpression;
+                        var table = map.Tables.FirstOrDefault(w => w.Type == arg.Expression.Type);
 
-                        //evaluationResults.Add(newExpressionColumnAndTableName);
+                        if (table == null)
+                        {
+                            map.AddSingleTable(arg.Expression.Type);
+
+                            table = map.Tables.FirstOrDefault(w => w.Type == arg.Expression.Type);
+                        }
+
+                        var column = table.Columns.First(w => w.PropertyName == arg.Member.Name);
+
+                        column.IsSelected = true;
+                        column.ColumnAlias = newExpression.Members[i].Name;
                     }
                     break;
                 case ExpressionType.Convert:
                     var convertExpressionColumnAndTableName = _getTableNameAndColumns((dynamic)expression);
 
-                    evaluationResults.AddRange(convertExpressionColumnAndTableName);
+                    //evaluationResults.AddRange(convertExpressionColumnAndTableName);
                     break;
                 case ExpressionType.Call:
 
                     //var callExpressionColumnAndTableName = _getColumnAndTableName(((MethodCallExpression)expression), SqlDbType.VarChar, null);
 
                     //evaluationResults.Add(callExpressionColumnAndTableName);
+                    break;
+                case ExpressionType.MemberInit:
+                    var memberInitExpression = expression as MemberInitExpression;
+                    map.DataReturnType = ObjectMapReturnType.MemberInit;
+                    map.MemberInitCount++;
+
+                    if (map.MemberInitCount > 1)
+                    {
+                        throw new Exception("Cannot select multiple types.  If you wish to select more than one type, select anonymous type and return a dynamic");
+                    }
+
+                    for (var i = 0; i < memberInitExpression.Bindings.Count; i++)
+                    {
+                        var assignment = memberInitExpression.Bindings[i] as MemberAssignment;
+
+                        var tableType = ((dynamic)assignment.Expression).Expression.Type;
+                        var targetMemberName = ((dynamic)assignment.Expression).Member.Name;
+
+                        var targetTable = map.Tables.FirstOrDefault(w => w.Type == tableType);
+
+                        if (targetTable == null)
+                        {
+                            map.AddSingleTable(assignment.Expression.Type);
+
+                            targetTable = map.Tables.FirstOrDefault(w => w.Type == tableType);
+                        }
+
+                        var targetColumn = targetTable.Columns.First(w => w.PropertyName == targetMemberName);
+
+                        // need to change for the reader to load correctly
+                        targetColumn.TableAlias = "";
+                        targetColumn.ColumnAlias = string.Format("{0}{1}", DatabaseSchemata.GetTableName(assignment.Member.DeclaringType), assignment.Member.Name);
+                        targetColumn.IsSelected = true;
+                    }
+
+                    break;
+                case ExpressionType.MemberAccess:
+                    map.DataReturnType = ObjectMapReturnType.Value;
+                    map.MemberInitCount++;
+
+                    var memberAccessTableType = ((dynamic)expression).Expression.Type;
+                    var memberAccessName = ((dynamic)expression).Member.Name;
+                    var memberAccessTable = map.Tables.FirstOrDefault(w => w.Type == memberAccessTableType);
+
+                    if (memberAccessTable == null)
+                    {
+                        map.AddSingleTable(memberAccessTableType);
+
+                        memberAccessTable = map.Tables.FirstOrDefault(w => w.Type == memberAccessTableType);
+                    }
+
+                    var memberAccessColumn = memberAccessTable.Columns.First(w => w.PropertyName == memberAccessName);
+
+                    memberAccessColumn.IsSelected = true;
+
                     break;
                 default:
                     break;
@@ -130,7 +193,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
         private static void _addWhereValidation(
             BinaryExpression expression,
             ObjectMap map,
-            ConversionPackage conversionPackage, 
+            ConversionPackage conversionPackage,
             ComparisonType compareType,
             object compareValue)
         {
@@ -144,7 +207,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
         private static void _addWhereValidation(
             UnaryExpression expression,
-            ObjectMap map, 
+            ObjectMap map,
             ConversionPackage conversionPackage,
             ComparisonType compareType,
             object compareValue)
@@ -164,9 +227,9 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
             if (conversionPackage.IsCasting || conversionPackage.IsConverting)
             {
-                 conversionPackage.TransformType = GetTransformType(expression);
+                conversionPackage.TransformType = GetTransformType(expression);
 
-                 if (conversionPackage.IsConverting)
+                if (conversionPackage.IsConverting)
                 {
                     object argValue;
 
@@ -239,7 +302,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
         private static void _addWhereValidation(
             object expression,
-            ObjectMap map, 
+            ObjectMap map,
             ConversionPackage conversionPackage,
             ComparisonType compareType,
             object compareValue)
@@ -272,7 +335,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
             if (!argsHaveParameter)
             {
-               // columnOptions = _addWhereValidation(expression.Object as dynamic, SqlDbType.VarChar, null);
+                // columnOptions = _addWhereValidation(expression.Object as dynamic, SqlDbType.VarChar, null);
                 result.JoinEntity = _getValue(expression.Arguments[0] as dynamic) as SqlTableColumnPair;
             }
 
@@ -282,7 +345,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
         private static void _evaluateJoin(BinaryExpression expression, JoinType joinType, ObjectMap map)
         {
-            var left = ((MemberExpression) expression.Left);
+            var left = ((MemberExpression)expression.Left);
             var right = ((MemberExpression)expression.Right);
             var leftTable = map.Tables.FirstOrDefault(w => w.Type == left.Expression.Type);
             var rightTable = map.Tables.FirstOrDefault(w => w.Type == right.Expression.Type);

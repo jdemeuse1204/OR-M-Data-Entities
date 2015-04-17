@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
@@ -84,15 +83,35 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 
 		public T First<T>() 
 		{
+		    if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof (T) != typeof (object))
+		    {
+		        throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof (T).Name));
+		    }
+
 			var buildContainer = Build();
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
 			{
-				return reader.Select();
+				return reader.First();
 			}
 		}
 
-		public ICollection All()
+        public T FirstOrDefault<T>()
+        {
+            if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof(T) != typeof(object))
+            {
+                throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
+            }
+
+            var buildContainer = Build();
+
+            using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
+            {
+                return reader.FirstOrDefault();
+            }
+        }
+
+		public ICollection ToList()
 		{
 			// inject the generic type here
 			var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "All" && w.ReturnType != typeof(ICollection));
@@ -102,8 +121,13 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 			return result as dynamic;
 		}
 
-		public List<T> All<T>()
+        public List<T> ToList<T>()
 		{
+            if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof(T) != typeof(object))
+            {
+                throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
+            }
+
 			var buildContainer = Build();
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
@@ -114,6 +138,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 
 		public IEnumerator GetEnumerator<T>()
 		{
+            if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof(T) != typeof(object))
+            {
+                throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
+            }
+
 			var buildContainer = Build();
 
 			var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map);

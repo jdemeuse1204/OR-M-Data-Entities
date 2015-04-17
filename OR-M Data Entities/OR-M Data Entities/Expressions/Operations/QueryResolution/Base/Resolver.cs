@@ -20,7 +20,9 @@ namespace OR_M_Data_Entities.Expressions.Operations.QueryResolution.Base
 
 		protected string ResolveSelect()
 		{
-			return Map.Rows.HasValue ? string.Format("SELECT TOP {0} ", Map.Rows.Value) : "SELECT ";
+            var select = string.Format("SELECT {0}", Map.IsDistinct ? "DISTINCT " : string.Empty);
+
+            return Map.Rows.HasValue ? string.Format("{0} TOP {1} ", select, Map.Rows.Value) : select;
 		}
 
 		protected string ResolveFrom()
@@ -30,7 +32,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.QueryResolution.Base
 
 		protected string ResolveColumns()
 		{
-			return Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetSelectColumns()).TrimEnd(',');
+		    return Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetSelectColumns()).TrimEnd(',');
 		}
 
 		protected WhereContainer ResolveWheres()

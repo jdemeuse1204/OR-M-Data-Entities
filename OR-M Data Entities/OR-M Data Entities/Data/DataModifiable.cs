@@ -20,6 +20,12 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataModifiable : DataFetching
     {
+        #region Events And Delegates
+        public delegate void OnBeforeSaveHandler(DataModifiable context, object entity);
+
+        public event OnBeforeSaveHandler OnBeforeSave;
+        #endregion
+
         #region Constructor
         protected DataModifiable(string connectionStringOrName)
             : base(connectionStringOrName)
@@ -31,36 +37,49 @@ namespace OR_M_Data_Entities.Data
         public virtual void SaveChanges<T>(T entity)
             where T : class
         {
-            if (DatabaseSchemata.HasForeignKeys<T>())
+            lock (Lock)
             {
-                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
-
-                // creates the save order based on the primary and foreign keys
-                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
-
-                foreach (var savableObject in savableObjects)
+                if (DatabaseSchemata.HasForeignKeys<T>())
                 {
-                    var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
+                    var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
-                    if (isList)
+                    // creates the save order based on the primary and foreign keys
+                    _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+
+                    if (OnBeforeSave != null)
                     {
-                        // relationship is one-many.  Need to set the foreign key before saving
-                        _setValue(savableObject.Parent, savableObject.Value);
+                        OnBeforeSave(this, entity);
                     }
 
-                    _saveObjectToDatabase(savableObject.Value);
-
-                    if (!isList)
+                    foreach (var savableObject in savableObjects)
                     {
-                        // relationship is one-one.  Need to set the foreign key after saving
-                        _setValue(savableObject.Parent, savableObject.Value);
+                        var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
+
+                        if (isList)
+                        {
+                            // relationship is one-many.  Need to set the foreign key before saving
+                            _setValue(savableObject.Parent, savableObject.Value);
+                        }
+
+                        _saveObjectToDatabase(savableObject.Value);
+
+                        if (!isList)
+                        {
+                            // relationship is one-one.  Need to set the foreign key after saving
+                            _setValue(savableObject.Parent, savableObject.Value);
+                        }
                     }
+
+                    return;
                 }
 
-                return;
-            }
+                if (OnBeforeSave != null)
+                {
+                    OnBeforeSave(this, entity);
+                }
 
-            _saveObjectToDatabase(entity);
+                _saveObjectToDatabase(entity);
+            }
         }
 
         private void _setValue(object parent, object child)
@@ -171,26 +190,26 @@ namespace OR_M_Data_Entities.Data
         public virtual bool Delete<T>(T entity)
             where T : class
         {
-            if (!DatabaseSchemata.HasForeignKeys<T>()) return _deleteObjectFromDatabase(entity);
-
-            var result = true;
-            var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
-
-            // creates the save order based on the primary and foreign keys
-            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
-
-            // need to reverse the save order for a delete
-            savableObjects.Reverse();
-
-            foreach (var savableObject in savableObjects)
+            lock (Lock)
             {
-                if (!_deleteObjectFromDatabase(savableObject.Value))
+                if (!DatabaseSchemata.HasForeignKeys<T>()) return _deleteObjectFromDatabase(entity);
+
+                var result = true;
+                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+
+                // creates the save order based on the primary and foreign keys
+                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+
+                // need to reverse the save order for a delete
+                savableObjects.Reverse();
+
+                foreach (var savableObject in savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
                 {
                     result = false;
                 }
-            }
 
-            return result;
+                return result;
+            }
         }
 
         private bool _deleteObjectFromDatabase<T>(T entity)
@@ -248,14 +267,19 @@ namespace OR_M_Data_Entities.Data
             {
                 var index = 0;
                 var foreignKeyValue = foreignKey.GetValue(entity);
+                var foreignKeyIsList = foreignKey.PropertyType.IsList();
 
                 if (foreignKeyValue == null)
                 {
+                    if (foreignKeyIsList) continue;
+
+                    // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
+                    // maintaining the relationship
                     throw new Exception(string.Format("SAVE CANCELLED!  Reason: Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
                 }
 
                 // doesnt have dependencies
-                if (foreignKeyValue.IsList())
+                if (foreignKeyIsList)
                 {
                     foreach (var item in (foreignKeyValue as dynamic))
                     {
