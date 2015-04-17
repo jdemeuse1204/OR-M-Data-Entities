@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OR_M_Data_Entities;
-using OR_M_Data_Entities.Data.PayloadOperations;
-using OR_M_Data_Entities.Tests.Context;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console
@@ -11,27 +10,39 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
-            var context = new DbSqlContext("arvixe");
+            var context = new DbSqlContext("sqlExpress");
 
-			var reader = context.SelectAll<Contact>().Take(1).Where<Contact>(w => w.ID == 1).First<Contact>();
+            var lst = new List<string> {"James", "Megan"};
 
-			// change underlying layer.... insert should not have All<T> or First<T> functions available
-			context.Update<Contact>().Set<Contact>(w => w.ID = 1);
-
-			context.Delete<Contact>().Where<Contact>(w => w.ID == 1);
-
-			context.Insert<Contact>().Value<Contact>(w => w.FirstName = "WINNING");
+            var reader =
+                context.SelectAll<Person>()
+                    .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
+                    .Where<Person>(w => w.FirstName.Equals("James"))
+                    .All<dynamic>();
 
 			if (reader != null)
 			{
 
 			}
 
+            var val = context.ExecuteQuery<int>("Select 1 From Car").Select();
+
+            if (val == 1)
+            {
+                
+            }
+
            // var parent = context.Find<Parent>(1);
+            var c = context.Find<Contact>(1);
+
+            if (c != null)
+            {
+                
+            }
 
             var name = context.Find<Name>(2);
 
-			name = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).First<Name>();
+			var names = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).All<Name>().Select(w => new Car{ Name = w.Value});
 
             if (name != null)
             {

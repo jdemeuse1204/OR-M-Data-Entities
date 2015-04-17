@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data.Commit;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
@@ -228,49 +228,6 @@ namespace OR_M_Data_Entities.Data
 
             // return if anything was deleted
             return rowsAffected > 0;
-        }
-        #endregion
-
-        #region Find Method
-        /// <summary>
-        /// Finds a data object by looking for PK matches
-        /// </summary>
-        /// <typeparam name="T">Must be a Class</typeparam>
-        /// <param name="pks"></param>
-        /// <returns>Class Object</returns>
-        public T Find<T>(params object[] pks)
-            where T : class
-        {
-            var result = Activator.CreateInstance<T>();
-
-            // get the database table name
-            var tableName = DatabaseSchemata.GetTableName(result);
-
-            var builder = new SqlQueryBuilder();
-            builder.SelectAll<T>();
-            builder.Table(tableName);
-
-            // Get All PKs
-            var keyProperties = DatabaseSchemata.GetPrimaryKeys(result);
-
-            for (var i = 0; i < keyProperties.Count(); i++)
-            {
-                var key = keyProperties[i];
-
-                // check to see if the column is renamed
-                var name = DatabaseSchemata.GetColumnName(key);
-
-                builder.AddWhere(tableName, name, ComparisonType.Equals, pks[i]);
-            }
-
-            Execute(builder);
-
-            if (Reader.HasRows)
-            {
-                Reader.Read();
-            }
-
-            return Select<T>();
         }
         #endregion
 

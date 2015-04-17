@@ -15,9 +15,8 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
-using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data.Commit;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -54,7 +53,7 @@ namespace OR_M_Data_Entities
 				return (T)reader[0];
 			}
 
-			if (typeof(T) == typeof(IDynamicMetaObjectProvider))
+			if (typeof(T) == typeof(object))
 			{
 				return reader.ToObject();
 			}
@@ -311,6 +310,14 @@ namespace OR_M_Data_Entities
         public static Type GetPropertyType(this PropertyInfo info)
         {
             return info.PropertyType.IsList() ? info.PropertyType.GetGenericArguments()[0] : info.PropertyType;
+        }
+    }
+
+    public static class TypeExtensions
+    {
+        public static bool IsDynamic(this Type type)
+        {
+            return type == typeof(IDynamicMetaObjectProvider);
         }
     }
 

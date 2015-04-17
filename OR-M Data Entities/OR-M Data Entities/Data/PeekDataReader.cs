@@ -7,8 +7,7 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
-using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {

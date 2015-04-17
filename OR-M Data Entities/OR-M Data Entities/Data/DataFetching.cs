@@ -9,9 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data.PayloadOperations;
 using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
@@ -21,6 +19,8 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReading
     {
+        public object _lock = new object();
+
         #region Constructor
         protected DataFetching(string connectionStringOrName)
             : base(connectionStringOrName)
@@ -60,23 +60,29 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region First
-        protected T First<T>(Expression<Func<T, bool>> expression)
+        public T First<T>(Expression<Func<T, bool>> expression)
             where T : class
         {
-			var where = Where<T>(expression);
+            lock (_lock)
+            {
+                var where = Where<T>(expression);
 
-            return where.First<T>();
+                return where.First<T>();
+            }
         }
 
         /// <summary>
         /// Converts the first row to type T
         /// </summary>
         /// <returns></returns>
-        protected T First<T>() where  T : class 
+        public T First<T>() where T : class 
         {
-			var select = SelectAll<T>();
+            lock (_lock)
+            {
+                var select = SelectAll<T>();
 
-			return select.First<T>();
+                return select.First<T>();
+            }
         }
 		#endregion
 
@@ -87,47 +93,47 @@ namespace OR_M_Data_Entities.Data
         /// <returns>List of type T</returns>
         public List<T> All<T>() where T : class
         {
-			var select = SelectAll<T>();
+		    lock (_lock)
+		    {
+		        var select = SelectAll<T>();
 
-            return select.All<T>();
+		        return select.All<T>();
+		    }
         }
+        #endregion
 
+        #region ExpressionQuery
         public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
         {
-			var select = SelectAll<T>();
+            lock (_lock)
+            {
+                var select = SelectAll<T>();
 
-            return select.Where<T>(expression);
+                return select.Where<T>(expression);
+            }
         }
 
 		public ExpressionSelectQuery SelectAll<T>() where T : class
 		{
-			var select = new ExpressionSelectQuery(null, this);
+		    lock (_lock)
+		    {
+		        var select = new ExpressionSelectQuery(null, this);
 
-			select.SelectAll<T>();
+		        select.SelectAll<T>();
 
-			return select;
+		        return select;
+		    }
 		}
 
-		public ExpressionUpdateSetQuery Update<T>() where T : class
-		{
-			var update = new ExpressionUpdateQuery(null, this);
+        public T Find<T>(params object[] pks) where T : class
+        {
+            lock (_lock)
+            {
+                var find = new ExpressionFindQuery(null, this);
 
-			return update.Update<T>();
-		}
-
-		public ExpressionDeleteWhereQuery Delete<T>() where T : class
-		{
-			var delete = new ExpressionDeleteQuery(null, this);
-
-			return delete.Delete<T>();
-		}
-
-		public ExpressionInsertValueQuery Insert<T>() where T : class
-		{
-			var insert = new ExpressionInsertQuery(null, this);
-
-			return insert.Insert<T>();
-		}
+                return find.Find<T>(pks);
+            }
+        }
 		#endregion
 	}
 }

@@ -12,8 +12,7 @@ using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
-using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping;
-using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping;
 
 namespace OR_M_Data_Entities.Data
 {

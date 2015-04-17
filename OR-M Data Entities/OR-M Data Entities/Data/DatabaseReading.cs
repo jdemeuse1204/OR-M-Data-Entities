@@ -5,14 +5,11 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq.Expressions;
+using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data.PayloadOperations.ObjectMapping.Base;
-using OR_M_Data_Entities.Data.PayloadOperations.Payloads.Base;
-using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -71,7 +68,7 @@ namespace OR_M_Data_Entities.Data
         /// Execute the SqlBuilder on the database
         /// </summary>
         /// <param name="builder"></param>
-		protected void Execute(OR_M_Data_Entities.Commands.Support.ISqlBuilder builder)
+		protected void Execute(ISqlBuilder builder)
         {
             _tryCloseReader();
             DataQueryType queryType;
@@ -139,7 +136,12 @@ namespace OR_M_Data_Entities.Data
 			return ExecuteQuery<T>(sql, parameters, null);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(OR_M_Data_Entities.Commands.Support.ISqlBuilder builder)
+        public DataReader<T> ExecuteQuery<T>(string sql, params KeyValuePair<string,object>[] parameters)
+        {
+            return ExecuteQuery<T>(sql, parameters.ToDictionary(keyValuePair => keyValuePair.Key, keyValuePair => keyValuePair.Value), null);
+        }
+
+        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
         {
             Execute(builder);
 

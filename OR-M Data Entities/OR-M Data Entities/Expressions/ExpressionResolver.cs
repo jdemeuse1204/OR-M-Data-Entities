@@ -15,7 +15,7 @@ using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data.Commit;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions
