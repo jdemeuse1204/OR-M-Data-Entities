@@ -6,10 +6,13 @@
  */
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -100,6 +103,75 @@ namespace OR_M_Data_Entities.Data
                     return "!=";
                 default:
                     throw new ArgumentOutOfRangeException("comparison");
+            }
+        }
+
+        public static string EnumerateList(IEnumerable list, Dictionary<string, object> parameters)
+        {
+            var result = "";
+
+            foreach (var item in list)
+            {
+                var parameter = parameters.GetNextParameter();
+                parameters.Add(parameter, item);
+
+                result += parameter + ",";
+            }
+
+            return result.TrimEnd(',');
+        }
+
+        private static string _addParameter(object value, Dictionary<string, object> parameters)
+        {
+            var parameter = parameters.GetNextParameter();
+            parameters.Add(parameter, value);
+
+            return parameter;
+        }
+
+        public static string GetComparisonString(ObjectColumn objectColumn, object compareValue, ComparisonType comparisonType, Dictionary<string,object> parameters)
+        {
+            var isCompareValueList = compareValue.IsList();
+
+            if (comparisonType == ComparisonType.Contains)
+            {
+                return string.Format(isCompareValueList ? " {0} IN ({1}) " : " {0} LIKE {1}", objectColumn.GetText(),
+                    isCompareValueList
+                        ? EnumerateList(compareValue as IEnumerable, parameters)
+                        : _addParameter(compareValue, parameters));
+            }
+
+            switch (comparisonType)
+            {
+                case ComparisonType.BeginsWith:
+                case ComparisonType.EndsWith:
+                    return string.Format(" {0} LIKE {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                case ComparisonType.Equals:
+                    return string.Format(" {0} = {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                case ComparisonType.EqualsIgnoreCase:
+                    return "";
+                case ComparisonType.EqualsTruncateTime:
+                    return "";
+                case ComparisonType.GreaterThan:
+                    return string.Format(" {0} > {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                case ComparisonType.GreaterThanEquals:
+                    return string.Format(" {0} >= {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                case ComparisonType.LessThan:
+                    return string.Format(" {0} < {1}", objectColumn.GetText(),
+                         _addParameter(compareValue, parameters));
+                case ComparisonType.LessThanEquals:
+                    return string.Format(" {0} <= {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                case ComparisonType.NotEqual:
+                    return string.Format(" {0} != {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
+                default:
+                    throw new ArgumentOutOfRangeException(string.Format("Cannot resolve comparison type {0}",
+                        comparisonType));
             }
         }
         #endregion

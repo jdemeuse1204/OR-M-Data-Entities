@@ -5,12 +5,11 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq.Expressions;
+using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -76,7 +75,7 @@ namespace OR_M_Data_Entities.Data
 
             Command = builder.Build(Connection, out queryType);
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking(queryType);
+            Reader = Command.ExecuteReaderWithPeeking(null);
         }
 
         /// <summary>
@@ -92,10 +91,10 @@ namespace OR_M_Data_Entities.Data
             Command = new SqlCommand(sql, Connection);
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking(DataQueryType.NoForeignKeys);
+            Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void Execute(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
+        protected void Execute(string sql, Dictionary<string, object> parameters, ObjectMap map)
         {
             _tryCloseReader();
 
@@ -108,14 +107,13 @@ namespace OR_M_Data_Entities.Data
             }
 
             Connect();
-            Reader = Command.ExecuteReaderWithPeeking(dataQueryType);
+			Reader = Command.ExecuteReaderWithPeeking(map);
         }
 
-        protected ExpressionQuery Execute<T>(Expression<Func<T, bool>> propertyLambda, DataFetching fetching)
-            where T : class
-        {
-            return fetching.From<T>().Where(propertyLambda);
-        }
+		protected void Execute(string sql, Dictionary<string, object> parameters)
+		{
+			Execute(sql, parameters, null);
+		}
         #endregion
 
         #region Query Execution
@@ -126,11 +124,21 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, DataQueryType dataQueryType)
-        {
-            Execute(sql, parameters, dataQueryType);
+		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, ObjectMap map)
+		{
+			Execute(sql, parameters, map);
 
-            return new DataReader<T>(Reader);
+			return new DataReader<T>(Reader);
+		}
+
+		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
+		{
+			return ExecuteQuery<T>(sql, parameters, null);
+		}
+
+        public DataReader<T> ExecuteQuery<T>(string sql, params KeyValuePair<string,object>[] parameters)
+        {
+            return ExecuteQuery<T>(sql, parameters.ToDictionary(keyValuePair => keyValuePair.Key, keyValuePair => keyValuePair.Value), null);
         }
 
         public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)

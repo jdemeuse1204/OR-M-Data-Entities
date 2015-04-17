@@ -12,7 +12,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data.Commit;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -23,20 +23,6 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public static class DatabaseSchemata
     {
-        public static bool UseTableColumnFetch(SqlExpressionType expressionType)
-        {
-            switch (expressionType)
-            {
-                case SqlExpressionType.ForeignKeySelect:
-                case SqlExpressionType.ForeignKeySelectJoin:
-                case SqlExpressionType.ForeignKeySelectWhere:
-                case SqlExpressionType.ForeignKeySelectWhereJoin:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
         public static SqlDbType GetSqlDbType(Type type)
         {
             var name = type.Name;
@@ -78,6 +64,10 @@ namespace OR_M_Data_Entities.Data
                     return SqlDbType.Float;
                 case "BYTE[]":
                     return SqlDbType.Binary;
+                case "CHAR":
+                    return SqlDbType.Char;
+                case "OBJECT":
+                    return SqlDbType.Variant;
                 default:
                     throw new Exception(string.Format("Type of {0} not recognized!", name));
             }

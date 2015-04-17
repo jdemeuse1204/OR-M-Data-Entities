@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Expressions;
 
@@ -20,6 +19,8 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReading
     {
+        public object _lock = new object();
+
         #region Constructor
         protected DataFetching(string connectionStringOrName)
             : base(connectionStringOrName)
@@ -59,43 +60,29 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region First
-        protected T First<T>(Expression<Func<T, bool>> propertyLambda)
+        public T First<T>(Expression<Func<T, bool>> expression)
             where T : class
         {
-			var result = Execute(propertyLambda, this);
+            lock (_lock)
+            {
+                var where = Where<T>(expression);
 
-            // Select All
-            result.Select<T>();
-
-            return result.First<T>();
+                return where.First<T>();
+            }
         }
 
         /// <summary>
         /// Converts the first row to type T
         /// </summary>
         /// <returns></returns>
-        protected T First<T>() where  T : class 
+        public T First<T>() where T : class 
         {
-            var builder = new SqlQueryBuilder();
-            builder.SelectTopOneAll<T>();
-            builder.Table<T>();
-
-            Execute(builder);
-
-            if (Reader.HasRows)
+            lock (_lock)
             {
-                var result = Reader.ToObject<T>();
+                var select = SelectAll<T>();
 
-                Reader.Close();
-                Reader.Dispose();
-
-                return result;
+                return select.First<T>();
             }
-
-            Reader.Close();
-            Reader.Dispose();
-
-            return default(T);
         }
 		#endregion
 
@@ -106,38 +93,46 @@ namespace OR_M_Data_Entities.Data
         /// <returns>List of type T</returns>
         public List<T> All<T>() where T : class
         {
-            var builder = new SqlQueryBuilder();
-            builder.SelectAll<T>();
-            builder.Table<T>();
+		    lock (_lock)
+		    {
+		        var select = SelectAll<T>();
 
-            Execute(builder);
+		        return select.All<T>();
+		    }
+        }
+        #endregion
 
-            var result = new List<T>();
-
-            while (Reader.Read())
+        #region ExpressionQuery
+        public ExpressionWhereQuery Where<T>(Expression<Func<T, bool>> expression) where T : class
+        {
+            lock (_lock)
             {
-                result.Add(Reader.ToObject<T>());
+                var select = SelectAll<T>();
+
+                return select.Where<T>(expression);
             }
-
-            Reader.Close();
-            Reader.Dispose();
-
-            return result;
         }
 
-        public ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : class
+		public ExpressionSelectQuery SelectAll<T>() where T : class
+		{
+		    lock (_lock)
+		    {
+		        var select = new ExpressionSelectQuery(null, this);
+
+		        select.SelectAll<T>();
+
+		        return select;
+		    }
+		}
+
+        public T Find<T>(params object[] pks) where T : class
         {
-            var result = Execute(propertyLambda, this);
+            lock (_lock)
+            {
+                var find = new ExpressionFindQuery(null, this);
 
-            // Select All
-            result.Select<T>();
-
-            return result;
-        }
-
-        public ExpressionQuery From<T>() where T : class
-        {
-            return new ExpressionQuery(DatabaseSchemata.GetTableName<T>(), this);
+                return find.Find<T>(pks);
+            }
         }
 		#endregion
 	}

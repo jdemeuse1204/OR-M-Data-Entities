@@ -15,7 +15,8 @@ using System.Dynamic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Support;
+using OR_M_Data_Entities.Data.Commit;
+using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -52,39 +53,17 @@ namespace OR_M_Data_Entities
 				return (T)reader[0];
 			}
 
-			if (typeof(T) == typeof(IDynamicMetaObjectProvider))
+			if (typeof(T) == typeof(object))
 			{
 				return reader.ToObject();
 			}
 
-            return reader.DataQueryType == DataQueryType.ForeignKeys ?
+		    return reader.Map != null ?
 				reader.GetObjectFromReaderWithForeignKeys<T>() :
 				reader.GetObjectFromReader<T>();
 		}
 
-        private static object Load(this PeekDataReader reader, object instance, string tableName)
-        {
-            if (string.IsNullOrWhiteSpace(tableName))
-            {
-                tableName = DatabaseSchemata.GetTableName(instance);
-            }
-
-            // find any unmapped attributes
-            var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
-
-            foreach (var property in properties)
-            {
-                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-
-                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
-
-                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-            }
-
-            return instance;
-        }
-
+		#region Helpers
 		private static T GetObjectFromReader<T>(this PeekDataReader reader)
 		{
 			// Create instance
@@ -106,6 +85,24 @@ namespace OR_M_Data_Entities
 			return instance;
 		}
 
+		private static object LoadObjectWithForeignKeys(this PeekDataReader reader, object instance, string tableName, ObjectMap map)
+		{
+			// find any unmapped attributes
+			var properties = instance.GetType().GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
+
+			foreach (var property in properties)
+			{
+				var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+				// need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+				var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
+
+				instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+			}
+
+			return instance;
+		}
+
 		private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
 		{
 			// Create instance
@@ -115,23 +112,25 @@ namespace OR_M_Data_Entities
 			var foreignKeys = DatabaseSchemata.GetForeignKeyTypes(instance);
 			var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
             var objectMapNodes = new List<ObjectMapNode>();
+			var map = reader.Map;
 
 			// load the instance
-			reader.Load(instance, null);
+			reader.LoadObjectWithForeignKeys(instance, tableName, map);
 
 			var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes);
+            _loadObjectWithForeignKeys(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes, map);
 
 			return instance;
 		}
 
-		private static void _recursiveLoad(
+		private static void _recursiveLoadWithForeignKeys(
             PeekDataReader reader, 
             object childInstance, 
             IEnumerable<ForeignKeyDetail> foreignKeys, 
             List<ObjectMapNode> objectMapNodes,
-            int lastCompositeKey)
+            int lastCompositeKey,
+			ObjectMap map)
 		{
 			foreach (var foreignKey in foreignKeys)
 			{
@@ -169,18 +168,18 @@ namespace OR_M_Data_Entities
 				        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
 				        property.SetValue(childInstance, propertyInstance);
 
-                        reader.Load(listItem, foreignKey.PropertyName);
+                        reader.LoadObjectWithForeignKeys(listItem, foreignKey.PropertyName, map);
 
-                        _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                        _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
                         propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
 				    }
 				    else
 				    {
 				        if (canAddObject)
 				        {
-                            reader.Load(listItem, foreignKey.PropertyName);
+                            reader.LoadObjectWithForeignKeys(listItem, foreignKey.PropertyName, map);
 
-                            _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                            _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
                             propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
 				        }
 				        else
@@ -194,7 +193,7 @@ namespace OR_M_Data_Entities
                                     .GetMethod("get_Item")
                                     .Invoke(propertyInstance, new object[] { count - 1 });
 
-                                _recursiveLoad(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                                _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
                             }
 				        }
 				    }
@@ -207,23 +206,24 @@ namespace OR_M_Data_Entities
 			        propertyInstance = Activator.CreateInstance(foreignKey.Type);
                     property.SetValue(childInstance, propertyInstance);
 
-                    reader.Load(propertyInstance, foreignKey.PropertyName);
-                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                    reader.LoadObjectWithForeignKeys(propertyInstance, foreignKey.PropertyName, map);
+                    _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
 			    }
 			    else
 			    {
-                    _recursiveLoad(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                    _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
 			    }
 			}
 		}
 
-        private static void _load(
+        private static void _loadObjectWithForeignKeys(
             PeekDataReader reader, 
             object instance, 
             IEnumerable<ForeignKeyDetail> foreignKeys, 
             string primaryKeyLookUpName, 
             object pkValue, 
-            List<ObjectMapNode> objectMapNodes)
+            List<ObjectMapNode> objectMapNodes,
+			ObjectMap map)
 		{
 			foreach (var foreignKey in foreignKeys)
 			{
@@ -235,7 +235,7 @@ namespace OR_M_Data_Entities
 
 			    if (singleInstance == null || singleInstance.IsList())
 			    {
-                    reader.Load(childInstance, foreignKey.PropertyName);
+                    reader.LoadObjectWithForeignKeys(childInstance, foreignKey.PropertyName, map);
 			    }
 
 			    if (index == -1)
@@ -268,7 +268,7 @@ namespace OR_M_Data_Entities
                                 .Invoke(singleInstance, new[] { childInstance }))
 					{
 						// go down each FK tree and create the child instance
-                        _recursiveLoad(reader, childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                        _recursiveLoadWithForeignKeys(reader, childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
 
                         singleInstance.GetType().GetMethod("Add").Invoke(singleInstance, new[] { childInstance });
 
@@ -280,7 +280,7 @@ namespace OR_M_Data_Entities
 					continue;
 				}
 
-                _recursiveLoad(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                _recursiveLoadWithForeignKeys(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey, map);
 
 			    if (singleInstance == null)
 			    {
@@ -300,16 +300,38 @@ namespace OR_M_Data_Entities
 			// read the next row
 			reader.Read();
 
-            _load(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes);
+            _loadObjectWithForeignKeys(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes, map);
 		}
+		#endregion
 	}
+
+    public static class PropertyInfoExtensions
+    {
+        public static Type GetPropertyType(this PropertyInfo info)
+        {
+            return info.PropertyType.IsList() ? info.PropertyType.GetGenericArguments()[0] : info.PropertyType;
+        }
+    }
+
+    public static class TypeExtensions
+    {
+        public static bool IsDynamic(this Type type)
+        {
+            return type == typeof(IDynamicMetaObjectProvider);
+        }
+    }
 
 	public static class SqlCommandExtensions
 	{
-		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, DataQueryType dataQueryType)
+		public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
 		{
-            return new PeekDataReader(cmd.ExecuteReader(), dataQueryType);
+            return new PeekDataReader(cmd);
 		}
+
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, ObjectMap map)
+        {
+            return new PeekDataReader(cmd, map);
+        }
 	}
 
 	public static class DictionaryExtensions

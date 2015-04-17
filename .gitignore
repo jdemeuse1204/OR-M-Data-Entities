@@ -1,0 +1,9 @@
+OR-M Data Entities/OR-M Data Entities/bin/Release/OR-M Data Entities.dll
+*.dll
+*.pdb
+*.cache
+*.exe
+OR-M Data Entities/OR-M Data Entities.Tests/bin/Release/OR-M Data Entities.dll
+OR-M Data Entities/OR0M Data Entities.Console/bin/Release/OR-M Data Entities.dll
+OR-M Data Entities/OR0M Data Entities.Console/obj/Release/OR0M Data Entities.Console.exe
+OR-M Data Entities/OR0M Data Entities.Console/obj/Release/OR0M Data Entities.Console.pdb
