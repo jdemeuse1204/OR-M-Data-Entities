@@ -24,7 +24,6 @@ namespace OR_M_Data_Entities.Commands
         private string _straightSelect { get; set; }
         private Type _tableType { get; set; }
         private Dictionary<string, object> _parameters { get; set; }
-        private Dictionary<string,string> _tableRenames { get; set; } 
         #endregion
 
         #region Constructor
@@ -35,8 +34,6 @@ namespace OR_M_Data_Entities.Commands
             _straightSelect = string.Empty;
             _parameters = new Dictionary<string, object>();
             _joins = new Dictionary<string, QueryBuilderJoin>();
-            _tableRenames = new Dictionary<string, string>();
-
             _tableType = null;
         }
         #endregion
@@ -56,20 +53,6 @@ namespace OR_M_Data_Entities.Commands
             if (string.IsNullOrWhiteSpace(TableName) && string.IsNullOrWhiteSpace(_straightSelect))
             {
                 throw new QueryNotValidException("Table statement missing");
-            }
-
-            // resolve join table names
-            foreach (var join in _joins)
-            {
-                if (_tableRenames.ContainsKey(join.Value.ParentTableName))
-                {
-                    join.Value.ParentTableAlias = _tableRenames[join.Value.ParentTableName];
-                }
-
-                if (_tableRenames.ContainsKey(join.Value.JoinTableName))
-                {
-                    join.Value.JoinTableAlias = _tableRenames[join.Value.JoinTableName];
-                }
             }
 
             var joinSql = _joins.Aggregate(string.Empty, (current, @join) => current + @join.Value.GetJoinText());
@@ -204,9 +187,7 @@ namespace OR_M_Data_Entities.Commands
 
                 foreach (var foreignKey in allJoinsFromForeignKeys)
                 {
-                    _tableRenames.Add(foreignKey.JoinEntity.TableName, foreignKey.JoinEntity.TableNameAlias);
-
-                    _joins.Add(foreignKey.JoinEntity.TableNameAlias, new QueryBuilderJoin
+                    _joins.Add(foreignKey.JoinEntityTableName, new QueryBuilderJoin
                     {
                         ParentTableName = DatabaseSchemata.GetTableName(foreignKey.ParentEntity.Table),
                         ParentColumnName = DatabaseSchemata.GetColumnName(foreignKey.ParentEntity.Column),
@@ -214,9 +195,7 @@ namespace OR_M_Data_Entities.Commands
                         JoinTableName = DatabaseSchemata.GetTableName(foreignKey.JoinEntity.Table),
                         JoinColumnName = DatabaseSchemata.GetColumnName(foreignKey.JoinEntity.Column),
 
-                        JoinTableAlias = foreignKey.JoinEntity.TableNameAlias,
-
-                        ParentTableAlias = foreignKey.ParentEntity.TableNameAlias,
+                        JoinTableAlias = foreignKey.JoinEntityTableName,
 
                         Type = foreignKey.Type
                     });
@@ -233,10 +212,7 @@ namespace OR_M_Data_Entities.Commands
                     var tName = table.Key;
                     var columns = tableNameAndColumnNames.Value;
 
-                    _select += columns.Aggregate("",
-                        (current, column) =>
-                            current +
-                            string.Format("[{0}].[{1}] as [{2}],", tName, column, string.Format("{0}{1}", tName, column)));
+                    _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}] as [{2}],", tName, column, string.Format("{0}{1}",tName,column)));
                 }
 
                 _select = _select.TrimEnd(',');
@@ -273,8 +249,6 @@ namespace OR_M_Data_Entities.Commands
 
         public string JoinTableAlias { get; set; }
 
-        public string ParentTableAlias { get; set; }
-
         public string GetJoinText()
         {
             if (!string.IsNullOrWhiteSpace(JoinTableAlias))
@@ -289,7 +263,7 @@ namespace OR_M_Data_Entities.Commands
                             JoinTableName,
                             JoinTableAlias,
                             JoinColumnName,
-                            string.IsNullOrWhiteSpace(ParentTableAlias) ? ParentTableName : ParentTableAlias,
+                            ParentTableName,
                             ParentColumnName);
                     case JoinType.Left:
                         return string.Format(joinText,
@@ -297,7 +271,7 @@ namespace OR_M_Data_Entities.Commands
                             JoinTableName,
                             JoinTableAlias,
                             JoinColumnName,
-                            string.IsNullOrWhiteSpace(ParentTableAlias) ? ParentTableName : ParentTableAlias,
+                            ParentTableName,
                             ParentColumnName);
                     default:
                         return string.Empty;
@@ -307,22 +281,22 @@ namespace OR_M_Data_Entities.Commands
             switch (Type)
             {
                 case JoinType.Equi:
-                    return string.Format("[{0}].[{1}] = [{2}].[{3}]",
-                        string.IsNullOrWhiteSpace(ParentTableAlias) ? ParentTableName : ParentTableAlias, 
+                    return string.Format("[{0}].[{1}] = [{2}].[{3}]", 
+                        ParentTableName, 
                         ParentColumnName, 
                         JoinTableName,
                         JoinColumnName);
                 case JoinType.Inner:
                     return string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ", 
                         JoinTableName,
-                        JoinColumnName,
-                        string.IsNullOrWhiteSpace(ParentTableAlias) ? ParentTableName : ParentTableAlias, 
+                        JoinColumnName, 
+                        ParentTableName, 
                         ParentColumnName);
                 case JoinType.Left:
                     return string.Format(" LEFT JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ", 
                         JoinTableName,
-                        JoinColumnName,
-                        string.IsNullOrWhiteSpace(ParentTableAlias) ? ParentTableName : ParentTableAlias, 
+                        JoinColumnName, 
+                        ParentTableName, 
                         ParentColumnName);
                 default:
                     return string.Empty;

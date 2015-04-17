@@ -263,9 +263,10 @@ namespace OR_M_Data_Entities.Data
 
         public static List<SqlTableColumnPair> GetTableColumnPairsFromTable(Type type, string tableName)
         {
-            return GetTableFields(type).Select(w => new SqlTableColumnPair(type)
+            return GetTableFields(type).Select(w => new SqlTableColumnPair
             {
                 Column = w,
+                Table = type,
                 DataType = GetSqlDbType(w.PropertyType),
                 TableNameAlias = tableName ?? GetTableName(type)
             }).ToList();
@@ -431,16 +432,18 @@ namespace OR_M_Data_Entities.Data
 
                 result.Add(new SqlJoin
                 {
-                    ParentEntity = new SqlTableColumnPair(type)
+                    ParentEntity = new SqlTableColumnPair
                     {
+                        Table = type,
                         Column = parentEntityColumn
                     },
 
-                    JoinEntity = new SqlTableColumnPair(fkPropertyType)
+                    JoinEntity = new SqlTableColumnPair
                     {
-                        Column = joinEntityColumn,
-                        TableNameAlias = foreignKey.Name
+                        Table = fkPropertyType,
+                        Column = joinEntityColumn
                     },
+                    JoinEntityTableName = foreignKey.Name,
                     Type = JoinType.Inner
                 });
 

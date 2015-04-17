@@ -18,38 +18,41 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
         public SqlTableColumnPair JoinEntity { get; set; }
 
         public JoinType Type { get; set; }
+
+        public string JoinEntityTableName { get; set; }
         #endregion
 
         #region Methods
         public string GetJoinText()
         {
+            var parentTableName = DatabaseSchemata.GetTableName(ParentEntity.Table);
             var parentColumnName = DatabaseSchemata.GetColumnName(ParentEntity.Column);
             var joinTableName = DatabaseSchemata.GetTableName(JoinEntity.Table);
             var joinColumnName = DatabaseSchemata.GetColumnName(JoinEntity.Column);
 
-            if (!string.IsNullOrWhiteSpace(JoinEntity.TableNameAlias))
+            if (!string.IsNullOrWhiteSpace(JoinEntityTableName))
             {
                 switch (Type)
                 {
                     case JoinType.Equi:
                         return string.Format(" [{0}].[{1}] = [{2}].[{3}]",
-                            string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                            parentTableName,
                             parentColumnName,
-                            string.IsNullOrWhiteSpace(JoinEntity.TableNameAlias) ? JoinEntity.TableName : JoinEntity.TableNameAlias,
+                            joinTableName,
                             joinColumnName);
                     case JoinType.Inner:
                         return string.Format(" INNER JOIN [{0}] as [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                             joinTableName,
-                            JoinEntity.TableNameAlias,
+                            JoinEntityTableName,
                             joinColumnName,
-                            string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                            parentTableName,
                             parentColumnName);
                     case JoinType.Left:
                         return string.Format(" LEFT JOIN [{0}] as [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                             joinTableName,
-                            JoinEntity.TableNameAlias,
+                            JoinEntityTableName,
                             joinColumnName,
-                            string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                            parentTableName,
                             parentColumnName);
                     default:
                         return "";
@@ -59,8 +62,8 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
             switch (Type)
             {
                 case JoinType.Equi:
-                    return string.Format(" [{0}].[{1}] = [{2}].[{3}]",
-                        string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                    return string.Format(" [{0}].[{1}] = [{2}].[{3}]", 
+                        parentTableName,
                         parentColumnName,
                         joinTableName,
                         joinColumnName);
@@ -68,13 +71,13 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
                     return string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}]",
                         joinTableName,
                         joinColumnName,
-                        string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                        parentTableName,
                         parentColumnName);
                 case JoinType.Left:
                     return string.Format(" LEFT JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}]",
                         joinTableName,
                         joinColumnName,
-                        string.IsNullOrWhiteSpace(ParentEntity.TableNameAlias) ? ParentEntity.TableName : ParentEntity.TableNameAlias,
+                        parentTableName,
                         parentColumnName);
                 default:
                     return "";
