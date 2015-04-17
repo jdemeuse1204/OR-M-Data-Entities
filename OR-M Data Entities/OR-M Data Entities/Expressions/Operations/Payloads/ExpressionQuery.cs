@@ -68,7 +68,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 				return _createInstance<SelectWhereResolver>();
 			}
 
-			return _createInstance<SelectResolver>();
+			return  _createInstance<SelectResolver>();
 		}
 
 		#region Data Retrieval
