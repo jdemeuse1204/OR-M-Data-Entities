@@ -111,6 +111,7 @@
     <Compile Include="Mapping\ForeignKey.cs" />
     <Compile Include="Mapping\Key.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKeyType.cs" />
+    <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
     <Compile Include="ModificationState.cs" />

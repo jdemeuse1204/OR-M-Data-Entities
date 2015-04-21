@@ -28,7 +28,15 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
         {
             var table = Tables.First(w => w.Type == BaseType);
 
-            return table.HasAlias ? table.Alias : table.TableName;
+            var fromTableName = table.HasAlias ? table.Alias : table.TableName;
+
+            if (table.LinkedServer != null)
+            {
+                return string.Format("{0}.[{1}] AS [{2}] ", table.LinkedServer.LinkedServerText, table.TableName,
+                    fromTableName);
+            }
+
+            return string.Format("[{0}] ", fromTableName);
         }
 
         public IEnumerable<ObjectTable> Tables
@@ -55,6 +63,15 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
             if (!hasForeignKeys) return;
 
             _selectRecursive(type, table);
+
+            var indexCount = OrderSequenceCount;
+
+            foreach (var item in Tables)
+            {
+                item.OrderByPrimaryKeys(ref indexCount);
+            }
+
+            OrderSequenceCount = indexCount;
         }
 
         public void AddSingleTable(Type type, bool includeInResult = false)
@@ -66,6 +83,16 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
             {
                 _tables = new List<ObjectTable>();
             }
+
+
+            var indexCount = OrderSequenceCount;
+
+            if (DataReturnType == ObjectMapReturnType.ForeignKeys)
+            {
+                table.OrderByPrimaryKeys(ref indexCount);
+            }
+
+            OrderSequenceCount = indexCount;
 
             _tables.Add(table);
         }

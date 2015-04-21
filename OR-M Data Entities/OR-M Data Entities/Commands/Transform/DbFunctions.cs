@@ -22,16 +22,6 @@ namespace OR_M_Data_Entities.Commands.Transform
         {
             return entity;
         }
-
-        public static int Cast(int entity, SqlDbType targetTransformType)
-        {
-            return entity;
-        }
-
-        public static string Cast(string entity, SqlDbType targetTransformType)
-        {
-            return entity;
-        }
         #endregion
 
         #region Convert

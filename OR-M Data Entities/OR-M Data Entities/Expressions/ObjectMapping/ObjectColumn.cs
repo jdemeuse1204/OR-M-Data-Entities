@@ -32,6 +32,8 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 
 		public SqlDbType DataType { get; set; }
 
+        public string LinkedServerName { get; set; }
+
 		public bool IsSelected { get; set; }
 
         public bool HasOrderSequence 
@@ -83,21 +85,33 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 				HasTableAlias ? string.IsNullOrWhiteSpace(TableAlias) ? TableName : TableAlias : TableName,
 				Name);
 		}
+        
+        public string GetTextWithFunctions()
+        {
+            return FunctionList.Count == 0 ? GetText() : FunctionList.Aggregate(GetText(), (current, function) => GetFunctionText(function.Value, current));
+        }
 
-		public string GetJoinText()
+	    public string GetJoinText()
 		{
-			return Joins.Aggregate("",
-				(current, @join) =>
-					current +
-					string.Format(
-						@join.Value == JoinType.Inner ? "INNER JOIN {0}On {1} = {2} " : "LEFT JOIN {0}On {1} = {2} ",
-						string.Format(@join.Key.HasTableAlias ? "[{0}] As [{1}] " : "{0}[{1}] ",
-							@join.Key.HasTableAlias ? @join.Key.TableName : "",
-							@join.Key.HasTableAlias ? @join.Key.TableAlias : @join.Key.TableName),
-						string.Format("[{0}].[{1}]", @join.Key.HasTableAlias ? @join.Key.TableAlias : @join.Key.TableName,
-							@join.Key.Name),
-						string.Format("[{0}].[{1}]", HasTableAlias ? TableAlias : TableName,
-							Name)));
+		    return Joins.Aggregate("",
+		        (current, @join) =>
+		            current +
+		            string.Format(
+		                @join.Value == JoinType.Inner ? "INNER JOIN {0}On {1} = {2} " : "LEFT JOIN {0}On {1} = {2} ",
+
+                        string.Format(@join.Key.HasTableAlias || !string.IsNullOrWhiteSpace(@join.Key.LinkedServerName) ? "{0} As [{1}] " : "{0}[{1}] ",
+                            @join.Key.HasTableAlias || !string.IsNullOrWhiteSpace(@join.Key.LinkedServerName)
+		                        ? (string.IsNullOrWhiteSpace(@join.Key.LinkedServerName)
+		                            ? string.Format("[{0}]", @join.Key.TableName)
+		                            : @join.Key.LinkedServerName)
+		                        : "",
+		                    @join.Key.HasTableAlias ? @join.Key.TableAlias : @join.Key.TableName),
+
+		                string.Format("[{0}].[{1}]", @join.Key.HasTableAlias ? @join.Key.TableAlias : @join.Key.TableName,
+		                    @join.Key.Name),
+
+		                string.Format("[{0}].[{1}]", HasTableAlias ? TableAlias : TableName,
+		                    Name)));
 		}
 
 		public string GetReaderLookupText(bool parentTableHasForeignKey)
@@ -109,8 +123,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 		{
 			foreach (var compareValue in CompareValues)
 			{
-				whereContainer.ValidationStatements.Add(_getComparisonString(this, compareValue.Key, compareValue.Value,
-					whereContainer.Parameters));
+				whereContainer.ValidationStatements.Add(_getComparisonString(this, compareValue.Key, compareValue.Value, whereContainer.Parameters));
 			}
 		}
 
@@ -145,7 +158,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 
 			if (comparisonType == ComparisonType.Contains)
 			{
-			    return string.Format(isCompareValueList ? " {0} IN ({1}) " : " {0} LIKE {1}", objectColumn.GetText(),
+			    return string.Format(isCompareValueList ? " {0} IN ({1}) " : " {0} LIKE {1}", objectColumn.GetTextWithFunctions(),
 			        isCompareValueList
 			            ? DatabaseOperations.EnumerateList(compareValue as IEnumerable, parameters)
 			            : _addParameter(_resolveContainsObject(compareValue, comparisonType), parameters));
@@ -153,7 +166,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 
             if (comparisonType == ComparisonType.NotContains)
             {
-                return string.Format(isCompareValueList ? " {0} NOT IN ({1}) " : " {0} NOT LIKE {1}", objectColumn.GetText(),
+                return string.Format(isCompareValueList ? " {0} NOT IN ({1}) " : " {0} NOT LIKE {1}", objectColumn.GetTextWithFunctions(),
                     isCompareValueList
                         ? DatabaseOperations.EnumerateList(compareValue as IEnumerable, parameters)
                         : _addParameter(_resolveContainsObject(compareValue, comparisonType), parameters));
@@ -163,33 +176,33 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 			{
 				case ComparisonType.BeginsWith:
 				case ComparisonType.EndsWith:
-					return string.Format(" {0} LIKE {1}", objectColumn.GetText(),
+                    return string.Format(" {0} LIKE {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
                 case ComparisonType.NotBeginsWith:
                 case ComparisonType.NotEndsWith:
-                    return string.Format(" {0} NOT LIKE {1}", objectColumn.GetText(),
+                    return string.Format(" {0} NOT LIKE {1}", objectColumn.GetTextWithFunctions(),
                         _addParameter(compareValue, parameters));
 				case ComparisonType.Equals:
-					return string.Format(" {0} = {1}", objectColumn.GetText(),
+                    return string.Format(" {0} = {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
 				case ComparisonType.EqualsIgnoreCase:
 					return "";
 				case ComparisonType.EqualsTruncateTime:
 					return "";
 				case ComparisonType.GreaterThan:
-					return string.Format(" {0} > {1}", objectColumn.GetText(),
+                    return string.Format(" {0} > {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
 				case ComparisonType.GreaterThanEquals:
-					return string.Format(" {0} >= {1}", objectColumn.GetText(),
+                    return string.Format(" {0} >= {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
 				case ComparisonType.LessThan:
-					return string.Format(" {0} < {1}", objectColumn.GetText(),
+                    return string.Format(" {0} < {1}", objectColumn.GetTextWithFunctions(),
 						 _addParameter(compareValue, parameters));
 				case ComparisonType.LessThanEquals:
-					return string.Format(" {0} <= {1}", objectColumn.GetText(),
+                    return string.Format(" {0} <= {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
 				case ComparisonType.NotEqual:
-					return string.Format(" {0} != {1}", objectColumn.GetText(),
+                    return string.Format(" {0} != {1}", objectColumn.GetTextWithFunctions(),
 						_addParameter(compareValue, parameters));
 				default:
 					throw new ArgumentOutOfRangeException(string.Format("Cannot resolve comparison type {0}",
@@ -197,7 +210,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 			}
 		}
 
-		public ObjectColumn(PropertyInfo memberInfo, int order, string tableName = "", string tableAlias = "", bool isSelected = true)
+		public ObjectColumn(PropertyInfo memberInfo, string linkedServerName, int order, string tableName = "", string tableAlias = "", bool isSelected = true)
 		{
 			Name = DatabaseSchemata.GetColumnName(memberInfo);
 		    ColumnAlias = Name;
@@ -210,6 +223,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 			TableAlias = tableAlias;
 			IsKey = DatabaseSchemata.IsPrimaryKey(memberInfo);
 		    Order = order;
+		    LinkedServerName = linkedServerName;
 		}
 	}
 }

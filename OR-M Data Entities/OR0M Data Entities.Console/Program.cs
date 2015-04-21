@@ -1,20 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using OR_M_Data_Entities;
+using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console
 {
     class Program
     {
+        static void Main2(string[] args)
+        {
+            foreach (var propertyInfo in typeof(Parent).GetProperties())
+            {
+                var hashCode = propertyInfo.GetHashCode();
+
+                if (hashCode != 0)
+                {
+                    
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
+            Main2(args);return;
+
             var context = new DbSqlContext("sqlExpress");
 
             var lst = new List<string> { "James", "Megan" };
 
-            var orderedQuery = context.SelectAll<Contact>().Where<Contact>(w => lst.Contains(w.FirstName)).ToList<Contact>();
+            var orderedQuery =
+                context.SelectAll<Contact>()
+                    .Where<Contact>(
+                        w =>
+                            DbFunctions.Convert(SqlDbType.VarChar, w.ID, null) ==
+                            DbFunctions.Convert(SqlDbType.VarChar, "", null))
+                    .ToList<Contact>();
 
             if (orderedQuery != null)
             {

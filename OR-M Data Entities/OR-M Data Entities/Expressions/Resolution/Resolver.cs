@@ -53,9 +53,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             switch (order)
             {
                 case ObjectColumnOrderType.Descending:
-                    return " DESC ";
+                    return " DESC";
                 case ObjectColumnOrderType.Ascending:
-                    return " ASC ";
+                    return " ASC";
                 default:
                     return string.Empty;
             }
@@ -95,7 +95,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
                 joins);
 
             return result;
@@ -119,7 +119,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from));
+                from);
 
             return result;
         }
@@ -144,7 +144,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
                 joins);
 
             for (var i = 0; i < where.ValidationStatements.Count; i++)
@@ -176,7 +176,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from));
+                from);
 
             for (var i = 0; i < where.ValidationStatements.Count; i++)
             {
@@ -208,7 +208,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}{3}{4}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
                 joins,
                 ordering);
 
@@ -234,7 +234,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
                 ordering);
 
             return result;
@@ -252,23 +252,26 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
             var result = new BuildContainer();
             var where = ResolveWheres();
+            var whereText = string.Empty;
+
+            for (var i = 0; i < where.ValidationStatements.Count; i++)
+            {
+                whereText += string.Format(i == 0 ? " WHERE {0} " : "AND {0} ", where.ValidationStatements[i]);
+            }
+
             var select = ResolveSelect();
             var from = ResolveFrom();
             var columns = ResolveColumns();
             var joins = ResolveJoins();
             var ordering = ResolveOrderBy();
 
-            result.Sql = string.Format("{0}{1} FROM {2}{3}{4}",
+            result.Sql = string.Format("{0}{1} FROM {2}{3}{4}{5}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
                 joins, 
+                whereText,
                 ordering);
-
-            for (var i = 0; i < where.ValidationStatements.Count; i++)
-            {
-                result.Sql += string.Format(i == 0 ? " WHERE {0} " : "AND {0} ", where.ValidationStatements[i]);
-            }
 
             result.Parameters = where.Parameters;
 
@@ -287,21 +290,24 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
             var result = new BuildContainer();
             var where = ResolveWheres();
+            var whereText = string.Empty;
+
+            for (var i = 0; i < where.ValidationStatements.Count; i++)
+            {
+                whereText += string.Format(i == 0 ? " WHERE {0} " : "AND {0} ", where.ValidationStatements[i]);
+            }
+
             var select = ResolveSelect();
             var from = ResolveFrom();
             var columns = ResolveColumns();
             var ordering = ResolveOrderBy();
 
-            result.Sql = string.Format("{0}{1} FROM {2}{3}",
+            result.Sql = string.Format("{0}{1} FROM {2}{3}{4}",
                 select,
                 columns.TrimEnd(','),
-                string.Format("[{0}] ", from),
+                from,
+                whereText,
                 ordering);
-
-            for (var i = 0; i < where.ValidationStatements.Count; i++)
-            {
-                result.Sql += string.Format(i == 0 ? " WHERE {0} " : "AND {0} ", where.ValidationStatements[i]);
-            }
 
             result.Parameters = where.Parameters;
 

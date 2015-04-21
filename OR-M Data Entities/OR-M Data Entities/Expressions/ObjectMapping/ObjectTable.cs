@@ -8,8 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Containers;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.ObjectMapping
 {
@@ -18,12 +20,22 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
         #region Constructor
         public ObjectTable(Type type, string alias, string tableName, bool isBaseTable = false, bool selectAllColumns = true)
         {
+            LinkedServer = type.GetCustomAttribute<LinkedServerAttribute>();
             var i = -1;
             Alias = alias;
             TableName = tableName;
-            Columns = DatabaseSchemata.GetTableFields(type).Select(w => new ObjectColumn(w, ++i, tableName, alias, selectAllColumns)).ToList();
+            Columns =
+                DatabaseSchemata.GetTableFields(type)
+                    .Select(
+                        w =>
+                            new ObjectColumn(w,
+                                LinkedServer != null
+                                    ? string.Format("{0}.[{1}]", LinkedServer.LinkedServerText, tableName)
+                                    : string.Empty, ++i, tableName, alias, selectAllColumns))
+                    .ToList();
             Type = type;
             IsBaseTable = isBaseTable;
+            LinkedServer = type.GetCustomAttribute<LinkedServerAttribute>();
         }
         #endregion
 
@@ -38,11 +50,23 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 
         public List<ObjectColumn> Columns { get; set; }
 
+        public LinkedServerAttribute LinkedServer { get; private set; }
+
         public bool HasAlias { get { return !TableName.Equals(Alias); } }
 
         public bool HasOrderSequence()
         {
             return Columns != null && Columns.Any(w => w.HasOrderSequence);
+        }
+
+        public void OrderByPrimaryKeys(ref int sequence)
+        {
+            foreach (var column in Columns.Where(w => w.IsKey))
+            {
+                sequence++;
+                column.SequenceNumber = sequence;
+                column.OrderType = ObjectColumnOrderType.Ascending;
+            }
         }
 
         public bool HasValidation()

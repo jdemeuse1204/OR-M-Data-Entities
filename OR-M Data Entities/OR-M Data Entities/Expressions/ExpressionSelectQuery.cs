@@ -58,7 +58,7 @@ namespace OR_M_Data_Entities.Expressions
             return new ExpressionWhereJoinQuery(Map, Context);
         }
 
-        public ExpressionWhereJoinQuery Include<T>(Expression<Func<T, object>> selector) where T : class
+        public ExpressionSelectQuery Include<T>(Expression<Func<T, object>> selector) where T : class
         {
             // rename for asethetics
             if (Map != null && Map.BaseType != null && Map.BaseType == typeof(T) && Map.DataReturnType != ObjectMapReturnType.Dynamic)
@@ -68,14 +68,14 @@ namespace OR_M_Data_Entities.Expressions
 
             LambdaResolver.ResolveSelectExpression(selector, Map);
 
-            return new ExpressionWhereJoinQuery(Map, Context);
+            return new ExpressionSelectQuery(Map, Context);
         }
 
-        public ExpressionWhereJoinQuery Include<T>() where T : class
+        public ExpressionSelectQuery Include<T>() where T : class
         {
             Map.AddSingleTable(typeof(T), true);
 
-            return new ExpressionWhereJoinQuery(Map, Context);
+            return new ExpressionSelectQuery(Map, Context);
         }
 
         public ExpressionWhereJoinQuery Distinct()
