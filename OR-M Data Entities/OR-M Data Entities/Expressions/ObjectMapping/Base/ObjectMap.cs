@@ -1,21 +1,28 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
+namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
 {
-    public class ObjectMap : Builder
+    public class ObjectMap
     {
         public Type BaseType { get; private set; }
         public ObjectMapReturnType DataReturnType { get; set; }
         public int? Rows { get; set; }
         public bool IsDistinct { get; set; }
         public int MemberInitCount { get; set; } // if returning a concrete type and not a dynamic this must be set to 1
+        public int OrderSequenceCount { get; set; }
 
         public string FromTableName()
         {
@@ -63,9 +70,26 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
             _tables.Add(table);
         }
 
+        public IOrderedEnumerable<ObjectColumn> OrderByColumns()
+        {
+            var result = new List<ObjectColumn>();
+
+            foreach (var table in Tables.Where(w => w.HasOrderSequence()))
+            {
+                result.AddRange(table.GetOrderByColumns());
+            }
+
+            return result.OrderBy(w => w.SequenceNumber);
+        }
+
         public bool HasTable(string alias)
         {
             return Tables.Any(w => w.HasAlias && w.Alias.Equals(alias));
+        }
+
+        public bool HasOrderSequence()
+        {
+            return Tables.Any(w => w.HasOrderSequence());
         }
 
         public void AddAllTables(Type type)
@@ -120,11 +144,6 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base
                     _selectRecursive(propertyType, table);
                 }
             }
-        }
-
-        protected override BuildContainer Build()
-        {
-            throw new NotImplementedException();
         }
     }
 }

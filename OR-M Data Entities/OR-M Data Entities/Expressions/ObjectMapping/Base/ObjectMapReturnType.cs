@@ -4,12 +4,14 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
-namespace OR_M_Data_Entities.Data
+namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
 {
-    public enum DataQueryType
+    public enum ObjectMapReturnType
     {
-        None,
+        Basic,
         ForeignKeys,
-        NoForeignKeys
+        Dynamic,
+        MemberInit,
+        Value
     }
 }

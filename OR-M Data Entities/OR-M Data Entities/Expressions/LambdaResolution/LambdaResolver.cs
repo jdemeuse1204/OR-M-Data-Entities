@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -8,11 +15,11 @@ using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
+using OR_M_Data_Entities.Expressions.ObjectMapping;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
+namespace OR_M_Data_Entities.Expressions.LambdaResolution
 {
     public class LambdaResolver
     {
@@ -31,9 +38,65 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
         {
             _evaltateSelectExpressionTree(selector.Body, map);
         }
+
+        public static void ResolveOrderExpression<T>(Expression<Func<T, object>> selector, ObjectMap map, ObjectColumnOrderType order)
+        {
+            _evaltateOrderExpressionTree(selector.Body, map, order);
+        }
         #endregion
 
         #region Tree Evaluation
+
+        private static void _evaltateOrderExpressionTree(Expression expression, ObjectMap map, ObjectColumnOrderType order)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Convert:
+                    var convertTableType = ((dynamic)expression).Operand.Expression.Type;
+                    var convertName = ((dynamic)expression).Operand.Member.Name;
+                    var convertTable = map.Tables.FirstOrDefault(w => w.Type == convertTableType);
+
+                    if (convertTable == null)
+                    {
+                        map.AddSingleTable(convertTableType);
+
+                        convertTable = map.Tables.FirstOrDefault(w => w.Type == convertTableType);
+                    }
+
+                    var convertColumn = convertTable.Columns.First(w => w.PropertyName == convertName);
+
+                    map.OrderSequenceCount++;
+
+                    convertColumn.SequenceNumber = map.OrderSequenceCount;
+                    convertColumn.OrderType = order;
+
+                    break;
+                case ExpressionType.MemberAccess:
+                    var memberAccessTableType = ((dynamic)expression).Expression.Type;
+                    var memberAccessName = ((dynamic)expression).Member.Name;
+                    var memberAccessTable = map.Tables.FirstOrDefault(w => w.Type == memberAccessTableType);
+
+                    if (memberAccessTable == null)
+                    {
+                        map.AddSingleTable(memberAccessTableType);
+
+                        memberAccessTable = map.Tables.FirstOrDefault(w => w.Type == memberAccessTableType);
+                    }
+
+                    var memberAccessColumn = memberAccessTable.Columns.First(w => w.PropertyName == memberAccessName);
+
+                    map.OrderSequenceCount++;
+
+                    memberAccessColumn.SequenceNumber = map.OrderSequenceCount;
+                    memberAccessColumn.OrderType = order;
+
+                    break;
+                default:
+                    throw new Exception("Invalid Order By Operation");
+            }
+        }
+
+
         /// <summary>
         /// Evaluates the expression tree to resolve it into ExpressionSelectResult's
         /// </summary>
@@ -140,13 +203,13 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
         {
             if (HasLeft(expression))
             {
-                _evaluateWhere(((dynamic)expression).Right, map);
+                _evaluateWhere(((dynamic)expression).Right, map, null);
 
                 _evaluateExpressionTree(((BinaryExpression)expression).Left, map);
             }
             else
             {
-                _evaluateWhere((dynamic)expression, map);
+                _evaluateWhere((dynamic)expression, map, null);
             }
         }
 
@@ -392,16 +455,19 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
 
         #region Expression Where Evaluation
 
-        private static void _evaluateWhere(object expression, ObjectMap map)
+        private static void _evaluateWhere(object expression, ObjectMap map, ExpressionType? nodeType)
         {
-            _evaluateWhere(expression as dynamic, map);
+            _evaluateWhere(expression as dynamic, map, null);
         }
 
-        private static void _evaluateWhere(MethodCallExpression expression, ObjectMap map)
+        private static void _evaluateWhere(MethodCallExpression expression, ObjectMap map, ExpressionType? nodeType)
         {
             var argsHaveParameter = false;
             var conversionPackage = new ConversionPackage();
-            var compareType = GetComparisonType(expression.Method.Name);
+            var compareName = string.Format("{0}{1}",
+                nodeType != null && nodeType.Value == ExpressionType.Not ? "NOT" : string.Empty,
+                expression.Method.Name);
+            var compareType = GetComparisonType(compareName);
 
             foreach (var arg in expression.Arguments.Where(_hasParameter))
             {
@@ -418,7 +484,7 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
             }
         }
 
-        private static void _evaluateWhere(BinaryExpression expression, ObjectMap map)
+        private static void _evaluateWhere(BinaryExpression expression, ObjectMap map, ExpressionType? nodeType)
         {
             var conversionPackage = new ConversionPackage();
             var compareValue = GetCompareValue(expression, SqlDbType.VarChar);
@@ -427,11 +493,10 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
             _addWhereValidation(expression, map, conversionPackage, comparisonType, compareValue);
         }
 
-        private static void _evaluateWhere(UnaryExpression expression, ObjectMap map)
+        private static void _evaluateWhere(UnaryExpression expression, ObjectMap map, ExpressionType? nodeType)
         {
-            var result = _evaluateWhere(expression.Operand as dynamic, map);
+            _evaluateWhere(expression.Operand as dynamic, map, expression.NodeType);
 
-            result.ComparisonType = GetComparisonType(expression.NodeType);
         }
         #endregion
 
@@ -578,6 +643,12 @@ namespace OR_M_Data_Entities.Expressions.Operations.LambdaResolution
                     return ComparisonType.BeginsWith;
                 case "ENDSWITH":
                     return ComparisonType.EndsWith;
+                case "NOTCONTAINS":
+                    return ComparisonType.NotContains;
+                case "NOTSTARTSWITH":
+                    return ComparisonType.NotBeginsWith;
+                case "NOTENDSWITH":
+                    return ComparisonType.NotEndsWith;
                 default:
                     throw new Exception("ExpressionType not in tree");
             }

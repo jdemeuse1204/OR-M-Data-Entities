@@ -1,10 +1,16 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.LambdaResolution;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
-using OR_M_Data_Entities.Expressions.Operations.Payloads;
+using OR_M_Data_Entities.Expressions.LambdaResolution;
+using OR_M_Data_Entities.Expressions.ObjectMapping;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Expressions
 {
@@ -40,5 +46,19 @@ namespace OR_M_Data_Entities.Expressions
 
 			return new ExpressionWhereQuery(Map, Context);
 		}
+
+        public ExpressionOrderedQuery OrderBy<T>(Expression<Func<T, object>> selector)
+        {
+            LambdaResolver.ResolveOrderExpression(selector, Map, ObjectColumnOrderType.Ascending);
+
+            return new ExpressionOrderedQuery(Map, Context);
+        }
+
+        public ExpressionOrderedQuery OrderByDescending<T>(Expression<Func<T, object>> selector)
+        {
+            LambdaResolver.ResolveOrderExpression(selector, Map, ObjectColumnOrderType.Descending);
+
+            return new ExpressionOrderedQuery(Map, Context);
+        }
 	}
 }

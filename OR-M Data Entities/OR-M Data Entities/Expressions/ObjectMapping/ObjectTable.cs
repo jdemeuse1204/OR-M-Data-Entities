@@ -1,10 +1,17 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
+using OR_M_Data_Entities.Expressions.Containers;
 
-namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
+namespace OR_M_Data_Entities.Expressions.ObjectMapping
 {
     public class ObjectTable : IEquatable<ObjectTable>
     {
@@ -32,6 +39,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
         public List<ObjectColumn> Columns { get; set; }
 
         public bool HasAlias { get { return !TableName.Equals(Alias); } }
+
+        public bool HasOrderSequence()
+        {
+            return Columns != null && Columns.Any(w => w.HasOrderSequence);
+        }
 
         public bool HasValidation()
         {
@@ -74,6 +86,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
             {
                 column.GetWhereContainer(whereContainer);
             }
+        }
+
+        public IEnumerable<ObjectColumn> GetOrderByColumns()
+        {
+            return Columns.Where(w => w.HasOrderSequence);
         }
 
         public void UnSelectAll()

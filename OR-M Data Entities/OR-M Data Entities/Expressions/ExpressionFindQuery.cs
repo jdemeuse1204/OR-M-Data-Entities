@@ -1,9 +1,15 @@
-﻿using System.Collections.Generic;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
-using OR_M_Data_Entities.Expressions.Operations.Payloads;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Expressions
 {

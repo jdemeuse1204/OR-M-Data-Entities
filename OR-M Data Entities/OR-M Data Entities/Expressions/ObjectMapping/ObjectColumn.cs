@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -6,22 +13,31 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.ObjectFunctions;
-using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
+using OR_M_Data_Entities.Expressions.Containers;
+using OR_M_Data_Entities.Expressions.ObjectFunctions;
 
-namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
+namespace OR_M_Data_Entities.Expressions.ObjectMapping
 {
 	public class ObjectColumn : ObjectFunctionTextBuilder
 	{
+        public int? SequenceNumber { get; set; }
+
 		public string Name { get; set; }
 
 		public string PropertyName { get; set; }
+
+        public ObjectColumnOrderType OrderType { get; set; }
 
         public string ColumnAlias { get; set; }
 
 		public SqlDbType DataType { get; set; }
 
 		public bool IsSelected { get; set; }
+
+        public bool HasOrderSequence 
+        {
+            get { return SequenceNumber != null; }
+        }
 
 		public bool IsPartOfValidation
 		{
@@ -38,6 +54,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
 			get { return CompareValues.Count != 0; ; }
 		}
 
+        public bool IsOrdered
+        {
+            get { return OrderBySequence != null; ; }
+        }
+
 		public List<KeyValuePair<object, ComparisonType>> CompareValues { get; set; }
 
 		public List<KeyValuePair<ObjectColumn, JoinType>> Joins { get; set; }
@@ -53,6 +74,8 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
 		public bool IsKey { get; private set; }
 
         public int Order { get; private set; }
+
+        public int? OrderBySequence { get; private set; }
 
 		public string GetText()
 		{
@@ -128,12 +151,24 @@ namespace OR_M_Data_Entities.Expressions.Operations.ObjectMapping
 			            : _addParameter(_resolveContainsObject(compareValue, comparisonType), parameters));
 			}
 
+            if (comparisonType == ComparisonType.NotContains)
+            {
+                return string.Format(isCompareValueList ? " {0} NOT IN ({1}) " : " {0} NOT LIKE {1}", objectColumn.GetText(),
+                    isCompareValueList
+                        ? DatabaseOperations.EnumerateList(compareValue as IEnumerable, parameters)
+                        : _addParameter(_resolveContainsObject(compareValue, comparisonType), parameters));
+            }
+
 			switch (comparisonType)
 			{
 				case ComparisonType.BeginsWith:
 				case ComparisonType.EndsWith:
 					return string.Format(" {0} LIKE {1}", objectColumn.GetText(),
 						_addParameter(compareValue, parameters));
+                case ComparisonType.NotBeginsWith:
+                case ComparisonType.NotEndsWith:
+                    return string.Format(" {0} NOT LIKE {1}", objectColumn.GetText(),
+                        _addParameter(compareValue, parameters));
 				case ComparisonType.Equals:
 					return string.Format(" {0} = {1}", objectColumn.GetText(),
 						_addParameter(compareValue, parameters));

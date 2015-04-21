@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {

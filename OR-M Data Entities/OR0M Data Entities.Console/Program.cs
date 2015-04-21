@@ -14,6 +14,13 @@ namespace OR0M_Data_Entities.Console
 
             var lst = new List<string> { "James", "Megan" };
 
+            var orderedQuery = context.SelectAll<Contact>().Where<Contact>(w => lst.Contains(w.FirstName)).ToList<Contact>();
+
+            if (orderedQuery != null)
+            {
+                
+            }
+
             var areader =
                 context.Select<Person>(w => new
                 {

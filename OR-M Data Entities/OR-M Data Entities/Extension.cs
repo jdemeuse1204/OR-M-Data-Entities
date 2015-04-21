@@ -16,7 +16,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Commit;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 

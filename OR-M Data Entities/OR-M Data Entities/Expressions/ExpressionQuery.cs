@@ -1,14 +1,20 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
-using OR_M_Data_Entities.Expressions.Operations.Payloads.Base;
-using OR_M_Data_Entities.Expressions.Operations.QueryResolution;
-using OR_M_Data_Entities.Expressions.Operations.QueryResolution.Base;
+using OR_M_Data_Entities.Expressions.Containers;
+using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
+using OR_M_Data_Entities.Expressions.Resolution;
 
-namespace OR_M_Data_Entities.Expressions.Operations.Payloads
+namespace OR_M_Data_Entities.Expressions
 {
     public abstract class ExpressionQuery : Builder, IEnumerable
     {
@@ -34,6 +40,11 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 			return Map.Tables.Any(w => w.Columns.Any(x => x.IsPartOfValidation));
 		}
 
+        private bool _isOrdering()
+        {
+            return Map.HasOrderSequence();
+        }
+
 		private T _createInstance<T>() where T : Resolver
 		{
 			return
@@ -51,6 +62,27 @@ namespace OR_M_Data_Entities.Expressions.Operations.Payloads
 		{
 			var hasJoins = _hasJoins();
 			var hasWheres = _hasWheres();
+		    var isOrdering = _isOrdering();
+
+		    if (isOrdering)
+		    {
+                if (hasJoins)
+                {
+                    if (hasWheres)
+                    {
+                        return _createInstance<OrderedSelectWhereJoinResolver>();
+                    }
+
+                    return _createInstance<OrderedSelectJoinResolver>();
+                }
+
+                if (hasWheres)
+                {
+                    return _createInstance<OrderedSelectWhereResolver>();
+                }
+
+                return _createInstance<OrderedSelectResolver>();
+		    }
 
 			if (hasJoins)
 			{

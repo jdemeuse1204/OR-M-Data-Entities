@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Data
         {
             lock (Lock)
             {
-                if (DatabaseSchemata.HasForeignKeys<T>())
+                if (DatabaseSchemata.HasForeignKeys(entity))
                 {
                     var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
@@ -192,7 +192,7 @@ namespace OR_M_Data_Entities.Data
         {
             lock (Lock)
             {
-                if (!DatabaseSchemata.HasForeignKeys<T>()) return _deleteObjectFromDatabase(entity);
+                if (!DatabaseSchemata.HasForeignKeys(entity)) return _deleteObjectFromDatabase(entity);
 
                 var result = true;
                 var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
