@@ -19,7 +19,21 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DataFetching : DatabaseReading
     {
+        #region Fields
         protected object Lock = new object();
+        #endregion
+
+        #region Properties
+        private string _schemaName;
+
+        public string SchemaName
+        {
+            get { return string.IsNullOrWhiteSpace(_schemaName) ? "DBO" : _schemaName; }
+            set { _schemaName = value; }
+        }
+
+        public bool IsLazyLoadEnabled { get; set; }
+        #endregion
 
         #region Constructor
         protected DataFetching(string connectionStringOrName)

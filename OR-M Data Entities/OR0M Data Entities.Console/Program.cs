@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Tests.Tables;
@@ -12,20 +14,42 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main2(string[] args)
         {
+            var parent = new Parent();
+
             foreach (var propertyInfo in typeof(Parent).GetProperties())
             {
-                var hashCode = propertyInfo.GetHashCode();
+                var parentPropertyInfo = parent.GetType().GetProperty(propertyInfo.Name);
 
-                if (hashCode != 0)
+                var hashCode = propertyInfo.GetHashCode();
+                var parentHashCode = parentPropertyInfo.GetHashCode();
+
+                hashCode = (propertyInfo as MemberInfo).GetHashCode();
+                parentHashCode = (parentPropertyInfo as MemberInfo).GetHashCode();
+
+                if (hashCode != 0 && parentHashCode != 0)
                 {
                     
+                }
+
+                propertyInfo.SetValue(parent, 1);
+
+                hashCode = propertyInfo.GetHashCode();
+                hashCode = (propertyInfo as MemberInfo).GetHashCode();
+
+                parentPropertyInfo = parent.GetType().GetProperty(propertyInfo.Name);
+                parentHashCode = parentPropertyInfo.GetHashCode();
+                parentHashCode = (parentPropertyInfo as MemberInfo).GetHashCode();
+
+                if (hashCode != 0 && parentHashCode != 0)
+                {
+
                 }
             }
         }
 
         static void Main(string[] args)
         {
-            Main2(args);return;
+           Main2(args);return;
 
             var context = new DbSqlContext("sqlExpress");
 
