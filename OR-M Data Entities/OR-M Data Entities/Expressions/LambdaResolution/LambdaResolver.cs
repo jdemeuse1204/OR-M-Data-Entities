@@ -129,9 +129,7 @@ namespace OR_M_Data_Entities.Expressions.LambdaResolution
                     }
                     break;
                 case ExpressionType.Convert:
-                    var convertExpressionColumnAndTableName = _getTableNameAndColumns((dynamic)expression);
-
-                    //evaluationResults.AddRange(convertExpressionColumnAndTableName);
+                    _evaltateSelectExpressionTree(((UnaryExpression)expression).Operand, map);
                     break;
                 case ExpressionType.Call:
 
@@ -244,9 +242,9 @@ namespace OR_M_Data_Entities.Expressions.LambdaResolution
             return DatabaseSchemata.GetTableFields(parameterExpression.Type).Select(column => new SqlTableColumnPair
             {
                 Column = column,
-                DataType = column.GetCustomAttribute<DbTranslationAttribute>() == null ?
+                DataType = column.GetCustomAttribute<DbTypeAttribute>() == null ?
                     DatabaseSchemata.GetSqlDbType(column.PropertyType) :
-                    column.GetCustomAttribute<DbTranslationAttribute>().Type,
+                    column.GetCustomAttribute<DbTypeAttribute>().Type,
                 Table = parameterExpression.Type
             }).ToList();
         }
@@ -346,9 +344,9 @@ namespace OR_M_Data_Entities.Expressions.LambdaResolution
 
             column.DataType = conversionPackage.IsCasting || conversionPackage.IsConverting
                 ? conversionPackage.TransformType
-                : expression.Member.GetCustomAttribute<DbTranslationAttribute>() == null
+                : expression.Member.GetCustomAttribute<DbTypeAttribute>() == null
                     ? DatabaseSchemata.GetSqlDbType(expression.Type)
-                    : expression.Member.GetCustomAttribute<DbTranslationAttribute>().Type;
+                    : expression.Member.GetCustomAttribute<DbTypeAttribute>().Type;
 
             if (conversionPackage.IsCasting)
             {

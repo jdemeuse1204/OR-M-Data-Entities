@@ -16,7 +16,7 @@ using OR_M_Data_Entities.Mapping;
 namespace OR_M_Data_Entities.Data
 {
     /// <summary>
-    /// This class uses DataFetching functions to Save, Delete, and Find
+    /// This class uses DataFetching functions to Save, Delete
     /// </summary>
     public abstract class DataModifiable : DataFetching
     {
@@ -115,7 +115,7 @@ namespace OR_M_Data_Entities.Data
         private void _saveObjectToDatabase<T>(T entity)
         {
             // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableName(entity);
+            var tableName = DatabaseSchemata.GetTableNameWithLinkedServer(entity);
 
             // ID is the default primary key name
             var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
@@ -144,7 +144,7 @@ namespace OR_M_Data_Entities.Data
                         // add validation to only update the row
                         foreach (var primaryKey in primaryKeys)
                         {
-                            update.AddWhere(tableName, primaryKey.Name, ComparisonType.Equals, primaryKey.GetValue(entity));
+                            update.AddWhere("", primaryKey.Name, ComparisonType.Equals, primaryKey.GetValue(entity));
                         }
 
                         Execute(update);

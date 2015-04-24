@@ -98,6 +98,29 @@ namespace OR_M_Data_Entities.Data
             return GetTableName(typeof(T));
         }
 
+        public static string GetTableNameWithLinkedServer<T>()
+        {
+            return GetTableNameWithLinkedServer(typeof(T));
+        }
+
+        public static string GetTableNameWithLinkedServer(object entity)
+        {
+            return GetTableNameWithLinkedServer(entity.GetType());
+        }
+
+        public static string GetTableNameWithLinkedServer(Type type)
+        {
+            // check for table name attribute
+            var tableAttribute = type.GetCustomAttribute<TableAttribute>();
+            var linkedserverattribute = type.GetCustomAttribute<LinkedServerAttribute>();
+
+            var tableName = tableAttribute == null ? type.Name : tableAttribute.Name;
+
+            return linkedserverattribute == null
+                ? tableName
+                : string.Format("{0}.[{1}]", linkedserverattribute.LinkedServerText, tableName);
+        }
+
         public static DbGenerationOption GetGenerationOption(PropertyInfo column)
         {
             var dbGenerationColumn = column.GetCustomAttribute<DbGenerationOptionAttribute>();

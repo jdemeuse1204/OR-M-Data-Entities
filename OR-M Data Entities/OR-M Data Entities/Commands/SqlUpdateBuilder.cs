@@ -5,6 +5,7 @@
  * Copyright (c) 2015 James Demeuse
  */
 
+using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Support;
@@ -51,6 +52,13 @@ namespace OR_M_Data_Entities.Commands
 
 		public void AddUpdate(PropertyInfo property, object entity)
 		{
+            // check if its a timestamp, we need to skip the update
+
+		    var datatype = property.GetCustomAttribute<DbTypeAttribute>();
+
+            // never update a timestamp
+		    if (datatype != null && datatype.Type == SqlDbType.Timestamp) return;
+
 			//string fieldName, object value
 			var value = property.GetValue(entity);
             var fieldName = DatabaseSchemata.GetColumnName(property);
@@ -58,7 +66,7 @@ namespace OR_M_Data_Entities.Commands
 			_set += string.Format("[{0}] = {1},", fieldName, data);
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
-			var translation = property.GetCustomAttribute<DbTranslationAttribute>();
+            var translation = property.GetCustomAttribute<DbTypeAttribute>();
 
 			if (translation != null)
 			{

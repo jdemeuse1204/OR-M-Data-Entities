@@ -31,12 +31,12 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 
         public void Table(Type tableType)
         {
-            Table(DatabaseSchemata.GetTableName(tableType));
+            Table(DatabaseSchemata.GetTableNameWithLinkedServer(tableType));
         }
 
         public void Table<T>()
         {
-            Table(DatabaseSchemata.GetTableName(typeof(T)));
+            Table(DatabaseSchemata.GetTableNameWithLinkedServer(typeof(T)));
         }
         #endregion
     }

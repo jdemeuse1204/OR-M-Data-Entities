@@ -53,7 +53,7 @@ namespace OR_M_Data_Entities.Commands.Support
 			var comparisonType = "=";
 			var startComparisonType = "";
 			var endComparisonType = "";
-			var startValidationString = " {0} [{1}].[{2}] {3} {4}{5}{6} ";
+			var startValidationString = " {0} {1}[{2}] {3} {4}{5}{6} ";
 
 			switch (type)
 			{
@@ -96,7 +96,7 @@ namespace OR_M_Data_Entities.Commands.Support
 			var data = GetNextParameter();
 			_where += string.Format(startValidationString, 
 				_getValidationType(), 
-				table, 
+				string.IsNullOrWhiteSpace(table) ? "" : string.Format("[{0}].", table), 
 				field, 
 				comparisonType, 
 				startComparisonType, 

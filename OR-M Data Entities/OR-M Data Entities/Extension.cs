@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
@@ -43,14 +44,16 @@ namespace OR_M_Data_Entities
             return result;
         }
 
-        public static T ToObject<T>(this PeekDataReader reader)
+        public static T ToObject<T>(this PeekDataReader reader) 
         {
             if (!reader.HasRows) return default(T);
 
             if (typeof(T).IsValueType
                 || typeof(T) == typeof(string))
             {
-                return (T)reader[0];
+                var data = reader[0];
+
+                return data == DBNull.Value ? default(T) : (T) data;
             }
 
             if (typeof(T) == typeof(object) ||

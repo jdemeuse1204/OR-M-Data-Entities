@@ -50,7 +50,7 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
             Generation = IsPrimaryKey ? DatabaseSchemata.GetGenerationOption(property) : DbGenerationOption.None;
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
-			var translation = property.GetCustomAttribute<DbTranslationAttribute>();
+			var translation = property.GetCustomAttribute<DbTypeAttribute>();
 
 			if (translation != null)
 			{
