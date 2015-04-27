@@ -47,6 +47,7 @@
     <Compile Include="Commands\JoinType.cs" />
     <Compile Include="Commands\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Commands\Secure\SqlSecureObject.cs" />
+    <Compile Include="Commands\Secure\StatementParts\SqlJoin.cs" />
     <Compile Include="Commands\SqlDeleteBuilder.cs" />
     <Compile Include="Commands\SqlInsertBuilder.cs" />
     <Compile Include="Commands\SqlQueryBuilder.cs" />
@@ -59,7 +60,6 @@
     <Compile Include="Commands\Secure\StatementParts\Field.cs" />
     <Compile Include="Commands\Secure\StatementParts\InsertItem.cs" />
     <Compile Include="Commands\Support\ISqlBuilder.cs" />
-    <Compile Include="Commands\Secure\StatementParts\SqlJoin.cs" />
     <Compile Include="Commands\Support\KeyContainer.cs" />
     <Compile Include="Commands\Support\SqlFunctionTextBuilder.cs" />
     <Compile Include="Commands\Secure\StatementParts\SqlFromTable.cs" />
