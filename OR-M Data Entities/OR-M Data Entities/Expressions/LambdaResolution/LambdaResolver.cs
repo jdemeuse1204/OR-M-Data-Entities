@@ -131,12 +131,6 @@ namespace OR_M_Data_Entities.Expressions.LambdaResolution
                 case ExpressionType.Convert:
                     _evaltateSelectExpressionTree(((UnaryExpression)expression).Operand, map);
                     break;
-                case ExpressionType.Call:
-
-                    //var callExpressionColumnAndTableName = _getColumnAndTableName(((MethodCallExpression)expression), SqlDbType.VarChar, null);
-
-                    //evaluationResults.Add(callExpressionColumnAndTableName);
-                    break;
                 case ExpressionType.MemberInit:
                     var memberInitExpression = expression as MemberInitExpression;
                     map.DataReturnType = ObjectMapReturnType.MemberInit;
