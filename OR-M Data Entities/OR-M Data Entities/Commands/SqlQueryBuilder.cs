@@ -11,7 +11,8 @@ using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands
 {
@@ -81,34 +82,6 @@ namespace OR_M_Data_Entities.Commands
             _tableType = null;
         }
 
-        public void SelectAll(Type tableType)
-        {
-            _tableType = tableType;
-
-            _createSelectStatement(tableType, " SELECT ");
-        }
-
-        public void SelectAll<T>() where T : class
-        {
-            _tableType = typeof(T);
-
-            SelectAll(typeof(T));
-        }
-
-        public void SelectTopOneAll(Type tableType)
-        {
-            _tableType = tableType;
-
-            _createSelectStatement(tableType, " SELECT TOP 1 ");
-        }
-
-        public void SelectTopOneAll<T>() where T : class
-        {
-            _tableType = typeof (T);
-
-            _createSelectStatement(typeof(T), " SELECT TOP 1 ");
-        }
-
         public void SelectTop(int rows, string table, params Field[] fields)
         {
             _select = string.Format(" SELECT TOP {0} ", rows);
@@ -175,63 +148,6 @@ namespace OR_M_Data_Entities.Commands
         }
         #endregion
 
-        #region Helpers
-        private void _createSelectStatement(Type tableType, string beginningSelectStatement)
-        {
-            _select = string.Empty;
-            _select = beginningSelectStatement;
-
-            if (DatabaseSchemata.HasForeignKeys(tableType))
-            {
-                var allJoinsFromForeignKeys = DatabaseSchemata.GetForeignKeyJoinsRecursive(tableType);
-
-                foreach (var foreignKey in allJoinsFromForeignKeys)
-                {
-                    _joins.Add(foreignKey.JoinEntityTableName, new QueryBuilderJoin
-                    {
-                        ParentTableName = DatabaseSchemata.GetTableName(foreignKey.ParentEntity.Table),
-                        ParentColumnName = DatabaseSchemata.GetColumnName(foreignKey.ParentEntity.Column),
-
-                        JoinTableName = DatabaseSchemata.GetTableName(foreignKey.JoinEntity.Table),
-                        JoinColumnName = DatabaseSchemata.GetColumnName(foreignKey.JoinEntity.Column),
-
-                        JoinTableAlias = foreignKey.JoinEntityTableName,
-
-                        Type = foreignKey.Type
-                    });
-                }
-
-                var allJoinsFromForeignKeysAndParent =
-                    allJoinsFromForeignKeys.SelectedTypes as Dictionary<string, Type>;
-
-                allJoinsFromForeignKeysAndParent.Add(DatabaseSchemata.GetTableName(tableType), tableType);
-
-                foreach (var table in allJoinsFromForeignKeysAndParent)
-                {
-                    var tableNameAndColumnNames = DatabaseSchemata.GetSelectAllFieldsAndTableName(table.Value);
-                    var tName = table.Key;
-                    var columns = tableNameAndColumnNames.Value;
-
-                    _select += columns.Aggregate("", (current, column) => current + string.Format("[{0}].[{1}] as [{2}],", tName, column, string.Format("{0}{1}",tName,column)));
-                }
-
-                _select = _select.TrimEnd(',');
-
-                return;
-            }
-
-            var selectAllTableNameAndFields = DatabaseSchemata.GetSelectAllFieldsAndTableName(tableType);
-            var tableName = selectAllTableNameAndFields.Key;
-            var fields = selectAllTableNameAndFields.Value;
-
-            foreach (var field in fields)
-            {
-                _select += string.Format("[{0}].[{1}],", tableName, field);
-            }
-
-            _select = _select.TrimEnd(',');
-        }
-        #endregion
     }
 
     #region helpers

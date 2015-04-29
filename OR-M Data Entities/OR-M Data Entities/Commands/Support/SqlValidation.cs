@@ -6,6 +6,7 @@
  */
 
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
+using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands.Support
 {

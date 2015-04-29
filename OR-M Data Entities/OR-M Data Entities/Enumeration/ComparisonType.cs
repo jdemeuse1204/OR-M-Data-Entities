@@ -1,0 +1,28 @@
+﻿/*
+ * OR-M Data Entities v1.2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+namespace OR_M_Data_Entities.Enumeration
+{
+	public enum ComparisonType
+	{
+		Contains,
+		BeginsWith,
+		EndsWith,
+        NotContains,
+        NotBeginsWith,
+        NotEndsWith,
+		Equals,
+		EqualsIgnoreCase,
+		EqualsTruncateTime,
+		GreaterThan,
+		GreaterThanEquals,
+		LessThan,
+		LessThanEquals,
+		NotEqual,
+        Between
+	}
+}

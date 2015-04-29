@@ -7,6 +7,7 @@
 
 using System;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {

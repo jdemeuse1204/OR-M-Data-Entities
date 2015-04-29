@@ -6,18 +6,34 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data
 {
     public abstract class Database : IDisposable
     {
+        #region Properties
         protected string ConnectionString { get; private set; }
         protected SqlConnection Connection { get; set; }
         protected SqlCommand Command { get; set; }
         protected PeekDataReader Reader { get; set; }
+
+        private string _schemaName;
+
+        public string SchemaName
+        {
+            get { return string.IsNullOrWhiteSpace(_schemaName) ? "DBO" : _schemaName; }
+            set { _schemaName = value; }
+        }
+
+        public bool IsLazyLoadEnabled { get; set; }
+
+        public Dictionary<string, ObjectSchematic> SavedTableSchematics { get; private set; }
+        #endregion
 
         protected Database(string connectionStringOrName)
         {
@@ -35,6 +51,8 @@ namespace OR_M_Data_Entities.Data
             }
             
             Connection = new SqlConnection(ConnectionString);
+
+            SavedTableSchematics = new Dictionary<string, ObjectSchematic>();
         }
 
         /// <summary>
@@ -56,6 +74,13 @@ namespace OR_M_Data_Entities.Data
         {
             // Disconnect our connection
             Connection.Close();
+        }
+
+        protected void TryDisposeCloseReader()
+        {
+            if (Reader == null) return;
+            Reader.Close();
+            Reader.Dispose();
         }
 
         public void Dispose()

@@ -8,7 +8,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands
 {

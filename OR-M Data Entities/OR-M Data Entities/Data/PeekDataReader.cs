@@ -7,7 +7,7 @@
 using System;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Expressions.ObjectMapping.Base;
+using OR_M_Data_Entities.Expressions;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -19,7 +19,6 @@ namespace OR_M_Data_Entities.Data
         #region Fields
         private readonly IDataReader _wrappedReader;
         private bool _lastResult;
-        public ObjectMap Map { get; private set; } // for foreign keys so we know how to read the data back
         #endregion
 
         #region Properties
@@ -29,6 +28,8 @@ namespace OR_M_Data_Entities.Data
         public bool HasRows { get; private set; }
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
+
+        public readonly SqlQuery Query;
 
         public object this[int i]
         {
@@ -52,10 +53,10 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(SqlCommand cmd, ObjectMap map)
+        public PeekDataReader(SqlCommand cmd, SqlQuery query)
             : this(cmd)
         {
-            Map = map;
+            Query = query;
         }
 
         public PeekDataReader(SqlCommand cmd)

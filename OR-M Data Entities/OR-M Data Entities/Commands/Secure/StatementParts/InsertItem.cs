@@ -8,6 +8,7 @@
 using System.Data;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
