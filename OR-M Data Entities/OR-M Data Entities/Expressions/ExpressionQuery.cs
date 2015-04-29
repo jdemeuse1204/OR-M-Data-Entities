@@ -378,6 +378,12 @@ namespace OR_M_Data_Entities.Expressions
 
                 var rightSide = "";
 
+                if (item.CompareValue == DBNull.Value)
+                {
+                    validationStatements.Add(string.Format(" {0} IS NULL ", leftSide));
+                    continue;
+                }
+
                 if (item.CompareValue is ExpressionSelectResult)
                 {
                     var compareValue = item.CompareValue as ExpressionSelectResult;
@@ -395,13 +401,13 @@ namespace OR_M_Data_Entities.Expressions
                     var compareValue = _resolveCompareValue(item);
                     rightSide = parameter;
 
-                    if (item.CompareValue is DataTransformContainer)
-                    {
-                        rightSide = Cast(parameter, ((DataTransformContainer)item.CompareValue).Transform);
-                        compareValue = ((DataTransformContainer) item.CompareValue).Value;
-                    }
+                        if (item.CompareValue is DataTransformContainer)
+                        {
+                            rightSide = Cast(parameter, ((DataTransformContainer)item.CompareValue).Transform);
+                            compareValue = ((DataTransformContainer)item.CompareValue).Value;
+                        }
 
-                    _parameters.Add(parameter, compareValue);
+                        _parameters.Add(parameter, compareValue);
                 }
 
                 validationStatements.Add(string.Format(partOfValidation, leftSide, rightSide));

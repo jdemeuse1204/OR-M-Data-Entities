@@ -62,7 +62,7 @@ namespace OR_M_Data_Entities.Commands
 			_set += string.Format("[{0}] = {1},", fieldName, data);
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
-			var translation = property.GetCustomAttribute<DbTranslationAttribute>();
+            var translation = property.GetCustomAttribute<DbTypeAttribute>();
 
 			if (translation != null)
 			{

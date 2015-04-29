@@ -5,8 +5,11 @@
  * (c) 2015 James Demeuse
  */
 using System;
+using System.Data;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities.Commands;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -93,6 +96,10 @@ namespace OR_M_Data_Entities.Data
 
                         foreach (var property in from property in tableColumns let columnName = DatabaseSchemata.GetColumnName(property) where !primaryKeys.Select(w => w.Name).Contains(property.Name) select property)
                         {
+                            var typeAttribute = property.GetCustomAttribute<DbTypeAttribute>();
+
+                            if (typeAttribute != null && typeAttribute.Type == SqlDbType.Timestamp) continue; // timestamps should not be updated
+
                             // Skip unmapped fields
                             update.AddUpdate(property, entity);
                         }

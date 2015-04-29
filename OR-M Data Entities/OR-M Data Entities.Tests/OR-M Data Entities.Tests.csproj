@@ -52,7 +52,6 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Context\EntityContext.cs" />
     <Compile Include="Context\SqlContext.cs" />
     <Compile Include="SqlContextTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

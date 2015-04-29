@@ -230,9 +230,9 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 					ColumnName = e.Member.GetCustomAttribute<ColumnAttribute>() == null
 							? e.Member.Name
 							: e.Member.GetCustomAttribute<ColumnAttribute>().Name,
-					Transform = isCasting || isConverting ? transformType : e.Member.GetCustomAttribute<DbTranslationAttribute>() == null ?
+                    Transform = isCasting || isConverting ? transformType : e.Member.GetCustomAttribute<DbTypeAttribute>() == null ?
 							ExpressionTypeTransform.GetSqlDbType(e.Type)
-							: e.Member.GetCustomAttribute<DbTranslationAttribute>().Type,
+                            : e.Member.GetCustomAttribute<DbTypeAttribute>().Type,
 					ShouldCast = isCasting,
 					ColumnType = e.Type,
 					ShouldConvert = isConverting,

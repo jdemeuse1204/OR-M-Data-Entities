@@ -68,10 +68,6 @@
     <Compile Include="Data\DataOperations.cs" />
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
-    <Compile Include="Entity\DbEntityContext.cs" />
-    <Compile Include="Entity\DbTable.cs" />
-    <Compile Include="Entity\IDbTable.cs" />
-    <Compile Include="Entity\SaveAction.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\Resolver\ExpressionResolutionResult.cs" />
     <Compile Include="Expressions\Resolver\ExpressionResolver.cs" />
@@ -82,8 +78,7 @@
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />
     <Compile Include="Mapping\DbGenerationOption.cs" />
-    <Compile Include="Mapping\DbTranslation.cs" />
-    <Compile Include="Mapping\ForeignKey.cs" />
+    <Compile Include="Mapping\DbType.cs" />
     <Compile Include="Mapping\Key.cs" />
     <Compile Include="Mapping\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\Table.cs" />
