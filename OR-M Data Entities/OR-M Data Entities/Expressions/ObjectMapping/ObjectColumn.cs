@@ -154,6 +154,11 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
 
 		public string _getComparisonString(ObjectColumn objectColumn, object compareValue, ComparisonType comparisonType, Dictionary<string, object> parameters)
 		{
+		    if (compareValue == null)
+		    {
+		        return string.Format(" {0} IS NULL", objectColumn.GetTextWithFunctions());
+		    }
+
 			var isCompareValueList = compareValue.IsList();
 
 			if (comparisonType == ComparisonType.Contains)
