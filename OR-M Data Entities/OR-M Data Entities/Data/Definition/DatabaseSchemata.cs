@@ -127,10 +127,10 @@ namespace OR_M_Data_Entities.Data.Definition
                 var tableName = GetTableName(fkPropertyType);
 
                 var joinString = isList
-                    ? string.Format("LEFT JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
+                    ? string.Format(" LEFT JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                         tableName, foreignKey.Name, foreignKeyAttribute.ForeignKeyColumnName, GetTableName(type),
                         GetPrimaryKeys(type).First().Name)
-                    : string.Format("INNER JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
+                    : string.Format(" INNER JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                         tableName, foreignKey.Name, GetPrimaryKeys(fkPropertyType).First().Name, GetTableName(type),
                         foreignKeyAttribute.ForeignKeyColumnName);
 
@@ -191,10 +191,10 @@ namespace OR_M_Data_Entities.Data.Definition
                 var tableName = GetTableName(fkPropertyType);
 
                 var joinString = isList
-                    ? string.Format("LEFT JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
+                    ? string.Format(" LEFT JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                         tableName, foreignKey.Name, foreignKeyAttribute.ForeignKeyColumnName, tableNameFromProperty,
                         GetPrimaryKeys(type).First().Name)
-                    : string.Format("INNER JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
+                    : string.Format(" INNER JOIN [{0}] As [{1}] On [{1}].[{2}] = [{3}].[{4}]",
                         tableName, foreignKey.Name, GetPrimaryKeys(fkPropertyType).First().Name, tableNameFromProperty,
                         foreignKeyAttribute.ForeignKeyColumnName);
 

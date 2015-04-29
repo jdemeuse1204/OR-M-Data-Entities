@@ -12,8 +12,22 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
             var ids = new List<int> {1, 2, 3};
-            var result =
-                context.From<Contact>().FirstOrDefault(w => ids.Contains(w.ID) && w.Number.Phone == "" && w.FirstName.Contains("James"));
+            var result = context.From<Contact>()
+                .InnerJoin(
+                    context.From<Appointment>(),
+                    contact => contact.ID,
+                    appointment => appointment.ContactID,
+                    (contact, appointment) => new Appointment
+                    {
+                        ContactID = contact.ID
+                    });
+                //context.From<Contact>()
+                //    .Select(w => new Contact
+                //    {
+                //        ID = w.ID,
+                //        FirstName = w.FirstName
+                //    })
+                //    .FirstOrDefault(w => ids.Contains(w.ID) && w.Number.Phone == "" && w.FirstName.Contains("James"));
 
             var list = new List<Contact>();
         }

@@ -58,8 +58,7 @@ namespace OR_M_Data_Entities.Expressions
             var select = string.Format("SELECT {0}{1}", Take > 0 ? string.Format("TOP {0} ", Take) : "",
                 Distinct ? "DISTINCT " : "");
 
-           // var columns = Select.Aggregate(string.Empty,
-           //     (current, column) => current + string.Format("{0},", column.GetSqlText()));
+            var columns = Schematic.GetColumnSql();
 
             var where = Where.Aggregate(string.Empty,
                 (current, column) =>
@@ -67,8 +66,11 @@ namespace OR_M_Data_Entities.Expressions
                         ? string.Format("WHERE {0} ", column)
                         : current + string.Format("AND {0} ", column));
 
-           // var sql = string.Format("{0}{1} FROM {2}", select, columns, where);
-            return "";
+            var joins = Schematic.HasJoins() ? Schematic.GetJoinSql() : string.Empty;
+
+            var sql = string.Format("{0}{1} FROM {2}{3}", select, columns, joins, where);
+
+            return sql;
         }
     }
 }

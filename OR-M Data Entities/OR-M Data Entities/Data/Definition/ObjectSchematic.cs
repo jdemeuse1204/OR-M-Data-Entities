@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Management.Instrumentation;
 using System.Reflection;
 
@@ -51,6 +52,61 @@ namespace OR_M_Data_Entities.Data.Definition
         public List<ObjectSchematic> ChildTypes { get; set; }
 
         public bool IsLazyLoading { get; set; }
+
+        public bool HasJoins()
+        {
+            return !string.IsNullOrWhiteSpace(JoinString) || ChildTypes.Any(w => !string.IsNullOrWhiteSpace(w.JoinString));
+        }
+
+        public bool HasSelectedColumns()
+        {
+            return ColumnSchematics.Count > 0 || ChildTypes.Any(w => w.ColumnSchematics.Count > 0);
+        }
+
+        public string GetJoinSql()
+        {
+            var sql = string.Empty;
+
+            _getJoinSql(this, ref sql);
+
+            return sql;
+        }
+
+        private void _getJoinSql(ObjectSchematic schematic,ref string sql)
+        {
+            sql += schematic.JoinString;
+
+            // not in current look through children
+            foreach (var child in schematic.ChildTypes.Where(w => w.HasJoins()))
+            {
+                _getJoinSql(child,ref sql);
+            }
+        }
+
+        public string GetColumnSql()
+        {
+            var sql = string.Empty;
+
+            _getColumnSql(this, ref sql);
+
+            return sql;
+        }
+
+        private void _getColumnSql(ObjectSchematic schematic, ref string sql)
+        {
+            sql += schematic.ColumnSchematics.Aggregate("",
+                (current, columnSchematic) =>
+                    current +
+                    (string.IsNullOrWhiteSpace(columnSchematic.Alias) || columnSchematic.Alias == columnSchematic.ColumnName
+                        ? string.Format("{0},", columnSchematic.TableAndColumnName)
+                        : string.Format("{0} As [{1}],", columnSchematic.TableAndColumnName, columnSchematic.Alias)));
+
+            // not in current look through children
+            foreach (var child in schematic.ChildTypes.Where(w => w.HasSelectedColumns()))
+            {
+                _getColumnSql(child, ref sql);
+            }
+        }
 
         public SqlColumnSchematic FindColumnSchematic(string tableName,string columName, Type type)
         {

@@ -73,6 +73,17 @@ namespace OR_M_Data_Entities
             return default(TSource);
         }
 
+        public static ExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
+            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            Expression<Func<TOuter, TInner, TResult>> resultSelector)
+        {
+            var result = new ExpressionQuery<TResult>(outer.Query, outer.Context);
+
+            //SqlExpressionSelectResolver.Resolve(selector, result.Query);
+
+            return result;
+        }
+
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, int, TResult>> selector)
         {
