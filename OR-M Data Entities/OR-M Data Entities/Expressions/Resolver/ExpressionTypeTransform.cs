@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -22,7 +23,14 @@ namespace OR_M_Data_Entities.Expressions.Resolver
 
         public static SqlDbType GetSqlDbType(Type type)
         {
-            switch (type.Name.ToUpper())
+            var name = type.Name;
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                name = type.GetGenericArguments()[0].Name;
+            }
+
+            switch (name.ToUpper())
             {
                 case "INT64":
                     return SqlDbType.BigInt;
@@ -52,8 +60,14 @@ namespace OR_M_Data_Entities.Expressions.Resolver
                     return SqlDbType.Xml;
                 case "DOUBLE":
                     return SqlDbType.Float;
+                case "BYTE[]":
+                    return SqlDbType.Binary;
+                case "CHAR":
+                    return SqlDbType.Char;
+                case "OBJECT":
+                    return SqlDbType.Variant;
                 default:
-                    throw new Exception("Type not recognized!");
+                    throw new Exception(string.Format("Type of {0} not recognized!", name));
             }
         }
     }

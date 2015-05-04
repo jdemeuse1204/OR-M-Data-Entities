@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OR_M_Data_Entities.Tests.Tables;
+﻿using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR_M_Data_Entities.Console
 {
@@ -13,7 +8,7 @@ namespace OR_M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
 
-            var contact = context.Where<Contact>(w => w.FirstName == null).First<Contact>();
+            var contact = context.Where<Contact>(w => w.FirstName == null).InnerJoin<Contact, Appointment>((c,a) => c.ID == a.ContactID).First<Contact>();
 
             if (contact != null)
             {

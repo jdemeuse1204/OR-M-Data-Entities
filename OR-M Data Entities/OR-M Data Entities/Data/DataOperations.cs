@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Data;
 using System.Linq;
@@ -30,21 +31,21 @@ namespace OR_M_Data_Entities.Data
             where T : class
         {
             // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableName(entity);
+            var tableDetails = DatabaseSchemata.GetTableDetails(entity);
 
             // ID is the default primary key name
             var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
 
             // delete Data
             var builder = new SqlDeleteBuilder();
-            builder.Delete(tableName);
+            builder.Delete(tableDetails.From);
 
             // Loop through all mapped properties
             foreach (var property in primaryKeys)
             {
                 var value = property.GetValue(entity);
                 var columnName = DatabaseSchemata.GetColumnName(property);
-                builder.AddWhere(tableName, columnName, ComparisonType.Equals, value);
+                builder.AddWhere(tableDetails.WhereTableName, columnName, ComparisonType.Equals, value);
             }
 
             // Execute the insert statement
@@ -74,7 +75,7 @@ namespace OR_M_Data_Entities.Data
             where T : class
         {
             // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableName(entity);
+            var tableDetails = DatabaseSchemata.GetTableDetails(entity);
 
             // ID is the default primary key name
             var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
@@ -92,7 +93,7 @@ namespace OR_M_Data_Entities.Data
                     {
                         // Update Data
                         var update = new SqlUpdateBuilder();
-                        update.Table(tableName);
+                        update.Table(tableDetails.From);
 
                         foreach (var property in from property in tableColumns let columnName = DatabaseSchemata.GetColumnName(property) where !primaryKeys.Select(w => w.Name).Contains(property.Name) select property)
                         {
@@ -107,7 +108,7 @@ namespace OR_M_Data_Entities.Data
                         // add validation to only update the row
                         foreach (var primaryKey in primaryKeys)
                         {
-                            update.AddWhere(tableName, primaryKey.Name, ComparisonType.Equals, primaryKey.GetValue(entity));
+                            update.AddWhere(tableDetails.WhereTableName, primaryKey.Name, ComparisonType.Equals, primaryKey.GetValue(entity));
                         }
 
                         Execute(update);
@@ -118,7 +119,7 @@ namespace OR_M_Data_Entities.Data
                         // Insert Data
                         var insert = new SqlInsertBuilder();
 
-                        insert.Table(tableName);
+                        insert.Table(tableDetails.From);
 
                         // Loop through all mapped properties
                         foreach (var property in tableColumns)
@@ -160,11 +161,11 @@ namespace OR_M_Data_Entities.Data
             var result = Activator.CreateInstance<T>();
 
             // get the database table name
-            var tableName = DatabaseSchemata.GetTableName(result);
+            var tableDetails = DatabaseSchemata.GetTableDetails(result);
 
             var builder = new SqlQueryBuilder();
             builder.SelectAll();
-            builder.Table(tableName);
+            builder.Table(tableDetails.From);
 
             // Get All PKs
             var keyProperties = DatabaseSchemata.GetPrimaryKeys(result);
@@ -176,7 +177,7 @@ namespace OR_M_Data_Entities.Data
                 // check to see if the column is renamed
                 var name = DatabaseSchemata.GetColumnName(key);
 
-                builder.AddWhere(tableName, name, ComparisonType.Equals, pks[i]);
+                builder.AddWhere(tableDetails.WhereTableName, name, ComparisonType.Equals, pks[i]);
             }
 
             Execute(builder);

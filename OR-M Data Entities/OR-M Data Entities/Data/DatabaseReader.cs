@@ -1,15 +1,18 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Infrastructure;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -94,7 +97,7 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReader();
         }
 
-        protected void Execute(string sql, Dictionary<string, object> parameters)
+        protected void Execute(string sql, List<SqlDbParameter> parameters)
         {
             _tryCloseReader();
 
@@ -102,8 +105,8 @@ namespace OR_M_Data_Entities.Data
 
             foreach (var item in parameters)
             {
-                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Key;
-                Command.Parameters[item.Key].Value = item.Value;
+                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Name;
+                Command.Parameters[item.Name].Value = item.Value;
             }
 
             Connect();
@@ -125,9 +128,16 @@ namespace OR_M_Data_Entities.Data
 			return new DataReader<T>(Reader);
 		}
 
-        public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string,object> parameters)
+        public DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters)
         {
             Execute(sql, parameters);
+
+            return new DataReader<T>(Reader);
+        }
+
+        public DataReader<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)
+        {
+            Execute(sql, parameters.ToList());
 
             return new DataReader<T>(Reader);
         }

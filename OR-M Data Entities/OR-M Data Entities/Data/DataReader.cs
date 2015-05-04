@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -30,14 +31,14 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        public T Select()
+        public T FirstOrDefault()
 	    {
 	        _reader.Read();
 
             return _reader.ToObject<T>();
 	    }
 
-	    public List<T> All()
+	    public List<T> ToList()
 	    {
 	        var result = new List<T>();
 

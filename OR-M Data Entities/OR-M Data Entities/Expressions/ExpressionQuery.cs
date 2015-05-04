@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,19 +14,20 @@ using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Resolver;
+using OR_M_Data_Entities.Infrastructure;
 
 namespace OR_M_Data_Entities.Expressions
 {
     public sealed class ExpressionQuery : DataTransform, IEnumerable
     {
         #region Properties
-        private string _from { get; set; }
+        private SqlStatementTableDetails _from { get; set; }
         private List<object> _where { get; set; }
         private List<object> _innerJoins { get; set; }
         private List<object> _leftJoins { get; set; }
         private List<object> _select { get; set; }
         private string _sql { get; set; }
-        private Dictionary<string, object> _parameters { get; set; }
+        private List<SqlDbParameter> _parameters { get; set; }
         private int _take { get; set; }
         private readonly DataFetching _context;
         private dynamic _results { get; set; }
@@ -35,7 +37,7 @@ namespace OR_M_Data_Entities.Expressions
         #endregion
 
         #region Constructor
-        public ExpressionQuery(string fromTable, DataFetching context)
+        public ExpressionQuery(SqlStatementTableDetails fromTable, DataFetching context)
         {
             _from = fromTable;
             _where = new List<object>();
@@ -43,7 +45,7 @@ namespace OR_M_Data_Entities.Expressions
             _leftJoins = new List<object>();
             _select = new List<object>();
             _sql = string.Empty;
-            _parameters = new Dictionary<string, object>();
+            _parameters = new List<SqlDbParameter>();
             _take = -1;  // -1 is select *
             _context = context;
 			_distinct = false;
@@ -79,7 +81,7 @@ namespace OR_M_Data_Entities.Expressions
             return this;
         }
 
-        public ExpressionQuery Join<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
+        public ExpressionQuery InnerJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
             where TParent : class
             where TChild : class
         {
@@ -87,7 +89,7 @@ namespace OR_M_Data_Entities.Expressions
             return this;
         }
 
-        public ExpressionQuery Join<TParent, TChild>()
+        public ExpressionQuery InnerJoin<TParent, TChild>()
             where TParent : class
             where TChild : class
         {
@@ -154,18 +156,21 @@ namespace OR_M_Data_Entities.Expressions
 
             if (childKeys.Count == 0) throw new ArgumentException("Child Table does not contain primary key(s)");
 
-            var key = childKeys.FirstOrDefault(w => w.Name.ToUpper() == "ID");
+            var key = childKeys.FirstOrDefault();
 
             if (key == null) throw new ArgumentException("Could not resolve child primary key for 'ID'");
 
+            var childTable = DatabaseSchemata.GetTableDetails<TChild>();
+            var parentTable = DatabaseSchemata.GetTableDetails<TParent>();
+
             compareValue.ColumnName = key.Name;
-            compareValue.TableName = DatabaseSchemata.GetTableName<TChild>();
+            compareValue.TableName = childTable.PlainJoinText;
 
             // Parent
-			var childTableName = compareValue.TableName.Substring(0, compareValue.TableName.Length - 1);
+			var childTableName = compareValue.TableName;
             join.CompareValue = compareValue;
 			join.ColumnName = childTableName + "ID";
-            join.TableName = DatabaseSchemata.GetTableName<TParent>();
+            join.TableName = parentTable.PlainJoinText;
 
             return join;
         }
@@ -178,7 +183,11 @@ namespace OR_M_Data_Entities.Expressions
             foreach (var item in list)
             {
                 var parameter = _getNextParameter();
-                _parameters.Add(parameter, item);
+                _parameters.Add(new SqlDbParameter
+                {
+                    Name = parameter,
+                    Value = item
+                }); 
 
                 result += parameter + ",";
             }
@@ -313,12 +322,24 @@ namespace OR_M_Data_Entities.Expressions
 					continue;
 				}
 
-                _sql += string.Format("[{0}].{1} ",
-                    item.TableName,
-                    item.ColumnName == "*" ? item.ColumnName : string.Format("{0}", item.ColumnName));
+                if (item.ColumnName == "*")
+                {
+                    _sql += DatabaseSchemata.GetTableFields(_returnDataType)
+                        .Aggregate("",
+                            (current, field) =>
+                                current +
+                                string.Format("[{0}].[{1}],", item.TableName, DatabaseSchemata.GetColumnName(field)))
+                        .TrimEnd(',');
+                }
+                else
+                {
+                    _sql += string.Format("[{0}].{1} ",
+                        item.TableName,
+                       string.Format("{0}", item.ColumnName));
+                }
             }
 
-            _sql += string.Format("FROM [{0}] ", _from);
+            _sql += string.Format(" FROM {0} ", _from.From);
 
             if (hasJoins)
             {
@@ -327,28 +348,17 @@ namespace OR_M_Data_Entities.Expressions
                     foreach (var item in @innerJoin)
                     {
                         var joinData = item.CompareValue as ExpressionSelectResult;
-                        var parentTable = item.TableName.ToUpper() == _from ? joinData.TableName : item.TableName;
-                        var parentColumn = item.TableName.ToUpper() == _from ? joinData.ColumnName : item.ColumnName;
-                        var childTable = item.TableName.ToUpper() != _from ? joinData.TableName : item.TableName;
-                        var childColumn = item.TableName.ToUpper() != _from ? joinData.ColumnName : item.ColumnName;
+                        var fromTableName = _from.From;
+                        var parentTable = item.TableName.ToUpper() == fromTableName ? joinData.TableName : item.TableName;
+                        var parentColumn = item.TableName.ToUpper() == fromTableName ? joinData.ColumnName : item.ColumnName;
+                        var childTable = item.TableName.ToUpper() != fromTableName ? joinData.TableName : item.TableName;
+                        var childColumn = item.TableName.ToUpper() != fromTableName ? joinData.ColumnName : item.ColumnName;
 
-                        if (hasLeftJoins)
-                        {
-                            _sql += string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ",
-                            childTable,
-                            childColumn,
-                            parentTable,
-                            parentColumn);
-                        }
-                        else
-                        {
-                            _sql += string.Format(", [{0}] ", childTable);
-                            validationStatements.Add(string.Format(" [{0}].[{1}] =  [{2}].[{3}]",
-                            childTable,
-                            childColumn,
-                            parentTable,
-                            parentColumn));
-                        }
+                        _sql += string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ",
+                        childTable,
+                        childColumn,
+                        parentTable,
+                        parentColumn);
                     }
                 }
 
@@ -407,7 +417,12 @@ namespace OR_M_Data_Entities.Expressions
                             compareValue = ((DataTransformContainer)item.CompareValue).Value;
                         }
 
-                        _parameters.Add(parameter, compareValue);
+                        _parameters.Add(new SqlDbParameter
+                        {
+                            Name = parameter,
+                            Value = compareValue
+                        }); 
+ 
                 }
 
                 validationStatements.Add(string.Format(partOfValidation, leftSide, rightSide));
@@ -457,7 +472,7 @@ namespace OR_M_Data_Entities.Expressions
 
             using (var reader = _context.ExecuteQuery<T>(result.Sql, result.Parameters))
             {
-                var executionResult = reader.Select();
+                var executionResult = reader.FirstOrDefault();
 
                 _results.Add(executionResult);
 
@@ -465,17 +480,17 @@ namespace OR_M_Data_Entities.Expressions
             }
         }
 
-        public ICollection All()
+        public ICollection ToList()
         {
             // inject the generic type here
-            var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "All" && w.ReturnType != typeof(ICollection));
+            var method = typeof(ExpressionQuery).GetMethods().FirstOrDefault(w => w.Name == "ToList" && w.ReturnType != typeof(ICollection));
             var genericMethod = method.MakeGenericMethod(new[] { _returnDataType });
             var result = genericMethod.Invoke(this, null);
 
             return result as dynamic;
         }
 
-        public List<T> All<T>()
+        public List<T> ToList<T>()
         {
             if (_hasQueryBeenExecuted) return _results as List<T>;
 

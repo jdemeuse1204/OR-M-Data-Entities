@@ -75,11 +75,14 @@
     <Compile Include="Expressions\Resolver\ExpressionTypeTransform.cs" />
     <Compile Include="Expressions\Resolver\ExpressionWhereResult.cs" />
     <Compile Include="Extension.cs" />
+    <Compile Include="Infrastructure\SqlDbParameter.cs" />
+    <Compile Include="Infrastructure\SqlStatementTableDetails.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />
     <Compile Include="Mapping\DbGenerationOption.cs" />
     <Compile Include="Mapping\DbType.cs" />
     <Compile Include="Mapping\Key.cs" />
+    <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />

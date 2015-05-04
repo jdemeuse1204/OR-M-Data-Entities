@@ -1,15 +1,16 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Infrastructure;
 using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -22,22 +23,19 @@ namespace OR_M_Data_Entities.Data
                 || column.GetCustomAttribute<KeyAttribute>() != null;
         }
 
-        public static string GetTableName(object entity)
+        public static SqlStatementTableDetails GetTableDetails(object entity)
         {
-            return GetTableName(entity.GetType());
+            return GetTableDetails(entity.GetType());
         }
 
-        public static string GetTableName(Type type)
+        public static SqlStatementTableDetails GetTableDetails(Type type)
         {
-            // check for table name attribute
-            var tableAttribute = type.GetCustomAttribute<TableAttribute>();
-
-            return tableAttribute == null ? type.Name : tableAttribute.Name;
+            return new SqlStatementTableDetails(type);
         }
 
-        public static string GetTableName<T>()
+        public static SqlStatementTableDetails GetTableDetails<T>()
         {
-            return GetTableName(typeof(T));
+            return GetTableDetails(typeof(T));
         }
 
         public static DbGenerationOption GetGenerationOption(PropertyInfo column)
@@ -66,9 +64,9 @@ namespace OR_M_Data_Entities.Data
         public static List<PropertyInfo> GetPrimaryKeys(object entity)
         {
             var keyList = entity.GetType().GetProperties().Where(w =>
-               (w.GetCustomAttribute<SearchablePrimaryKeyAttribute>() != null
-               && w.GetCustomAttribute<SearchablePrimaryKeyAttribute>().IsPrimaryKey)
-               || (w.Name.ToUpper() == "ID")).ToList();
+               (w.GetCustomAttribute<KeyAttribute>() != null) ||
+               (w.GetCustomAttribute<ColumnAttribute>() != null && w.GetCustomAttribute<ColumnAttribute>().IsPrimaryKey) ||
+               (w.Name.ToUpper() == "ID")).ToList();
 
             if (keyList.Count != 0)
             {
@@ -80,7 +78,12 @@ namespace OR_M_Data_Entities.Data
 
         public static List<PropertyInfo> GetTableFields(object entity)
         {
-            return entity.GetType().GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
+            return GetTableFields(entity.GetType());
+        }
+
+        public static List<PropertyInfo> GetTableFields(Type type)
+        {
+            return type.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null).ToList();
         } 
     }
 }

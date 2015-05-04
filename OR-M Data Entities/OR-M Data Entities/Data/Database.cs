@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Configuration;
 using System.Data;
@@ -61,11 +62,17 @@ namespace OR_M_Data_Entities.Data
         public void Dispose()
         {
             // disconnect our db reader
-            Reader.Close();
-            Reader.Dispose();
+            if (Reader != null)
+            {
+                Reader.Close();
+                Reader.Dispose();
+            }
 
             // dispose of our sql command
-            Command.Dispose();
+            if (Command != null)
+            {
+                Command.Dispose();
+            }
 
             // close our connection
             Connection.Close();

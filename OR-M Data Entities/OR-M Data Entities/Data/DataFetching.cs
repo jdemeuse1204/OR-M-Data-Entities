@@ -1,9 +1,10 @@
 ﻿/*
- * OR-M Data Entities v1.0.0
+ * OR-M Data Entities v1.1.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -98,7 +99,7 @@ namespace OR_M_Data_Entities.Data
         /// Return list of items
         /// </summary>
         /// <returns>List of type T</returns>
-        public List<T> All<T>()
+        public List<T> ToList<T>()
         {
             var builder = new SqlQueryBuilder();
             builder.SelectAll<T>();
@@ -130,7 +131,7 @@ namespace OR_M_Data_Entities.Data
 
         public ExpressionQuery From<T>() where T : class
         {
-            return new ExpressionQuery(DatabaseSchemata.GetTableName<T>(), this);
+            return new ExpressionQuery(DatabaseSchemata.GetTableDetails<T>(), this);
         }
 		#endregion
 	}

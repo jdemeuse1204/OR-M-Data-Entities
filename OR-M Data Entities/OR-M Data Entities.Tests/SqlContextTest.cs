@@ -24,7 +24,7 @@ namespace OR_M_Data_Entities.Tests
         [TestMethod]
         public void Test_Sql_All()
         {
-            var allPolicies = sqlContext.All<Policy>();
+            var allPolicies = sqlContext.ToList<Policy>();
 
             Assert.IsTrue(allPolicies != null && allPolicies.Count > 0);
         }
@@ -44,7 +44,7 @@ namespace OR_M_Data_Entities.Tests
         {
             var sql = "Select * From Policy";
 
-            var items = sqlContext.ExecuteQuery<Policy>(sql).All();
+            var items = sqlContext.ExecuteQuery<Policy>(sql).ToList();
 
             Assert.IsTrue(items != null && items.Count > 0);
         }
@@ -54,7 +54,7 @@ namespace OR_M_Data_Entities.Tests
         {
             var sql = "Select * From Policy";
 
-            var item = sqlContext.ExecuteQuery<Policy>(sql).Select();
+            var item = sqlContext.ExecuteQuery<Policy>(sql).FirstOrDefault();
 
             Assert.IsTrue(item != null);
         }
@@ -95,7 +95,7 @@ namespace OR_M_Data_Entities.Tests
         [TestMethod]
         public void Test_Sql_Where_ExpressionQuery_All()
         {
-            var item = sqlContext.Where<Policy>(w => w.Id == TestID).All<Policy>();
+            var item = sqlContext.Where<Policy>(w => w.Id == TestID).ToList<Policy>();
 
             Assert.IsTrue(item != null);
         }
@@ -103,7 +103,7 @@ namespace OR_M_Data_Entities.Tests
         [TestMethod]
         public void Test_Sql_Where_ExpressionQuery_All_2()
         {
-            var item = sqlContext.Where<Policy>(w => w.Id == TestID).All();
+            var item = sqlContext.Where<Policy>(w => w.Id == TestID).ToList();
 
             Assert.IsTrue(item != null);
         }
@@ -128,7 +128,7 @@ namespace OR_M_Data_Entities.Tests
         public void Test_Sql_Where_ExpressionQuery_Join_First()
         {
             var item = sqlContext.From<Policy>()
-                    .Join<Policy, PolicyInfo>((p, c) => p.PolicyInfoId == c.Id)
+                    .InnerJoin<Policy, PolicyInfo>((p, c) => p.PolicyInfoId == c.Id)
                     .Where<Policy>(w => w.Id == 45)
                     .Select<PolicyInfo>()
                     .First<PolicyInfo>();
