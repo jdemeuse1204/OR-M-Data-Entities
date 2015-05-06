@@ -65,33 +65,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
 
         protected static object GetValue(MethodCallExpression expression)
         {
-            var isCasting = DatabaseOperations.IsCasting(expression);
-            var isConverting = DatabaseOperations.IsConverting(expression);
             var objectMember = Expression.Convert(expression, typeof(object));
 
             var getterLambda = Expression.Lambda<Func<object>>(objectMember);
 
             var getter = getterLambda.Compile();
 
-            var result = getter();
-
-            if (!isCasting && !isConverting) return result;
-
-            //var transform = GetTransformType(expression);
-            //var transformResult = new SqlValue(result, transform);
-
-            //if (isConverting)
-            //{
-            //    // only from where statement
-            //    transformResult.AddFunction(DbFunctions.Convert, transform, 1);
-            //}
-
-            //if (isCasting)
-            //{
-            //    transformResult.AddFunction(DbFunctions.Cast, transform);
-            //}
-
-            return null;
+            return getter();
         }
 
         protected static object GetValue(UnaryExpression expression)

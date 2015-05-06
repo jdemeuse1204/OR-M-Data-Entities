@@ -64,6 +64,7 @@
     <Compile Include="Tables\Name.cs" />
     <Compile Include="Tables\Person.cs" />
     <Compile Include="Tables\PhoneNumber.cs" />
+    <Compile Include="Tables\PhoneType.cs" />
     <Compile Include="Tables\Policy.cs" />
     <Compile Include="Tables\PolicyInfo.cs" />
     <Compile Include="Tables\StateCode.cs" />

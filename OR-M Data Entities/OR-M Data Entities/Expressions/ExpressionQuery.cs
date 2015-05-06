@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Linq;
-using System.Reflection;
+﻿using System.Collections;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Expressions
 {

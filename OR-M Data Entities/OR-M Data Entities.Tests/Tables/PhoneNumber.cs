@@ -8,5 +8,10 @@ namespace OR_M_Data_Entities.Tests.Tables
         public int ID { get; set; }
 
         public string Phone{ get; set; }
+
+        public int PhoneTypeID { get; set; }
+
+        [ForeignKey("PhoneTypeID")]
+        public PhoneType PhoneType { get; set; }
     }
 }
