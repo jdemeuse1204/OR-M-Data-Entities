@@ -29,8 +29,6 @@ namespace OR_M_Data_Entities.Data
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
 
-        public readonly SqlQuery Query;
-
         public object this[int i]
         {
             get { return _wrappedReader[i]; }
@@ -53,11 +51,6 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(SqlCommand cmd, SqlQuery query)
-            : this(cmd)
-        {
-            Query = query;
-        }
 
         public PeekDataReader(SqlCommand cmd)
         {

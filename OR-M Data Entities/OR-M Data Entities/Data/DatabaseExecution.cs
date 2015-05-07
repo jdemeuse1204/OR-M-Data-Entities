@@ -41,19 +41,6 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void ExecuteReader(SqlQuery query)
-        {
-            TryDisposeCloseReader();
-
-            Command = new SqlCommand(query.ToSql(), Connection);
-
-            _addParameters(query.Parameters);
-
-            Connect();
-
-            Reader = Command.ExecuteReaderWithPeeking();
-        }
-
         #region Query Execution
         public DataReader<T> ExecuteQuery<T>(string sql)
         {

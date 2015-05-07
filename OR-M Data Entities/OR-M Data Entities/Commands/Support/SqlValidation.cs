@@ -49,7 +49,7 @@ namespace OR_M_Data_Entities.Commands.Support
 						childField);
 		}
 
-		public void AddWhere(string table, string field, ComparisonType type, object equals)
+		public void AddWhere(string table, string field, CompareType type, object equals)
 		{
 			var comparisonType = "=";
 			var startComparisonType = "";
@@ -58,38 +58,38 @@ namespace OR_M_Data_Entities.Commands.Support
 
 			switch (type)
 			{
-				case ComparisonType.Contains:
+				case CompareType.Like:
 					startComparisonType = "'%";
 					endComparisonType = "%'";
 					comparisonType = "LIKE";
 					break;
-				case ComparisonType.BeginsWith:
+				case CompareType.BeginsWith:
 					endComparisonType = "%'";
 					comparisonType = "LIKE";
 					break;
-				case ComparisonType.EndsWith:
+				case CompareType.EndsWith:
 					startComparisonType = "'%";
 					comparisonType = "LIKE";
 					break;
-				case ComparisonType.EqualsIgnoreCase:  // not used
+				case CompareType.EqualsIgnoreCase:  // not used
 					startValidationString = " {0} [{1}].[{2}] {3} {4}{5}{6} ";
 					break;
-				case ComparisonType.EqualsTruncateTime: // not used
+				case CompareType.EqualsTruncateTime: // not used
 					startValidationString = " {0} Cast([{1}].[{2}] as date) {3} Cast({4}{5}{6} as date)";
 					break;
-				case ComparisonType.GreaterThan:
+				case CompareType.GreaterThan:
 					comparisonType = ">";
 					break;
-				case ComparisonType.GreaterThanEquals:
+				case CompareType.GreaterThanEquals:
 					comparisonType = ">=";
 					break;
-				case ComparisonType.LessThan:
+				case CompareType.LessThan:
 					comparisonType = "<";
 					break;
-				case ComparisonType.LessThanEquals:
+				case CompareType.LessThanEquals:
 					comparisonType = "<=";
 					break;
-				case ComparisonType.NotEqual:
+				case CompareType.NotEqual:
 					comparisonType = "!=";
 					break;
 			}

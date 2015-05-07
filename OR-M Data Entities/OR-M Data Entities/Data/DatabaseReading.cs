@@ -65,24 +65,21 @@ namespace OR_M_Data_Entities.Data
         {
 
             //var lst = new ExpressionQuery<Contact>(context);
-            var tableName = DatabaseSchemata.GetTableName<T>();
-            ObjectSchematic schematic;
+            //var tableName = DatabaseSchemata.GetTableName<T>();
+            //ObjectSchematic schematic;
 
-            if (!SavedTableSchematics.ContainsKey(tableName))
-            {
-                schematic = DatabaseSchemata.GetObjectSchematic<T>();
+            //if (!SavedTableSchematics.ContainsKey(tableName))
+            //{
+            //    schematic = DatabaseSchemata.GetObjectSchematic<T>();
 
-                SavedTableSchematics.Add(tableName, schematic);
-            }
-            else
-            {
-                schematic = SavedTableSchematics[tableName];
-            }
+            //    SavedTableSchematics.Add(tableName, schematic);
+            //}
+            //else
+            //{
+            //    schematic = SavedTableSchematics[tableName];
+            //}
 
-            return new ExpressionQuery<T>(new SqlQuery()
-            {
-                Schematic = schematic
-            }, this);
+            return new ExpressionQuery<T>();
         } 
         #endregion
     }

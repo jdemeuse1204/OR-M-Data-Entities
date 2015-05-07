@@ -1,37 +1,33 @@
 ﻿using System.Collections;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public class ExpressionQuery<T> : IEnumerable
+    public class ExpressionQuery<T> : IEnumerable, IExpressionQuery
     {
-        public readonly SqlQuery Query;
-        public readonly DatabaseReading Context;
+        public readonly WhereResolutionContainer WhereResolution;
+        public readonly SelectResolutionContainer SelectResolution;
+        public readonly JoinResolutionContainer JoinResolution;
 
-        public ExpressionQuery(DatabaseReading context)
+        public ExpressionQuery()
         {
-            var tableName = DatabaseSchemata.GetTableName<T>();
-
-            Query = new SqlQuery
-            {
-                ReturnType = typeof(T),
-                IsLazyLoading = context.IsLazyLoadEnabled,
-                From = string.Format("[{0}]", tableName)
-            };
-
-            Context = context;
-
-            //if (Context.)
+            WhereResolution = new WhereResolutionContainer();
+            SelectResolution = new SelectResolutionContainer();
+            JoinResolution = new JoinResolutionContainer();
         }
 
-        public ExpressionQuery(SqlQuery query, DatabaseReading context)
+        public ExpressionQuery(WhereResolutionContainer resolution)
         {
-            Query = query;
-            Context = context;
+            WhereResolution = resolution;
         }
 
         public IEnumerator GetEnumerator()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public string GetSql()
         {
             throw new System.NotImplementedException();
         }

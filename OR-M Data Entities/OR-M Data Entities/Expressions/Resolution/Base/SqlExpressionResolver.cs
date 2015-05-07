@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Base
 {
@@ -79,19 +80,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
             return GetValue(expression.Operand as dynamic);
         }
 
-        protected static string EnumerateList(IEnumerable list, SqlQuery query)
+        protected static string EnumerateList(IEnumerable list, WhereResolutionContainer resolution)
         {
-            var result = "";
-
-            foreach (var item in list)
-            {
-                var parameter = query.GetNextParameter();
-                query.AddParameter(parameter, item);
-
-                result += parameter + ",";
-            }
-
-            return result.TrimEnd(',');
+           return (from object item in list select resolution.AddParameter(item)).Aggregate("", (current, parameter) => current + (parameter + ",")).TrimEnd(',');
         }
 
         protected static bool HasParameter(object expression)

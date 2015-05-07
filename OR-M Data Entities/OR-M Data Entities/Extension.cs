@@ -26,58 +26,47 @@ namespace OR_M_Data_Entities
 {
     public static class ExpressionQueryExtensions
     {
-        public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
-        {
-            SqlExpressionWhereResolver.Resolve(expression, source.Query);
-
-            return source;
-        }
-
         public static TSource First<TSource>(this ExpressionQuery<TSource> source)
         {
-            source.Query.Take = 1;
-
+            // execute sql, and grab data
             return default(TSource);
         }
 
         public static TSource First<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            source.Query.Take = 1;
-
             source.Where(expression);
+
+            // execute sql, and grab data
 
             return default(TSource);
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
-            source.Query.Take = 1;
-            source.Query.IsFirstOrDefault = true;
-
+            // execute sql, and grab data
             return default(TSource);
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            source.Query.Take = 1;
-            source.Query.IsFirstOrDefault = true;
             source.Where(expression);
 
-            var sql = source.Query.ToSql();
-
-            if (sql != "")
-            {
-
-            }
-
+            // execute sql, and grab data
             return default(TSource);
+        }
+
+        public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            WhereExpressionResolver<TSource>.Resolve(expression, source);
+
+            return source;
         }
 
         public static ExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            var result = new ExpressionQuery<TResult>(outer.Query, outer.Context);
+            var result = new ExpressionQuery<TResult>();
 
             //SqlExpressionSelectResolver.Resolve(selector, result.Query);
 
@@ -87,7 +76,7 @@ namespace OR_M_Data_Entities
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, int, TResult>> selector)
         {
-            var result = new ExpressionQuery<TResult>(source.Query, source.Context);
+            var result = new ExpressionQuery<TResult>();
 
             //SqlExpressionSelectResolver.Resolve(selector, result.Query);
 
@@ -97,9 +86,7 @@ namespace OR_M_Data_Entities
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            var result = new ExpressionQuery<TResult>(source.Query, source.Context);
-
-            SqlExpressionSelectResolver.Resolve(selector, result.Query);
+            var result = new ExpressionQuery<TResult>();
 
             return result;
         }
@@ -187,7 +174,7 @@ namespace OR_M_Data_Entities
                 return reader.ToObject();
             }
 
-            return (reader.Query.IsLazyLoading || reader.Query == null) ? reader.GetObjectFromReader<T>() :
+            return
             reader.GetObjectFromReaderWithForeignKeys<T>();
         }
 
@@ -479,11 +466,6 @@ namespace OR_M_Data_Entities
         public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
         {
             return new PeekDataReader(cmd);
-        }
-
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlQuery query)
-        {
-            return new PeekDataReader(cmd, query);
         }
     }
 

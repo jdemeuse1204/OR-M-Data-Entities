@@ -7,22 +7,25 @@
 
 namespace OR_M_Data_Entities.Enumeration
 {
-	public enum ComparisonType
-	{
-		Contains,
-		BeginsWith,
-		EndsWith,
-        NotContains,
+    public enum CompareType
+    {
+        None,
+        Like,
+        BeginsWith,
+        EndsWith,
+        NotLike,
         NotBeginsWith,
         NotEndsWith,
-		Equals,
-		EqualsIgnoreCase,
-		EqualsTruncateTime,
-		GreaterThan,
-		GreaterThanEquals,
-		LessThan,
-		LessThanEquals,
-		NotEqual,
-        Between
-	}
+        Equals,
+        EqualsIgnoreCase,
+        EqualsTruncateTime,
+        GreaterThan,
+        GreaterThanEquals,
+        LessThan,
+        LessThanEquals,
+        NotEqual,
+        Between,
+        In,
+        NotIn
+    }
 }
