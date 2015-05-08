@@ -17,6 +17,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
@@ -26,6 +27,7 @@ namespace OR_M_Data_Entities
 {
     public static class ExpressionQueryExtensions
     {
+        #region First
         public static TSource First<TSource>(this ExpressionQuery<TSource> source)
         {
             // execute sql, and grab data
@@ -54,10 +56,182 @@ namespace OR_M_Data_Entities
             // execute sql, and grab data
             return default(TSource);
         }
+        #endregion
+
+        #region Max
+        public static decimal? Max(this ExpressionQuery<decimal?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static decimal Max(this ExpressionQuery<decimal> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static double? Max(this ExpressionQuery<double?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static double Max(this ExpressionQuery<double> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static float? Max(this ExpressionQuery<float?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static float Max(this ExpressionQuery<float> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static int? Max(this ExpressionQuery<int?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static int Max(this ExpressionQuery<int> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static long? Max(this ExpressionQuery<long?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static long Max(this ExpressionQuery<long> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+        #endregion
+
+        #region Min
+        public static decimal? Min(this ExpressionQuery<decimal?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static decimal Min(this ExpressionQuery<decimal> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static double? Min(this ExpressionQuery<double?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static double Min(this ExpressionQuery<double> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static float? Min(this ExpressionQuery<float?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static float Min(this ExpressionQuery<float> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static int? Min(this ExpressionQuery<int?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static int Min(this ExpressionQuery<int> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+
+        public static long? Min(this ExpressionQuery<long?> source)
+        {
+            // execute sql, and grab data
+            return null;
+        }
+
+        public static long Min(this ExpressionQuery<long> source)
+        {
+            // execute sql, and grab data
+            return 0;
+        }
+        #endregion
+
+        #region Count
+        public static TSource Count<TSource>(this ExpressionQuery<TSource> source)
+        {
+            // execute sql, and grab data
+            return default(TSource);
+        }
+
+        public static TSource Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            // execute sql, and grab data
+            return default(TSource);
+        }
+        #endregion
+
+        #region To List
+        public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source)
+        {
+            // execute sql, and grab data
+
+            return new List<TSource>();
+        }
+
+        public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            // execute sql, and grab data
+
+            return new List<TSource>();
+        }
+        #endregion
+
+        public static TSource Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            // execute sql, and grab data
+
+            return default(TSource);
+        }
 
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            WhereExpressionResolver<TSource>.Resolve(expression, source);
+            //WhereExpressionResolver<TSource>.Resolve(expression, source);
+
+            var resolver = new WhereExpressionResolver<TSource>(source.Query);
+
+            resolver.Resolve(expression);
 
             return source;
         }
@@ -66,19 +240,30 @@ namespace OR_M_Data_Entities
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            var result = new ExpressionQuery<TResult>();
+            var result = new ExpressionQuery<TResult>(outer.Context, outer.Query);
 
-            //SqlExpressionSelectResolver.Resolve(selector, result.Query);
+            var joinResolver = new JoinExpressionResolver(result.Query);
+            joinResolver.Resolve(outer, inner, outerKeySelector, innerKeySelector, resultSelector, result, JoinType.Inner);
+
+            // resolve select too
+            var selectResolver = new SelectExpressionResolver(result.Query);
+            selectResolver.Resolve(resultSelector);
 
             return result;
         }
 
-        public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
-            Expression<Func<TSource, int, TResult>> selector)
+        public static ExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
+            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            var result = new ExpressionQuery<TResult>();
+            var result = new ExpressionQuery<TResult>(outer.Context, outer.Query);
 
-            //SqlExpressionSelectResolver.Resolve(selector, result.Query);
+            var joinResolver = new JoinExpressionResolver(result.Query);
+            joinResolver.Resolve(outer, inner, outerKeySelector, innerKeySelector, resultSelector, result, JoinType.Left);
+
+            // resolve select too
+            var selectResolver = new SelectExpressionResolver(result.Query);
+            selectResolver.Resolve(resultSelector);
 
             return result;
         }
@@ -86,7 +271,10 @@ namespace OR_M_Data_Entities
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            var result = new ExpressionQuery<TResult>();
+            var result = new ExpressionQuery<TResult>(source.Context, source.Query);
+            var resolver = new SelectExpressionResolver(result.Query);
+
+            resolver.Resolve(selector);
 
             return result;
         }

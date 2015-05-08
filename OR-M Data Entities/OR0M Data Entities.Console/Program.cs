@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using OR_M_Data_Entities;
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console

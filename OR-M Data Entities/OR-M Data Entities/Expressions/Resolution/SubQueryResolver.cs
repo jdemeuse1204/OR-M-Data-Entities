@@ -31,6 +31,15 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 }
             }
 
+            //while (true)
+            //{
+
+
+            //    expression = expression.Arguments.FirstOrDefault(w => w.Type == typeof(MethodCallExpression)) as MethodCallExpression;
+
+            //    if (expression == null) break;
+            //}
+
             switch (expression.Method.Name)
             {
                 case "Select":

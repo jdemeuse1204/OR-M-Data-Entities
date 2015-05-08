@@ -5,8 +5,8 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -79,7 +79,7 @@ namespace OR_M_Data_Entities.Data
             //    schematic = SavedTableSchematics[tableName];
             //}
 
-            return new ExpressionQuery<T>();
+            return new ExpressionQuery<T>(this, new DbQuery(typeof(T)));
         } 
         #endregion
     }
