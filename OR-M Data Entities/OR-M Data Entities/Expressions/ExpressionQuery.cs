@@ -1,12 +1,15 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public class ExpressionQuery<T> : IEnumerable
+    public class ExpressionQuery<T> : IEnumerable<T>
     {
         public readonly DatabaseReading Context;
+
+        private List<T> _queryResult { get; set; } 
 
         public DbQuery Query { get; set; }
 
@@ -26,9 +29,24 @@ namespace OR_M_Data_Entities.Expressions
 
         }
 
-        public IEnumerator GetEnumerator()
+        public IEnumerator<T> GetEnumerator()
         {
-            throw new System.NotImplementedException();
+            if (_queryResult == null)
+            {
+                _queryResult = new List<T>();
+
+                // execute query
+                Query.Resolve();
+
+                var sql = Query.Sql;
+            }
+
+            return _queryResult.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

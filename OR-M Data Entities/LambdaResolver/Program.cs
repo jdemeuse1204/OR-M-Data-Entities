@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -20,21 +19,18 @@ namespace LambdaResolver
                     w.FirstName == "Megan" && w.FirstName == "WIN" && w.FirstName == "AHHHH" ||
                     w.FirstName == "" && !w.FirstName.StartsWith("Coolness") && w.Number.PhoneType.Type == "Home")
                 .InnerJoin(ctx.From<Appointment>(), contact => contact.ID, appointment => appointment.ContactID,
-                    (contact, appointment) => new Contact
+                    (contact, appointment) => new
                     {
-                        ID = contact.ID,
-                        Appointments = new List<Appointment> {appointment},
-                        FirstName = contact.FirstName,
-                        LastName = contact.LastName,
-                        Name = contact.Name,
-                        Number = contact.Number,
-                        PhoneID = contact.PhoneID
+                        contact.ID,
+                        LastName = contact.FirstName,
+                        FirstName = contact.LastName,
+                        contact.Name,
+                        contact.Number,
+                        contact.PhoneID,
+                        appointment
                     })
                 .InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
-                    (contact, number) => new Contact
-                    {
-                        ID = contact.ID
-                    });
+                    (contact, number) => contact.ID).FirstOrDefault();
 
             if (item != null)
             {
@@ -51,16 +47,16 @@ namespace LambdaResolver
 
             s = DateTime.Now;
 
-            item = ctx.From<Contact>().Where(
-                w =>
-                    w.ID == 1 && w.FirstName == "James" ||
-                    w.FirstName == "Megan" && w.FirstName == "WIN" && w.FirstName == "AHHHH" ||
-                    w.FirstName == "" && !w.FirstName.StartsWith("Coolness") && w.Number.PhoneType.Type == "Home")
-                .InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
-                    (contact, number) => new Contact
-                    {
-                        ID = contact.ID
-                    });
+            //item = ctx.From<Contact>().Where(
+            //    w =>
+            //        w.ID == 1 && w.FirstName == "James" ||
+            //        w.FirstName == "Megan" && w.FirstName == "WIN" && w.FirstName == "AHHHH" ||
+            //        w.FirstName == "" && !w.FirstName.StartsWith("Coolness") && w.Number.PhoneType.Type == "Home")
+            //    .InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
+            //        (contact, number) => new Contact
+            //        {
+            //            ID = contact.ID
+            //        });
             e = DateTime.Now;
 
             f = e - s;

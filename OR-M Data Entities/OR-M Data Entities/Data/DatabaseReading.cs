@@ -78,8 +78,11 @@ namespace OR_M_Data_Entities.Data
             //{
             //    schematic = SavedTableSchematics[tableName];
             //}
+            var query = new DbQuery(typeof (T));
 
-            return new ExpressionQuery<T>(this, new DbQuery(typeof(T)));
+            query.CreateSelectList();
+
+            return new ExpressionQuery<T>(this, query);
         } 
         #endregion
     }

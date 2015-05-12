@@ -108,18 +108,6 @@ namespace OR_M_Data_Entities.Commands
 
             switch (type)
             {
-                case JoinType.Equi:
-
-                    _joins.Add(joinKey, new QueryBuilderJoin
-                    {
-                        JoinColumnName = childField,
-                        JoinTableName = childTable,
-                        ParentColumnName = parentField,
-                        ParentTableName = parentTable,
-                        Type = type
-                    });
-
-                    break;
                 case JoinType.Inner:
 
                     _joins.Add(joinKey, new QueryBuilderJoin
@@ -196,12 +184,6 @@ namespace OR_M_Data_Entities.Commands
 
             switch (Type)
             {
-                case JoinType.Equi:
-                    return string.Format("[{0}].[{1}] = [{2}].[{3}]", 
-                        ParentTableName, 
-                        ParentColumnName, 
-                        JoinTableName,
-                        JoinColumnName);
                 case JoinType.Inner:
                     return string.Format(" INNER JOIN [{0}] On [{0}].[{1}] = [{2}].[{3}] ", 
                         JoinTableName,

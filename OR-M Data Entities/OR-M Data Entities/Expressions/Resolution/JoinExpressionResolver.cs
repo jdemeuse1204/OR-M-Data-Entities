@@ -23,37 +23,56 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             Expression<Func<TOuter, TInner, TResult>> resultSelector,
             ExpressionQuery<TResult> expressionQuery, JoinType joinType)
         {
-
-            var joinId = JoinResolution.NextJoinId();
-
-            var outerNode = _resolveOuterKeySelector(outerKeySelector, joinId, joinType);
-
-            var innerNode = _resolveInnerKeySelector(innerKeySelector, joinId, joinType);
-
-            JoinResolution.AddJoin(outerNode);
-            JoinResolution.AddJoin(innerNode);
+            JoinResolution.AddJoin(new JoinGroup
+            {
+                Left = _resolveInnerKeySelector(innerKeySelector),
+                Right = _resolveOuterKeySelector(outerKeySelector),
+                JoinType = joinType
+            });
         }
 
-        private JoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector, int joinId, JoinType joinType)
-        {
+        private JoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector)
+        {           
             return new JoinNode
             {
-                TableName = DatabaseSchemata.GetTableName(outerKeySelector.Parameters[0].Type),
-                JoinId = joinId,
-                ColumnName = GetColumnName(outerKeySelector.Body as MemberExpression),
-                JoinType = joinType
+                TableName = DatabaseSchemata.GetTableName(_resolveType(outerKeySelector)),
+                ColumnName = GetColumnName(outerKeySelector.Body as MemberExpression)
             };
         }
 
-        private JoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector, int joinId, JoinType joinType)
+        private JoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector)
         {
             return new JoinNode
             {
-                TableName = DatabaseSchemata.GetTableName(innerKeySelector.Parameters[0].Type),
-                JoinId = joinId,
-                ColumnName = GetColumnName(innerKeySelector.Body as MemberExpression),
-                JoinType = joinType
+                TableName = DatabaseSchemata.GetTableName(_resolveType(innerKeySelector)),
+                ColumnName = GetColumnName(innerKeySelector.Body as MemberExpression)
             };
+        }
+
+        private Type _resolveType<T, TKey>(Expression<Func<T, TKey>> expression)
+        {
+            if (Shape == null || !expression.Parameters[0].Type.IsAnonymousType()) return expression.Parameters[0].Type;
+
+            var newExpression = Shape as NewExpression;
+            var field = expression.Body as MemberExpression;
+
+            if (field == null) throw new Exception("Could not resolve field in JoinExpressionResolver");
+
+            if (newExpression != null)
+            {
+                for (var i = 0; i < newExpression.Arguments.Count; i++)
+                {
+                    var argument = newExpression.Arguments[i];
+                    var member = newExpression.Members[i];
+
+                    if (member.Name == field.Member.Name)
+                    {
+                        return ((MemberExpression) argument).Expression.Type;
+                    }
+                }
+            }
+
+            throw new Exception("Could not resolve type");
         }
     }
 }

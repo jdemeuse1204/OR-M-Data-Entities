@@ -17,8 +17,6 @@ namespace OR_M_Data_Entities.Enumeration
         NotBeginsWith,
         NotEndsWith,
         Equals,
-        EqualsIgnoreCase,
-        EqualsTruncateTime,
         GreaterThan,
         GreaterThanEquals,
         LessThan,

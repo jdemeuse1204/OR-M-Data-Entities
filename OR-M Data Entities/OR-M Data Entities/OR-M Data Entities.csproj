@@ -80,13 +80,15 @@
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\Query\DbQuery.cs" />
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
+    <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\JoinExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\LambdaResolution.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
-    <Compile Include="Expressions\Resolution\Containers\SelectResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\WhereResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\SelectExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolution\SelectInfo.cs" />
     <Compile Include="Expressions\Resolution\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\WhereExpressionResolver.cs" />
     <Compile Include="Extension.cs" />
@@ -101,6 +103,7 @@
     <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
+    <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryNotValidException.cs" />
   </ItemGroup>

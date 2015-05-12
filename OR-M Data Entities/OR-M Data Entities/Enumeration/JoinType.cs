@@ -9,7 +9,6 @@ namespace OR_M_Data_Entities.Enumeration
 {
 	public enum JoinType
 	{
-		Equi,
 		Inner,
 		Left
 	}

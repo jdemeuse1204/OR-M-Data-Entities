@@ -15,6 +15,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -46,6 +47,10 @@ namespace OR_M_Data_Entities
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
             // execute sql, and grab data
+            source.Query.Resolve();
+
+
+
             return default(TSource);
         }
 
@@ -249,6 +254,8 @@ namespace OR_M_Data_Entities
             var selectResolver = new SelectExpressionResolver(result.Query);
             selectResolver.Resolve(resultSelector);
 
+            result.Query.SetShape(resultSelector.Body);
+
             return result;
         }
 
@@ -264,6 +271,8 @@ namespace OR_M_Data_Entities
             // resolve select too
             var selectResolver = new SelectExpressionResolver(result.Query);
             selectResolver.Resolve(resultSelector);
+
+            result.Query.SetShape(resultSelector.Body);
 
             return result;
         }
@@ -646,6 +655,22 @@ namespace OR_M_Data_Entities
         public static bool IsDynamic(this Type type)
         {
             return type == typeof(IDynamicMetaObjectProvider);
+        }
+
+        public static bool IsAnonymousType(this Type type)
+        {
+
+            if (type == null)
+            {
+                throw new ArgumentNullException("type");
+            }
+
+            // HACK: The only way to detect anonymous types right now.
+            return Attribute.IsDefined(type, typeof(CompilerGeneratedAttribute), false)
+                   && type.IsGenericType && type.Name.Contains("AnonymousType")
+                   && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+                   && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+
         }
     }
 

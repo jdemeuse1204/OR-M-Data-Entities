@@ -18,7 +18,7 @@ namespace OR0M_Data_Entities.Console
                     (contact, appointment) => new Appointment
                     {
                         ContactID = contact.ID
-                    });
+                    }).FirstOrDefault();
                 //context.From<Contact>()
                 //    .Select(w => new Contact
                 //    {

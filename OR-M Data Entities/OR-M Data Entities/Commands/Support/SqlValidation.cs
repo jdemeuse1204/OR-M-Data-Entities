@@ -71,12 +71,6 @@ namespace OR_M_Data_Entities.Commands.Support
 					startComparisonType = "'%";
 					comparisonType = "LIKE";
 					break;
-				case CompareType.EqualsIgnoreCase:  // not used
-					startValidationString = " {0} [{1}].[{2}] {3} {4}{5}{6} ";
-					break;
-				case CompareType.EqualsTruncateTime: // not used
-					startValidationString = " {0} Cast([{1}].[{2}] as date) {3} Cast({4}{5}{6} as date)";
-					break;
 				case CompareType.GreaterThan:
 					comparisonType = ">";
 					break;
