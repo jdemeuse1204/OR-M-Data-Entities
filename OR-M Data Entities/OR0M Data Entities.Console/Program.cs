@@ -10,7 +10,7 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
             var ids = new List<int> {1, 2, 3};
-            var result = context.From<Contact>()
+            var result = context.From<Contact>().Where(w => ids.Contains(w.ID))
                 .InnerJoin(
                     context.From<Appointment>(),
                     contact => contact.ID,

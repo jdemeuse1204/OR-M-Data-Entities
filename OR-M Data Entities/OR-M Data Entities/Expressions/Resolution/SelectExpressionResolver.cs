@@ -26,6 +26,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         public void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> selector)
         {
+            SelectList.UnSelectAll();
+
             _resolveShape(selector.Body as dynamic);
         }
 

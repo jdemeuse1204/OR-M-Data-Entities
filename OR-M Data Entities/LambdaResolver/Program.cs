@@ -15,9 +15,17 @@ namespace LambdaResolver
             var s = DateTime.Now;
             var item = ctx.From<Contact>().Where(
                 w =>
-                    w.ID == 1 && w.FirstName == "James" ||
-                    w.FirstName == "Megan" && w.FirstName == "WIN" && w.FirstName == "AHHHH" ||
-                    w.FirstName == "" && !w.FirstName.StartsWith("Coolness") && w.Number.PhoneType.Type == "Home")
+                    w.ID == 1 &&
+                    w.FirstName == "James" ||
+                    w.FirstName == "Megan" &&
+                    w.FirstName == "WIN" &&
+                    w.FirstName == "AHHHH" ||
+                    w.FirstName == "" &&
+                    !w.FirstName.StartsWith("Coolness") &&
+                    w.Number.PhoneType.Type == "Home" &&
+                    lst.Contains(w.ID) &&
+                    w.LastName == ctx.From<Appointment>().Where(x => x.ContactID == 1).Select(x => x.Description).FirstOrDefault()
+                    )
                 .InnerJoin(ctx.From<Appointment>(), contact => contact.ID, appointment => appointment.ContactID,
                     (contact, appointment) => new
                     {
@@ -34,7 +42,7 @@ namespace LambdaResolver
 
             if (item != null)
             {
-                
+
             }
             var e = DateTime.Now;
 
@@ -42,7 +50,7 @@ namespace LambdaResolver
 
             if (f.Days == 1)
             {
-                
+
             }
 
             s = DateTime.Now;

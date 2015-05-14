@@ -232,8 +232,6 @@ namespace OR_M_Data_Entities
 
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            //WhereExpressionResolver<TSource>.Resolve(expression, source);
-
             var resolver = new WhereExpressionResolver<TSource>(source.Query);
 
             resolver.Resolve(expression);

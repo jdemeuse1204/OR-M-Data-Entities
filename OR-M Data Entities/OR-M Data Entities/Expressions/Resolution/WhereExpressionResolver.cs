@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Enumeration;
@@ -127,7 +128,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             // get the value from the expression
             var value = GetValue((isParameterOnLeftSide ? expression.Right : expression.Left) as dynamic);
 
-            result.CompareValue = IsExpressionQuery(value.GetType()) ? value : resolution.AddParameter(value);
+            result.CompareValue = IsExpressionQuery(value.GetType()) ? _resolveSubQuery(value) : resolution.AddParameter(value);
 
             // get the comparison tyoe
             LoadComparisonType(expression, result);
@@ -148,20 +149,26 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 Group = group
             };
             var isParameterOnLeftSide = HasParameter(expression.Object as dynamic);
+            object value;
 
             if (isParameterOnLeftSide)
             {
                 LoadColumnAndTableName(expression.Object as dynamic, result);
 
-                var value = GetValue(expression.Arguments[0] as dynamic);
-                // FIX ME COMPARE IS WRONG!
-                result.CompareValue = IsExpressionQuery(value.GetType()) ? value : resolution.AddParameter(value);
+                value = GetValue(expression.Arguments[0] as dynamic);
             }
             else
             {
                 LoadColumnAndTableName(expression.Arguments[0] as dynamic, result);
 
-                GetValue(expression.Object as dynamic);
+                value = GetValue(expression.Object as dynamic);
+            }
+
+            if (IsExpressionQuery(value.GetType()))
+            {
+                // resolve sub query
+                result.CompareValue = _resolveSubQuery(value);
+                return result;
             }
 
             var invertComparison = expressionType.HasValue && expressionType.Value == ExpressionType.Not;
@@ -173,28 +180,37 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                     result.Comparison = invertComparison ? CompareType.NotEqual : CompareType.Equals;
                     break;
                 case "CONTAINS":
-                    result.Comparison = result.CompareValue.IsList()
+                    result.Comparison = value.IsList()
                         ? (invertComparison ? CompareType.NotIn : CompareType.In)
                         : (invertComparison ? CompareType.NotLike : CompareType.Like);
 
-                    if (!result.CompareValue.IsList())
+                    if (!value.IsList())
                     {
-                        result.CompareValue = string.Format("%{0}%", result.CompareValue);
+                        result.CompareValue = resolution.AddParameter(string.Format("%{0}%", value));
+                    }
+                    else
+                    {
+                        result.CompareValue = string.Format("({0})",
+                            ((ICollection) value).Cast<object>()
+                                .Aggregate("",
+                                    (current, item) =>
+                                        current +
+                                        string.Format("{0},", resolution.AddParameter(string.Format("{0}", item))))
+                                .TrimEnd(','));
                     }
                     break;
                 case "STARTSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = string.Format("{0}%", result.CompareValue);
+                    result.CompareValue = resolution.AddParameter(string.Format("{0}%", value));
                     break;
                 case "ENDSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = string.Format("%{0}", result.CompareValue);
+                    result.CompareValue = resolution.AddParameter(string.Format("%{0}", value));;
                     break;
             }
 
             return result;
         }
-
 
         private LambdaResolution _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, int group = -1)
         {
@@ -296,6 +312,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return e != null
                 ? HasParameter(expression.Object as dynamic)
                 : expression.Arguments.Select(arg => HasParameter(arg as dynamic)).Any(hasParameter => hasParameter);
+        }
+
+        private string _resolveSubQuery(object subQuery)
+        {
+                // resolve sub query
+            var eq = ((dynamic)subQuery);
+            eq.Query.Resolve();
+            return eq.Query.Sql;
         }
     }
 }

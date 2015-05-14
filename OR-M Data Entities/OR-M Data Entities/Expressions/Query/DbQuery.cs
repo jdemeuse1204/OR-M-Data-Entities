@@ -43,16 +43,15 @@ namespace OR_M_Data_Entities.Expressions.Query
 
         public void Resolve()
         {
+            
             var where = WhereResolution.HasItems ? WhereResolution.Resolve() : string.Empty;
 
             var select = SelectList.HasItems ? SelectList.Resolve() : string.Empty;
 
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
 
-            if (where == null && select == null && join == null)
-            {
-                
-            }
+            Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}", "", "", select,
+                DatabaseSchemata.GetTableName(BaseType), join, string.Format("WHERE {0}", where), "");
         }
 
         private void _createSelectList(Type startType)

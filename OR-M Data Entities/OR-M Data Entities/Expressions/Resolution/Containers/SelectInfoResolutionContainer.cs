@@ -99,7 +99,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         public string Resolve()
         {
             var result = string.Empty;
-            var allUnselected = _infos.Any(w => w.IsSelected);
+            var allUnselected = !_infos.Any(w => w.IsSelected);
             var allInfos = allUnselected ? _infos : _infos.Where(w => w.IsSelected);
 
             return allInfos.Aggregate(result, (current, info) => current + string.Format("[{0}].[{1}],", info.TableName, DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
