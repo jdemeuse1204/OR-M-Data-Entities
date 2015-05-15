@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -38,7 +39,7 @@ namespace LambdaResolver
                         appointment
                     })
                 .InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
-                    (contact, number) => contact.ID).FirstOrDefault();
+                    (contact, number) => contact.ID).Distinct().FirstOrDefault();
 
             if (item != null)
             {

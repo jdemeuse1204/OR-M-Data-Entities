@@ -4,10 +4,12 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
+
 using System;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Data.Execution;
+using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -28,6 +30,8 @@ namespace OR_M_Data_Entities.Data
         public bool HasRows { get; private set; }
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
+        public bool IsLazyLoading { get; private set; }
+        public DbQuery DbQuery { get; private set; }
 
         public object this[int i]
         {
@@ -59,6 +63,18 @@ namespace OR_M_Data_Entities.Data
             _wrappedReader = wrappedReader;
             HasRows = wrappedReader.HasRows;
             FieldCount = wrappedReader.FieldCount;
+        }
+
+        public PeekDataReader(SqlCommand cmd, SqlCommandPayload payload)
+        {
+            var wrappedReader = cmd.ExecuteReader();
+
+            _wrappedReader = wrappedReader;
+            HasRows = wrappedReader.HasRows;
+            FieldCount = wrappedReader.FieldCount;
+
+            IsLazyLoading = payload.IsLazyLoading;
+            DbQuery = payload.DbQuery;
         }
         #endregion
 

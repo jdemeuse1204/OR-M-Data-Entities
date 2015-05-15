@@ -100,22 +100,15 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
                 expression.Arguments.Select(argument => argument as MethodCallExpression)
                     .Select(
                         methodCallExpression =>
-                            IsExpressionQuery(methodCallExpression) || IsSubQuery(methodCallExpression))
+                            methodCallExpression.IsExpressionQuery() || IsSubQuery(methodCallExpression))
                     .FirstOrDefault();
         }
 
-        protected bool IsExpressionQuery(MethodCallExpression expression)
+        protected bool IsExpressionQuery(object o)
         {
-            return expression.Method.ReturnType.IsGenericType &&
-                   expression.Method.ReturnType.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQuery<>));
-        }
-
-        protected bool IsExpressionQuery(Type type)
-        {
-            return type.IsGenericType &&
-                   type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQuery<>));
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof(ExpressionQuery<>));
         }
     }
 }

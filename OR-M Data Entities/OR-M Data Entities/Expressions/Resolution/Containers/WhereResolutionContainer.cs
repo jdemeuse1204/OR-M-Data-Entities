@@ -78,7 +78,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
                     result += string.Format("[{0}].[{1}] {2} {3}", currentLambdaResolition.TableName,
                         currentLambdaResolition.ColumnName, currentLambdaResolition.GetComparisonStringOperator(),
-                        currentLambdaResolition.CompareValue);
+                        currentLambdaResolition.CompareValue.IsExpressionQuery()
+                            ? string.Format("({0})", _resolveSubQuery(currentLambdaResolition.CompareValue))
+                            : currentLambdaResolition.CompareValue);
                     continue;
                 }
 
@@ -96,15 +98,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return result;
         }
 
-        private string _getOperator(string value)
+        private string _resolveSubQuery(object subQuery)
         {
-            switch (value.ToUpper())
-            {
-                case "EQUALS":
-                    return "=";
-                default:
-                    return "";
-            }
+            // resolve sub query
+            var eq = ((dynamic)subQuery);
+            eq.Query.Resolve();
+            return eq.Query.Sql;
         }
     }
 }

@@ -36,7 +36,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return _joins.Aggregate("",
                 (current, @join) =>
                     current +
-                    string.Format(" {0} [{1}] On [{1}].[{2}] = [{3}].[{4}] ", @join.JoinType, @join.Left.TableName,
+                    string.Format(" {0} JOIN [{1}] On [{1}].[{2}] = [{3}].[{4}] ", @join.JoinType, @join.Left.TableName,
                         @join.Left.ColumnName, @join.Right.TableName, @join.Right.ColumnName));
         }
     }
@@ -46,6 +46,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         // alias is not needed, foreign keys will not use this to join
 
         public string TableName { get; set; }
+
+        public string TableAlias { get; set; }
 
         public string ColumnName { get; set; }
     }

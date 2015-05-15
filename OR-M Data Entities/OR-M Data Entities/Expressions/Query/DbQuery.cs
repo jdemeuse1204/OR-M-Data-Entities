@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
 
@@ -43,18 +44,26 @@ namespace OR_M_Data_Entities.Expressions.Query
 
         public void Resolve()
         {
-            
             var where = WhereResolution.HasItems ? WhereResolution.Resolve() : string.Empty;
 
             var select = SelectList.HasItems ? SelectList.Resolve() : string.Empty;
 
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
 
-            Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}", "", "", select,
-                DatabaseSchemata.GetTableName(BaseType), join, string.Format("WHERE {0}", where), "");
+            var from = DatabaseSchemata.GetTableName(BaseType);
+
+            Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}",
+                SelectList.IsSelectDistinct ? " DISTINCT" : string.Empty,
+                SelectList.TakeRows > 0 ? string.Format("TOP {0}", SelectList.TakeRows) : string.Empty, select,
+                from.Contains("[") ? from : string.Format("[{0}]", from),
+                join, 
+                string.Format("WHERE {0}", where), 
+                "");
+
+            // add in our parameters
         }
 
-        private void _createSelectList(Type startType)
+        private void _initialize(Type startType)
         {
             var types = new List<SqlType> { new SqlType(startType) };
 
@@ -69,19 +78,51 @@ namespace OR_M_Data_Entities.Expressions.Query
                                 new SqlType(
                                     w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType,
                                     w.Name));
+                var parentPrimaryKeyName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(item).First());
+                var parentTableName = DatabaseSchemata.GetTableName(item);
 
                 foreach (var info in properties)
                 {
                     SelectList.Add(info, item.Type, item.TableName);
+
+                    var fkAttribute = info.GetCustomAttribute<ForeignKeyAttribute>();
+
+                    // foreign key joins.  List = left, single = inner
+                    if (fkAttribute != null)
+                    {
+                        var group = new JoinGroup();
+
+                        if (info.PropertyType.IsList())
+                        {
+                            group.JoinType = JoinType.ForeignKeyLeft;
+                            group.Left = new JoinNode
+                            {
+                                ColumnName = parentPrimaryKeyName,
+                                TableName = parentTableName
+                            };
+
+                            group.Right = new JoinNode
+                            {
+                                ColumnName = fkAttribute.ForeignKeyColumnName,
+                                TableName = parentTableName
+                            };
+                        }
+                        else
+                        {
+                            
+                        }
+
+                        JoinResolution.AddJoin(group);
+                    }
                 }
 
                 types.AddRange(foreignKeyTypes);
             }
         }
 
-        public void CreateSelectList()
+        public void Initialize()
         {
-            _createSelectList(BaseType);
+            _initialize(BaseType);
         }
     }
 

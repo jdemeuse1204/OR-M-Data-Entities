@@ -46,6 +46,7 @@
     <Compile Include="Data\DatabaseExecution.cs" />
     <Compile Include="Data\Definition\ObjectSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
+    <Compile Include="Data\Execution\SqlCommandPayload.cs" />
     <Compile Include="Enumeration\ChangeStateType.cs" />
     <Compile Include="Enumeration\ComparisonType.cs" />
     <Compile Include="Enumeration\JoinType.cs" />
@@ -83,6 +84,7 @@
     <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
+    <Compile Include="Expressions\Resolution\ExpressionQueryFunctionResolver.cs" />
     <Compile Include="Expressions\Resolution\JoinExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\LambdaResolution.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />

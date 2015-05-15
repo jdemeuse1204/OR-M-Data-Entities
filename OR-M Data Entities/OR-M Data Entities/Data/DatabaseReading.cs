@@ -80,7 +80,7 @@ namespace OR_M_Data_Entities.Data
             //}
             var query = new DbQuery(typeof (T));
 
-            query.CreateSelectList();
+            query.Initialize();
 
             return new ExpressionQuery<T>(this, query);
         } 

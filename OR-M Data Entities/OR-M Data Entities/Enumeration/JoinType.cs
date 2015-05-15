@@ -10,6 +10,8 @@ namespace OR_M_Data_Entities.Enumeration
 	public enum JoinType
 	{
 		Inner,
-		Left
+		Left,
+        ForeignKeyInner,
+        ForeignKeyLeft
 	}
 }

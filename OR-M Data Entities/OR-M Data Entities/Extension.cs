@@ -18,8 +18,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
@@ -46,12 +48,7 @@ namespace OR_M_Data_Entities
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
-            // execute sql, and grab data
-            source.Query.Resolve();
-
-
-
-            return default(TSource);
+            return _execute(source).FirstOrDefault();
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -59,7 +56,7 @@ namespace OR_M_Data_Entities
             source.Where(expression);
 
             // execute sql, and grab data
-            return default(TSource);
+            return _execute(source).FirstOrDefault();
         }
         #endregion
 
@@ -124,6 +121,24 @@ namespace OR_M_Data_Entities
             return 0;
         }
         #endregion
+
+        public static ExpressionQuery<T> Distinct<T>(this ExpressionQuery<T> source)
+        {
+            var resolver = new ExpressionQueryFunctionResolver(source.Query);
+
+            resolver.ResolveDistinct();
+
+            return source;
+        }
+
+        public static ExpressionQuery<T> Take<T>(this ExpressionQuery<T> source, int rows)
+        {
+            var resolver = new ExpressionQueryFunctionResolver(source.Query);
+
+            resolver.ResolveTake(rows);
+
+            return source;
+        }
 
         #region Min
         public static decimal? Min(this ExpressionQuery<decimal?> source)
@@ -285,6 +300,34 @@ namespace OR_M_Data_Entities
 
             return result;
         }
+
+        public static bool IsExpressionQuery(this MethodCallExpression expression)
+        {
+            return expression.Method.ReturnType.IsGenericType &&
+                   expression.Method.ReturnType.GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+        }
+
+        public static bool IsExpressionQuery(this Type type)
+        {
+            return type.IsGenericType &&
+                   type.GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+        }
+
+        public static bool IsExpressionQuery(this object o)
+        {
+            return o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+        }
+
+        private static IEnumerable<T> _execute<T>(ExpressionQuery<T> source)
+        {
+            source.GetEnumerator();
+
+            return source;
+        }
     }
 
     #region helpers
@@ -369,8 +412,7 @@ namespace OR_M_Data_Entities
                 return reader.ToObject();
             }
 
-            return
-            reader.GetObjectFromReaderWithForeignKeys<T>();
+            return reader.GetObjectFromReaderWithForeignKeys<T>();
         }
 
         #region Helpers
@@ -677,6 +719,11 @@ namespace OR_M_Data_Entities
         public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
         {
             return new PeekDataReader(cmd);
+        }
+
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlCommandPayload payload)
+        {
+            return new PeekDataReader(cmd, payload);
         }
     }
 

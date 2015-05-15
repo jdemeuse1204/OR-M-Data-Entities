@@ -3,7 +3,9 @@ using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -41,6 +43,19 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
+        protected void ExecuteReader(DbQuery query)
+        {
+            TryDisposeCloseReader();
+
+            Command = new SqlCommand(query.Sql, Connection);
+
+            _addParameters(query.WhereResolution.Parameters);
+
+            Connect();
+
+            Reader = Command.ExecuteReaderWithPeeking(new SqlCommandPayload(query, IsLazyLoadEnabled));
+        }
+
         #region Query Execution
         public DataReader<T> ExecuteQuery<T>(string sql)
         {
@@ -68,6 +83,16 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
         }
 
+
+        public DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
+        {
+            // execute query
+            query.Query.Resolve();
+
+            ExecuteReader(query.Query);
+
+            return new DataReader<T>(Reader);
+        }
         #endregion
     }
 }

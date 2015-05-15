@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
@@ -128,7 +129,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             // get the value from the expression
             var value = GetValue((isParameterOnLeftSide ? expression.Right : expression.Left) as dynamic);
 
-            result.CompareValue = IsExpressionQuery(value.GetType()) ? _resolveSubQuery(value) : resolution.AddParameter(value);
+            result.CompareValue = IsExpressionQuery(value) ? value : resolution.AddParameter(value);
 
             // get the comparison tyoe
             LoadComparisonType(expression, result);
@@ -162,13 +163,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 LoadColumnAndTableName(expression.Arguments[0] as dynamic, result);
 
                 value = GetValue(expression.Object as dynamic);
-            }
-
-            if (IsExpressionQuery(value.GetType()))
-            {
-                // resolve sub query
-                result.CompareValue = _resolveSubQuery(value);
-                return result;
             }
 
             var invertComparison = expressionType.HasValue && expressionType.Value == ExpressionType.Not;
@@ -252,7 +246,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             {
                 // cannot come from a foriegn key, is the base type
                 result.ColumnName = expression.Member.Name;
-                result.TableName = expression.Expression.Type.Name;
+                result.TableName = DatabaseSchemata.GetTableName(expression.Expression.Type);
             }
             else
             {
@@ -312,14 +306,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return e != null
                 ? HasParameter(expression.Object as dynamic)
                 : expression.Arguments.Select(arg => HasParameter(arg as dynamic)).Any(hasParameter => hasParameter);
-        }
-
-        private string _resolveSubQuery(object subQuery)
-        {
-                // resolve sub query
-            var eq = ((dynamic)subQuery);
-            eq.Query.Resolve();
-            return eq.Query.Sql;
         }
     }
 }

@@ -19,6 +19,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             }
         }
 
+        public bool IsSelectDistinct { get; set; }
+
+        public int TakeRows { get; set; }
+
         public IEnumerable<SelectInfo> Infos { get { return _infos; } }
 
         public SelectInfoResolutionContainer()

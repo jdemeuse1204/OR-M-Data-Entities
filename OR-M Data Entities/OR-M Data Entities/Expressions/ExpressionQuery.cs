@@ -35,10 +35,7 @@ namespace OR_M_Data_Entities.Expressions
             {
                 _queryResult = new List<T>();
 
-                // execute query
-                Query.Resolve();
-
-                var sql = Query.Sql;
+                _queryResult = Context.ExecuteQuery(this).ToList();
             }
 
             return _queryResult.GetEnumerator();

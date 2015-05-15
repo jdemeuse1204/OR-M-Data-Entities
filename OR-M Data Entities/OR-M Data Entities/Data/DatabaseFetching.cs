@@ -5,6 +5,7 @@
  * Copyright (c) 2015 James Demeuse
  */
 
+using System.Collections.Generic;
 using System.Data;
 using OR_M_Data_Entities.Commands.Support;
 
@@ -55,6 +56,6 @@ namespace OR_M_Data_Entities.Data
 
             return new KeyContainer();
         }
-        #endregion      
+        #endregion
 	}
 }
