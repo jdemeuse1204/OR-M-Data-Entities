@@ -16,8 +16,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             BaseType = baseType;
             NewType = baseType;
             TableName = tableName;
-
-            WasModified = false;
         }
 
         private MemberInfo _newProperty;
@@ -46,11 +44,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         public int Ordinal { get; set; }
 
-        public string TableName { get; set; }
+        public string TableName { get; private set; }
 
         public bool WasModified { get; private set; }
 
         public bool IsSelected { get; set; } // if all are false then its select all or else only whats true
+
+        public void ChangeTableName(string tableName)
+        {
+            WasTableNameChanged = true;
+            TableName = tableName;
+        }
+
+        public bool WasTableNameChanged { get; private set; }
 
         // always look up by new type because type might have changed
 

@@ -14,12 +14,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             // TODO make so subquery can contain a subquery..... might work already!?
 
-            _resolveTest(expression, ref result, ref type);
+            _resolve(expression, ref result, ref type);
 
             return result;
         }
 
-        private static void _resolveTest(MethodCallExpression expression, ref object query, ref Type type)
+        private static void _resolve(MethodCallExpression expression, ref object query, ref Type type)
         {
             foreach (var argument in expression.Arguments)
             {
@@ -28,7 +28,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 if (nextMethodCallExpression != null)
                 {
                     // remove recursion
-                    _resolveTest(nextMethodCallExpression, ref query, ref type);
+                    _resolve(nextMethodCallExpression, ref query, ref type);
 
                     switch (expression.Method.Name.ToUpper())
                     {
@@ -69,7 +69,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             query = Activator.CreateInstance(creationType, null, new DbQuery(type));
 
-            ((dynamic) query).Query.CreateSelectList();
+            ((dynamic)query).Query.InitializeWithoutForeignKeys();
         }
     }
 }

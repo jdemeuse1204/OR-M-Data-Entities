@@ -49,6 +49,7 @@
     <Compile Include="Data\Execution\SqlCommandPayload.cs" />
     <Compile Include="Enumeration\ChangeStateType.cs" />
     <Compile Include="Enumeration\ComparisonType.cs" />
+    <Compile Include="Enumeration\ConnectorType.cs" />
     <Compile Include="Enumeration\JoinType.cs" />
     <Compile Include="Commands\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Commands\Secure\SqlSecureObject.cs" />
@@ -75,13 +76,15 @@
     <Compile Include="Data\DatabaseModifiable.cs" />
     <Compile Include="Enumeration\DataQueryType.cs" />
     <Compile Include="Data\DataReader.cs" />
-    <Compile Include="Enumeration\SqlConnector.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\Query\DbQuery.cs" />
+    <Compile Include="Expressions\Query\IExpressionQueryable.cs" />
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Query\IQueryPart.cs" />
     <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
+    <Compile Include="Expressions\Resolution\Containers\ChangeTableContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryFunctionResolver.cs" />
@@ -91,6 +94,7 @@
     <Compile Include="Expressions\Resolution\Containers\WhereResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\SelectExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\SelectInfo.cs" />
+    <Compile Include="Expressions\Resolution\SqlConnector.cs" />
     <Compile Include="Expressions\Resolution\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\WhereExpressionResolver.cs" />
     <Compile Include="Extension.cs" />

@@ -36,28 +36,67 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return _joins.Aggregate("",
                 (current, @join) =>
                     current +
-                    string.Format(" {0} JOIN [{1}] On [{1}].[{2}] = [{3}].[{4}] ", @join.JoinType, @join.Left.TableName,
-                        @join.Left.ColumnName, @join.Right.TableName, @join.Right.ColumnName));
+                    string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
+                        _getJoinName(@join.JoinType),
+                        @join.Left.HasAlias
+                            ? string.Format("[{0}] AS [{1}]", @join.Left.TableName, @join.Left.TableAlias)
+                            : string.Format("[{0}]", @join.Left.TableName),
+                        @join.Left.HasAlias ? @join.Left.TableAlias : @join.Left.TableName,
+                        @join.Left.ColumnName,
+                        @join.Right.TableName,
+                        @join.Right.ColumnName));
+        }
+
+        public IEnumerable<ChangeTableContainer> GetChangeTableContainers()
+        {
+            return _joins.Where(w => w.Left.Change != null).Select(w => w.Left.Change);
+        }
+
+        private string _getJoinName(JoinType joinType)
+        {
+            switch (joinType)
+            {
+                case JoinType.ForeignKeyLeft:
+                case JoinType.Left:
+                    return "LEFT";
+                case JoinType.ForeignKeyInner:
+                case JoinType.Inner:
+                    return "INNER";
+                default:
+                    return "";
+            }
         }
     }
 
-    public class JoinNode
+    public class LeftJoinNode : JoinNode
     {
-        // alias is not needed, foreign keys will not use this to join
+        public ChangeTableContainer Change { get; set; }
+    }
 
+    public class RightJoinNode : JoinNode
+    {
+    }
+
+    public abstract class JoinNode
+    {
         public string TableName { get; set; }
 
         public string TableAlias { get; set; }
 
         public string ColumnName { get; set; }
+
+        public bool HasAlias
+        {
+            get { return !string.IsNullOrWhiteSpace(TableAlias) && TableAlias != TableName; }
+        }
     }
 
     public class JoinGroup
     {
         public JoinType JoinType { get; set; }
 
-        public JoinNode Left { get; set; }
+        public LeftJoinNode Left { get; set; }
 
-        public JoinNode Right { get; set; }
+        public RightJoinNode Right { get; set; }
     }
 }

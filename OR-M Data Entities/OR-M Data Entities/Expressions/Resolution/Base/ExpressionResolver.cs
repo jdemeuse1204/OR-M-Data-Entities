@@ -58,7 +58,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         #region Load Value
         protected object GetValue(ConstantExpression expression)
         {
-            return expression.Value;
+            return expression.Value ?? "IS NULL";
         }
 
         protected object GetValue(MemberExpression expression)
@@ -69,7 +69,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
 
             var getter = getterLambda.Compile();
 
-            return getter();
+            var value = getter();
+
+            return value ?? "IS NULL";
         }
 
         protected object GetValue(MethodCallExpression expression)
@@ -85,7 +87,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
 
             var getter = getterLambda.Compile();
 
-            return getter();
+            var value = getter();
+
+            return value ?? "IS NULL";
         }
 
         protected object GetValue(UnaryExpression expression)

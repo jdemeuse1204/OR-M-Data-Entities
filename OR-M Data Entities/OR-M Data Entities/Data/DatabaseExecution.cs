@@ -49,7 +49,7 @@ namespace OR_M_Data_Entities.Data
 
             Command = new SqlCommand(query.Sql, Connection);
 
-            _addParameters(query.WhereResolution.Parameters);
+            _addParameters(query.WhereResolution.GetParameters());
 
             Connect();
 

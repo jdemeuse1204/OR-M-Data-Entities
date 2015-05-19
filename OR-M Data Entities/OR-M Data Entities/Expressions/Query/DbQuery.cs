@@ -6,6 +6,7 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
@@ -16,16 +17,23 @@ namespace OR_M_Data_Entities.Expressions.Query
         public readonly Type BaseType;
         public readonly SelectInfoResolutionContainer SelectList;
 
+        private readonly List<Type> _types;
+        public IEnumerable<Type> Types {
+            get { return _types; }
+        }
+
         public object Shape { get; private set; }
 
         public string Sql { get; private set; }
 
-        public DbQuery(Type baseType = null, WhereResolutionContainer whereResolution = null, SelectInfoResolutionContainer selectInfoCollection = null, JoinResolutionContainer joinResolution = null)
+        public DbQuery(Type baseType = null, WhereResolutionContainer whereResolution = null, SelectInfoResolutionContainer selectInfoCollection = null, JoinResolutionContainer joinResolution = null, List<Type> types = null)
         {
             WhereResolution = whereResolution ?? new WhereResolutionContainer();
             JoinResolution = joinResolution ?? new JoinResolutionContainer();
             SelectList = selectInfoCollection ?? new SelectInfoResolutionContainer();
             BaseType = baseType;
+            _types = types ?? new List<Type>();
+            Shape = baseType;
         }
 
         protected DbQuery(DbQuery query)
@@ -35,6 +43,7 @@ namespace OR_M_Data_Entities.Expressions.Query
             JoinResolution = query.JoinResolution;
             BaseType = query.BaseType;
             Shape = query.Shape;
+            _types = query._types;
         }
 
         public void SetShape(object shape)
@@ -44,6 +53,14 @@ namespace OR_M_Data_Entities.Expressions.Query
 
         public void Resolve()
         {
+            // joins can change table names because of Foreign Keys, get name changes
+            var changeTables = JoinResolution.GetChangeTableContainers();
+
+            foreach (var changeTable in changeTables)
+            {
+                SelectList.ChangeTable(changeTable);
+            }
+
             var where = WhereResolution.HasItems ? WhereResolution.Resolve() : string.Empty;
 
             var select = SelectList.HasItems ? SelectList.Resolve() : string.Empty;
@@ -56,73 +73,101 @@ namespace OR_M_Data_Entities.Expressions.Query
                 SelectList.IsSelectDistinct ? " DISTINCT" : string.Empty,
                 SelectList.TakeRows > 0 ? string.Format("TOP {0}", SelectList.TakeRows) : string.Empty, select,
                 from.Contains("[") ? from : string.Format("[{0}]", from),
-                join, 
-                string.Format("WHERE {0}", where), 
+                join,
+                string.Format("WHERE {0}", where),
                 "");
-
-            // add in our parameters
         }
 
-        private void _initialize(Type startType)
+        private void _initialize(Type parentType, string parentTableName)
         {
-            var types = new List<SqlType> { new SqlType(startType) };
-
-            for (var i = 0; i < types.Count; i++)
+            foreach (
+                var property in
+                    parentType.GetProperties().Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null))
             {
-                var item = types[i];
-                var properties = item.Type.GetProperties();
-                var foreignKeyTypes = 
-                    properties.Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null)
-                        .Select(
-                            w =>
-                                new SqlType(
-                                    w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType,
-                                    w.Name));
-                var parentPrimaryKeyName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(item).First());
-                var parentTableName = DatabaseSchemata.GetTableName(item);
+                var isList = property.PropertyType.IsList();
+                var type = isList
+                    ? property.PropertyType.GetGenericArguments()[0]
+                    : property.PropertyType;
+                var foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
 
-                foreach (var info in properties)
+                _types.Add(type);
+
+                // add properties to select statement
+                _addPropertiesByType(type);
+
+                // add join here
+                var group = new JoinGroup();
+                string tableName;
+
+                if (isList)
                 {
-                    SelectList.Add(info, item.Type, item.TableName);
+                    group.JoinType = JoinType.ForeignKeyLeft;
+                    tableName = DatabaseSchemata.GetTableName(type);
 
-                    var fkAttribute = info.GetCustomAttribute<ForeignKeyAttribute>();
-
-                    // foreign key joins.  List = left, single = inner
-                    if (fkAttribute != null)
+                    group.Left = new LeftJoinNode 
                     {
-                        var group = new JoinGroup();
+                        ColumnName = foreignKeyAttribute.ForeignKeyColumnName,
+                        TableName = tableName,
+                        TableAlias = property.Name,
+                        Change = tableName != property.Name ? new ChangeTableContainer(type, property.Name) : null
+                    };
 
-                        if (info.PropertyType.IsList())
-                        {
-                            group.JoinType = JoinType.ForeignKeyLeft;
-                            group.Left = new JoinNode
-                            {
-                                ColumnName = parentPrimaryKeyName,
-                                TableName = parentTableName
-                            };
+                    group.Right = new RightJoinNode
+                    {
+                        ColumnName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(type).First()),
+                        TableName = parentTableName
+                    };
+                }
+                else
+                {
+                    group.JoinType = JoinType.ForeignKeyInner;
+                    tableName = DatabaseSchemata.GetTableName(type);
 
-                            group.Right = new JoinNode
-                            {
-                                ColumnName = fkAttribute.ForeignKeyColumnName,
-                                TableName = parentTableName
-                            };
-                        }
-                        else
-                        {
-                            
-                        }
+                    group.Left = new LeftJoinNode 
+                    { 
+                        ColumnName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(type).First()),
+                        TableName = DatabaseSchemata.GetTableName(type),
+                        TableAlias = property.Name,
+                        Change = tableName != property.Name ? new ChangeTableContainer(type, property.Name) : null
+                    };
 
-                        JoinResolution.AddJoin(group);
-                    }
+                    group.Right = new RightJoinNode
+                    {
+                        ColumnName = foreignKeyAttribute.ForeignKeyColumnName,
+                        TableName = parentTableName
+                    };
                 }
 
-                types.AddRange(foreignKeyTypes);
+                JoinResolution.AddJoin(group);
+
+                if (DatabaseSchemata.HasForeignKeys(type))
+                {
+                    _initialize(type, property.Name);
+                }
             }
         }
 
         public void Initialize()
         {
-            _initialize(BaseType);
+            _addPropertiesByType(BaseType);
+            _types.Add(BaseType);
+            _initialize(BaseType, DatabaseSchemata.GetTableName(BaseType));
+        }
+
+        public void InitializeWithoutForeignKeys()
+        {
+            _addPropertiesByType(BaseType);
+            _types.Add(BaseType);
+        }
+
+        private void _addPropertiesByType(Type type)
+        {
+            var tableName = DatabaseSchemata.GetTableName(type);
+
+            foreach (var info in type.GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null))
+            {
+                SelectList.Add(info, type, tableName);
+            }
         }
     }
 

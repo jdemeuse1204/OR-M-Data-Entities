@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 
@@ -34,6 +35,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         private SelectInfo _find(MemberExpression expression)
         {
+            // what if we are selecting a foreign key, then we need to select all from that table
             return SelectList.Infos.First(
                     w =>
                         w.NewType == expression.Expression.Type &&
@@ -52,6 +54,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             SelectList.ReturnPropertyOnly = true;
         }
 
+        private bool _isForeignKey(MemberExpression expression)
+        {
+            var propertyInfo = expression.Member as PropertyInfo;
+
+            if (propertyInfo == null) return false;
+
+            var type = propertyInfo.PropertyType.IsList() ? propertyInfo.PropertyType.GetGenericArguments()[0] : propertyInfo.PropertyType;
+
+            return Types.Contains(type);
+        }
+
         private void _resolveShape(NewExpression expression)
         {
             var count = expression.Members.Count;
@@ -65,11 +78,20 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
                 if (memberExpression != null)
                 {
-                    var info = _find(memberExpression);
+                    if (!_isForeignKey(memberExpression))
+                    {
+                        var info = _find(memberExpression);
 
-                    info.NewType = member.ReflectedType;
-                    info.NewProperty = member;
-                    info.IsSelected = true;
+                        info.NewType = member.ReflectedType;
+                        info.NewProperty = member;
+                        info.IsSelected = true;
+                    }
+                    else
+                    {
+                        _selectAll(member.ReflectedType.IsList()
+                            ? member.ReflectedType.GetGenericArguments()[0]
+                            : member.ReflectedType); 
+                    }
                     continue;
                 }
 
@@ -118,6 +140,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                     case MemberBindingType.MemberBinding:
                         break;
                 }
+            }
+        }
+
+        private void _selectAll(Type type)
+        {
+            foreach (var column in SelectList.Infos.Where(w => w.NewType == type))
+            {
+                column.IsSelected = true;
             }
         }
     }

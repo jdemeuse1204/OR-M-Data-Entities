@@ -5,7 +5,7 @@ using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public class ExpressionQuery<T> : IEnumerable<T>
+    public class ExpressionQuery<T> : IEnumerable<T>, IExpressionQueryable
     {
         public readonly DatabaseReading Context;
 

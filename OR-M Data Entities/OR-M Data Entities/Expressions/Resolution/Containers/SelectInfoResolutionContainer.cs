@@ -30,6 +30,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             _infos = new List<SelectInfo>();
         }
 
+        public void ChangeTable(ChangeTableContainer changeTableContainer)
+        {
+            foreach (var info in _infos.Where(w => !w.WasTableNameChanged && w.NewType == changeTableContainer.Type))
+            {
+                info.ChangeTableName(changeTableContainer.TableName);
+            }
+        }
+
         private SelectInfo _find(PropertyInfo item)
         {
             return _infos.First(w => w.OriginalProperty == item);

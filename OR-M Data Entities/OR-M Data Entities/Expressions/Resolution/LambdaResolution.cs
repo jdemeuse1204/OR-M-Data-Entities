@@ -1,9 +1,10 @@
 ﻿using System;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Expressions.Resolution
 {
-    public class LambdaResolution
+    public class LambdaResolution : IQueryPart
     {
         public LambdaResolution()
         {
@@ -12,6 +13,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             Comparison = CompareType.None;
             Group = -1;
         }
+
+        public Guid QueryId { get; set; }
 
         public string TableName { get; set; }
 

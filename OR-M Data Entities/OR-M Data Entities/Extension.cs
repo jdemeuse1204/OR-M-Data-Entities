@@ -21,7 +21,6 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
@@ -397,8 +396,18 @@ namespace OR_M_Data_Entities
 
         public static T ToObject<T>(this PeekDataReader reader)
         {
-            if (!reader.HasRows) return default(T);
+            if (!reader.HasRows) throw new Exception("Query contains no records");
 
+            return reader._toObject<T>();
+        }
+
+        public static T ToObjectDefault<T>(this PeekDataReader reader)
+        {
+            return !reader.HasRows ? default(T) : reader._toObject<T>();
+        }
+
+        public static T _toObject<T>(this PeekDataReader reader)
+        {
             if (typeof(T).IsValueType
                 || typeof(T) == typeof(string))
             {
@@ -410,6 +419,11 @@ namespace OR_M_Data_Entities
             if (typeof(T) == typeof(object))
             {
                 return reader.ToObject();
+            }
+
+            if (reader.DbQuery.Shape is Expression)
+            {
+
             }
 
             return reader.GetObjectFromReaderWithForeignKeys<T>();

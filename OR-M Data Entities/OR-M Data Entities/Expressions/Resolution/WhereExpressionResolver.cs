@@ -35,29 +35,33 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             }
 
             var count = 0;
+            var wasRightAdded = false;
 
             while (true)
             {
                 // if the right has a left then its a group expression
                 if (IsGroup(expression.Right))
                 {
-                    if (count != 0) WhereResolution.AddConnector(SqlConnector.Or);
+                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
 
                     _evaluateGroup(expression.Right as BinaryExpression, WhereResolution);
                 }
                 else
                 {
-                    if (count != 0) WhereResolution.AddConnector(SqlConnector.Or);
+                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
 
                     var result = _evaluate(expression.Right as dynamic, WhereResolution, WhereResolution.NextGroupNumber());
 
                     WhereResolution.AddResolution(result);
+                    wasRightAdded = true;
                 }
 
                 // check to see if the end is a group
                 if (IsGroup(expression.Left))
                 {
-                    if (count != 0) WhereResolution.AddConnector(SqlConnector.Or);
+                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+
+                    if (count == 0 && wasRightAdded) WhereResolution.AddConnector(ConnectorType.And);
 
                     _evaluateGroup(expression.Left as BinaryExpression, WhereResolution);
                     break;
@@ -66,7 +70,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 // check to see if we are at the end of the expression
                 if (!HasComparison(expression.Left))
                 {
-                    if (count != 0) WhereResolution.AddConnector(SqlConnector.Or);
+                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+
+                    if (count == 0 && wasRightAdded) WhereResolution.AddConnector(ConnectorType.And);
 
                     var result = _evaluate(expression.Left as dynamic, WhereResolution, WhereResolution.NextGroupNumber());
 
@@ -92,7 +98,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 rightResult.Group = groupNumber;
 
                 resolution.AddResolution(rightResult);
-                resolution.AddConnector(SqlConnector.And);
+                resolution.AddConnector(ConnectorType.And);
 
                 if (HasComparison(expression.Left))
                 {
@@ -129,7 +135,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             // get the value from the expression
             var value = GetValue((isParameterOnLeftSide ? expression.Right : expression.Left) as dynamic);
 
-            result.CompareValue = IsExpressionQuery(value) ? value : resolution.AddParameter(value);
+            // if its an expression query we need to combine parameters into the main query
+            result.CompareValue = IsExpressionQuery(value) ? value : resolution.GetParameter(value);
 
             // get the comparison tyoe
             LoadComparisonType(expression, result);
@@ -172,6 +179,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 case "EQUALS":
                 case "OP_EQUALITY":
                     result.Comparison = invertComparison ? CompareType.NotEqual : CompareType.Equals;
+                    result.CompareValue = resolution.GetParameter(value);
                     break;
                 case "CONTAINS":
                     result.Comparison = value.IsList()
@@ -180,7 +188,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
                     if (!value.IsList())
                     {
-                        result.CompareValue = resolution.AddParameter(string.Format("%{0}%", value));
+                        result.CompareValue = resolution.GetParameter(string.Format("%{0}%", value));
                     }
                     else
                     {
@@ -189,17 +197,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                                 .Aggregate("",
                                     (current, item) =>
                                         current +
-                                        string.Format("{0},", resolution.AddParameter(string.Format("{0}", item))))
+                                        string.Format("{0},", resolution.GetParameter(string.Format("{0}", item))))
                                 .TrimEnd(','));
                     }
                     break;
                 case "STARTSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = resolution.AddParameter(string.Format("{0}%", value));
+                    result.CompareValue = resolution.GetParameter(string.Format("{0}%", value));
                     break;
                 case "ENDSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = resolution.AddParameter(string.Format("%{0}", value));;
+                    result.CompareValue = resolution.GetParameter(string.Format("%{0}", value));;
                     break;
             }
 

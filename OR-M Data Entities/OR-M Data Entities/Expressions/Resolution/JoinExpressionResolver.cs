@@ -31,18 +31,18 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             });
         }
 
-        private JoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector)
-        {           
-            return new JoinNode
+        private RightJoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector)
+        {
+            return new RightJoinNode
             {
                 TableName = DatabaseSchemata.GetTableName(_resolveType(outerKeySelector)),
                 ColumnName = GetColumnName(outerKeySelector.Body as MemberExpression)
             };
         }
 
-        private JoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector)
+        private LeftJoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector)
         {
-            return new JoinNode
+            return new LeftJoinNode
             {
                 TableName = DatabaseSchemata.GetTableName(_resolveType(innerKeySelector)),
                 ColumnName = GetColumnName(innerKeySelector.Body as MemberExpression)
