@@ -98,7 +98,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 PropertyName = type.Name,
                 TableName = GetTableName(type),
                 ChildTypes = foreignKeys,
-                PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(type, type.Name),
+                PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(type),
             };
 
             _loadColumnSchematics(result, type, type.Name);
@@ -145,7 +145,7 @@ namespace OR_M_Data_Entities.Data.Definition
                     TableName = tableName,
                     ChildTypes = new List<ObjectSchematic>(),
                     JoinString = joinString,
-                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
+                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
                 };
 
                 if (!lasyLoad)
@@ -209,7 +209,7 @@ namespace OR_M_Data_Entities.Data.Definition
                     TableName = GetTableName(fkPropertyType),
                     ChildTypes = new List<ObjectSchematic>(),
                     JoinString = joinString,
-                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
+                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType),
                 };
 
                 // load columns here if not lazy loading
@@ -440,7 +440,7 @@ namespace OR_M_Data_Entities.Data.Definition
             return GetSelectAllFieldsAndTableName(typeof(T));
         }
 
-        private static string[] _primaryKeyColumnNamesWithTableName(Type type, string tableName)
+        private static string[] _primaryKeyColumnNamesWithTableName(Type type)
         {
             var keyList = type.GetProperties().Where(w =>
               (w.GetCustomAttributes<SearchablePrimaryKeyAttribute>() != null
@@ -454,7 +454,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 var propertyInfo = keyList[i];
                 var columnAttribute = propertyInfo.GetCustomAttribute<ColumnAttribute>();
 
-                result[i] = string.Format("{0}{1}", tableName, columnAttribute == null ? propertyInfo.Name : columnAttribute.Name);
+                result[i] = columnAttribute == null ? propertyInfo.Name : columnAttribute.Name;
             }
 
             return result;

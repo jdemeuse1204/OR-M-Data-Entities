@@ -6,11 +6,11 @@ using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.Join
 {
     public class JoinExpressionResolver : ExpressionResolver
     {
-        public JoinExpressionResolver(DbQuery query)
+        public JoinExpressionResolver(DbQueryBase query)
             : base(query)
         {
         }

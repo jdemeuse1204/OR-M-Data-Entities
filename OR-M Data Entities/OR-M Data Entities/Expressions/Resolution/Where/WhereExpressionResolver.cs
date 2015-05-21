@@ -8,11 +8,11 @@ using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
     public class WhereExpressionResolver<T> : ExpressionResolver
     {
-        public WhereExpressionResolver(DbQuery query)
+        public WhereExpressionResolver(DbQueryBase query)
             : base(query)
         {
         }
@@ -121,9 +121,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private LambdaResolution _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, int group = -1)
+        private WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, int group = -1)
         {
-            var result = new LambdaResolution
+            var result = new WhereResolutionPart
             {
                 Group = group,
             };
@@ -150,9 +150,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private LambdaResolution _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, int group = -1, ExpressionType? expressionType = null)
+        private WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, int group = -1, ExpressionType? expressionType = null)
         {
-            var result = new LambdaResolution
+            var result = new WhereResolutionPart
             {
                 Group = group
             };
@@ -214,14 +214,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return result;
         }
 
-        private LambdaResolution _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, int group = -1)
+        private WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, int group = -1)
         {
             return _evaluate(expression.Operand as dynamic, resolution, group, expression.NodeType);
         }
         #endregion
 
         #region Load Comparison Type
-        private void LoadComparisonType(BinaryExpression expression, LambdaResolution resolution)
+        private void LoadComparisonType(BinaryExpression expression, WhereResolutionPart resolution)
         {
             switch (expression.NodeType)
             {
@@ -248,7 +248,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         #endregion
 
         #region Load Table And Column Name
-        private void LoadColumnAndTableName(MemberExpression expression, LambdaResolution result)
+        private void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result)
         {
             if (expression.Expression.NodeType == ExpressionType.Parameter)
             {
@@ -264,7 +264,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             }
         }
 
-        private void LoadColumnAndTableName(MethodCallExpression expression, LambdaResolution result)
+        private void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result)
         {
             LoadColumnAndTableName(expression.Object as MemberExpression, result);
         }

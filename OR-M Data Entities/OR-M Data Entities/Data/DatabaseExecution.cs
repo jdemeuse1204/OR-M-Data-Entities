@@ -43,7 +43,7 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void ExecuteReader(DbQuery query)
+        protected void ExecuteReader(DbQueryBase query)
         {
             TryDisposeCloseReader();
 

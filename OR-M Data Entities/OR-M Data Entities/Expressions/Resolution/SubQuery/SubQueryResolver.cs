@@ -3,7 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Expressions.Query;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {
     public class SubQueryResolver
     {

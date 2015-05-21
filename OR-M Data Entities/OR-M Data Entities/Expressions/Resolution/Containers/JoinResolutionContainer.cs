@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
@@ -47,7 +48,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                         @join.Right.ColumnName));
         }
 
-        public IEnumerable<ChangeTableContainer> GetChangeTableContainers()
+        public IEnumerable<TableInfo> GetChangeTableContainers()
         {
             return _joins.Where(w => w.Left.Change != null).Select(w => w.Left.Change);
         }
@@ -58,9 +59,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             {
                 case JoinType.ForeignKeyLeft:
                 case JoinType.Left:
+                case JoinType.PseudoKeyLeft:
                     return "LEFT";
                 case JoinType.ForeignKeyInner:
                 case JoinType.Inner:
+                case JoinType.PseudoKeyInner:
                     return "INNER";
                 default:
                     return "";
@@ -70,7 +73,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
     public class LeftJoinNode : JoinNode
     {
-        public ChangeTableContainer Change { get; set; }
     }
 
     public class RightJoinNode : JoinNode
@@ -84,6 +86,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         public string TableAlias { get; set; }
 
         public string ColumnName { get; set; }
+
+        public TableInfo Change { get; set; }
 
         public bool HasAlias
         {

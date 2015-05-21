@@ -63,22 +63,7 @@ namespace OR_M_Data_Entities.Data
         #region Data Execution
         public ExpressionQuery<T> From<T>()
         {
-
-            //var lst = new ExpressionQuery<Contact>(context);
-            //var tableName = DatabaseSchemata.GetTableName<T>();
-            //ObjectSchematic schematic;
-
-            //if (!SavedTableSchematics.ContainsKey(tableName))
-            //{
-            //    schematic = DatabaseSchemata.GetObjectSchematic<T>();
-
-            //    SavedTableSchematics.Add(tableName, schematic);
-            //}
-            //else
-            //{
-            //    schematic = SavedTableSchematics[tableName];
-            //}
-            var query = new DbQuery(typeof (T));
+            var query = new DbQuery(typeof(T));
 
             query.Initialize();
 

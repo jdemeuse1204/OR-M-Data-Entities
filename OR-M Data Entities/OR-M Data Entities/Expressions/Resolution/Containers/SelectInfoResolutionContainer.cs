@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
     public class SelectInfoResolutionContainer : IResolutionContainer
     {
         private readonly List<SelectInfo> _infos;
+        private readonly List<TableInfo> _tableAliases;
 
         public bool HasItems
         {
@@ -25,16 +28,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public IEnumerable<SelectInfo> Infos { get { return _infos; } }
 
+        public IEnumerable<TableInfo> TableAliases { get { return _tableAliases; } }
+
         public SelectInfoResolutionContainer()
         {
             _infos = new List<SelectInfo>();
+            _tableAliases = new List<TableInfo>();
         }
 
-        public void ChangeTable(ChangeTableContainer changeTableContainer)
+        public void ChangeTable(TableInfo tableInfo)
         {
-            foreach (var info in _infos.Where(w => !w.WasTableNameChanged && w.NewType == changeTableContainer.Type))
+            foreach (var info in _infos.Where(w => !w.WasTableNameChanged && w.NewType == tableInfo.Type))
             {
-                info.ChangeTableName(changeTableContainer.TableName);
+                info.ChangeTableName(tableInfo.TableName);
             }
         }
 
@@ -43,10 +49,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return _infos.First(w => w.OriginalProperty == item);
         }
 
-
-        public void Add(PropertyInfo item, Type baseType, string tableName)
+        public void Add(PropertyInfo item, Type baseType, string tableName, string queryTableName, string foreignKeyTableName)
         {
-            _infos.Add(new SelectInfo(item, baseType, tableName, _infos.Count));
+            if (!_tableAliases.Select(w => w.QueryTableName).Contains(queryTableName))
+            {
+                _tableAliases.Add(new TableInfo(tableName, foreignKeyTableName, baseType, queryTableName));
+            }
+
+            _infos.Add(new SelectInfo(item, baseType, tableName, queryTableName, _infos.Count));
+        }
+
+        public string GetNextTableReadName()
+        {
+            return string.Format("AkA{0}", _tableAliases.Count);
         }
 
         public void UnSelectAll()

@@ -11,7 +11,7 @@ using OR_M_Data_Entities.Mapping.Base;
 namespace OR_M_Data_Entities.Mapping
 {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
-    public sealed class ForeignKeyAttribute : NonSelectableAttribute
+    public sealed class ForeignKeyAttribute : AutoLoadKeyAttribute
     {
         public ForeignKeyAttribute(string foreignKeyColumnName)
         {

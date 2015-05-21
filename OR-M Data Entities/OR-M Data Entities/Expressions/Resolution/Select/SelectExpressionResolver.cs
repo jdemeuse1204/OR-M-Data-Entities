@@ -4,12 +4,13 @@ using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {
     public class SelectExpressionResolver : ExpressionResolver
     {
-        public SelectExpressionResolver(DbQuery query)
+        public SelectExpressionResolver(DbQueryBase query)
             : base(query)
         {
         }

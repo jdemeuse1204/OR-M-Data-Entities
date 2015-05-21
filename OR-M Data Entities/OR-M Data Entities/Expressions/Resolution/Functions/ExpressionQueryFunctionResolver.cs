@@ -1,11 +1,11 @@
 ﻿using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.Functions
 {
     public class ExpressionQueryFunctionResolver : ExpressionResolver
     {
-        public ExpressionQueryFunctionResolver(DbQuery query)
+        public ExpressionQueryFunctionResolver(DbQueryBase query)
             : base(query)
         {
         }

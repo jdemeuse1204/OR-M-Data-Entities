@@ -14,10 +14,10 @@ namespace LambdaResolver
 
             var lst = new List<int> { 1, 2, 3, 4, 5 };
             var s = DateTime.Now;
-            var item = ctx.From<Contact>().FirstOrDefault(
+            var item = ctx.From<Contact>().First(
                 w =>
                     w.ID == 1 &&
-                    //w.FirstName == "James" ||
+                    w.FirstName == "James" //||
                     //w.FirstName == "Megan" &&
                     //w.FirstName == "WIN" &&
                     //w.FirstName == "AHHHH" ||
@@ -26,9 +26,8 @@ namespace LambdaResolver
                     //w.Number.PhoneType.Type == "Home" &&
                     //lst.Contains(w.ID) &&
                     //w.LastName == null &&
-                    w.LastName.Equals("COOL") &&
-                    w.LastName ==
-                    ctx.From<Appointment>().Where(x => x.ContactID == 1).Select(x => x.Description).FirstOrDefault()
+                    //w.LastName.Equals("COOL") &&
+                    //w.LastName == ctx.From<Appointment>().Where(x => x.ContactID == 1).Select(x => x.Description).FirstOrDefault()
                 );
 
             if (item != null)

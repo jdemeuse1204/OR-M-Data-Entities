@@ -1,12 +1,12 @@
 ﻿using System;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Resolution.Where.Base;
 
-namespace OR_M_Data_Entities.Expressions.Resolution
+namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
-    public class LambdaResolution : IQueryPart
+    public class WhereResolutionPart : IQueryPart
     {
-        public LambdaResolution()
+        public WhereResolutionPart()
         {
             TableName = string.Empty;
             ColumnName = string.Empty;

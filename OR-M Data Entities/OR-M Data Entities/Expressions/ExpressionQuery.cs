@@ -7,8 +7,11 @@ namespace OR_M_Data_Entities.Expressions
 {
     public class ExpressionQuery<T> : IEnumerable<T>, IExpressionQueryable
     {
+        #region Fields
         public readonly DatabaseReading Context;
+        #endregion
 
+        #region Properties
         private List<T> _queryResult { get; set; } 
 
         public DbQuery Query { get; set; }
@@ -17,7 +20,9 @@ namespace OR_M_Data_Entities.Expressions
         {
             get { return Context != null && Context.IsLazyLoadEnabled; }
         }
+        #endregion
 
+        #region Constructor
         public ExpressionQuery(DatabaseReading context = null, DbQuery query = null)
         {
             Context = context;
@@ -28,15 +33,16 @@ namespace OR_M_Data_Entities.Expressions
         {
 
         }
+        #endregion
 
+        #region Methods
         public IEnumerator<T> GetEnumerator()
         {
-            if (_queryResult == null)
-            {
-                _queryResult = new List<T>();
+            if (_queryResult != null) return _queryResult.GetEnumerator();
 
-                _queryResult = Context.ExecuteQuery(this).ToList();
-            }
+            _queryResult = new List<T>();
+
+            _queryResult = Context.ExecuteQuery(this).ToList();
 
             return _queryResult.GetEnumerator();
         }
@@ -45,5 +51,6 @@ namespace OR_M_Data_Entities.Expressions
         {
             return GetEnumerator();
         }
+        #endregion
     }
 }

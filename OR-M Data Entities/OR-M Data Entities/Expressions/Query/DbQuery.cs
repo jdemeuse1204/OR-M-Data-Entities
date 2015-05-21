@@ -3,47 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
-    public class DbQuery
+    public class DbQuery : DbQueryJoinLoading
     {
-        public readonly WhereResolutionContainer WhereResolution;
-        public readonly JoinResolutionContainer JoinResolution;
-        public readonly Type BaseType;
-        public readonly SelectInfoResolutionContainer SelectList;
-
-        private readonly List<Type> _types;
-        public IEnumerable<Type> Types {
-            get { return _types; }
+        public DbQuery(Type baseType = null,
+            WhereResolutionContainer whereResolution = null,
+            SelectInfoResolutionContainer selectInfoCollection = null,
+            JoinResolutionContainer joinResolution = null,
+            List<Type> types = null)
+            : base(baseType, whereResolution, selectInfoCollection, joinResolution, types)
+        {
         }
 
-        public object Shape { get; private set; }
-
-        public string Sql { get; private set; }
-
-        public DbQuery(Type baseType = null, WhereResolutionContainer whereResolution = null, SelectInfoResolutionContainer selectInfoCollection = null, JoinResolutionContainer joinResolution = null, List<Type> types = null)
+        protected DbQuery(DbQueryBase query)
+            : base(query)
         {
-            WhereResolution = whereResolution ?? new WhereResolutionContainer();
-            JoinResolution = joinResolution ?? new JoinResolutionContainer();
-            SelectList = selectInfoCollection ?? new SelectInfoResolutionContainer();
-            BaseType = baseType;
-            _types = types ?? new List<Type>();
-            Shape = baseType;
-        }
-
-        protected DbQuery(DbQuery query)
-        {
-            WhereResolution = query.WhereResolution;
-            SelectList = query.SelectList;
-            JoinResolution = query.JoinResolution;
-            BaseType = query.BaseType;
-            Shape = query.Shape;
-            _types = query._types;
         }
 
         public void SetShape(object shape)
@@ -78,109 +57,61 @@ namespace OR_M_Data_Entities.Expressions.Query
                 "");
         }
 
-        private void _initialize(Type parentType, string parentTableName)
+        private void _initialize(Type parentType, string parentTableName, bool isParentSearch = true)
         {
             foreach (
                 var property in
-                    parentType.GetProperties().Where(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null))
+                    parentType.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null))
             {
                 var isList = property.PropertyType.IsList();
                 var type = isList
                     ? property.PropertyType.GetGenericArguments()[0]
                     : property.PropertyType;
                 var foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
+                var pseudoKeyAttribute = property.GetCustomAttribute<PseudoKeyAttribute>();
 
                 _types.Add(type);
 
                 // add properties to select statement
-                _addPropertiesByType(type);
+                _addPropertiesByType(type, property.Name, SelectList.GetNextTableReadName());
 
                 // add join here
-                var group = new JoinGroup();
-                string tableName;
-
-                if (isList)
+                if (foreignKeyAttribute != null)
                 {
-                    group.JoinType = JoinType.ForeignKeyLeft;
-                    tableName = DatabaseSchemata.GetTableName(type);
-
-                    group.Left = new LeftJoinNode 
-                    {
-                        ColumnName = foreignKeyAttribute.ForeignKeyColumnName,
-                        TableName = tableName,
-                        TableAlias = property.Name,
-                        Change = tableName != property.Name ? new ChangeTableContainer(type, property.Name) : null
-                    };
-
-                    group.Right = new RightJoinNode
-                    {
-                        ColumnName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(type).First()),
-                        TableName = parentTableName
-                    };
+                    JoinResolution.AddJoin(GetJoinGroup(foreignKeyAttribute, property, parentTableName, isParentSearch));
                 }
-                else
+                else if (pseudoKeyAttribute != null)
                 {
-                    group.JoinType = JoinType.ForeignKeyInner;
-                    tableName = DatabaseSchemata.GetTableName(type);
-
-                    group.Left = new LeftJoinNode 
-                    { 
-                        ColumnName = DatabaseSchemata.GetColumnName(DatabaseSchemata.GetPrimaryKeys(type).First()),
-                        TableName = DatabaseSchemata.GetTableName(type),
-                        TableAlias = property.Name,
-                        Change = tableName != property.Name ? new ChangeTableContainer(type, property.Name) : null
-                    };
-
-                    group.Right = new RightJoinNode
-                    {
-                        ColumnName = foreignKeyAttribute.ForeignKeyColumnName,
-                        TableName = parentTableName
-                    };
+                    JoinResolution.AddJoin(GetJoinGroup(pseudoKeyAttribute, property, parentTableName, isParentSearch));
                 }
-
-                JoinResolution.AddJoin(group);
 
                 if (DatabaseSchemata.HasForeignKeys(type))
                 {
-                    _initialize(type, property.Name);
+                    _initialize(type, property.Name, false);
                 }
             }
         }
 
         public void Initialize()
         {
-            _addPropertiesByType(BaseType);
-            _types.Add(BaseType);
+            InitializeWithoutForeignKeys();
             _initialize(BaseType, DatabaseSchemata.GetTableName(BaseType));
         }
 
         public void InitializeWithoutForeignKeys()
         {
-            _addPropertiesByType(BaseType);
+            _addPropertiesByType(BaseType, string.Empty, SelectList.GetNextTableReadName());
             _types.Add(BaseType);
         }
 
-        private void _addPropertiesByType(Type type)
+        private void _addPropertiesByType(Type type, string foreignKeyTableName, string queryTableName)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
 
             foreach (var info in type.GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null))
             {
-                SelectList.Add(info, type, tableName);
+                SelectList.Add(info, type, tableName, queryTableName, foreignKeyTableName);
             }
         }
-    }
-
-    class SqlType
-    {
-        public SqlType(Type type, string tableName = "")
-        {
-            Type = type;
-            TableName = string.IsNullOrWhiteSpace(tableName) ? DatabaseSchemata.GetTableName(type) : tableName;
-        }
-
-        public Type Type { get; set; }
-
-        public string TableName { get; set; }
     }
 }

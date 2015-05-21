@@ -31,7 +31,7 @@ namespace OR_M_Data_Entities.Data
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
         public bool IsLazyLoading { get; private set; }
-        public DbQuery DbQuery { get; private set; }
+        public DbQueryBase DbQuery { get; private set; }
 
         public object this[int i]
         {

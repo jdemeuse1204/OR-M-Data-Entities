@@ -12,6 +12,8 @@ namespace OR_M_Data_Entities.Enumeration
 		Inner,
 		Left,
         ForeignKeyInner,
-        ForeignKeyLeft
+        ForeignKeyLeft,
+        PseudoKeyInner,
+        PseudoKeyLeft
 	}
 }
