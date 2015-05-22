@@ -13,6 +13,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Data.Commit;
+using OR_M_Data_Entities.Expressions.ObjectMapping;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -31,6 +32,8 @@ namespace OR_M_Data_Entities.Data
             {
                 name = type.GetGenericArguments()[0].Name;
             }
+
+            if (type.IsEnum) return SqlDbType.Int;
 
             switch (name.ToUpper())
             {
@@ -295,24 +298,19 @@ namespace OR_M_Data_Entities.Data
             }).ToList();
         }
 
-        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes<T>()
+        public static List<TableInfo> GetForeignKeyTypes<T>()
         {
             return GetForeignKeyTypes(typeof(T));
         }
 
-        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(object entity)
+        public static List<TableInfo> GetForeignKeyTypes(object entity)
         {
             return GetForeignKeyTypes(entity.GetType());
         }
 
-        public static IEnumerable<ForeignKeyDetail> GetForeignKeyTypes(Type type)
+        public static List<TableInfo> GetForeignKeyTypes(Type type)
         {
-            var result = new List<ForeignKeyDetail>();
-            var resultingTypes = new List<PulledForeignKeyDetail>();
-
-            _addForeignKeyTypesRecursive(result, type, resultingTypes);
-
-            return result;
+            return _createObjectList(type);
         }
 
         public static SqlJoinCollection GetForeignKeyJoinsRecursive<T>() where T : class
@@ -332,6 +330,40 @@ namespace OR_M_Data_Entities.Data
             _addForeignKeyJoinsRecursive(result, type);
 
             return result;
+        }
+
+        private static List<TableInfo> _createObjectList(Type type)
+        {
+            var typesToScan = new List<TableInfo>
+            {
+                new TableInfo
+                {
+                    TableName = GetTableName(type),
+                    Type = type,
+                    PrimaryKeys = _primaryKeyColumnNamesWithTableName(type, GetTableName(type)),
+                }
+            };
+
+            // skip the first one because its our first object
+            for (var i = 0; i < typesToScan.Count; i++)
+            {
+                // add the types foreign keys
+                var a = typesToScan[i];
+
+                typesToScan.AddRange(GetForeignKeys(a.Type).Select(w => new TableInfo
+                {
+                    ParentType = a.Type,
+                    ParentProperty = a.Property,
+                    Type = w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType,
+                    TableName = GetTableName(w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType),
+                    TableAlias = w.Name,
+                    PrimaryKeys = _primaryKeyColumnNamesWithTableName(w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType, w.Name),
+                    IsList = w.PropertyType.IsList(),
+                    Property = w
+                }));
+            }
+
+            return typesToScan;
         }
 
         public static void GetForeignKeyJoinsRecursive(Type type, SqlJoinCollection joins)
@@ -357,82 +389,6 @@ namespace OR_M_Data_Entities.Data
             }
 
             return result;
-        }
-
-        private static void _addForeignKeyTypesRecursive(List<ForeignKeyDetail> result, Type type, List<PulledForeignKeyDetail> resultingTypes)
-        {
-            var foreignKeys = GetForeignKeys(type);
-
-            foreach (var foreignKey in foreignKeys)
-            {
-                var pulledForeignKeyDetail = new PulledForeignKeyDetail(foreignKey);
-
-                if (resultingTypes.Contains(pulledForeignKeyDetail))
-                {
-                    continue;
-                }
-
-                var isList = foreignKey.PropertyType.IsList();
-                var fkPropertyType = isList
-                    ? foreignKey.PropertyType.GetGenericArguments()[0]
-                    : foreignKey.PropertyType;
-
-                var fkDetail = new ForeignKeyDetail
-                {
-                    Type = fkPropertyType,
-                    ParentType = type,
-                    IsList = isList,
-                    ListType = isList ? foreignKey.PropertyType : null,
-                    PropertyName = foreignKey.Name,
-                    ChildTypes = new List<ForeignKeyDetail>(),
-                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
-                    KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
-                };
-
-                _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
-
-                resultingTypes.Add(pulledForeignKeyDetail);
-
-                result.Add(fkDetail);
-
-                if (HasForeignKeys(fkPropertyType))
-                {
-                    _addForeignKeyTypesRecursive(result, fkPropertyType, resultingTypes);
-                }
-            }
-        }
-
-        private static void _getChildren(List<ForeignKeyDetail> result, Type type, List<PulledForeignKeyDetail> resultingTypes)
-        {
-            var foreignKeys = GetForeignKeys(type);
-
-            foreach (var foreignKey in foreignKeys)
-            {
-                var isList = foreignKey.PropertyType.IsList();
-                var fkPropertyType = isList
-                    ? foreignKey.PropertyType.GetGenericArguments()[0]
-                    : foreignKey.PropertyType;
-                var fkDetail = new ForeignKeyDetail
-                {
-                    Type = fkPropertyType,
-                    ParentType = type,
-                    IsList = isList,
-                    ListType = isList ? foreignKey.PropertyType : null,
-                    PropertyName = foreignKey.Name,
-                    ChildTypes = new List<ForeignKeyDetail>(),
-                    PrimaryKeyDatabaseNames = _primaryKeyColumnNamesWithTableName(fkPropertyType, foreignKey.Name),
-                    KeysSelectedHashCodeList = new Dictionary<int, List<int>>()
-                };
-
-                result.Add(fkDetail);
-
-                resultingTypes.Add(new PulledForeignKeyDetail(foreignKey));
-
-                if (HasForeignKeys(fkPropertyType))
-                {
-                    _getChildren(fkDetail.ChildTypes, fkPropertyType, resultingTypes);
-                }
-            }
         }
 
         private static void _addForeignKeyJoinsRecursive(SqlJoinCollection result, Type type)

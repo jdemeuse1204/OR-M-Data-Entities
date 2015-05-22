@@ -3,6 +3,7 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
+    [View("1")]
     [Table("Contacts")]
     public class Contact
     {

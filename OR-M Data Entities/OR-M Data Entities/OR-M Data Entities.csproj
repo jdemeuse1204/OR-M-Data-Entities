@@ -90,6 +90,7 @@
     <Compile Include="Expressions\ExpressionWhereJoinQuery.cs" />
     <Compile Include="Expressions\ObjectMapping\ObjectColumnOrderType.cs" />
     <Compile Include="Expressions\Containers\BuildContainer.cs" />
+    <Compile Include="Expressions\ObjectMapping\TableInfo.cs" />
     <Compile Include="Expressions\Resolution\Builder.cs" />
     <Compile Include="Expressions\Containers\WhereContainer.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
@@ -115,6 +116,7 @@
     <Compile Include="Mapping\Objects\ObjectMapper.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
+    <Compile Include="Mapping\View.cs" />
     <Compile Include="ModificationState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryNotValidException.cs" />

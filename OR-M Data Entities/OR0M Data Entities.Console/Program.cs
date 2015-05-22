@@ -1,21 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
+using ORSigningPro.Common.Data.ORTSigningPro.Tables;
 using OR_M_Data_Entities;
-using OR_M_Data_Entities.Commands;
-using OR_M_Data_Entities.Commands.Secure.StatementParts;
-using OR_M_Data_Entities.Commands.Transform;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.ObjectMapping;
-using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Tests.Tables;
+using Address = OR_M_Data_Entities.Tests.Tables.Address;
+using Contact = OR_M_Data_Entities.Tests.Tables.Contact;
 
 namespace OR0M_Data_Entities.Console
 {
@@ -34,16 +24,17 @@ namespace OR0M_Data_Entities.Console
 
         static void Main(string[] args)
         {
-            var context = new DbSqlContext("sqlExpress");
+            //"ORTSigningProEntities"
+            var context = new DbSqlContext("ORTSigningProEntities");
 
             var lst = new List<string> { "James", "Megan" };
 
             var orderedQuery =
-                context.SelectAll<Contact>()
-                    .Where<Contact>(
+                context.SelectAll<MobileClosing>()
+                    .Where<MobileClosing>(
                         w =>
-                            w.FirstName == null)
-                    .ToList<Contact>();
+                            w.MobileClosingID == 12)
+                    .ToList<MobileClosing>();
 
             if (orderedQuery != null)
             {

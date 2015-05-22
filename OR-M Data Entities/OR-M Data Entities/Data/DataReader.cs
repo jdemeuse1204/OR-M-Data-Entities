@@ -36,35 +36,35 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        public T FirstOrDefault()
+        public T FirstOrDefault(string viewId = null)
 	    {
 	        _reader.Read();
 
-            var result = _reader.ToObject<T>();
+            var result = _reader.ToObject<T>(viewId);
 
             Dispose();
 
             return result == null ? default(T) : result;
 	    }
 
-        public T First()
+        public T First(string viewId = null)
         {
             _reader.Read();
 
-            var result = _reader.ToObject<T>();
+            var result = _reader.ToObject<T>(viewId);
 
             Dispose();
 
             return result;
         }
 
-	    public List<T> ToList()
+        public List<T> ToList(string viewId = null)
 	    {
 	        var result = new List<T>();
 
 	        while (_reader.Read())
 	        {
-                result.Add(_reader.ToObject<T>());
+                result.Add(_reader.ToObject<T>(viewId));
 	        }
 
             Dispose();

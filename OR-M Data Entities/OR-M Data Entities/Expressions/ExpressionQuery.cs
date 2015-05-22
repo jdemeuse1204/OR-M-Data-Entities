@@ -113,7 +113,7 @@ namespace OR_M_Data_Entities.Expressions
 			return genericMethod.Invoke(this, null);
 		}
 
-		public T First<T>() 
+        public T First<T>(string viewId = null) 
 		{
 		    if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof (T) != typeof (object))
 		    {
@@ -124,11 +124,11 @@ namespace OR_M_Data_Entities.Expressions
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
 			{
-				return reader.First();
+                return reader.First(viewId);
 			}
 		}
 
-        public T FirstOrDefault<T>()
+        public T FirstOrDefault<T>(string viewId = null)
         {
             if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof(T) != typeof(object))
             {
@@ -139,7 +139,7 @@ namespace OR_M_Data_Entities.Expressions
 
             using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
             {
-                return reader.FirstOrDefault();
+                return reader.FirstOrDefault(viewId);
             }
         }
 
@@ -153,7 +153,7 @@ namespace OR_M_Data_Entities.Expressions
 			return result as dynamic;
 		}
 
-        public List<T> ToList<T>()
+        public List<T> ToList<T>(string viewId = null)
 		{
             if (Map.DataReturnType == ObjectMapReturnType.Dynamic && typeof(T) != typeof(object))
             {
@@ -164,7 +164,7 @@ namespace OR_M_Data_Entities.Expressions
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
 			{
-				return reader.Cast<T>().ToList();
+			    return reader.ToList(viewId);
 			}
 		}
 

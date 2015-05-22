@@ -139,15 +139,22 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
             _selectRecursive(type, table);
         }
 
-        private void _selectRecursive(Type type, ObjectTable parentTable)
+        private void _selectRecursive(Type type, ObjectTable parentTable, bool isComingFromList = false)
         {
             foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(type))
             {
                 var propertyType = foreignKey.GetPropertyType();
                 var table = new ObjectTable(propertyType, foreignKey.Name, DatabaseSchemata.GetTableName(propertyType));
                 var attribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
+                var isList = foreignKey.PropertyType.IsList();
 
-                if (foreignKey.PropertyType.IsList())
+                // if a left join occurs all subsequent joins should be left joined
+                if (!isComingFromList && isList)
+                {
+                    isComingFromList = true;
+                }
+
+                if (isList)
                 {
                     var column = parentTable.Columns.First(w => w.IsKey);
                     var childColumn = table.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
@@ -161,14 +168,14 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
                     var childColumn = table.Columns.First(w => w.IsKey);
 
                     // must exist
-                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Inner)); 
+                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, isComingFromList ? JoinType.Left : JoinType.Inner)); 
                 }
 
                 _tables.Add(table);
 
                 if (DatabaseSchemata.HasForeignKeys(propertyType))
                 {
-                    _selectRecursive(propertyType, table);
+                    _selectRecursive(propertyType, table, isComingFromList);
                 }
             }
         }
