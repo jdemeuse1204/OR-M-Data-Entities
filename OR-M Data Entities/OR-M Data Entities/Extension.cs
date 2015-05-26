@@ -229,18 +229,6 @@ namespace OR_M_Data_Entities
                 var currentCompositeKey = row.PrimaryKeys.Sum(t => reader[t].GetHashCode());
                 var canAddObject = !row.KeyHashesLoaded.Contains(currentCompositeKey);
 
-                // load FK
-
-                if (!canAddObject)
-                {
-                    // check to see how we continue
-                    if (_canContinue(ref i, foreignKey.Count, reader, pkValue, primaryKeyLookUpName))
-                    {
-                        continue;
-                    }
-                    break;
-                }
-
                 if (row.ParentType != currentInstance.GetType())
                 {
                     // if the ParentProperty is null the property is coming from the base
@@ -297,17 +285,29 @@ namespace OR_M_Data_Entities
                     }
                 }
 
+                // check if the property has been loaded
+                var propertyToBeSet = currentInstance.GetType().GetProperty(row.Property.Name).GetValue(currentInstance);
+
+                // load FK
+                if (propertyToBeSet != null && !canAddObject)
+                {
+                    // check to see how we continue
+                    if (_canContinue(ref i, foreignKey.Count, reader, pkValue, primaryKeyLookUpName))
+                    {
+                        continue;
+                    }
+                    break;
+                }
+
                 if (row.IsList)
                 {
                     // does list exist?
-                    var property = currentInstance.GetType().GetProperty(row.Property.Name).GetValue(currentInstance);
-
-                    if (property == null)
+                    if (propertyToBeSet == null)
                     {
                         // create out list
                         currentInstance.SetPropertyInfoValue(row.Property.Name, Activator.CreateInstance(row.Property.PropertyType));
 
-                        property = currentInstance.GetType().GetProperty(row.Property.Name).GetValue(currentInstance);
+                        propertyToBeSet = currentInstance.GetType().GetProperty(row.Property.Name).GetValue(currentInstance);
                     }
 
                     // add object
@@ -319,7 +319,7 @@ namespace OR_M_Data_Entities
 
                     if (reader.LoadObjectWithForeignKeys(childInstance, row.TableAlias))
                     {
-                        property.GetType().GetMethod("Add").Invoke(property, new[] { childInstance });
+                        propertyToBeSet.GetType().GetMethod("Add").Invoke(propertyToBeSet, new[] { childInstance });
                     }
                 }
                 else

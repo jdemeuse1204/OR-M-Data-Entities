@@ -33,7 +33,7 @@ namespace OR0M_Data_Entities.Console
                 context.SelectAll<MobileClosing>()
                     .Where<MobileClosing>(
                         w =>
-                            w.MobileClosingID == 12)
+                            w.MobileClosingID == 10)
                     .ToList<MobileClosing>();
 
             if (orderedQuery != null)
