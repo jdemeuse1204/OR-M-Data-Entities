@@ -25,16 +25,16 @@ namespace OR0M_Data_Entities.Console
         static void Main(string[] args)
         {
             //"ORTSigningProEntities"
-            var context = new DbSqlContext("ORTSigningProEntities");
+            var context = new DbSqlContext("sqlExpress");
 
             var lst = new List<string> { "James", "Megan" };
 
             var orderedQuery =
-                context.SelectAll<MobileClosing>()
-                    .Where<MobileClosing>(
+                context.SelectAll<Contact>()
+                    .Where<Contact>(
                         w =>
-                            w.MobileClosingID == 10)
-                    .ToList<MobileClosing>();
+                            w.ID == 1)
+                    .ToList<Contact>("2");
 
             if (orderedQuery != null)
             {
