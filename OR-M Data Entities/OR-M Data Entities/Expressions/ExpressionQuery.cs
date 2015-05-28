@@ -51,11 +51,11 @@ namespace OR_M_Data_Entities.Expressions
 				Activator.CreateInstance(typeof(T), new object[] { Map }) as T;
 		}
 
-		protected override BuildContainer Build()
+		protected override BuildContainer Build(string viewId)
 		{
 			var resolver = _getResolver();
 
-			return resolver.Resolve();
+            return resolver.Resolve(viewId);
 		}
 
 		private Resolver _getResolver()
@@ -120,7 +120,7 @@ namespace OR_M_Data_Entities.Expressions
 		        throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof (T).Name));
 		    }
 
-			var buildContainer = Build();
+			var buildContainer = Build(viewId);
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
 			{
@@ -135,7 +135,7 @@ namespace OR_M_Data_Entities.Expressions
                 throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
             }
 
-            var buildContainer = Build();
+            var buildContainer = Build(viewId);
 
             using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
             {
@@ -160,7 +160,7 @@ namespace OR_M_Data_Entities.Expressions
                 throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
             }
 
-			var buildContainer = Build();
+            var buildContainer = Build(viewId);
 
 			using (var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map))
 			{
@@ -175,7 +175,7 @@ namespace OR_M_Data_Entities.Expressions
                 throw new Exception(string.Format("Cannot convert dynamic selection to {0}", typeof(T).Name));
             }
 
-			var buildContainer = Build();
+			var buildContainer = Build(null);
 
 			var reader = Context.ExecuteQuery<T>(buildContainer.Sql, buildContainer.Parameters, Map);
 

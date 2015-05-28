@@ -21,9 +21,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             Map = map;
         }
 
-        protected string ResolveJoins()
+        protected string ResolveJoins(string viewId)
         {
-            return Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetJoins());
+            return string.IsNullOrWhiteSpace(viewId)
+                ? Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetJoins())
+                : Map.Tables.Where(w => w.ViewIds.Contains(viewId))
+                    .Aggregate(string.Empty, (current, table) => current + table.GetJoins());
         }
 
         protected string ResolveSelect()
@@ -38,14 +41,23 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return Map.FromTableName();
         }
 
-        protected string ResolveColumns()
+        protected string ResolveColumns(string viewId)
         {
-            return Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetSelectColumns()).TrimEnd(',');
+            return string.IsNullOrWhiteSpace(viewId)
+                ? Map.Tables.Aggregate(string.Empty, (current, table) => current + table.GetSelectColumns()).TrimEnd(',')
+                : Map.Tables.Where(w => w.ViewIds.Contains(viewId))
+                    .Aggregate(string.Empty, (current, table) => current + table.GetSelectColumns())
+                    .TrimEnd(',');
         }
 
-        public string ResolveOrderBy()
+        public string ResolveOrderBy(string viewId)
         {
-            return Map.OrderByColumns().Aggregate(" ORDER BY", (current, column) => current + string.Format(" {0} {1},", column.GetText(), _getOrderByText(column.OrderType))).TrimEnd(',');
+            return
+                Map.OrderByColumns(viewId)
+                    .Aggregate(" ORDER BY",
+                        (current, column) =>
+                            current + string.Format(" {0} {1},", column.GetText(), _getOrderByText(column.OrderType)))
+                    .TrimEnd(',');
         }
 
         private string _getOrderByText(ObjectColumnOrderType order)
@@ -61,11 +73,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             }
         }
 
-        protected WhereContainer ResolveWheres()
+        protected WhereContainer ResolveWheres(string viewId)
         {
             var where = new WhereContainer();
+            var list = string.IsNullOrWhiteSpace(viewId)
+                ? Map.Tables.Where(w => w.HasValidation())
+                : Map.Tables.Where(w => w.HasValidation() && w.ViewIds.Contains(viewId));
 
-            foreach (var objectTable in Map.Tables.Where(w => w.HasValidation()))
+            foreach (var objectTable in list)
             {
                 objectTable.GetWheres(where);
             }
@@ -73,7 +88,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return where;
         }
 
-        public abstract BuildContainer Resolve();
+        public abstract BuildContainer Resolve(string viewId);
     }
 
     #region helpers
@@ -84,13 +99,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var joins = ResolveJoins();
+            var columns = ResolveColumns(viewId);
+            var joins = ResolveJoins(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
@@ -109,12 +124,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
+            var columns = ResolveColumns(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}",
                 select,
@@ -132,14 +147,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
-            var where = ResolveWheres();
+            var where = ResolveWheres(viewId);
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var joins = ResolveJoins();
+            var columns = ResolveColumns(viewId);
+            var joins = ResolveJoins(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
@@ -165,13 +180,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
-            var where = ResolveWheres();
+            var where = ResolveWheres(viewId);
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
+            var columns = ResolveColumns(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}",
                 select,
@@ -196,14 +211,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var joins = ResolveJoins();
-            var ordering = ResolveOrderBy();
+            var columns = ResolveColumns(viewId);
+            var joins = ResolveJoins(viewId);
+            var ordering = ResolveOrderBy(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}{4}",
                 select,
@@ -223,13 +238,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var ordering = ResolveOrderBy();
+            var columns = ResolveColumns(viewId);
+            var ordering = ResolveOrderBy(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}",
                 select,
@@ -248,10 +263,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
-            var where = ResolveWheres();
+            var where = ResolveWheres(viewId);
             var whereText = string.Empty;
 
             for (var i = 0; i < where.ValidationStatements.Count; i++)
@@ -261,9 +276,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var joins = ResolveJoins();
-            var ordering = ResolveOrderBy();
+            var columns = ResolveColumns(viewId);
+            var joins = ResolveJoins(viewId);
+            var ordering = ResolveOrderBy(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}{4}{5}",
                 select,
@@ -286,10 +301,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
         }
 
-        public override BuildContainer Resolve()
+        public override BuildContainer Resolve(string viewId)
         {
             var result = new BuildContainer();
-            var where = ResolveWheres();
+            var where = ResolveWheres(viewId);
             var whereText = string.Empty;
 
             for (var i = 0; i < where.ValidationStatements.Count; i++)
@@ -299,8 +314,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             var select = ResolveSelect();
             var from = ResolveFrom();
-            var columns = ResolveColumns();
-            var ordering = ResolveOrderBy();
+            var columns = ResolveColumns(viewId);
+            var ordering = ResolveOrderBy(viewId);
 
             result.Sql = string.Format("{0}{1} FROM {2}{3}{4}",
                 select,

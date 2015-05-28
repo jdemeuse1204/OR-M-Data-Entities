@@ -36,10 +36,16 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping
             Type = type;
             IsBaseTable = isBaseTable;
             LinkedServer = type.GetCustomAttribute<LinkedServerAttribute>();
+
+            var view = type.GetCustomAttribute<ViewAttribute>();
+
+            ViewIds = view == null ? new string[0] : view.ViewIds;
         }
         #endregion
 
         #region Properties
+        public string[] ViewIds { get; private set; }
+
         public Type Type { get; set; }
 
         public string Alias { get; set; }

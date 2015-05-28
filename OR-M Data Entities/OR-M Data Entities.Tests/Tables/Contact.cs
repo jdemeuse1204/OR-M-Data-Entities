@@ -16,7 +16,7 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public int PhoneID { get; set; }
 
-        [ForeignKey("PhoneID")]
+        [PseudoKey("PhoneID", "ID")]
         public PhoneNumber Number { get; set; }
 
         [ForeignKey("ContactID")]

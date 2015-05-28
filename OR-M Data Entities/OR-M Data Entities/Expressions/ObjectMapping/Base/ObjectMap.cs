@@ -48,7 +48,8 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
         public ObjectMap(Type type)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
-            var hasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            var hasForeignKeys = DatabaseSchemata.HasForeignOrPseudoKeys(type);
+
             DataReturnType = hasForeignKeys ? ObjectMapReturnType.ForeignKeys : ObjectMapReturnType.Basic;
             BaseType = type;
             var table = new ObjectTable(type, tableName, tableName, true, true);
@@ -97,11 +98,14 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
             _tables.Add(table);
         }
 
-        public IOrderedEnumerable<ObjectColumn> OrderByColumns()
+        public IOrderedEnumerable<ObjectColumn> OrderByColumns(string viewId)
         {
             var result = new List<ObjectColumn>();
+            var list = string.IsNullOrWhiteSpace(viewId)
+                ? Tables.Where(w => w.HasOrderSequence())
+                : Tables.Where(w => w.HasOrderSequence() && w.ViewIds.Contains(viewId));
 
-            foreach (var table in Tables.Where(w => w.HasOrderSequence()))
+            foreach (var table in list)
             {
                 result.AddRange(table.GetOrderByColumns());
             }
@@ -122,7 +126,7 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
         public void AddAllTables(Type type)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
-            var hasForeignKeys = DatabaseSchemata.HasForeignKeys(type);
+            var hasForeignKeys = DatabaseSchemata.HasForeignOrPseudoKeys(type);
             DataReturnType = hasForeignKeys ? ObjectMapReturnType.ForeignKeys : ObjectMapReturnType.Basic;
 
             var table = new ObjectTable(type, tableName, tableName, false, hasForeignKeys);
@@ -141,12 +145,15 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
 
         private void _selectRecursive(Type type, ObjectTable parentTable, bool isComingFromList = false)
         {
-            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(type))
+            foreach (var foreignKey in DatabaseSchemata.GetAllForeignAndPseudoKeys(type))
             {
                 var propertyType = foreignKey.GetPropertyType();
                 var table = new ObjectTable(propertyType, foreignKey.Name, DatabaseSchemata.GetTableName(propertyType));
-                var attribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
+                var foreignKeyAttribute = foreignKey.GetCustomAttribute<ForeignKeyAttribute>();
+                var pseudoKeyAttribute = foreignKey.GetCustomAttribute<PseudoKeyAttribute>();
                 var isList = foreignKey.PropertyType.IsList();
+
+                if (foreignKeyAttribute != null && pseudoKeyAttribute != null) throw new Exception("Cannot have Pseudo and Foreign Key");
 
                 // if a left join occurs all subsequent joins should be left joined
                 if (!isComingFromList && isList)
@@ -154,29 +161,61 @@ namespace OR_M_Data_Entities.Expressions.ObjectMapping.Base
                     isComingFromList = true;
                 }
 
-                if (isList)
+                if (foreignKeyAttribute != null)
                 {
-                    var column = parentTable.Columns.First(w => w.IsKey);
-                    var childColumn = table.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
-
-                    // can be one or none to many
-                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Left));
+                    _addForeignKey(foreignKeyAttribute, table, parentTable, isList, isComingFromList);
                 }
                 else
                 {
-                    var column = parentTable.Columns.First(w => w.Name == attribute.ForeignKeyColumnName);
-                    var childColumn = table.Columns.First(w => w.IsKey);
-
-                    // must exist
-                    column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, isComingFromList ? JoinType.Left : JoinType.Inner)); 
+                    _addPseudoKey(pseudoKeyAttribute, table, parentTable, isList, isComingFromList);
                 }
 
                 _tables.Add(table);
 
-                if (DatabaseSchemata.HasForeignKeys(propertyType))
+                if (DatabaseSchemata.HasForeignOrPseudoKeys(propertyType))
                 {
                     _selectRecursive(propertyType, table, isComingFromList);
                 }
+            }
+        }
+
+        private void _addForeignKey(ForeignKeyAttribute foreignKeyAttribute, ObjectTable table, ObjectTable parentTable, bool isList, bool isComingFromList)
+        {
+            if (isList)
+            {
+                var column = parentTable.Columns.First(w => w.IsKey);
+                var childColumn = table.Columns.First(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
+
+                // can be one or none to many
+                column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Left));
+            }
+            else
+            {
+                var column = parentTable.Columns.First(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
+                var childColumn = table.Columns.First(w => w.IsKey);
+
+                // must exist
+                column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, isComingFromList ? JoinType.Left : JoinType.Inner));
+            }
+        }
+
+        private void _addPseudoKey(PseudoKeyAttribute foreignKeyAttribute, ObjectTable table, ObjectTable parentTable, bool isList, bool isComingFromList)
+        {
+            if (isList)
+            {
+                var column = parentTable.Columns.First(w => w.Name == foreignKeyAttribute.ParentColumnName);
+                var childColumn = table.Columns.First(w => w.Name == foreignKeyAttribute.ChildColumnName);
+
+                // can be one or none to many
+                column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, JoinType.Left));
+            }
+            else
+            {
+                var column = parentTable.Columns.First(w => w.Name == foreignKeyAttribute.ParentColumnName);
+                var childColumn = table.Columns.First(w => w.Name == foreignKeyAttribute.ChildColumnName);
+
+                // must exist
+                column.Joins.Add(new KeyValuePair<ObjectColumn, JoinType>(childColumn, isComingFromList ? JoinType.Left : JoinType.Inner));
             }
         }
     }

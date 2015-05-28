@@ -193,6 +193,18 @@ namespace OR_M_Data_Entities.Data
                w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
         }
 
+        public static List<PropertyInfo> GetPseudoKeys(Type entityType)
+        {
+            return entityType.GetProperties().Where(w =>
+               w.GetCustomAttribute<PseudoKeyAttribute>() != null).ToList();
+        }
+
+        public static List<PropertyInfo> GetAllForeignAndPseudoKeys(Type entityType)
+        {
+            return entityType.GetProperties().Where(w =>
+               w.GetCustomAttribute<SearchableForeignKeyAttribute>() != null).ToList();
+        } 
+
         public static List<ForeignKeyAttribute> GetForeignKeyAttributes(Type entityType)
         {
             return entityType.GetProperties().Where(w =>
@@ -214,6 +226,11 @@ namespace OR_M_Data_Entities.Data
             return HasForeignKeys(typeof(T));
         }
 
+        public static bool HasForeignOrPseudoKeys(Type entityType)
+        {
+            return entityType.GetProperties().Count(w => w.GetCustomAttribute<SearchableForeignKeyAttribute>() != null) > 0;
+        }
+
         public static bool HasForeignKeys(Type entityType)
         {
             return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
@@ -222,6 +239,21 @@ namespace OR_M_Data_Entities.Data
         public static bool HasForeignKeys(object entity)
         {
             return HasForeignKeys(entity.GetType());
+        }
+
+        public static bool HasPseudoKeys(Type entityType)
+        {
+            return entityType.GetProperties().Count(w => w.GetCustomAttribute<PseudoKeyAttribute>() != null) > 0;
+        }
+
+        public static bool HasPseudoKeys(object entity)
+        {
+            return HasPseudoKeys(entity.GetType());
+        }
+
+        public static bool HasPseudoKeys<T>()
+        {
+            return HasPseudoKeys(typeof(T));
         }
 
         public static bool HasForeignListKeys(object entity)
@@ -266,7 +298,7 @@ namespace OR_M_Data_Entities.Data
 
         public static List<PropertyInfo> GetTableFields(Type entityType)
         {
-            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<ForeignKeyAttribute>() == null).ToList();
+            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<SearchableForeignKeyAttribute>() == null).ToList();
         }
 
         public static PropertyInfo GetTableFieldByName(string name, Type type)
@@ -350,7 +382,7 @@ namespace OR_M_Data_Entities.Data
                 // add the types foreign keys
                 var a = typesToScan[i];
 
-                typesToScan.AddRange(GetForeignKeys(a.Type).Select(w => new TableInfo
+                typesToScan.AddRange(GetAllForeignAndPseudoKeys(a.Type).Select(w => new TableInfo
                 {
                     ParentType = a.Type,
                     ParentProperty = a.Property,

@@ -105,6 +105,7 @@
     <Compile Include="Data\Commit\SqlJoinCollectionKeyMatchType.cs" />
     <Compile Include="Extension.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
+    <Compile Include="Mapping\Base\SearchableForeignKey.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
     <Compile Include="Mapping\Column.cs" />
     <Compile Include="Mapping\DbGenerationOption.cs" />
@@ -114,6 +115,7 @@
     <Compile Include="Mapping\Base\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\Objects\ObjectMapper.cs" />
+    <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
     <Compile Include="Mapping\View.cs" />

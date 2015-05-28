@@ -13,6 +13,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
     public abstract class Builder
     {
         public ObjectMap Map { get; protected set; }
-        protected abstract BuildContainer Build();
+        protected abstract BuildContainer Build(string viewId);
     }
 }
