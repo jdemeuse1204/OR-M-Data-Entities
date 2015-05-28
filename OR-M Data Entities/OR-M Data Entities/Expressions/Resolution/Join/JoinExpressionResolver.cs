@@ -2,7 +2,6 @@
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
@@ -10,20 +9,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
 {
     public class JoinExpressionResolver : ExpressionResolver
     {
-        public JoinExpressionResolver(DbQueryBase query)
-            : base(query)
-        {
-        }
-
-        public void Resolve<TOuter, TInner, TKey, TResult>(
+        public static void Resolve<TOuter, TInner, TKey, TResult>(
             ExpressionQuery<TOuter> outer,
             ExpressionQuery<TInner> inner,
             Expression<Func<TOuter, TKey>> outerKeySelector,
             Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector,
-            ExpressionQuery<TResult> expressionQuery, JoinType joinType)
+            ExpressionQuery<TResult> expressionQuery, 
+            JoinType joinType,
+            JoinResolutionContainer joinResolution)
         {
-            JoinResolution.AddJoin(new JoinGroup
+            joinResolution.AddJoin(new JoinGroup
             {
                 Left = _resolveInnerKeySelector(innerKeySelector),
                 Right = _resolveOuterKeySelector(outerKeySelector),
@@ -31,7 +27,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             });
         }
 
-        private RightJoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector)
+        private static RightJoinNode _resolveOuterKeySelector<TOuter, TKey>(Expression<Func<TOuter, TKey>> outerKeySelector)
         {
             return new RightJoinNode
             {
@@ -40,7 +36,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             };
         }
 
-        private LeftJoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector)
+        private static LeftJoinNode _resolveInnerKeySelector<TInner, TKey>(Expression<Func<TInner, TKey>> innerKeySelector)
         {
             return new LeftJoinNode
             {
@@ -49,7 +45,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             };
         }
 
-        private Type _resolveType<T, TKey>(Expression<Func<T, TKey>> expression)
+        private static Type _resolveType<T, TKey>(Expression<Func<T, TKey>> expression)
         {
             if (Shape == null || !expression.Parameters[0].Type.IsAnonymousType()) return expression.Parameters[0].Type;
 

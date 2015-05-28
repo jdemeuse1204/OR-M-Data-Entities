@@ -1,34 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Expressions.Resolution.Containers;
+using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
-    public class DbQuery : DbQueryJoinLoading
+    public abstract class DbQuery<T> : DbSubQuery<T>
     {
-        public DbQuery(Type baseType = null,
-            WhereResolutionContainer whereResolution = null,
-            SelectInfoResolutionContainer selectInfoCollection = null,
-            JoinResolutionContainer joinResolution = null,
-            List<Type> types = null)
-            : base(baseType, whereResolution, selectInfoCollection, joinResolution, types)
-        {
-        }
+        #region Properties
+        public string Sql { get; private set; }
+        #endregion
 
-        protected DbQuery(DbQueryBase query)
-            : base(query)
+        #region Constructor
+        protected DbQuery()
+            : base()
         {
         }
-
-        public void SetShape(object shape)
-        {
-            Shape = shape;
-        }
+        #endregion
 
         public void Resolve()
         {
@@ -46,7 +37,7 @@ namespace OR_M_Data_Entities.Expressions.Query
 
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
 
-            var from = DatabaseSchemata.GetTableName(BaseType);
+            var from = DatabaseSchemata.GetTableName(typeof(T));
 
             Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}",
                 SelectList.IsSelectDistinct ? " DISTINCT" : string.Empty,
@@ -57,6 +48,8 @@ namespace OR_M_Data_Entities.Expressions.Query
                 "");
         }
 
+
+        // TODO: remove recursion
         private void _initialize(Type parentType, string parentTableName, bool isParentSearch = true)
         {
             foreach (

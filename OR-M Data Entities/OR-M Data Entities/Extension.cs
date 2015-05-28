@@ -21,6 +21,7 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Expressions.Resolution.Functions;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Expressions.Resolution.Select;
@@ -123,18 +124,14 @@ namespace OR_M_Data_Entities
 
         public static ExpressionQuery<T> Distinct<T>(this ExpressionQuery<T> source)
         {
-            var resolver = new ExpressionQueryFunctionResolver(source.Query);
-
-            resolver.ResolveDistinct();
+            ((ExpressionQueryResolvable<T>)source).ResolveDistinct();
 
             return source;
         }
 
         public static ExpressionQuery<T> Take<T>(this ExpressionQuery<T> source, int rows)
         {
-            var resolver = new ExpressionQueryFunctionResolver(source.Query);
-
-            resolver.ResolveTake(rows);
+            ((ExpressionQueryResolvable<T>)source).ResolveTakeRows(rows);
 
             return source;
         }
@@ -246,9 +243,7 @@ namespace OR_M_Data_Entities
 
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            var resolver = new WhereExpressionResolver<TSource>(source.Query);
-
-            resolver.Resolve(expression);
+            ((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
 
             return source;
         }
@@ -257,47 +252,22 @@ namespace OR_M_Data_Entities
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            var result = new ExpressionQuery<TResult>(outer.Context, outer.Query);
-
-            var joinResolver = new JoinExpressionResolver(result.Query);
-            joinResolver.Resolve(outer, inner, outerKeySelector, innerKeySelector, resultSelector, result, JoinType.Inner);
-
-            // resolve select too
-            var selectResolver = new SelectExpressionResolver(result.Query);
-            selectResolver.Resolve(resultSelector);
-
-            result.Query.SetShape(resultSelector.Body);
-
-            return result;
+            return ((ExpressionQueryResolvable<TOuter>) outer).ResolveInnerJoin(inner, outerKeySelector,
+                innerKeySelector, resultSelector);
         }
 
         public static ExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            var result = new ExpressionQuery<TResult>(outer.Context, outer.Query);
-
-            var joinResolver = new JoinExpressionResolver(result.Query);
-            joinResolver.Resolve(outer, inner, outerKeySelector, innerKeySelector, resultSelector, result, JoinType.Left);
-
-            // resolve select too
-            var selectResolver = new SelectExpressionResolver(result.Query);
-            selectResolver.Resolve(resultSelector);
-
-            result.Query.SetShape(resultSelector.Body);
-
-            return result;
+            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveInnerJoin(inner, outerKeySelector,
+                innerKeySelector, resultSelector);
         }
 
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            var result = new ExpressionQuery<TResult>(source.Context, source.Query);
-            var resolver = new SelectExpressionResolver(result.Query);
-
-            resolver.Resolve(selector);
-
-            return result;
+            return ((ExpressionQueryResolvable<TSource>) source).ResolveSelect(selector, source);
         }
 
         public static bool IsExpressionQuery(this MethodCallExpression expression)
@@ -472,25 +442,26 @@ namespace OR_M_Data_Entities
 
         private static bool LoadObjectWithForeignKeys(this PeekDataReader reader, object instance)
         {
-            try
-            {
-                // find any unmapped attributes
-                var properties = reader.DbQuery.SelectList.Infos.Where(w => w.NewType == instance.GetType());
+            throw new Exception("FIX ME!");
+            //try
+            //{
+            //    // find any unmapped attributes
+            //    var properties = reader.DbQuery.SelectList.Infos.Where(w => w.NewType == instance.GetType());
 
-                foreach (var property in properties)
-                {
-                    // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                    var dbValue = reader[property.Ordinal];
+            //    foreach (var property in properties)
+            //    {
+            //        // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+            //        var dbValue = reader[property.Ordinal];
 
-                    instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
-                }
+            //        instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
+            //    }
 
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            //    return true;
+            //}
+            //catch
+            //{
+            //    return false;
+            //}
         }
 
         private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
@@ -687,10 +658,11 @@ namespace OR_M_Data_Entities
 
         private static int GetCompositKey(this ObjectSchematic schematic, PeekDataReader reader)
         {
-            var infos = reader.DbQuery.SelectList.Infos.Where(
-                w => w.NewType == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
+            //var infos = reader.DbQuery.SelectList.Infos.Where(
+            //    w => w.NewType == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
 
-            return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
+            //return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
+            throw new  Exception("FIX ME!");
         } 
         #endregion
     }

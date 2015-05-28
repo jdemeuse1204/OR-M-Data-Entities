@@ -5,7 +5,7 @@ using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public class ExpressionQuery<T> : IEnumerable<T>, IExpressionQueryable
+    public abstract class ExpressionQuery<T> : DbQuery<T>, IEnumerable<T>
     {
         #region Fields
         public readonly DatabaseReading Context;
@@ -14,8 +14,6 @@ namespace OR_M_Data_Entities.Expressions
         #region Properties
         private List<T> _queryResult { get; set; } 
 
-        public DbQuery Query { get; set; }
-
         private bool _isLazyLoadEnabled
         {
             get { return Context != null && Context.IsLazyLoadEnabled; }
@@ -23,19 +21,13 @@ namespace OR_M_Data_Entities.Expressions
         #endregion
 
         #region Constructor
-        public ExpressionQuery(DatabaseReading context = null, DbQuery query = null)
+        protected ExpressionQuery(DatabaseReading context = null)
         {
             Context = context;
-            Query = query ?? new DbQuery();
-        }
-
-        public ExpressionQuery()
-        {
-
         }
         #endregion
 
-        #region Methods
+        #region Enumeration Methods
         public IEnumerator<T> GetEnumerator()
         {
             if (_queryResult != null) return _queryResult.GetEnumerator();

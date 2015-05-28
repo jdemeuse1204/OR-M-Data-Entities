@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
-using OR_M_Data_Entities.Expressions.Query;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {
@@ -67,7 +66,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
             var expressionQuery = typeof(ExpressionQuery<>);
             var creationType = expressionQuery.MakeGenericType(type);
 
-            query = Activator.CreateInstance(creationType, null, new DbQuery(type));
+            query = Activator.CreateInstance(creationType, null);
 
             ((dynamic)query).Query.InitializeWithoutForeignKeys();
         }

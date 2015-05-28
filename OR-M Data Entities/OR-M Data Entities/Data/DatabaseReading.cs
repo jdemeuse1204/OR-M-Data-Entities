@@ -6,7 +6,7 @@
  */
 
 using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Resolution;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -63,11 +63,10 @@ namespace OR_M_Data_Entities.Data
         #region Data Execution
         public ExpressionQuery<T> From<T>()
         {
-            var query = new DbQuery(typeof(T));
+            var resolvableQuery = new ExpressionQueryResolvable<T>(this);
 
-            query.Initialize();
 
-            return new ExpressionQuery<T>(this, query);
+            return resolvableQuery;
         } 
         #endregion
     }

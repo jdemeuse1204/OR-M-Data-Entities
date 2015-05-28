@@ -1,36 +1,38 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
-    public class WhereExpressionResolver<T> : ExpressionResolver
+    public class WhereExpressionResolver : ExpressionResolver
     {
-        public WhereExpressionResolver(DbQueryBase query)
-            : base(query)
+        public static void Resolve<T>(Expression<Func<T, bool>> expression, WhereResolutionContainer container)
         {
+            _evaluateTree(expression.Body as dynamic, container);
         }
 
-        public void Resolve(Expression<Func<T, bool>> expression)
+        private static void _evaluateTree(MethodCallExpression expression, WhereResolutionContainer container)
         {
-            _evaluateTree(expression.Body as BinaryExpression);
+            var result = _evaluate(expression, container, container.NextGroupNumber());
+
+            container.AddResolution(result);
         }
 
         // need to evaluate groupings
-        private void _evaluateTree(BinaryExpression expression)
+        private static void _evaluateTree(BinaryExpression expression, WhereResolutionContainer container)
         {
             // check to see if we are at the end of the expression
             if (!HasComparison(expression))
             {
-                var result = _evaluate(expression as dynamic, WhereResolution, WhereResolution.NextGroupNumber());
+                var result = _evaluate(expression as dynamic, container, container.NextGroupNumber());
 
-                WhereResolution.AddResolution(result);
+                container.AddResolution(result);
                 return;
             }
 
@@ -42,41 +44,41 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 // if the right has a left then its a group expression
                 if (IsGroup(expression.Right))
                 {
-                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+                    if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    _evaluateGroup(expression.Right as BinaryExpression, WhereResolution);
+                    _evaluateGroup(expression.Right as BinaryExpression, container);
                 }
                 else
                 {
-                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+                    if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    var result = _evaluate(expression.Right as dynamic, WhereResolution, WhereResolution.NextGroupNumber());
+                    var result = _evaluate(expression.Right as dynamic, container, container.NextGroupNumber());
 
-                    WhereResolution.AddResolution(result);
+                    container.AddResolution(result);
                     wasRightAdded = true;
                 }
 
                 // check to see if the end is a group
                 if (IsGroup(expression.Left))
                 {
-                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+                    if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    if (count == 0 && wasRightAdded) WhereResolution.AddConnector(ConnectorType.And);
+                    if (count == 0 && wasRightAdded) container.AddConnector(ConnectorType.And);
 
-                    _evaluateGroup(expression.Left as BinaryExpression, WhereResolution);
+                    _evaluateGroup(expression.Left as BinaryExpression, container);
                     break;
                 }
 
                 // check to see if we are at the end of the expression
                 if (!HasComparison(expression.Left))
                 {
-                    if (count != 0) WhereResolution.AddConnector(ConnectorType.Or);
+                    if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    if (count == 0 && wasRightAdded) WhereResolution.AddConnector(ConnectorType.And);
+                    if (count == 0 && wasRightAdded) container.AddConnector(ConnectorType.And);
 
-                    var result = _evaluate(expression.Left as dynamic, WhereResolution, WhereResolution.NextGroupNumber());
+                    var result = _evaluate(expression.Left as dynamic, container, container.NextGroupNumber());
 
-                    WhereResolution.AddResolution(result);
+                    container.AddResolution(result);
                     break;
                 }
 
@@ -87,7 +89,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
         #region Evaluate
 
-        private void _evaluateGroup(BinaryExpression expression, WhereResolutionContainer resolution)
+        private static void _evaluateGroup(BinaryExpression expression, WhereResolutionContainer resolution)
         {
             var groupNumber = resolution.NextGroupNumber();
             // comparisons are always AND here, will be no groups in here
@@ -121,7 +123,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, int group = -1)
+        private static WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, int group = -1)
         {
             var result = new WhereResolutionPart
             {
@@ -150,7 +152,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, int group = -1, ExpressionType? expressionType = null)
+        private static WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, int group = -1, ExpressionType? expressionType = null)
         {
             var result = new WhereResolutionPart
             {
@@ -192,13 +194,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     }
                     else
                     {
-                        result.CompareValue = string.Format("({0})",
-                            ((ICollection) value).Cast<object>()
-                                .Aggregate("",
-                                    (current, item) =>
-                                        current +
-                                        string.Format("{0},", resolution.GetParameter(string.Format("{0}", item))))
-                                .TrimEnd(','));
+                        result.CompareValue = new List<SqlDbParameter>();
+
+                        foreach (var item in ((ICollection) value))
+                        {
+                            ((List<SqlDbParameter>)result.CompareValue).Add(resolution.GetParameter(string.Format("{0}", item)));
+                        }
                     }
                     break;
                 case "STARTSWITH":
@@ -214,14 +215,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             return result;
         }
 
-        private WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, int group = -1)
+        private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, int group = -1)
         {
             return _evaluate(expression.Operand as dynamic, resolution, group, expression.NodeType);
         }
         #endregion
 
         #region Load Comparison Type
-        private void LoadComparisonType(BinaryExpression expression, WhereResolutionPart resolution)
+        private static void LoadComparisonType(BinaryExpression expression, WhereResolutionPart resolution)
         {
             switch (expression.NodeType)
             {
@@ -248,7 +249,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         #endregion
 
         #region Load Table And Column Name
-        private void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result)
+        private static void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result)
         {
             if (expression.Expression.NodeType == ExpressionType.Parameter)
             {
@@ -264,13 +265,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             }
         }
 
-        private void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result)
+        private static void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result)
         {
             LoadColumnAndTableName(expression.Object as MemberExpression, result);
         }
         #endregion
 
-        private bool HasComparison(Expression expression)
+        private static bool HasComparison(Expression expression)
         {
             return expression.NodeType == ExpressionType.And
                 || expression.NodeType == ExpressionType.AndAlso
@@ -278,7 +279,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 || expression.NodeType == ExpressionType.OrElse;
         }
 
-        private bool IsGroup(Expression expression)
+        private static bool IsGroup(Expression expression)
         {
             var binaryExpression = expression as BinaryExpression;
 
@@ -287,27 +288,27 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     binaryExpression.NodeType == ExpressionType.AndAlso);
         }
 
-        private bool HasParameter(ConstantExpression expression)
+        private static bool HasParameter(ConstantExpression expression)
         {
             return false;
         }
 
-        private bool HasParameter(UnaryExpression expression)
+        private static bool HasParameter(UnaryExpression expression)
         {
             return expression == null ? false : HasParameter(expression.Operand as dynamic);
         }
 
-        private bool HasParameter(ParameterExpression expression)
+        private static bool HasParameter(ParameterExpression expression)
         {
             return true;
         }
 
-        private bool HasParameter(MemberExpression expression)
+        private static bool HasParameter(MemberExpression expression)
         {
             return HasParameter(expression.Expression as dynamic);
         }
 
-        private bool HasParameter(MethodCallExpression expression)
+        private static bool HasParameter(MethodCallExpression expression)
         {
             var e = expression.Object;
 

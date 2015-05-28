@@ -1,28 +1,27 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
+using OR_M_Data_Entities.Expressions.Resolution.Select;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Expressions.Query
+namespace OR_M_Data_Entities.Expressions.Resolution.Join
 {
-    public abstract class DbQueryJoinLoading : DbQueryBase
+    public abstract class DbJoinQuery<T> : DbSelectQuery<T>
     {
-        protected DbQueryJoinLoading(Type baseType = null,
-        WhereResolutionContainer whereResolution = null,
-        SelectInfoResolutionContainer selectInfoCollection = null,
-        JoinResolutionContainer joinResolution = null,
-        List<Type> types = null)
-            : base(baseType, whereResolution, selectInfoCollection, joinResolution, types)
+        public readonly JoinResolutionContainer JoinResolution;
+
+        protected DbJoinQuery()
+            : base()
         {
+            
         }
 
-        protected DbQueryJoinLoading(DbQueryBase query)
-            : base(query)
+        protected void InitializeJoins()
         {
+            
         }
 
         private JoinGroupInfo _getJoinGroupInfo(PropertyInfo property)

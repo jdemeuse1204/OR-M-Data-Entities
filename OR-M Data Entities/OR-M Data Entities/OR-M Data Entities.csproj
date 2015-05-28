@@ -79,19 +79,20 @@
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
-    <Compile Include="Expressions\Query\DbQueryBase.cs" />
     <Compile Include="Expressions\Query\DbQuery.cs" />
-    <Compile Include="Expressions\Query\DbQueryJoinLoading.cs" />
-    <Compile Include="Expressions\Query\IExpressionQueryable.cs" />
     <Compile Include="Expressions\Query\TableInfo.cs" />
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
+    <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
+    <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
     <Compile Include="Expressions\Resolution\Where\Base\IQueryPart.cs" />
     <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\ChangeTableContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
-    <Compile Include="Expressions\Resolution\Functions\ExpressionQueryFunctionResolver.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolution\Where\DbWhereQuery.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereResolutionPart.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
     <Compile Include="Expressions\Resolution\Containers\WhereResolutionContainer.cs" />
@@ -123,7 +124,9 @@
     <None Include="OR-M Data Entities.licenseheader" />
     <None Include="README.md" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Expressions\Resolution\Functions\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

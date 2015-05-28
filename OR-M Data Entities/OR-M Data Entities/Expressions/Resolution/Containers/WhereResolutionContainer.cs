@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Where;
 using OR_M_Data_Entities.Expressions.Resolution.Where.Base;
@@ -119,6 +118,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                         currentLambdaResolition.CompareValue.IsExpressionQuery()
                             ? string.Format("({0})", _resolveSubQuery(currentLambdaResolition.CompareValue))
                             : ((SqlDbParameter) currentLambdaResolition.CompareValue).Name);
+
+                    // can be a list of sqldb parameters
 
                     continue;
                 }
