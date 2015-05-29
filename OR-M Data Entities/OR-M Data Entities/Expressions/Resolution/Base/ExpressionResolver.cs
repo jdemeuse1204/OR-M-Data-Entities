@@ -9,11 +9,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
 {
     public abstract class ExpressionResolver
     {
-        protected ExpressionResolver()
-        {
-            
-        }
-
         protected static string GetColumnName(MemberExpression expression)
         {
             if (expression.Expression is ParameterExpression)
@@ -55,12 +50,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         }
 
         #region Load Value
-        protected object GetValue(ConstantExpression expression)
+        protected static object GetValue(ConstantExpression expression)
         {
             return expression.Value ?? "IS NULL";
         }
 
-        protected object GetValue(MemberExpression expression)
+        protected static object GetValue(MemberExpression expression)
         {
             var objectMember = Expression.Convert(expression, typeof(object));
 
@@ -73,7 +68,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
             return value ?? "IS NULL";
         }
 
-        protected object GetValue(MethodCallExpression expression)
+        protected static object GetValue(MethodCallExpression expression)
         {
             if (IsSubQuery(expression))
             {
@@ -91,13 +86,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
             return value ?? "IS NULL";
         }
 
-        protected object GetValue(UnaryExpression expression)
+        protected static object GetValue(UnaryExpression expression)
         {
             return GetValue(expression.Operand as dynamic);
         }
         #endregion
 
-        protected bool IsSubQuery(MethodCallExpression expression)
+        protected static bool IsSubQuery(MethodCallExpression expression)
         {
             return
                 expression.Arguments.Select(argument => argument as MethodCallExpression)
@@ -107,7 +102,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
                     .FirstOrDefault();
         }
 
-        protected bool IsExpressionQuery(object o)
+        protected static bool IsExpressionQuery(object o)
         {
             return o.GetType().IsGenericType &&
                    o.GetType().GetGenericTypeDefinition()

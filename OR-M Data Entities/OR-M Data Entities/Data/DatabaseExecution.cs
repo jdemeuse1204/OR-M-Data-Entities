@@ -5,7 +5,7 @@ using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Resolution;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -43,17 +43,17 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
-        protected void ExecuteReader(DbQueryBase query)
+        protected void ExecuteReader(IExpressionQueryResolvable query)
         {
             TryDisposeCloseReader();
 
             Command = new SqlCommand(query.Sql, Connection);
 
-            _addParameters(query.WhereResolution.GetParameters());
+            _addParameters(query.Parameters);
 
             Connect();
 
-            Reader = Command.ExecuteReaderWithPeeking(new SqlCommandPayload(query, IsLazyLoadEnabled));
+            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query));
         }
 
         #region Query Execution
@@ -86,10 +86,11 @@ namespace OR_M_Data_Entities.Data
 
         public DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
         {
+            var resolvableQuery = query as IExpressionQueryResolvable;
             // execute query
-            query.Query.Resolve();
+            query.Resolve();
 
-            ExecuteReader(query.Query);
+            ExecuteReader(resolvableQuery);
 
             return new DataReader<T>(Reader);
         }

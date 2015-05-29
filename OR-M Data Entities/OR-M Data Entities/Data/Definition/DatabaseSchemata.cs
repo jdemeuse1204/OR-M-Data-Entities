@@ -274,7 +274,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
             return linkedserverattribute == null
                 ? tableName
-                : string.Format("{0}.[{1}]", linkedserverattribute.LinkedServerText, tableName);
+                : string.Format("{0}.[{1}]", linkedserverattribute.FormattedLinkedServerText, tableName);
         }
 
         public static DbGenerationOption GetGenerationOption(PropertyInfo column)
@@ -419,8 +419,13 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public static List<PropertyInfo> GetTableFields(Type entityType)
         {
-            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<ForeignKeyAttribute>() == null).ToList();
+            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadKeyAttribute>() == null).ToList();
         }
+
+        public static List<PropertyInfo> GetAllForeignKeysAndPseudoKeys(Type type)
+        {
+            return type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null).ToList();
+        } 
 
         public static PropertyInfo GetTableFieldByName(string name, Type type)
         {

@@ -147,28 +147,28 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         private string _resolveSubQuery(object subQuery)
         {
-            var queryable = subQuery as IExpressionQueryable;
+            var queryable = subQuery as IExpressionQueryResolvable;
 
-            queryable.Query.Resolve();
+            queryable.ResolveExpression();
 
-            return queryable.Query.Sql;
+            return queryable.Sql;
         }
 
         public void Combine(object subQuery)
         {
-            var queryable = subQuery as IExpressionQueryable;
+            //var queryable = subQuery as IExpressionQueryResolvable;
 
-            for (var i = 0; i < queryable.Query.WhereResolution.Resolutions.Count; i++)
-            {
-                var item = queryable.Query.WhereResolution.Resolutions[i] as WhereResolutionPart;
-                var sqlDbParameter = item != null ? item.CompareValue as SqlDbParameter : null;
+            //for (var i = 0; i < queryable.Query.WhereResolution.Resolutions.Count; i++)
+            //{
+            //    var item = queryable.Query.WhereResolution.Resolutions[i] as WhereResolutionPart;
+            //    var sqlDbParameter = item != null ? item.CompareValue as SqlDbParameter : null;
 
-                if (item == null || sqlDbParameter == null) continue;
+            //    if (item == null || sqlDbParameter == null) continue;
 
-                item.CompareValue = GetParameter(sqlDbParameter.Value);
+            //    item.CompareValue = GetParameter(sqlDbParameter.Value);
 
-                AddGhostResolution(item);
-            }
+            //    AddGhostResolution(item);
+            //}
         }
     }
 }

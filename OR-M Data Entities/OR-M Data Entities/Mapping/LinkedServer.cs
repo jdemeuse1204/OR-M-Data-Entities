@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Mapping
 
         public string SchemaName { get; private set; }
 
-	    public string LinkedServerText
+        public string FormattedLinkedServerText
 	    {
             get { return string.Format("[{0}].[{1}].[{2}]", ServerName, DatabaseName, SchemaName); }
 	    }

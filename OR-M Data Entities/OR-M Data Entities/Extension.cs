@@ -19,13 +19,8 @@ using System.Runtime.CompilerServices;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Expressions.Resolution.Functions;
-using OR_M_Data_Entities.Expressions.Resolution.Join;
-using OR_M_Data_Entities.Expressions.Resolution.Select;
-using OR_M_Data_Entities.Expressions.Resolution.Where;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -669,9 +664,16 @@ namespace OR_M_Data_Entities
 
     public static class PropertyInfoExtensions
     {
-        public static Type GetPropertyType(this PropertyInfo info)
+        public static bool IsPropertyTypeList(this PropertyInfo propertyInfo)
         {
-            return info.PropertyType.IsList() ? info.PropertyType.GetGenericArguments()[0] : info.PropertyType;
+            return propertyInfo.PropertyType.IsList();
+        }
+
+        public static Type GetPropertyType(this PropertyInfo propertyInfo)
+        {
+            return propertyInfo.IsPropertyTypeList()
+                ? propertyInfo.PropertyType.GetGenericArguments()[0]
+                : propertyInfo.PropertyType;
         }
     }
 
@@ -703,10 +705,10 @@ namespace OR_M_Data_Entities
     {
         public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
         {
-            return new PeekDataReader(cmd);
+            return ExecuteReaderWithPeeking(cmd, null);
         }
 
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlCommandPayload payload)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, ISqlPayload payload)
         {
             return new PeekDataReader(cmd, payload);
         }

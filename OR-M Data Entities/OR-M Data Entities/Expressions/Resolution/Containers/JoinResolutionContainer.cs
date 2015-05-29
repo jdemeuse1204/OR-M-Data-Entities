@@ -1,16 +1,21 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Expressions.Resolution.Join;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
     public class JoinResolutionContainer : IResolutionContainer
     {
-        public JoinResolutionContainer()
+        public IEnumerable<JoinPair> Joins { get { return _joins; } }
+
+        private readonly List<JoinPair> _joins;
+
+        public JoinResolutionContainer(IEnumerable<JoinPair> joins)
         {
-            _joins = new List<JoinGroup>();
+            _joins = new List<JoinPair>();
+            _joins.AddRange(joins);
         }
 
         public bool HasItems
@@ -21,36 +26,31 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             }
         }
 
-        private readonly List<JoinGroup> _joins;
-
-        public IEnumerable<JoinGroup> Joins { get { return _joins; } }
-
-
-        public void AddJoin(JoinGroup join)
+        public void Add(JoinPair join)
         {
             _joins.Add(join);
         }
 
-
         public string Resolve()
         {
-            return _joins.Aggregate("",
-                (current, @join) =>
-                    current +
-                    string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
-                        _getJoinName(@join.JoinType),
-                        @join.Left.HasAlias
-                            ? string.Format("[{0}] AS [{1}]", @join.Left.TableName, @join.Left.TableAlias)
-                            : string.Format("[{0}]", @join.Left.TableName),
-                        @join.Left.HasAlias ? @join.Left.TableAlias : @join.Left.TableName,
-                        @join.Left.ColumnName,
-                        @join.Right.TableName,
-                        @join.Right.ColumnName));
+            return "";
+            //_joins.Aggregate("",
+            //    (current, @join) =>
+            //        current +
+            //        string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
+            //            _getJoinName(@join.JoinType),
+            //            @join.ParentNode.HasAlias
+            //                ? string.Format("[{0}] AS [{1}]", @join.ParentNode.TableName, @join.ParentNode.TableAlias)
+            //                : string.Format("[{0}]", @join.ParentNode.TableName),
+            //            @join.ParentNode.HasAlias ? @join.ParentNode.TableAlias : @join.ParentNode.TableName,
+            //            @join.ParentNode.ColumnName,
+            //            @join.ChildNode.TableName,
+            //            @join.ChildNode.ColumnName));
         }
 
         public IEnumerable<TableInfo> GetChangeTableContainers()
         {
-            return _joins.Where(w => w.Left.Change != null).Select(w => w.Left.Change);
+            return null;// _joins.Where(w => w.ParentNode.TableInfo != null).Select(w => w.ParentNode.TableInfo);
         }
 
         private string _getJoinName(JoinType joinType)
@@ -69,38 +69,5 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                     return "";
             }
         }
-    }
-
-    public class LeftJoinNode : JoinNode
-    {
-    }
-
-    public class RightJoinNode : JoinNode
-    {
-    }
-
-    public abstract class JoinNode
-    {
-        public string TableName { get; set; }
-
-        public string TableAlias { get; set; }
-
-        public string ColumnName { get; set; }
-
-        public TableInfo Change { get; set; }
-
-        public bool HasAlias
-        {
-            get { return !string.IsNullOrWhiteSpace(TableAlias) && TableAlias != TableName; }
-        }
-    }
-
-    public class JoinGroup
-    {
-        public JoinType JoinType { get; set; }
-
-        public LeftJoinNode Left { get; set; }
-
-        public RightJoinNode Right { get; set; }
     }
 }

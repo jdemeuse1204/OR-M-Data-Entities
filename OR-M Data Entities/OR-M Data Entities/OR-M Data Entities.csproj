@@ -46,7 +46,8 @@
     <Compile Include="Data\DatabaseExecution.cs" />
     <Compile Include="Data\Definition\ObjectSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
-    <Compile Include="Data\Execution\SqlCommandPayload.cs" />
+    <Compile Include="Data\Execution\ISqlPayload.cs" />
+    <Compile Include="Data\Execution\SqlPayload.cs" />
     <Compile Include="Enumeration\ChangeStateType.cs" />
     <Compile Include="Enumeration\ComparisonType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
@@ -79,11 +80,18 @@
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
+    <Compile Include="Expressions\IExpressionQuery.cs" />
     <Compile Include="Expressions\Query\DbQuery.cs" />
+    <Compile Include="Expressions\Query\ReadOnlyTableTypeCollection.cs" />
     <Compile Include="Expressions\Query\TableInfo.cs" />
+    <Compile Include="Expressions\Query\TableType.cs" />
+    <Compile Include="Expressions\Query\TableTypeCollection.cs" />
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
+    <Compile Include="Expressions\Resolution\Base\QueryInitializerType.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
+    <Compile Include="Expressions\Resolution\Join\JoinPair.cs" />
     <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
     <Compile Include="Expressions\Resolution\Where\Base\IQueryPart.cs" />
@@ -116,6 +124,7 @@
     <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
+    <Compile Include="Mapping\View.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QueryNotValidException.cs" />

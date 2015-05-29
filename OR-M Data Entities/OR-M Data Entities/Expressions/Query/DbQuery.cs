@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
@@ -15,8 +16,8 @@ namespace OR_M_Data_Entities.Expressions.Query
         #endregion
 
         #region Constructor
-        protected DbQuery()
-            : base()
+        protected DbQuery(QueryInitializerType queryInitializerType)
+            : base(queryInitializerType)
         {
         }
         #endregion
@@ -46,65 +47,6 @@ namespace OR_M_Data_Entities.Expressions.Query
                 join,
                 string.Format("WHERE {0}", where),
                 "");
-        }
-
-
-        // TODO: remove recursion
-        private void _initialize(Type parentType, string parentTableName, bool isParentSearch = true)
-        {
-            foreach (
-                var property in
-                    parentType.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null))
-            {
-                var isList = property.PropertyType.IsList();
-                var type = isList
-                    ? property.PropertyType.GetGenericArguments()[0]
-                    : property.PropertyType;
-                var foreignKeyAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
-                var pseudoKeyAttribute = property.GetCustomAttribute<PseudoKeyAttribute>();
-
-                _types.Add(type);
-
-                // add properties to select statement
-                _addPropertiesByType(type, property.Name, SelectList.GetNextTableReadName());
-
-                // add join here
-                if (foreignKeyAttribute != null)
-                {
-                    JoinResolution.AddJoin(GetJoinGroup(foreignKeyAttribute, property, parentTableName, isParentSearch));
-                }
-                else if (pseudoKeyAttribute != null)
-                {
-                    JoinResolution.AddJoin(GetJoinGroup(pseudoKeyAttribute, property, parentTableName, isParentSearch));
-                }
-
-                if (DatabaseSchemata.HasForeignKeys(type))
-                {
-                    _initialize(type, property.Name, false);
-                }
-            }
-        }
-
-        public void Initialize()
-        {
-            InitializeWithoutForeignKeys();
-            _initialize(BaseType, DatabaseSchemata.GetTableName(BaseType));
-        }
-
-        public void InitializeWithoutForeignKeys()
-        {
-            _addPropertiesByType(BaseType, string.Empty, SelectList.GetNextTableReadName());
-            _types.Add(BaseType);
-        }
-
-        private void _addPropertiesByType(Type type, string foreignKeyTableName, string queryTableName)
-        {
-            var tableName = DatabaseSchemata.GetTableName(type);
-
-            foreach (var info in type.GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null))
-            {
-                SelectList.Add(info, type, tableName, queryTableName, foreignKeyTableName);
-            }
-        }
+        }        
     }
 }
