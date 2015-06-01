@@ -5,7 +5,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select.Info
 {
     public class SelectInfo : SelectInfoChanged 
     {
-        public SelectInfo(MemberInfo info, Type baseType, string tableName,string tableReadName, int ordinal)
+        public SelectInfo(MemberInfo info, Type baseType, string tableName,string tableReadName, int ordinal, bool isPrimaryKey)
         {
             OriginalProperty = info;
             NewProperty = info;
@@ -14,6 +14,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select.Info
             NewType = baseType;
             TableName = tableName;
             TableReadName = tableReadName;
+            IsPrimaryKey = isPrimaryKey;
         }
 
         private MemberInfo _newProperty;
@@ -43,6 +44,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select.Info
         public int Ordinal { get; set; }
 
         public string TableName { get; private set; }
+
+        public bool IsPrimaryKey { get; private set; }
 
         public string TableReadName { get; private set; }
 

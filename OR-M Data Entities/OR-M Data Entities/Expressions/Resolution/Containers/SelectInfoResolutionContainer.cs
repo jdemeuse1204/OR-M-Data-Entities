@@ -49,14 +49,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return _infos.First(w => w.OriginalProperty == item);
         }
 
-        public void Add(PropertyInfo item, Type baseType, string tableName, string queryTableName, string foreignKeyTableName)
+        public void Add(PropertyInfo item, Type baseType, string tableName, string queryTableName, string foreignKeyTableName, bool isPrimaryKey)
         {
             if (!_tableAliases.Select(w => w.QueryTableName).Contains(queryTableName))
             {
                 _tableAliases.Add(new TableInfo(tableName, foreignKeyTableName, baseType, queryTableName));
             }
 
-            _infos.Add(new SelectInfo(item, baseType, tableName, queryTableName, _infos.Count));
+            _infos.Add(new SelectInfo(item, baseType, tableName, queryTableName, _infos.Count, isPrimaryKey));
         }
 
         public string GetNextTableReadName()
@@ -129,7 +129,22 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             var allUnselected = !_infos.Any(w => w.IsSelected);
             var allInfos = allUnselected ? _infos : _infos.Where(w => w.IsSelected);
 
-            return allInfos.Aggregate(result, (current, info) => current + string.Format("[{0}].[{1}],", info.TableName, DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
+            return
+                allInfos.Aggregate(result,
+                    (current, info) =>
+                        current +
+                        string.Format("[{0}].[{1}],", info.TableReadName,
+                            DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
+        }
+
+        public string GetOrderStatement()
+        {
+            var order = _infos.Where(w => w.IsPrimaryKey)
+                .OrderBy(w => w.Ordinal)
+                .Aggregate(string.Empty, (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.TableReadName,
+                    DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
+
+            return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);
         }
     }
 }

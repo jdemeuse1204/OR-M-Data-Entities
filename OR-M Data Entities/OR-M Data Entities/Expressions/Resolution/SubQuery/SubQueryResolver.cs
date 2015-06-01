@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {
@@ -63,12 +65,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
         private static void _resolveFrom(Expression expression, ref object query, ref Type type)
         {
             type = expression.Type.GenericTypeArguments[0];
-            var expressionQuery = typeof(ExpressionQuery<>);
+            var expressionQuery = typeof(ExpressionQueryResolvable<>);
             var creationType = expressionQuery.MakeGenericType(type);
 
-            query = Activator.CreateInstance(creationType, null);
-
-            ((dynamic)query).Query.InitializeWithoutForeignKeys();
+            query = Activator.CreateInstance(creationType);
         }
     }
 }

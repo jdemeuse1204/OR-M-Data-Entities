@@ -86,9 +86,10 @@ namespace OR_M_Data_Entities.Data
 
         public DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
         {
-            var resolvableQuery = query as IExpressionQueryResolvable;
+            var resolvableQuery = (IExpressionQueryResolvable)query;
+
             // execute query
-            query.Resolve();
+            resolvableQuery.ResolveExpression();
 
             ExecuteReader(resolvableQuery);
 

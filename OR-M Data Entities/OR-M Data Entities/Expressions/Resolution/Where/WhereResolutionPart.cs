@@ -18,6 +18,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
         public string TableName { get; set; }
 
+        public string TableAlias { get; set; }
+
         public string ColumnName { get; set; }
 
         public CompareType Comparison { get; set; }

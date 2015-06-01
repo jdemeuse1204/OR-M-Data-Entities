@@ -2,15 +2,13 @@
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
-    public class TableType
+    public class TableType : PartialTableType
     {
-        public Type Type { get; private set; }
-
         public string Alias { get; private set; }
 
-        public TableType(Type type, string alias)
+        public TableType(Type type, string alias, string propertyName)
+            : base(type, propertyName)
         {
-            Type = type;
             Alias = alias;
         }
     }

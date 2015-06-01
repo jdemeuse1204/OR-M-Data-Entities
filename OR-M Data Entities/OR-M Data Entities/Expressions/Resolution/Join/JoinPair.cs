@@ -20,8 +20,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
 
         public string ChildTableName { get; private set; }
 
+        public string ParentPropertyName { get; private set; }
+
         public JoinPair(Type parentType, Type childType, bool heirarchyContainsList, string computedParentAlias,
-            string computedChildAlias, string childPropertyName, string parentTableName, string childTableName)
+            string computedChildAlias, string parentPropertyName, string childPropertyName, string parentTableName, string childTableName)
         {
             ParentType = parentType;
 
@@ -32,6 +34,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             ChildPropertyName = childPropertyName;
             ParentTableName = parentTableName;
             ChildTableName = childTableName;
+            ParentPropertyName = parentPropertyName;
         }
     }
 }

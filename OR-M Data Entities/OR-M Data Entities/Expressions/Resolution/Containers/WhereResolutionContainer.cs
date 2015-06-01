@@ -11,13 +11,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
     public class WhereResolutionContainer : IResolutionContainer
     {
+        #region Properties
         public Guid Id { get; private set; }
-
-        public WhereResolutionContainer()
-        {
-            _resolutions = new List<IQueryPart>();
-            Id = Guid.NewGuid();
-        }
 
         public bool HasItems
         {
@@ -27,8 +22,21 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             }
         }
 
-        private readonly List<IQueryPart> _resolutions;
         public IReadOnlyList<IQueryPart> Resolutions { get { return _resolutions; } }
+        #endregion
+
+        #region Fields
+        private readonly List<IQueryPart> _resolutions;
+        #endregion
+
+        #region Constructor
+        public WhereResolutionContainer()
+        {
+            _resolutions = new List<IQueryPart>();
+            Id = Guid.NewGuid();
+        }
+        #endregion
+
 
         public SqlDbParameter GetParameter(object value)
         {
@@ -85,15 +93,16 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             var result = "";
             var currentGroupNumber = -1;
+            // combine parameters from sub query
             var list =
                 _resolutions.Where(
                     w =>
                         (w is WhereResolutionPart) && w.QueryId == Id &&
-                        ((WhereResolutionPart) w).CompareValue.IsExpressionQuery()).ToList();
+                        ((SqlDbParameter)((WhereResolutionPart) w).CompareValue).Value.IsExpressionQuery()).ToList();
 
             for (var i = 0; i < list.Count; i++)
             {
-                Combine(((WhereResolutionPart)list[i]).CompareValue);
+                Combine(((SqlDbParameter)((WhereResolutionPart)list[i]).CompareValue).Value as IExpressionQueryResolvable);
             }
 
             for (var i = 0; i < _resolutions.Count(w => w.QueryId == Id); i++)
@@ -112,7 +121,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                     // is expression query?
 
                     result += string.Format("[{0}].[{1}] {2} {3}",
-                        currentLambdaResolition.TableName,
+                        currentLambdaResolition.TableAlias,
                         currentLambdaResolition.ColumnName,
                         currentLambdaResolition.GetComparisonStringOperator(),
                         currentLambdaResolition.CompareValue.IsExpressionQuery()
@@ -154,21 +163,15 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return queryable.Sql;
         }
 
-        public void Combine(object subQuery)
+        public void Combine(IExpressionQueryResolvable query)
         {
-            //var queryable = subQuery as IExpressionQueryResolvable;
-
-            //for (var i = 0; i < queryable.Query.WhereResolution.Resolutions.Count; i++)
-            //{
-            //    var item = queryable.Query.WhereResolution.Resolutions[i] as WhereResolutionPart;
-            //    var sqlDbParameter = item != null ? item.CompareValue as SqlDbParameter : null;
-
-            //    if (item == null || sqlDbParameter == null) continue;
-
-            //    item.CompareValue = GetParameter(sqlDbParameter.Value);
-
-            //    AddGhostResolution(item);
-            //}
+            foreach (var item in query.Parameters)
+            {
+                AddGhostResolution(new WhereResolutionPart
+                {
+                    CompareValue = item
+                });
+            }
         }
     }
 }

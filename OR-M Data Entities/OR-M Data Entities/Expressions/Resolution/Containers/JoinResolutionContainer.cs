@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
@@ -33,19 +34,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public string Resolve()
         {
-            return "";
-            //_joins.Aggregate("",
-            //    (current, @join) =>
-            //        current +
-            //        string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
-            //            _getJoinName(@join.JoinType),
-            //            @join.ParentNode.HasAlias
-            //                ? string.Format("[{0}] AS [{1}]", @join.ParentNode.TableName, @join.ParentNode.TableAlias)
-            //                : string.Format("[{0}]", @join.ParentNode.TableName),
-            //            @join.ParentNode.HasAlias ? @join.ParentNode.TableAlias : @join.ParentNode.TableName,
-            //            @join.ParentNode.ColumnName,
-            //            @join.ChildNode.TableName,
-            //            @join.ChildNode.ColumnName));
+            return _joins.Aggregate("",
+                (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
+                    @join.HeirarchyContainsList ? "LEFT" : "INNER",
+                    string.Format("[{0}] As [{1}]", @join.ChildTableName, @join.ComputedChildAlias),
+                    @join.ComputedParentAlias, @join.ParentPropertyName, @join.ComputedChildAlias,
+                    @join.ChildPropertyName));
         }
 
         public IEnumerable<TableInfo> GetChangeTableContainers()

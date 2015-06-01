@@ -19,6 +19,7 @@ using System.Runtime.CompilerServices;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
@@ -43,7 +44,9 @@ namespace OR_M_Data_Entities
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
-            return _execute(source).FirstOrDefault();
+            if (!source.IsSubQuery) return _execute(source).FirstOrDefault();
+            _executeWithNoRead(source);
+            return default(TSource);
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -51,7 +54,7 @@ namespace OR_M_Data_Entities
             source.Where(expression);
 
             // execute sql, and grab data
-            return _execute(source).FirstOrDefault();
+            return FirstOrDefault(source);
         }
         #endregion
 
@@ -227,13 +230,16 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
-        public static TSource Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static bool Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
-            // execute sql, and grab data
+            return _execute(source).Any();
+        }
 
-            return default(TSource);
+        public static bool Any<TSource>(this ExpressionQuery<TSource> source)
+        {
+            return _execute(source).Any();
         }
 
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -247,16 +253,16 @@ namespace OR_M_Data_Entities
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            return ((ExpressionQueryResolvable<TOuter>) outer).ResolveInnerJoin(inner, outerKeySelector,
-                innerKeySelector, resultSelector);
+            return ((ExpressionQueryResolvable<TOuter>) outer).ResolveJoin(inner, outerKeySelector,
+                innerKeySelector, resultSelector, JoinType.Inner);
         }
 
         public static ExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveInnerJoin(inner, outerKeySelector,
-                innerKeySelector, resultSelector);
+            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
+                innerKeySelector, resultSelector, JoinType.Left);
         }
 
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
@@ -264,6 +270,11 @@ namespace OR_M_Data_Entities
         {
             return ((ExpressionQueryResolvable<TSource>) source).ResolveSelect(selector, source);
         }
+
+        public static ExpressionQuery<TResult> ChangeType<TSource, TResult>(ExpressionQueryResolvable<TSource> query)
+        {
+            return new ExpressionQueryResolvable<TResult>();
+        } 
 
         public static bool IsExpressionQuery(this MethodCallExpression expression)
         {
@@ -276,14 +287,18 @@ namespace OR_M_Data_Entities
         {
             return type.IsGenericType &&
                    type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+                       .IsAssignableFrom(typeof (ExpressionQuery<>)) || type.IsGenericType &&
+                   type.GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof (ExpressionQueryResolvable<>));
         }
 
         public static bool IsExpressionQuery(this object o)
         {
             return o.GetType().IsGenericType &&
                    o.GetType().GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+                       .IsAssignableFrom(typeof (ExpressionQuery<>)) || o.GetType().IsGenericType &&
+                   o.GetType().GetGenericTypeDefinition()
+                       .IsAssignableFrom(typeof (ExpressionQueryResolvable<>));
         }
 
         private static IEnumerable<T> _execute<T>(ExpressionQuery<T> source)
@@ -291,6 +306,11 @@ namespace OR_M_Data_Entities
             source.GetEnumerator();
 
             return source;
+        }
+
+        private static void _executeWithNoRead<T>(ExpressionQuery<T> source)
+        {
+            
         }
     }
 
@@ -437,26 +457,25 @@ namespace OR_M_Data_Entities
 
         private static bool LoadObjectWithForeignKeys(this PeekDataReader reader, object instance)
         {
-            throw new Exception("FIX ME!");
-            //try
-            //{
-            //    // find any unmapped attributes
-            //    var properties = reader.DbQuery.SelectList.Infos.Where(w => w.NewType == instance.GetType());
+            try
+            {
+                // find any unmapped attributes
+                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewType == instance.GetType());
 
-            //    foreach (var property in properties)
-            //    {
-            //        // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-            //        var dbValue = reader[property.Ordinal];
+                foreach (var property in properties)
+                {
+                    // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
+                    var dbValue = reader[property.Ordinal];
 
-            //        instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
-            //    }
+                    instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
+                }
 
-            //    return true;
-            //}
-            //catch
-            //{
-            //    return false;
-            //}
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
@@ -568,7 +587,7 @@ namespace OR_M_Data_Entities
                 {
                     _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
                 }
-            }
+            }   
         }
 
         private static void _loadObjectWithForeignKeys(
@@ -653,11 +672,10 @@ namespace OR_M_Data_Entities
 
         private static int GetCompositKey(this ObjectSchematic schematic, PeekDataReader reader)
         {
-            //var infos = reader.DbQuery.SelectList.Infos.Where(
-            //    w => w.NewType == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
+            var infos = reader.Payload.Query.SelectInfos.Where(
+                w => w.NewType == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
 
-            //return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
-            throw new  Exception("FIX ME!");
+            return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
         } 
         #endregion
     }

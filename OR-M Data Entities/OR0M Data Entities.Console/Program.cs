@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Linq;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -9,30 +10,31 @@ namespace OR0M_Data_Entities.Console
         static void Main2(string[] args)
         {
             var context = new DbSqlContext("sqlExpress");
-            var ids = new List<int> {1, 2, 3};
-            var result = context.From<Contact>().Where(w => w.ID == 1)
-                .InnerJoin(
-                    context.From<Appointment>(),
-                    contact => contact.ID,
-                    appointment => appointment.ContactID,
-                    (contact, appointment) => new Appointment
-                    {
-                        ContactID = contact.ID
-                    }).FirstOrDefault();
+
+            var s = DateTime.Now;
+            var result =
+                context.From<Contact>()
+                    .FirstOrDefault(
+                        w =>
+                            w.ID == 1 &&
+                            w.FirstName ==
+                            context.From<Appointment>()
+                                .Where(x => x.ContactID == 1)
+                                .Select(x => x.Description)
+                                .FirstOrDefault());
+            var e = DateTime.Now;
+
+            var f = e - s;
+
+            if (f.Days == 1)
+            {
+                
+            }
 
             if (result != null)
             {
                 
             }
-                //context.From<Contact>()
-                //    .Select(w => new Contact
-                //    {
-                //        ID = w.ID,
-                //        FirstName = w.FirstName
-                //    })
-                //    .FirstOrDefault(w => ids.Contains(w.ID) && w.Number.Phone == "" && w.FirstName.Contains("James"));
-
-            var list = new List<Contact>();
         }
 
         static void Main(string[] args)

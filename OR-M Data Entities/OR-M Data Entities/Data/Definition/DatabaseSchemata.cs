@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -422,9 +424,32 @@ namespace OR_M_Data_Entities.Data.Definition
             return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadKeyAttribute>() == null).ToList();
         }
 
-        public static List<PropertyInfo> GetAllForeignKeysAndPseudoKeys(Type type)
+        public static List<ForeignKeyJoinInfo> GetAllForeignKeysAndPseudoKeys(Type type)
         {
-            return type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null).ToList();
+            var autoLoadProperties =
+                type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null);
+
+            return (from autoLoadProperty in autoLoadProperties
+                let fkAttribute = autoLoadProperty.GetCustomAttribute<ForeignKeyAttribute>()
+                let pskAttribute = autoLoadProperty.GetCustomAttribute<PseudoKeyAttribute>()
+                select new ForeignKeyJoinInfo
+                {
+                    Property = autoLoadProperty,
+                    ParentPropertyName =
+                        fkAttribute != null
+                            ? autoLoadProperty.PropertyType.IsList()
+                                ? GetPrimaryKeys(type).First().Name
+                                : fkAttribute.ForeignKeyColumnName
+                            : pskAttribute.ParentTableColumnName,
+                    ChildPropertyName =
+                        fkAttribute != null
+                            ? autoLoadProperty.PropertyType.IsList()
+                                ? fkAttribute.ForeignKeyColumnName
+                                : GetPrimaryKeys(autoLoadProperty.PropertyType).First().Name
+                            : pskAttribute.ChildTableColumnName,
+                    ActualChildTableName = GetTableName(autoLoadProperty.GetPropertyType()),
+                    ActualParentTableName = GetTableName(type)
+                }).ToList();
         } 
 
         public static PropertyInfo GetTableFieldByName(string name, Type type)
@@ -463,6 +488,12 @@ namespace OR_M_Data_Entities.Data.Definition
             }
 
             return result;
+        }
+
+        public static bool IsPrimaryKey(Type type, string columnName)
+        {
+            return columnName.ToUpper() == "ID" ||
+                   type.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
         }
     }
 }

@@ -9,6 +9,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
             : base(queryInitializerType)
         {
             
+        }
+
+        protected DbSubQuery(IExpressionQueryResolvable query)
+            : base(query)
+        {
+
         } 
     }
 }

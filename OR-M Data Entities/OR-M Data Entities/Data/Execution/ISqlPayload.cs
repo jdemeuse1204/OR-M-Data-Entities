@@ -5,7 +5,5 @@ namespace OR_M_Data_Entities.Data.Execution
     public interface ISqlPayload
     {
         IExpressionQueryResolvable Query { get; }
-
-        bool IsLazyLoading { get; }
     }
 }
