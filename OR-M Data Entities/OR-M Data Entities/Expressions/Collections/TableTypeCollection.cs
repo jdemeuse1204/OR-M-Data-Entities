@@ -10,9 +10,17 @@ namespace OR_M_Data_Entities.Expressions.Collections
         {
             var aka = string.Format("AkA{0}", Internal.Count);
 
-            Internal.Add(new TableType(partialTable.Type, aka, partialTable.PropertyName));
+            Internal.Add(new TableType(partialTable.Type, partialTable.ExpressionQueryId, aka, partialTable.PropertyName));
 
             return aka;
+        }
+
+        public void Insert(int index,PartialTableType partialTable)
+        {
+            var aka = string.Format("AkA{0}", Internal.Count);
+
+            Internal.Insert(index,
+                new TableType(partialTable.Type, partialTable.ExpressionQueryId, aka, partialTable.PropertyName));
         }
 
         public void AddRange(IEnumerable<PartialTableType> range)
@@ -20,7 +28,7 @@ namespace OR_M_Data_Entities.Expressions.Collections
             Internal.AddRange(
                 range.Select(
                     w =>
-                        new TableType(w.Type, string.Format("AkA{0}", Internal.Count),
+                        new TableType(w.Type, w.ExpressionQueryId, string.Format("AkA{0}", Internal.Count),
                             w.PropertyName)));
         }
 

@@ -3,7 +3,6 @@ using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
@@ -19,12 +18,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             Expression<Func<TOuter, TInner, TResult>> resultSelector,
             JoinType joinType,
             JoinResolutionContainer joinResolution,
-            TableTypeCollection tables)
+            TableTypeCollection tables, 
+            Guid expressionQueryId)
         {
             // If we are doing a join here do not worry about foreign keys.  
             var childTableName = DatabaseSchemata.GetTableName<TInner>();
-            var computedChildTableName = !tables.ContainsType(typeof(TInner)) ? tables.Add(PartialTableType.GetFromSelector(innerKeySelector)) : tables.Find(typeof(TInner)).Alias;
-            var computedParentTableName = !tables.ContainsType(typeof(TOuter)) ? tables.Add(PartialTableType.GetFromSelector(outerKeySelector)) : tables.Find(typeof(TOuter)).Alias;
+            var computedChildTableName = tables.Find(typeof(TInner), expressionQueryId).Alias;
+            var computedParentTableName = tables.Find(typeof(TOuter), expressionQueryId).Alias;
 
             joinResolution.Add(new JoinPair(
                 typeof (TOuter), 

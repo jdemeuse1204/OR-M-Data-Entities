@@ -2,8 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Expressions.Collections;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
@@ -13,7 +12,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
     public sealed class SelectExpressionResolver : ExpressionResolver
     {
 
-        public static void Resolve<TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> selector, SelectInfoResolutionContainer selectList, ReadOnlyTableTypeCollection tables)
+        public static void Resolve<TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
             // What if we are reshaping a reshaped container?
 
@@ -21,14 +20,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             selectList.UnSelectAll();
 
             // resolve the expressions shape
-            _resolveShape(selector.Body as dynamic, selectList, tables);
+            _resolveShape(selector.Body as dynamic, selectList, baseQuery);
         }
 
-        public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> selector, SelectInfoResolutionContainer selectList, ReadOnlyTableTypeCollection tables)
+        public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
             selectList.UnSelectAll();
 
-            _resolveShape(selector.Body as dynamic, selectList, tables);
+            _resolveShape(selector.Body as dynamic, selectList, baseQuery);
         }
 
 
@@ -41,7 +40,34 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         w.NewProperty.Name == expression.Member.Name);
         }
 
-        private static void _resolveShape(MemberExpression expression, SelectInfoResolutionContainer selectList, ReadOnlyTableTypeCollection tables)
+        private static void _resolveShape(ParameterExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        {
+            var infos = selectList.Infos.Where(w => w.BaseType == expression.Type).ToList();
+
+            if (infos.Count == 0)
+            {
+                var nextTableAlias = selectList.GetNextTableReadName();
+
+                foreach (var property in expression.Type.GetProperties())
+                {
+                    var tableName = DatabaseSchemata.GetTableName(expression.Type);
+
+                    selectList.Add(property,
+                        expression.Type,
+                        tableName,
+                        nextTableAlias,
+                        tableName,
+                        DatabaseSchemata.IsPrimaryKey(property));
+                }
+            }
+
+            foreach (var selectInfo in selectList.Infos.Where(w => w.BaseType == expression.Type))
+            {
+                selectInfo.IsSelected = true;
+            }
+        }
+
+        private static void _resolveShape(MemberExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
             var info = _find(expression, selectList);
 
@@ -53,7 +79,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             selectList.ReturnPropertyOnly = true;
         }
 
-        private static void _resolveShape(NewExpression expression, SelectInfoResolutionContainer selectList, ReadOnlyTableTypeCollection tables)
+        private static void _resolveShape(NewExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
             var count = expression.Members.Count;
 
@@ -66,7 +92,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
                 if (memberExpression != null)
                 {
-                    if (!_isForeignKey(memberExpression, tables))
+                    if (!_isForeignKey(memberExpression, baseQuery))
                     {
                         var info = _find(memberExpression, selectList);
 
@@ -94,7 +120,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             }
         }
 
-        private static void _resolveShape(MemberInitExpression expression, SelectInfoResolutionContainer selectList, ReadOnlyTableTypeCollection tables)
+        private static void _resolveShape(MemberInitExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
             var newType = expression.Type;
 
@@ -132,7 +158,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             }
         }
 
-        private static bool _isForeignKey(MemberExpression expression, ReadOnlyTableTypeCollection tables)
+        private static bool _isForeignKey(MemberExpression expression, IExpressionQueryResolvable baseQuery)
         {
             var propertyInfo = expression.Member as PropertyInfo;
 
@@ -140,7 +166,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
             var type = propertyInfo.PropertyType.IsList() ? propertyInfo.PropertyType.GetGenericArguments()[0] : propertyInfo.PropertyType;
 
-            return tables.ContainsType(type);
+            return baseQuery.Tables.ContainsType(type, baseQuery.Id);
         }
 
         private static void _selectAll(Type type, SelectInfoResolutionContainer selectList)

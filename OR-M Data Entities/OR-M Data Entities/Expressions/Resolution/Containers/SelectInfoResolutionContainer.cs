@@ -9,10 +9,10 @@ using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
-    public class SelectInfoResolutionContainer : IResolutionContainer
+    public class SelectInfoResolutionContainer : ResolutionContainerBase, IResolutionContainer
     {
-        private readonly List<SelectInfo> _infos;
-        private readonly List<TableInfo> _tableAliases;
+        private List<SelectInfo> _infos;
+        private List<TableInfo> _tableAliases;
 
         public bool HasItems
         {
@@ -30,18 +30,22 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public IEnumerable<TableInfo> TableAliases { get { return _tableAliases; } }
 
-        public SelectInfoResolutionContainer()
+        public SelectInfoResolutionContainer(Guid expressionQueryId)
+            : base(expressionQueryId)
         {
             _infos = new List<SelectInfo>();
             _tableAliases = new List<TableInfo>();
         }
 
-        public void ChangeTable(TableInfo tableInfo)
+        public void Combine(IResolutionContainer container)
         {
-            foreach (var info in _infos.Where(w => !w.WasTableNameChanged && w.NewType == tableInfo.Type))
-            {
-                info.ChangeTableName(tableInfo.TableName);
-            }
+            _tableAliases = container.GetType()
+                .GetField("_tableAliases", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(container) as List<TableInfo>;
+
+            _infos = container.GetType()
+                .GetField("_infos", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(container) as List<SelectInfo>;
         }
 
         private SelectInfo _find(PropertyInfo item)

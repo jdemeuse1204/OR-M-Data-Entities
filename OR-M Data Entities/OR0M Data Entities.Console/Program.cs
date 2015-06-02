@@ -12,14 +12,20 @@ namespace OR0M_Data_Entities.Console
             var context = new DbSqlContext("sqlExpress");
 
             var s = DateTime.Now;
+            var result2 =
+                context.From<Policy>()
+                    .InnerJoin(context.From<PolicyType>(), policy => policy.PolicyInfoId, type => type.ID,
+                        (policy, type) => policy)
+                    .FirstOrDefault();
+
             var result =
                 context.From<Contact>()
                     .FirstOrDefault(
                         w =>
-                            w.ID == 1 &&
+                            w.ID == 2 &&
                             w.FirstName ==
                             context.From<Appointment>()
-                                .Where(x => x.ContactID == 1)
+                                .Where(x => x.ContactID == 2 && x.Description == "James")
                                 .Select(x => x.Description)
                                 .FirstOrDefault());
             var e = DateTime.Now;
@@ -31,7 +37,7 @@ namespace OR0M_Data_Entities.Console
                 
             }
 
-            if (result != null)
+            if (result != null && result2 != null)
             {
                 
             }

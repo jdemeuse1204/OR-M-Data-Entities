@@ -50,12 +50,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         }
 
         #region Load Value
-        protected static object GetValue(ConstantExpression expression)
+        protected static object GetValue(ConstantExpression expression, IExpressionQueryResolvable baseQuery)
         {
             return expression.Value ?? "IS NULL";
         }
 
-        protected static object GetValue(MemberExpression expression)
+        protected static object GetValue(MemberExpression expression, IExpressionQueryResolvable baseQuery)
         {
             var objectMember = Expression.Convert(expression, typeof(object));
 
@@ -68,11 +68,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
             return value ?? "IS NULL";
         }
 
-        protected static object GetValue(MethodCallExpression expression)
+        protected static object GetValue(MethodCallExpression expression, IExpressionQueryResolvable baseQuery)
         {
             if (IsSubQuery(expression))
             {
-                return SubQueryResolver.Resolve(expression);
+                return SubQueryResolver.Resolve(expression, baseQuery);
             }
 
             var objectMember = Expression.Convert(expression, typeof(object));
@@ -86,9 +86,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
             return value ?? "IS NULL";
         }
 
-        protected static object GetValue(UnaryExpression expression)
+        protected static object GetValue(UnaryExpression expression, IExpressionQueryResolvable baseQuery)
         {
-            return GetValue(expression.Operand as dynamic);
+            return GetValue(expression.Operand as dynamic, baseQuery);
         }
         #endregion
 

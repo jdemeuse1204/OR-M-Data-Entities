@@ -1,26 +1,24 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Expressions.Resolution.Base;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {
     public class SubQueryResolver
     {
-        public static object Resolve(MethodCallExpression expression)
+        public static object Resolve(MethodCallExpression expression, IExpressionQueryResolvable baseQuery)
         {
             object result = null;
             Type type = null;
 
-            // TODO make so subquery can contain a subquery..... might work already!?
-
-            _resolve(expression, ref result, ref type);
+            _resolve(expression, baseQuery, ref result, ref type);
 
             return result;
         }
 
-        private static void _resolve(MethodCallExpression expression, ref object query, ref Type type)
+        private static void _resolve(MethodCallExpression expression, IExpressionQueryResolvable baseQuery, ref object query, ref Type type)
         {
             foreach (var argument in expression.Arguments)
             {
@@ -29,7 +27,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
                 if (nextMethodCallExpression != null)
                 {
                     // remove recursion
-                    _resolve(nextMethodCallExpression, ref query, ref type);
+                    _resolve(nextMethodCallExpression, baseQuery, ref query, ref type);
 
                     switch (expression.Method.Name.ToUpper())
                     {
@@ -48,7 +46,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 
             if (expression.Method.Name.ToUpper() == "FROM")
             {
-                _resolveFrom(expression, ref query, ref type);
+                _resolveFrom(expression, baseQuery, ref query, ref type);
             }
         }
 
@@ -62,13 +60,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
             typeof(ExpressionQueryExtensions).GetMethod("Select").MakeGenericMethod(type, returnType).Invoke(query, new[] { query, expression.Operand });
         }
 
-        private static void _resolveFrom(Expression expression, ref object query, ref Type type)
+        private static void _resolveFrom(Expression expression, IExpressionQueryResolvable baseQuery, ref object query, ref Type type)
         {
             type = expression.Type.GenericTypeArguments[0];
             var expressionQuery = typeof(ExpressionQueryResolvable<>);
             var creationType = expressionQuery.MakeGenericType(type);
 
-            query = Activator.CreateInstance(creationType);
+            query = Activator.CreateInstance(creationType, new object[] { baseQuery, ExpressionQueryConstructionType.SubQuery });
+
+            // clear all the select infos and make them of the currnt type
+            ((IExpressionQueryResolvable)query).Clear();
+            ((IExpressionQueryResolvable)query).Initialize();
         }
     }
 }

@@ -6,6 +6,7 @@ using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
+using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Expressions.Resolution.Select;
 using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
@@ -17,34 +18,41 @@ namespace OR_M_Data_Entities.Expressions.Resolution
     {
         #region Properties
         public IReadOnlyList<SqlDbParameter> Parameters {
-            get { return _parameters; }
+            get { return WhereResolution.Parameters; }
         }
 
         private readonly List<SqlDbParameter> _parameters;
 
         public bool IsLazyLoading { get { return Context != null && Context.IsLazyLoadEnabled; } }
 
+        public void Initialize()
+        {
+            this.InitializeSelectInfos();
+        }
+
         public IEnumerable<SelectInfo> SelectInfos
         {
-            get { return this.SelectList.Infos; }
+            get { return this.Columns.Infos; }
         }
+
+        public void Clear()
+        {
+            this.ClearJoinQuery();
+            this.ClearSelectQuery();
+            this.ClearWhereQuery();
+        }
+
         #endregion
 
-        #region Constructor
-        public ExpressionQueryResolvable()
-            : base()
-        {
-            _parameters = new List<SqlDbParameter>();
-        }
-        
+        #region Constructor        
         public ExpressionQueryResolvable(DatabaseReading context)
             : base(context)
         {
             _parameters = new List<SqlDbParameter>();
         }
 
-        public ExpressionQueryResolvable(IExpressionQueryResolvable query)
-            : base(query)
+        public ExpressionQueryResolvable(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
+            : base(query, constructionType)
         {
             _parameters =
                 query.GetType()
@@ -55,9 +63,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         public void ResolveWhere(Expression<Func<T, bool>> expression)
         {
-            WhereExpressionResolver.Resolve(expression, this.WhereResolution, this.Tables);
-
-            _parameters.AddRange(this.WhereResolution.GetParameters());
+            WhereExpressionResolver.Resolve(expression, this.WhereResolution, this);
         }
 
         public ExpressionQuery<TResult> ResolveJoin<TInner, TKey, TResult>(
@@ -66,6 +72,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<T, TInner, TResult>> resultSelector, JoinType joinType)
         {
+            var tables = (TableTypeCollection)this.Tables;
+
+            if (!tables.ContainsType(typeof (TInner), this.Id))
+            {
+                tables.Add(new PartialTableType(typeof(TInner), this.Id, null));
+            }
+
             JoinExpressionResolver.Resolve(this, 
                 inner, 
                 outerKeySelector, 
@@ -73,33 +86,27 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 resultSelector,
                 joinType, 
                 this.JoinResolution,
-                this.Tables as TableTypeCollection);
+                this.Tables as TableTypeCollection,
+                this.Id);
 
-            SelectExpressionResolver.Resolve(resultSelector, this.SelectList, this.Tables);
+            SelectExpressionResolver.Resolve(resultSelector, this.Columns, this);
 
-            return new ExpressionQueryResolvable<TResult>(this);
+            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Join);
         }
 
         public ExpressionQuery<TResult> ResolveSelect<TSource,TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> selector, ExpressionQuery<TSource> source)
         {
-            // What if we are reshaping a reshaped container?
-
-            // need to unselect all for reshape
-            SelectList.UnSelectAll();
-
             // resolve the expressions shape
-            SelectExpressionResolver.Resolve(selector, this.SelectList, this.Tables);
+            SelectExpressionResolver.Resolve(selector, this.Columns, this);
 
-            return new ExpressionQueryResolvable<TResult>(this);
+            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Main);
         }
 
         public ExpressionQuery<TResult> ResolveSelect<TSource, TResult>(Expression<Func<TSource, TResult>> selector, ExpressionQuery<TSource> source)
         {
-            SelectList.UnSelectAll();
+            SelectExpressionResolver.Resolve(selector, this.Columns, this);
 
-            SelectExpressionResolver.Resolve(selector, this.SelectList, this.Tables);
-
-            return new ExpressionQueryResolvable<TResult>(this);
+            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Main);
         }
 
         public void ResolveTakeRows(int rows)
@@ -115,6 +122,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         public void ResolveExpression()
         {
             ResolveQuery();
-        } 
+        }
     }
 }

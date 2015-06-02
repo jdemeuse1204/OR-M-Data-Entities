@@ -3,7 +3,6 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
-    [Table("Policy")]
     public class Policy
     {
         [Column("PolicyID")]

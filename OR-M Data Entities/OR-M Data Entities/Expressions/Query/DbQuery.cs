@@ -1,53 +1,66 @@
-﻿using System;
-using System.Reflection;
+﻿using System.Reflection;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
     public abstract class DbQuery<T> : DbSubQuery<T>
     {
+        #region Fields
+        protected readonly DatabaseReading Context;
+        #endregion
+
         #region Properties
+        public bool IsLazyLoadEnabled
+        {
+            get { return Context == null || Context.IsLazyLoadEnabled; }
+        }
+
+        public bool IsSubQuery { get; private set; }
+
         public string Sql { get; private set; }
 
-        protected readonly Type Type;
+        
         #endregion
 
         #region Constructor
-        protected DbQuery(QueryInitializerType queryInitializerType)
-            : base(queryInitializerType)
+        protected DbQuery(DatabaseReading context)
+            : base()
         {
-            Type = typeof (T);
+            Context = context;
+            IsSubQuery = context == null && ConstructionType == ExpressionQueryConstructionType.SubQuery;
         }
 
-        protected DbQuery(IExpressionQueryResolvable query)
-            : base(query)
+        protected DbQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
+            : base(query, constructionType)
         {
-            Type =
-                query.GetType()
-                    .GetField("Type", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .GetValue(query) as Type;
+            Context =
+                query.GetType().GetField("Context", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(query) as
+                    DatabaseReading;
+            IsSubQuery = this.Id != query.Id;
         }
         #endregion
 
+        // if tables are coming into the function then we need to change all table aliases (AkA) in this query before we resolve it
         protected void ResolveQuery()
         {
             var where = WhereResolution.HasItems ? WhereResolution.Resolve() : string.Empty;
 
-            var select = SelectList.HasItems ? SelectList.Resolve() : string.Empty;
+            var select = Columns.HasItems ? Columns.Resolve() : string.Empty;
 
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
 
             var from = string.Format("[{0}] As [{1}]", DatabaseSchemata.GetTableName(Type),
-                Tables.FindAlias(Type));
+                Tables.FindAlias(Type, this.Id));
 
-            var order = SelectList.GetOrderStatement();
+            var order = IsSubQuery ? string.Empty : Columns.GetOrderStatement();
 
             Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}",
-                SelectList.IsSelectDistinct ? " DISTINCT" : string.Empty,
-                SelectList.TakeRows > 0 ? string.Format("TOP {0}", SelectList.TakeRows) : string.Empty, select,
+                Columns.IsSelectDistinct ? " DISTINCT" : string.Empty,
+                Columns.TakeRows > 0 ? string.Format("TOP {0}", Columns.TakeRows) : string.Empty, select,
                 from.Contains("[") ? from : string.Format("[{0}]", from),
                 join,
                 string.IsNullOrWhiteSpace(where) ? string.Empty : string.Format("WHERE {0}", where),

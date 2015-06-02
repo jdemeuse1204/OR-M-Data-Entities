@@ -67,6 +67,7 @@
     <Compile Include="Tables\PhoneType.cs" />
     <Compile Include="Tables\Policy.cs" />
     <Compile Include="Tables\PolicyInfo.cs" />
+    <Compile Include="Tables\PolicyType.cs" />
     <Compile Include="Tables\StateCode.cs" />
     <Compile Include="Tables\Zip.cs" />
   </ItemGroup>

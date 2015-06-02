@@ -39,14 +39,12 @@ namespace OR_M_Data_Entities
         {
             source.Where(expression);
 
-            return _execute(source).First();
+            return First(source);
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
-            if (!source.IsSubQuery) return _execute(source).FirstOrDefault();
-            _executeWithNoRead(source);
-            return default(TSource);
+            return _execute(source).FirstOrDefault();
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -271,11 +269,6 @@ namespace OR_M_Data_Entities
             return ((ExpressionQueryResolvable<TSource>) source).ResolveSelect(selector, source);
         }
 
-        public static ExpressionQuery<TResult> ChangeType<TSource, TResult>(ExpressionQueryResolvable<TSource> query)
-        {
-            return new ExpressionQueryResolvable<TResult>();
-        } 
-
         public static bool IsExpressionQuery(this MethodCallExpression expression)
         {
             return expression.Method.ReturnType.IsGenericType &&
@@ -306,11 +299,6 @@ namespace OR_M_Data_Entities
             source.GetEnumerator();
 
             return source;
-        }
-
-        private static void _executeWithNoRead<T>(ExpressionQuery<T> source)
-        {
-            
         }
     }
 
@@ -460,12 +448,13 @@ namespace OR_M_Data_Entities
             try
             {
                 // find any unmapped attributes
-                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewType == instance.GetType());
+                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewType == instance.GetType() && w.IsSelected).ToList();
 
-                foreach (var property in properties)
+                for (var i = 0; i < properties.Count; i++)
                 {
-                    // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                    var dbValue = reader[property.Ordinal];
+                    var property = properties[i];
+
+                    var dbValue = reader[i];
 
                     instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
                 }

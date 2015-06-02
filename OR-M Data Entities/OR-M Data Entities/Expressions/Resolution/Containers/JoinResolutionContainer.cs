@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
@@ -7,13 +9,14 @@ using OR_M_Data_Entities.Expressions.Resolution.Join;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
-    public class JoinResolutionContainer : IResolutionContainer
+    public class JoinResolutionContainer : ResolutionContainerBase, IResolutionContainer
     {
         public IEnumerable<JoinPair> Joins { get { return _joins; } }
 
-        private readonly List<JoinPair> _joins;
+        private List<JoinPair> _joins;
 
-        public JoinResolutionContainer(IEnumerable<JoinPair> joins)
+        public JoinResolutionContainer(IEnumerable<JoinPair> joins, Guid expressionQueryId)
+            : base(expressionQueryId)
         {
             _joins = new List<JoinPair>();
             _joins.AddRange(joins);
@@ -27,9 +30,21 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             }
         }
 
+        public void Combine(IResolutionContainer container)
+        {
+            _joins = container.GetType()
+                .GetField("_joins", BindingFlags.NonPublic | BindingFlags.Instance)
+                .GetValue(container) as List<JoinPair>;
+        }
+
         public void Add(JoinPair join)
         {
             _joins.Add(join);
+        }
+
+        public void ClearJoins()
+        {
+            _joins.Clear();
         }
 
         public string Resolve()

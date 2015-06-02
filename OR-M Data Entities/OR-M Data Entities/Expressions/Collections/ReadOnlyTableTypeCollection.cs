@@ -10,10 +10,13 @@ namespace OR_M_Data_Entities.Expressions.Collections
     {
         #region Fields
         protected readonly List<TableType> Internal;
+
+        protected readonly Type ExpressionQueryType;
         #endregion
 
         #region Properties
         public int Count { get { return Internal.Count; } }
+
         #endregion
 
         #region Constructor
@@ -23,29 +26,29 @@ namespace OR_M_Data_Entities.Expressions.Collections
         }
         #endregion
 
-        public TableType Find(Type type)
+        public TableType Find(Type type, Guid expressionQueryId)
         {
-            return Internal.FirstOrDefault(w => w.Type == type);
+            return Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Type == type);
         }
 
-        public TableType Find(string alias)
+        public TableType Find(string alias, Guid expressionQueryId)
         {
-            return Internal.FirstOrDefault(w => w.Alias == alias);
+            return Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Alias == alias);
         }
 
-        public TableType FindByPropertyName(string propertyName)
+        public TableType FindByPropertyName(string propertyName, Guid expressionQueryId)
         {
-            return Internal.First(w => w.PropertyName == propertyName);
+            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.PropertyName == propertyName);
         }
 
-        public string FindAlias(Type type)
+        public string FindAlias(Type type, Guid expressionQueryId)
         {
-            return Internal.First(w => w.Type == type).Alias;
+            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.Type == type).Alias;
         }
 
-        public bool ContainsType(Type type)
+        public bool ContainsType(Type type, Guid expressionQueryId)
         {
-            return Internal.Select(w => w.Type).Contains(type);
+            return Internal.Where(w => w.ExpressionQueryId == expressionQueryId).Select(w => w.Type).Contains(type);
         }
 
         public IEnumerator<TableType> GetEnumerator()

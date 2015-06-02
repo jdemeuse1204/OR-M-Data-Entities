@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
     public class PartialTableType
     {
+        public Guid ExpressionQueryId { get; private set; }
+
         public Type Type { get; private set; }
 
         // only applicable tp foreign Keys
@@ -13,16 +14,12 @@ namespace OR_M_Data_Entities.Expressions.Query
 
         public string ActualTableName { get; private set; }
 
-        public PartialTableType(Type type, string propertyName)
+        public PartialTableType(Type type, Guid expressionQueryI, string propertyName)
         {
             ActualTableName = DatabaseSchemata.GetTableName(type);
             Type = type;
             PropertyName = propertyName;
-        }
-
-        public static PartialTableType GetFromSelector<T, TKey>(Expression<Func<T, TKey>> outerKeySelector)
-        {
-            return new PartialTableType(null,null);
+            ExpressionQueryId = expressionQueryI;
         }
     }
 }

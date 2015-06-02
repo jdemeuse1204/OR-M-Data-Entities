@@ -5,5 +5,7 @@
         string Resolve();
 
         bool HasItems { get; }
+
+        void Combine(IResolutionContainer container);
     }
 }
