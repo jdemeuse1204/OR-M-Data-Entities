@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 
@@ -11,14 +10,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
     public class JoinResolutionContainer : ResolutionContainerBase, IResolutionContainer
     {
-        public IEnumerable<JoinPair> Joins { get { return _joins; } }
+        public IEnumerable<JoinTablePair> Joins { get { return _joins; } }
 
-        private List<JoinPair> _joins;
+        private List<JoinTablePair> _joins;
 
-        public JoinResolutionContainer(IEnumerable<JoinPair> joins, Guid expressionQueryId)
+        public JoinResolutionContainer(IEnumerable<JoinTablePair> joins, Guid expressionQueryId)
             : base(expressionQueryId)
         {
-            _joins = new List<JoinPair>();
+            _joins = new List<JoinTablePair>();
             _joins.AddRange(joins);
         }
 
@@ -34,10 +33,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             _joins = container.GetType()
                 .GetField("_joins", BindingFlags.NonPublic | BindingFlags.Instance)
-                .GetValue(container) as List<JoinPair>;
+                .GetValue(container) as List<JoinTablePair>;
         }
 
-        public void Add(JoinPair join)
+        public void Add(JoinTablePair join)
         {
             _joins.Add(join);
         }
@@ -52,14 +51,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return _joins.Aggregate("",
                 (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
                     @join.HeirarchyContainsList ? "LEFT" : "INNER",
-                    string.Format("[{0}] As [{1}]", @join.ChildTableName, @join.ComputedChildAlias),
-                    @join.ComputedParentAlias, @join.ParentPropertyName, @join.ComputedChildAlias,
-                    @join.ChildPropertyName));
-        }
-
-        public IEnumerable<TableInfo> GetChangeTableContainers()
-        {
-            return null;// _joins.Where(w => w.ParentNode.TableInfo != null).Select(w => w.ParentNode.TableInfo);
+                    string.Format("[{0}] As [{1}]", @join.ChildTable.Name, @join.ChildTable.Alias),
+                    @join.ParentTable.Alias, @join.ParentTable.ForeignKeyTableName, @join.ChildTable.Alias,
+                    @join.ChildTable.ForeignKeyTableName));
         }
 
         private string _getJoinName(JoinType joinType)

@@ -2,14 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Query.Tables;
 
 namespace OR_M_Data_Entities.Expressions.Collections
 {
-    public class ReadOnlyTableTypeCollection : IEnumerable<TableType>
+    public class ReadOnlyTableCollection : IEnumerable<ForeignKeyTable>
     {
         #region Fields
-        protected readonly List<TableType> Internal;
+        protected readonly List<ForeignKeyTable> Internal;
 
         protected readonly Type ExpressionQueryType;
         #endregion
@@ -20,25 +20,25 @@ namespace OR_M_Data_Entities.Expressions.Collections
         #endregion
 
         #region Constructor
-        public ReadOnlyTableTypeCollection()
+        public ReadOnlyTableCollection()
         {
-            Internal = new List<TableType>();
+            Internal = new List<ForeignKeyTable>();
         }
         #endregion
 
-        public TableType Find(Type type, Guid expressionQueryId)
+        public ForeignKeyTable Find(Type type, Guid expressionQueryId)
         {
             return Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Type == type);
         }
 
-        public TableType Find(string alias, Guid expressionQueryId)
+        public ForeignKeyTable Find(string alias, Guid expressionQueryId)
         {
             return Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Alias == alias);
         }
 
-        public TableType FindByPropertyName(string propertyName, Guid expressionQueryId)
+        public ForeignKeyTable FindByPropertyName(string propertyName, Guid expressionQueryId)
         {
-            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.PropertyName == propertyName);
+            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.ForeignKeyTableName == propertyName);
         }
 
         public string FindAlias(Type type, Guid expressionQueryId)
@@ -51,7 +51,7 @@ namespace OR_M_Data_Entities.Expressions.Collections
             return Internal.Where(w => w.ExpressionQueryId == expressionQueryId).Select(w => w.Type).Contains(type);
         }
 
-        public IEnumerator<TableType> GetEnumerator()
+        public IEnumerator<ForeignKeyTable> GetEnumerator()
         {
             return Internal.GetEnumerator();
         }

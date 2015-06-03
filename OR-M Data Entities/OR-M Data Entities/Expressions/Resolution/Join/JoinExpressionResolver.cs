@@ -18,24 +18,22 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             Expression<Func<TOuter, TInner, TResult>> resultSelector,
             JoinType joinType,
             JoinResolutionContainer joinResolution,
-            TableTypeCollection tables, 
+            TableCollection tables, 
             Guid expressionQueryId)
         {
             // If we are doing a join here do not worry about foreign keys.  
-            var childTableName = DatabaseSchemata.GetTableName<TInner>();
             var computedChildTableName = tables.Find(typeof(TInner), expressionQueryId).Alias;
             var computedParentTableName = tables.Find(typeof(TOuter), expressionQueryId).Alias;
 
-            joinResolution.Add(new JoinPair(
-                typeof (TOuter), 
+            joinResolution.Add(new JoinTablePair(
+                expressionQueryId,
+                typeof (TOuter),
                 typeof (TInner),
                 !_hasInnerJoin(joinType),
                 computedParentTableName,
                 computedChildTableName,
                 GetColumnName(outerKeySelector.Body as dynamic),
-                GetColumnName(innerKeySelector.Body as dynamic),
-                DatabaseSchemata.GetTableName<TOuter>(),
-                childTableName));
+                GetColumnName(innerKeySelector.Body as dynamic)));
         }
 
         private static Type _resolveType<T, TKey>(Expression<Func<T, TKey>> expression)

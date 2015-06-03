@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
-using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
+using OR_M_Data_Entities.Expressions.Query.Columns;
 
 namespace OR_M_Data_Entities.Expressions.Resolution
 {
@@ -13,10 +13,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         IReadOnlyList<SqlDbParameter> Parameters { get; }
 
-        ReadOnlyTableTypeCollection Tables { get; }
+        ReadOnlyTableCollection Tables { get; }
 
         // for use with payload
-        IEnumerable<SelectInfo> SelectInfos { get; }
+        IEnumerable<DbColumn> SelectInfos { get; }
 
         void Clear();
 

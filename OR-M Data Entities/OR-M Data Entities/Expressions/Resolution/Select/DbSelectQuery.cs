@@ -5,7 +5,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
-using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping.Base;
@@ -17,11 +17,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         #region Fields And Properties
         protected readonly SelectInfoResolutionContainer Columns;
 
-        private readonly List<JoinPair> _foreignKeyJoinPairs;
-        protected IEnumerable<JoinPair> ForeignKeyJoinPairs { get { return _foreignKeyJoinPairs; } }
+        private readonly List<JoinTablePair> _foreignKeyJoinPairs;
+        protected IEnumerable<JoinTablePair> ForeignKeyJoinPairs { get { return _foreignKeyJoinPairs; } }
 
-        private readonly TableTypeCollection _tables;
-        public ReadOnlyTableTypeCollection Tables
+        private readonly TableCollection _tables;
+        public ReadOnlyTableCollection Tables
         {
             get { return _tables; }
         }
@@ -38,8 +38,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         {
             Id = Guid.NewGuid();
             Columns = new SelectInfoResolutionContainer(this.Id);
-            _foreignKeyJoinPairs = new List<JoinPair>();
-            _tables = new TableTypeCollection { new TableType(typeof(T), this.Id, null, null) };
+            _foreignKeyJoinPairs = new List<JoinTablePair>();
+            _tables = new TableCollection { new ForeignKeyTable(this.Id, typeof(T), null) };
             Type = typeof(T);
             ConstructionType = ExpressionQueryConstructionType.Main;
 
@@ -66,12 +66,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             _foreignKeyJoinPairs =
                 query.GetType()
                     .GetProperty("ForeignKeyJoinPairs", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .GetValue(query) as List<JoinPair>;
+                    .GetValue(query) as List<JoinTablePair>;
 
             _tables =
                 query.GetType()
                     .GetProperty("Tables", BindingFlags.Public | BindingFlags.Instance)
-                    .GetValue(query) as TableTypeCollection;
+                    .GetValue(query) as TableCollection;
 
             Type =
                 query.GetType()
@@ -92,23 +92,23 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             // if its a subquery the type doesnt exist, we need to add it
             if (ConstructionType == ExpressionQueryConstructionType.SubQuery)
             {
-                _tables.Insert(0, new PartialTableType(Type, this.Id, null));
+                _tables.Insert(0, new ForeignKeyTable(this.Id, Type, null, null));
             }
 
             for (var i = 0; i < _tables.Count; i++)
             {
                 var currentType = _tables[i];
-                var parentOfCurrent = i == 0 ? null : _foreignKeyJoinPairs.FirstOrDefault(w => w.ChildType == currentType.Type);
-                var foreignKeys = DatabaseSchemata.GetAllForeignKeysAndPseudoKeys(currentType.Type);
+                var parentOfCurrent = i == 0 ? null : _foreignKeyJoinPairs.FirstOrDefault(w => w.ChildTable.Type == currentType.Type);
+                var foreignKeys = DatabaseSchemata.GetAllForeignKeysAndPseudoKeys(currentType.Type, this.Id);
 
                 if (i == 0)
                 {
-                    _addPropertiesByType(currentType.Type, currentType.PropertyName, currentType.Alias);
+                    _addPropertiesByType(currentType.Type, currentType.ForeignKeyTableName, currentType.Alias);
                 }
                 else
                 {
-                    _addPropertiesByType(parentOfCurrent.ChildType, parentOfCurrent.ChildPropertyName,
-                        parentOfCurrent.ComputedChildAlias);
+                    _addPropertiesByType(parentOfCurrent.ChildTable.Type, parentOfCurrent.ChildTable.ForeignKeyTableName,
+                        parentOfCurrent.ChildTable.Alias);
                 }
 
                 // only load base type, this could be a sub query or lazy loading
@@ -118,21 +118,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                 if (foreignKeys.Count == 0) continue;
 
                 _tables.AddRange(
-                    foreignKeys.Select(w => new PartialTableType(w.Property.GetPropertyType(), this.Id, w.Property.Name)));
+                    foreignKeys.Select(w => new ForeignKeyTable(this.Id, w.ChildColumn.Property.DeclaringType, w.ChildColumn.PropertyName)));
 
                 _foreignKeyJoinPairs.AddRange(
                     foreignKeys.Select(
                         w =>
-                            new JoinPair(
-                                currentType.Type, w.Property.GetPropertyType(),
-                                ((parentOfCurrent != null && parentOfCurrent.HeirarchyContainsList) ||
-                                 w.Property.IsPropertyTypeList()),
-                                parentOfCurrent == null ? currentType.Alias : parentOfCurrent.ComputedChildAlias,
-                                _tables.FindAlias(w.Property.GetPropertyType(), this.Id),
-                                w.ParentPropertyName,
-                                w.ChildPropertyName,
-                                DatabaseSchemata.GetTableName(currentType.Type),
-                                DatabaseSchemata.GetTableName(w.Property.GetPropertyType()))
+                            new JoinTablePair(
+                                this.Id,
+                                currentType.Type, w.ChildColumn.Property.DeclaringType,
+                                ((parentOfCurrent != null && parentOfCurrent.HeirarchyContainsList) || w.JoinType == JoinType.Left),
+                                parentOfCurrent == null ? currentType.Alias : parentOfCurrent.ChildTable.Alias,
+                                _tables.FindAlias(w.ChildColumn.Table.Type, this.Id),
+                                w.ParentColumn.PropertyName,
+                                w.ChildColumn.PropertyName)
                         ));
             }
         }
@@ -143,13 +141,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             _foreignKeyJoinPairs.Clear();
         }
 
-        private void _addPropertiesByType(Type type, string foreignKeyTableName, string queryTableName)
+        private void _addPropertiesByType(Type type, string foreignKeyTableName, string alias)
         {
             var tableName = DatabaseSchemata.GetTableName(type);
 
             foreach (var info in type.GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null))
             {
-                Columns.Add(info, type, tableName, queryTableName, foreignKeyTableName, DatabaseSchemata.IsPrimaryKey(type, info.Name));
+                Columns.Add(info, type, tableName, alias, foreignKeyTableName, DatabaseSchemata.IsPrimaryKey(type, info.Name));
             }
         }
         #endregion

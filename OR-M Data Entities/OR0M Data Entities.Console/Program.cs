@@ -12,12 +12,24 @@ namespace OR0M_Data_Entities.Console
             var context = new DbSqlContext("sqlExpress");
 
             var s = DateTime.Now;
+            var e = DateTime.Now;
+            var f = e - s;
+
             var result2 =
                 context.From<Policy>()
                     .InnerJoin(context.From<PolicyType>(), policy => policy.PolicyInfoId, type => type.ID,
                         (policy, type) => policy)
                     .FirstOrDefault();
 
+            e = DateTime.Now;
+            f = e - s;
+
+            if (f.Days == 1)
+            {
+
+            }
+
+            s = DateTime.Now;
             var result =
                 context.From<Contact>()
                     .FirstOrDefault(
@@ -28,9 +40,9 @@ namespace OR0M_Data_Entities.Console
                                 .Where(x => x.ContactID == 2 && x.Description == "James")
                                 .Select(x => x.Description)
                                 .FirstOrDefault());
-            var e = DateTime.Now;
+            e = DateTime.Now;
 
-            var f = e - s;
+            f = e - s;
 
             if (f.Days == 1)
             {

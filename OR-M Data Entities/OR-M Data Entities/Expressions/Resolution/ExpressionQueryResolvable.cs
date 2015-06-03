@@ -7,9 +7,10 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Query.Columns;
+using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Expressions.Resolution.Select;
-using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 using OR_M_Data_Entities.Expressions.Resolution.Where;
 
 namespace OR_M_Data_Entities.Expressions.Resolution
@@ -30,7 +31,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             this.InitializeSelectInfos();
         }
 
-        public IEnumerable<SelectInfo> SelectInfos
+        public IEnumerable<DbColumn> SelectInfos
         {
             get { return this.Columns.Infos; }
         }
@@ -73,13 +74,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<T, TInner, TResult>> resultSelector, JoinType joinType)
         {
-            var tables = (TableTypeCollection)this.Tables;
+            var tables = (TableCollection)this.Tables;
 
             // since we are joining, if the table doesnt have any foreign keys the 
             // table will not exist so we need to add it
             if (!tables.ContainsType(typeof (TInner), this.Id))
             {
-                tables.Add(new PartialTableType(typeof(TInner), this.Id, null));
+                // does not come from a fk
+                tables.Add(new ForeignKeyTable(this.Id, typeof(TInner), null));
             }
 
             JoinExpressionResolver.Resolve(this, 
@@ -89,7 +91,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 resultSelector,
                 joinType, 
                 this.JoinResolution,
-                this.Tables as TableTypeCollection,
+                this.Tables as TableCollection,
                 this.Id);
 
             SelectExpressionResolver.Resolve(resultSelector, this.Columns, this);

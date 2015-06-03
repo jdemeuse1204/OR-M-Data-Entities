@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Expressions.Resolution.Where.Base;
+using OR_M_Data_Entities.Expressions.Query.Tables;
+using OR_M_Data_Entities.Expressions.Resolution.Base;
 
 namespace OR_M_Data_Entities.Expressions.Query.Columns
 {
@@ -10,15 +10,29 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
         public PartialColumn(Guid expressionQueryId, Type tableType, PropertyInfo property)
         {
             ExpressionQueryId = expressionQueryId;
-            TableType = tableType;
+            Table = new DbTable(expressionQueryId, tableType);
             Property = property;
+        }
+
+        public PartialColumn(Guid expressionQueryId, Type tableType, string propertyName)
+        {
+            ExpressionQueryId = expressionQueryId;
+            Table = new DbTable(expressionQueryId, tableType);
+            _propertyName = propertyName;
+
+            Property = tableType.GetProperty(propertyName);
         }
 
         public Guid ExpressionQueryId { get; set; }
 
-        public Type TableType { get; set; }
+        public DbTable Table { get; set; }
 
-        public PropertyInfo Property { get; set; }
+        public MemberInfo Property { get; set; }
+
+        public bool IsPropertyList
+        {
+            get { return Property != null && Property.IsList(); }
+        }
 
         public string _propertyName;
 
@@ -31,20 +45,6 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
                     _propertyName = Property.Name;
                 }
                 return _propertyName;
-            }
-        }
-
-        private string _tableName;
-
-        public string TableName
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(_tableName) && TableType != null)
-                {
-                    _tableName = DatabaseSchemata.GetTableName(TableType);
-                }
-                return _tableName;
             }
         }
     }

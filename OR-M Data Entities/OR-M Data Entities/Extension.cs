@@ -448,7 +448,7 @@ namespace OR_M_Data_Entities
             try
             {
                 // find any unmapped attributes
-                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewType == instance.GetType() && w.IsSelected).ToList();
+                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewTable.Type == instance.GetType() && w.IsSelected).ToList();
 
                 for (var i = 0; i < properties.Count; i++)
                 {
@@ -662,7 +662,7 @@ namespace OR_M_Data_Entities
         private static int GetCompositKey(this ObjectSchematic schematic, PeekDataReader reader)
         {
             var infos = reader.Payload.Query.SelectInfos.Where(
-                w => w.NewType == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
+                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
 
             return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
         } 

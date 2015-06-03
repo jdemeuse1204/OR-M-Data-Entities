@@ -3,9 +3,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
-using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {
@@ -31,18 +31,18 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         }
 
 
-        private static SelectInfo _find(MemberExpression expression, SelectInfoResolutionContainer selectList)
+        private static DbColumn _find(MemberExpression expression, SelectInfoResolutionContainer selectList)
         {
             // what if we are selecting a foreign key, then we need to select all from that table
             return selectList.Infos.First(
                     w =>
-                        w.NewType == expression.Expression.Type &&
+                        w.NewTable.Type == expression.Expression.Type &&
                         w.NewProperty.Name == expression.Member.Name);
         }
 
         private static void _resolveShape(ParameterExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
         {
-            var infos = selectList.Infos.Where(w => w.BaseType == expression.Type).ToList();
+            var infos = selectList.Infos.Where(w => w.Table.Type == expression.Type).ToList();
 
             if (infos.Count == 0)
             {
@@ -61,7 +61,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                 }
             }
 
-            foreach (var selectInfo in selectList.Infos.Where(w => w.BaseType == expression.Type))
+            foreach (var selectInfo in selectList.Infos.Where(w => w.Table.Type == expression.Type))
             {
                 selectInfo.IsSelected = true;
             }
@@ -72,7 +72,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             var info = _find(expression, selectList);
 
             // is it always the same ?
-            info.NewType = expression.Expression.Type;
+            info.NewTable.Type = expression.Expression.Type;
             info.NewProperty = expression.Member;
             info.IsSelected = true;
 
@@ -96,7 +96,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                     {
                         var info = _find(memberExpression, selectList);
 
-                        info.NewType = member.ReflectedType;
+                        info.NewTable.Type = member.ReflectedType;
                         info.NewProperty = member;
                         info.IsSelected = true;
                     }
@@ -112,7 +112,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
                 if (parameterExpression != null)
                 {
-                    foreach (var info in selectList.Infos.Where(w => w.NewType == parameterExpression.Type))
+                    foreach (var info in selectList.Infos.Where(w => w.NewTable.Type == parameterExpression.Type))
                     {
                         info.IsSelected = true;
                     }
@@ -138,7 +138,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         {
                             var info = _find(memberExpression, selectList);
 
-                            info.NewType = newType;
+                            info.NewTable.Type = newType;
                             info.NewProperty = assignment.Member;
                             info.IsSelected = true;
                             continue;
@@ -171,7 +171,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
         private static void _selectAll(Type type, SelectInfoResolutionContainer selectList)
         {
-            foreach (var column in selectList.Infos.Where(w => w.NewType == type))
+            foreach (var column in selectList.Infos.Where(w => w.NewTable.Type == type))
             {
                 column.IsSelected = true;
             }

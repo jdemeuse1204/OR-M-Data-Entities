@@ -10,7 +10,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
@@ -424,31 +426,31 @@ namespace OR_M_Data_Entities.Data.Definition
             return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadKeyAttribute>() == null).ToList();
         }
 
-        public static List<ForeignKeyJoinInfo> GetAllForeignKeysAndPseudoKeys(Type type)
+        public static List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Type type, Guid expressionQueryId)
         {
             var autoLoadProperties =
                 type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null);
 
-            return (from autoLoadProperty in autoLoadProperties
-                let fkAttribute = autoLoadProperty.GetCustomAttribute<ForeignKeyAttribute>()
-                let pskAttribute = autoLoadProperty.GetCustomAttribute<PseudoKeyAttribute>()
-                select new ForeignKeyJoinInfo
+            return (from property in autoLoadProperties
+                let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
+                let pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>()
+                select new JoinColumnPair
                 {
-                    Property = autoLoadProperty,
-                    ParentPropertyName =
-                        fkAttribute != null
-                            ? autoLoadProperty.PropertyType.IsList()
-                                ? GetPrimaryKeys(type).First().Name
-                                : fkAttribute.ForeignKeyColumnName
-                            : pskAttribute.ParentTableColumnName,
-                    ChildPropertyName =
-                        fkAttribute != null
-                            ? autoLoadProperty.PropertyType.IsList()
-                                ? fkAttribute.ForeignKeyColumnName
-                                : GetPrimaryKeys(autoLoadProperty.PropertyType).First().Name
-                            : pskAttribute.ChildTableColumnName,
-                    ActualChildTableName = GetTableName(autoLoadProperty.GetPropertyType()),
-                    ActualParentTableName = GetTableName(type)
+                    ChildColumn =
+                        new PartialColumn(expressionQueryId, property.GetPropertyType(),
+                            fkAttribute != null
+                                ? property.PropertyType.IsList()
+                                    ? fkAttribute.ForeignKeyColumnName
+                                    : GetPrimaryKeys(property.PropertyType).First().Name
+                                : pskAttribute.ChildTableColumnName),
+                    ParentColumn =
+                        new PartialColumn(expressionQueryId, type,
+                            fkAttribute != null
+                                ? property.PropertyType.IsList()
+                                    ? GetPrimaryKeys(type).First().Name
+                                    : fkAttribute.ForeignKeyColumnName
+                                : pskAttribute.ParentTableColumnName),
+                    JoinType = property.PropertyType.IsList() ? JoinType.Left : JoinType.Inner
                 }).ToList();
         } 
 

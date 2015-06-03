@@ -83,25 +83,25 @@
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\IExpressionQuery.cs" />
     <Compile Include="Expressions\OrderedExpressionQuery.cs" />
-    <Compile Include="Expressions\Query\Columns\Column.cs" />
+    <Compile Include="Expressions\Query\Columns\SimpleColumn.cs" />
     <Compile Include="Expressions\Query\Columns\PartialColumn.cs" />
-    <Compile Include="Expressions\Query\Columns\QueryColumn.cs" />
+    <Compile Include="Expressions\Query\Columns\DbColumn.cs" />
     <Compile Include="Expressions\Query\DbQuery.cs" />
-    <Compile Include="Expressions\Query\PartialTableType.cs" />
-    <Compile Include="Expressions\Collections\ReadOnlyTableTypeCollection.cs" />
-    <Compile Include="Expressions\Query\TableInfo.cs" />
-    <Compile Include="Expressions\Query\TableType.cs" />
-    <Compile Include="Expressions\Collections\TableTypeCollection.cs" />
+    <Compile Include="Expressions\Collections\ReadOnlyTableCollection.cs" />
+    <Compile Include="Expressions\Query\Tables\AliasTable.cs" />
+    <Compile Include="Expressions\Query\Tables\ForeignKeyTable.cs" />
+    <Compile Include="Expressions\Query\Tables\DbTable.cs" />
+    <Compile Include="Expressions\Collections\TableCollection.cs" />
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\Base\ResolutionContainerBase.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
-    <Compile Include="Expressions\Resolution\Join\ForeignKeyJoinInfo.cs" />
-    <Compile Include="Expressions\Resolution\Join\JoinPair.cs" />
+    <Compile Include="Expressions\Resolution\Join\JoinColumnPair.cs" />
+    <Compile Include="Expressions\Resolution\Join\JoinTablePair.cs" />
     <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
-    <Compile Include="Expressions\Resolution\Where\Base\IQueryPart.cs" />
+    <Compile Include="Expressions\Resolution\Base\IQueryPart.cs" />
     <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
@@ -111,8 +111,6 @@
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
     <Compile Include="Expressions\Resolution\Containers\WhereResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Select\SelectExpressionResolver.cs" />
-    <Compile Include="Expressions\Resolution\Select\Info\SelectInfo.cs" />
-    <Compile Include="Expressions\Resolution\Select\Info\SelectInfoChanged.cs" />
     <Compile Include="Expressions\Resolution\Where\SqlConnector.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereExpressionResolver.cs" />
@@ -141,7 +139,6 @@
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Expressions\Query\Tables\" />
     <Folder Include="Expressions\Resolution\Functions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

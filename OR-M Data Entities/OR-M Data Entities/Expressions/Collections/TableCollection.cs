@@ -1,0 +1,40 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using OR_M_Data_Entities.Expressions.Query.Tables;
+
+namespace OR_M_Data_Entities.Expressions.Collections
+{
+    public class TableCollection : ReadOnlyTableCollection
+    {
+        public string Add(ForeignKeyTable foreignKeyTable)
+        {
+            foreignKeyTable.Alias = string.Format("AkA{0}", Internal.Count);
+
+            Internal.Add(foreignKeyTable);
+
+            return foreignKeyTable.Alias;
+        }
+
+        public void Insert(int index, ForeignKeyTable foreignKeyTable)
+        {
+            var aka = string.Format("AkA{0}", Internal.Count);
+
+            foreignKeyTable.Alias = aka;
+
+            Internal.Insert(index, foreignKeyTable);
+        }
+
+        public void AddRange(IEnumerable<ForeignKeyTable> range)
+        {
+            Internal.AddRange(
+                range.Select(
+                    w =>
+                        new ForeignKeyTable(w.ExpressionQueryId, w.Type, w.ForeignKeyTableName, string.Format("AkA{0}", Internal.Count))));
+        }
+
+        public ForeignKeyTable this[int i]
+        {
+            get { return Internal[i]; }
+        }
+    }
+}

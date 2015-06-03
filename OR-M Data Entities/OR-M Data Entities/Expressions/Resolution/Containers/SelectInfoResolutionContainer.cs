@@ -3,17 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Query.Columns;
+using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
-using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
     public class SelectInfoResolutionContainer : ResolutionContainerBase, IResolutionContainer
     {
-        private List<SelectInfo> _infos;
-        private List<TableInfo> _tableAliases;
+        private List<DbColumn> _infos;
+        private List<ForeignKeyTable> _tableAliases;
 
         public bool HasItems
         {
@@ -27,43 +26,42 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public int TakeRows { get; set; }
 
-        public IEnumerable<SelectInfo> Infos { get { return _infos; } }
+        public IEnumerable<DbColumn> Infos { get { return _infos; } }
 
-        public IEnumerable<TableInfo> TableAliases { get { return _tableAliases; } }
+        public IEnumerable<ForeignKeyTable> TableAliases { get { return _tableAliases; } }
 
         public SelectInfoResolutionContainer(Guid expressionQueryId)
             : base(expressionQueryId)
         {
-            _infos = new List<SelectInfo>();
-            _tableAliases = new List<TableInfo>();
+            _infos = new List<DbColumn>();
+            _tableAliases = new List<ForeignKeyTable>();
         }
 
         public void Combine(IResolutionContainer container)
         {
             _tableAliases = container.GetType()
                 .GetField("_tableAliases", BindingFlags.NonPublic | BindingFlags.Instance)
-                .GetValue(container) as List<TableInfo>;
+                .GetValue(container) as List<ForeignKeyTable>;
 
             _infos = container.GetType()
                 .GetField("_infos", BindingFlags.NonPublic | BindingFlags.Instance)
-                .GetValue(container) as List<SelectInfo>;
+                .GetValue(container) as List<DbColumn>;
         }
 
-        private SelectInfo _find(PropertyInfo item)
+        private DbColumn _find(PropertyInfo item)
         {
-            return _infos.First(w => w.OriginalProperty == item);
+            return _infos.First(w => w.Property == item);
         }
 
-        public void Add(PropertyInfo item, Type baseType, string tableName, string queryTableName, string foreignKeyTableName, bool isPrimaryKey)
+        public void Add(PropertyInfo item, Type baseType, string tableName, string tableAlias, string foreignKeyTableName, bool isPrimaryKey)
         {
-            if (!_tableAliases.Select(w => w.QueryTableName).Contains(queryTableName))
+            if (!_tableAliases.Select(w => w.Alias).Contains(tableAlias))
             {
-                _tableAliases.Add(new TableInfo(tableName, foreignKeyTableName, baseType, queryTableName));
+                _tableAliases.Add(new ForeignKeyTable(this.ExpressionQueryId, baseType, foreignKeyTableName, tableAlias));
             }
 
-            var test = new QueryColumn(this.ExpressionQueryId, item.DeclaringType, item, queryTableName, isPrimaryKey,
-                _infos.Count);
-            _infos.Add(new SelectInfo(item, baseType, tableName, queryTableName, _infos.Count, isPrimaryKey));
+            _infos.Add(new DbColumn(this.ExpressionQueryId, item.DeclaringType, item, tableAlias, isPrimaryKey,
+                _infos.Count));
         }
 
         public string GetNextTableReadName()
@@ -83,7 +81,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public bool ReturnPropertyOnly { get; set; }
 
-        public void CopyTo(SelectInfo[] array, int arrayIndex)
+        public void CopyTo(DbColumn[] array, int arrayIndex)
         {
             _infos.CopyTo(array, arrayIndex);
         }
@@ -124,7 +122,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             _infos.RemoveAt(index);
         }
 
-        public SelectInfo this[int index]
+        public DbColumn this[int index]
         {
             get { return _infos[index]; }
             set { _infos[index] = value; }
@@ -140,16 +138,16 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 allInfos.Aggregate(result,
                     (current, info) =>
                         current +
-                        string.Format("[{0}].[{1}],", info.TableReadName,
-                            DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
+                        string.Format("[{0}].[{1}],", info.GetTableAlias(),
+                            DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
         }
 
         public string GetOrderStatement()
         {
             var order = _infos.Where(w => w.IsPrimaryKey)
                 .OrderBy(w => w.Ordinal)
-                .Aggregate(string.Empty, (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.TableReadName,
-                    DatabaseSchemata.GetColumnName(info.OriginalProperty))).TrimEnd(',');
+                .Aggregate(string.Empty, (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.GetTableAlias(),
+                    DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
 
             return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);
         }
