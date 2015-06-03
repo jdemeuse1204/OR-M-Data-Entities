@@ -1,5 +1,4 @@
 ﻿using System;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Where.Base;
 
@@ -15,7 +14,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             Group = -1;
         }
 
-        public Guid QueryId { get; set; }
+        public Guid ExpressionQueryId { get; set; }
 
         public string TableName { get; set; }
 

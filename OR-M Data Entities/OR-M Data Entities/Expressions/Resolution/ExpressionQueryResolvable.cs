@@ -61,6 +61,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         }
         #endregion
 
+        #region Methods
         public void ResolveWhere(Expression<Func<T, bool>> expression)
         {
             WhereExpressionResolver.Resolve(expression, this.WhereResolution, this);
@@ -74,6 +75,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
             var tables = (TableTypeCollection)this.Tables;
 
+            // since we are joining, if the table doesnt have any foreign keys the 
+            // table will not exist so we need to add it
             if (!tables.ContainsType(typeof (TInner), this.Id))
             {
                 tables.Add(new PartialTableType(typeof(TInner), this.Id, null));
@@ -111,17 +114,18 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         public void ResolveTakeRows(int rows)
         {
-            
+            this.Columns.TakeRows = rows;
         }
 
         public void ResolveDistinct()
         {
-            
+            this.Columns.IsSelectDistinct = true;
         }
 
         public void ResolveExpression()
         {
             ResolveQuery();
         }
+        #endregion
     }
 }

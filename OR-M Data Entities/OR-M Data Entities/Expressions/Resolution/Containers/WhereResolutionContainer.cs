@@ -76,7 +76,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public void AddResolution(WhereResolutionPart resolution)
         {
-            resolution.QueryId = ExpressionQueryId;
+            resolution.ExpressionQueryId = ExpressionQueryId;
 
             _resolutions.Add(resolution);
         }
@@ -90,7 +90,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             _resolutions.Add(new SqlConnector
             {
-                QueryId = ExpressionQueryId,
+                ExpressionQueryId = ExpressionQueryId,
                 Type = connector
             });
         }
@@ -118,7 +118,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             var currentGroupNumber = -1;
             // combine parameters from sub query
 
-            var resolutions = _resolutions.Where(w => w.QueryId == ExpressionQueryId).ToList();
+            var resolutions = _resolutions.Where(w => w.ExpressionQueryId == ExpressionQueryId).ToList();
 
             for (var i = 0; i < resolutions.Count; i++)
             {

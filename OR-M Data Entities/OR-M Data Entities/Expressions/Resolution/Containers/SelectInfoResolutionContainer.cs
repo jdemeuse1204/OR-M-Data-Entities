@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Expressions.Query;
+using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Select.Info;
 
@@ -60,6 +61,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 _tableAliases.Add(new TableInfo(tableName, foreignKeyTableName, baseType, queryTableName));
             }
 
+            var test = new QueryColumn(this.ExpressionQueryId, item.DeclaringType, item, queryTableName, isPrimaryKey,
+                _infos.Count);
             _infos.Add(new SelectInfo(item, baseType, tableName, queryTableName, _infos.Count, isPrimaryKey));
         }
 

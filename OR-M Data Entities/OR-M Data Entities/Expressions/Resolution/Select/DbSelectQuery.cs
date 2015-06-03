@@ -89,8 +89,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
         protected void InitializeSelectInfos()
         {
-            Columns.Clear();
-
             // if its a subquery the type doesnt exist, we need to add it
             if (ConstructionType == ExpressionQueryConstructionType.SubQuery)
             {
