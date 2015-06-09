@@ -63,10 +63,12 @@ namespace OR_M_Data_Entities.Data
         #region Data Execution
         public ExpressionQuery<T> From<T>()
         {
-            var resolvableQuery = new ExpressionQueryResolvable<T>(this);
+            return new ExpressionQueryResolvable<T>(this);
+        }
 
-
-            return resolvableQuery;
+        public ExpressionQuery<T> FromView<T>(string viewId)
+        {
+            return new ExpressionQueryViewResolvable<T>(this, viewId);
         } 
         #endregion
     }

@@ -12,8 +12,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         #endregion
 
         #region Constructor
-        protected DbWhereQuery()
-            : base()
+        protected DbWhereQuery(string viewId = null)
+            : base(viewId)
         {
             WhereResolution = new WhereResolutionContainer(this.Id);
         }
@@ -23,6 +23,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         {
             switch (ConstructionType)
             {
+                case ExpressionQueryConstructionType.Select:
                 case ExpressionQueryConstructionType.Join:
                     WhereResolution = query.GetType()
                             .GetField("WhereResolution", BindingFlags.NonPublic | BindingFlags.Instance)

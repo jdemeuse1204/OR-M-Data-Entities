@@ -22,8 +22,6 @@ using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
@@ -59,62 +57,52 @@ namespace OR_M_Data_Entities
         #region Max
         public static decimal? Max(this ExpressionQuery<decimal?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _max(source);
         }
 
         public static decimal Max(this ExpressionQuery<decimal> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _max(source);
         }
 
         public static double? Max(this ExpressionQuery<double?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _max(source);
         }
 
         public static double Max(this ExpressionQuery<double> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _max(source);
         }
 
         public static float? Max(this ExpressionQuery<float?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _max(source);
         }
 
         public static float Max(this ExpressionQuery<float> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _max(source);
         }
 
         public static int? Max(this ExpressionQuery<int?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _max(source);
         }
 
         public static int Max(this ExpressionQuery<int> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _max(source);
         }
 
         public static long? Max(this ExpressionQuery<long?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _max(source);
         }
 
         public static long Max(this ExpressionQuery<long> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _max(source);
         }
         #endregion
 
@@ -213,18 +201,14 @@ namespace OR_M_Data_Entities
         #region To List
         public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source)
         {
-            // execute sql, and grab data
-
-            return new List<TSource>();
+            return _execute(source).ToList();
         }
 
         public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
-            // execute sql, and grab data
-
-            return new List<TSource>();
+            return All(source);
         }
         #endregion
 
@@ -232,7 +216,7 @@ namespace OR_M_Data_Entities
         {
             source.Where(expression);
 
-            return _execute(source).Any();
+            return Any(source);
         }
 
         public static bool Any<TSource>(this ExpressionQuery<TSource> source)
@@ -251,7 +235,7 @@ namespace OR_M_Data_Entities
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            return ((ExpressionQueryResolvable<TOuter>) outer).ResolveJoin(inner, outerKeySelector,
+            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
                 innerKeySelector, resultSelector, JoinType.Inner);
         }
 
@@ -266,7 +250,7 @@ namespace OR_M_Data_Entities
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            return ((ExpressionQueryResolvable<TSource>) source).ResolveSelect(selector, source);
+            return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
         }
 
         public static bool IsExpressionQuery(this MethodCallExpression expression)
@@ -280,18 +264,27 @@ namespace OR_M_Data_Entities
         {
             return type.IsGenericType &&
                    type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQuery<>)) || type.IsGenericType &&
+                       .IsAssignableFrom(typeof(ExpressionQuery<>)) || type.IsGenericType &&
                    type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQueryResolvable<>));
+                       .IsAssignableFrom(typeof(ExpressionQueryResolvable<>));
         }
 
         public static bool IsExpressionQuery(this object o)
         {
             return o.GetType().IsGenericType &&
                    o.GetType().GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQuery<>)) || o.GetType().IsGenericType &&
+                       .IsAssignableFrom(typeof(ExpressionQuery<>)) || o.GetType().IsGenericType &&
                    o.GetType().GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof (ExpressionQueryResolvable<>));
+                       .IsAssignableFrom(typeof(ExpressionQueryResolvable<>));
+        }
+
+        private static T _max<T>(this ExpressionQuery<T> source)
+        {
+            ((ExpressionQueryResolvable<T>)source).ResoveMax();
+
+            _execute(source);
+
+            return source.FirstOrDefault();
         }
 
         private static IEnumerable<T> _execute<T>(ExpressionQuery<T> source)
@@ -394,55 +387,18 @@ namespace OR_M_Data_Entities
                 return reader.ToObject();
             }
 
-            return reader.GetObjectFromReaderWithForeignKeys<T>();
+            try
+            {
+                return reader.GetObjectFromReaderWithForeignKeys<T>();
+            }
+            catch (StackOverflowException)
+            {
+                throw new StackOverflowException("Data Load Error:  Object has too many foreign keys, please consider making a view or making your model smaller");
+            }           
         }
 
         #region Helpers
-        private static T GetObjectFromReader<T>(this PeekDataReader reader)
-        {
-            // Create instance
-            var instance = Activator.CreateInstance<T>();
-
-            // find any unmapped attributes
-            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
-
-            foreach (var property in properties)
-            {
-                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-
-                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[columnAttribute != null ? columnAttribute.Name : property.Name];
-
-                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-            }
-
-            return instance;
-        }
-
         #region Load Object With Foreign Keys
-        private static T GetObjectFromReaderUsingTableName<T>(this PeekDataReader reader)
-        {
-            // Create instance
-            var instance = Activator.CreateInstance<T>();
-
-            var tableName = DatabaseSchemata.GetTableName<T>();
-
-            // find any unmapped attributes
-            var properties = typeof(T).GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null).ToList();
-
-            foreach (var property in properties)
-            {
-                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-
-                // need to select by tablename and columnname because of joins.  Column names cannot be ambiguous
-                var dbValue = reader[tableName + (columnAttribute != null ? columnAttribute.Name : property.Name)];
-
-                instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
-            }
-
-            return instance;
-        }
-
         private static bool LoadObjectWithForeignKeys(this PeekDataReader reader, object instance)
         {
             try
@@ -471,18 +427,15 @@ namespace OR_M_Data_Entities
         {
             // Create instance
             var instance = Activator.CreateInstance<T>();
-            var tableName = DatabaseSchemata.GetTableName<T>();
-            var primaryKey = DatabaseSchemata.GetPrimaryKeys<T>().First();
             var foreignKeys = DatabaseSchemata.GetObjectSchematic(instance);
-            var primaryKeyLookUpName = string.Format("{0}{1}", tableName, DatabaseSchemata.GetColumnName(primaryKey));
             var objectMapNodes = new List<ObjectMapNode>();
+            var pkValue = foreignKeys.GetCompositKey(reader);
+            var pkArray = foreignKeys.GetCompositKeyArray(reader);
 
             // load the instance
             reader.LoadObjectWithForeignKeys(instance);
 
-            var pkValue = instance.GetType().GetProperty(primaryKey.Name).GetValue(instance);
-
-            _loadObjectWithForeignKeys(reader, instance, foreignKeys.ChildTypes, primaryKeyLookUpName, pkValue, objectMapNodes);
+            _loadObjectWithForeignKeys(reader, instance, foreignKeys.ChildTypes, pkArray, pkValue, objectMapNodes);
 
             return instance;
         }
@@ -576,15 +529,15 @@ namespace OR_M_Data_Entities
                 {
                     _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
                 }
-            }   
+            }
         }
 
         private static void _loadObjectWithForeignKeys(
             PeekDataReader reader,
             object instance,
             IEnumerable<ObjectSchematic> foreignKeys,
-            string primaryKeyLookUpName,
-            object pkValue,
+            int[] pkOrdinals,
+            object compositePkValue,
             List<ObjectMapNode> objectMapNodes)
         {
             foreach (var foreignKey in foreignKeys)
@@ -645,27 +598,27 @@ namespace OR_M_Data_Entities
             if (!reader.Peek()) return;
 
             // if one column doesnt match then we do not have a match
-
-            // TODO - Check for multiple keys!
-            if (!pkValue.Equals(reader[primaryKeyLookUpName]))
-            {
-                return;
-            }
+            if (!compositePkValue.Equals(pkOrdinals.Sum(w => reader[w].GetHashCode()))) return;
 
             // read the next row
             reader.Read();
 
-            _loadObjectWithForeignKeys(reader, instance, foreignKeys, primaryKeyLookUpName, pkValue, objectMapNodes);
+            _loadObjectWithForeignKeys(reader, instance, foreignKeys, pkOrdinals, compositePkValue, objectMapNodes);
         }
         #endregion
 
         private static int GetCompositKey(this ObjectSchematic schematic, PeekDataReader reader)
         {
-            var infos = reader.Payload.Query.SelectInfos.Where(
-                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewProperty.Name));
+            return schematic.GetCompositKeyArray(reader).Sum(t => reader[t].GetHashCode());
+        }
 
-            return infos.Select(w => w.Ordinal).Sum(t => reader[t].GetHashCode());
-        } 
+        private static int[] GetCompositKeyArray(this ObjectSchematic schematic, PeekDataReader reader)
+        {
+            var infos = reader.Payload.Query.SelectInfos.Where(
+                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewPropertyName));
+
+            return infos.Select(w => w.Ordinal).ToArray();
+        }
         #endregion
     }
 

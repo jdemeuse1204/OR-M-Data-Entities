@@ -4,6 +4,7 @@
     {
         Join,
         SubQuery,
-        Main
+        Main,
+        Select
     }
 }

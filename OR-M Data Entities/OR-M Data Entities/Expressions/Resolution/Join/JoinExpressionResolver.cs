@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq.Expressions;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Resolution.Base;

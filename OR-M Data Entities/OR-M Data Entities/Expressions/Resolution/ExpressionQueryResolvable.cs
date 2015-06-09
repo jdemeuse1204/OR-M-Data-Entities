@@ -6,7 +6,6 @@ using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
-using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
@@ -45,9 +44,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         #endregion
 
-        #region Constructor        
-        public ExpressionQueryResolvable(DatabaseReading context)
-            : base(context)
+        #region Constructor
+        public ExpressionQueryResolvable(DatabaseReading context, string viewId = null)
+            : base(context, viewId)
         {
             _parameters = new List<SqlDbParameter>();
         }
@@ -104,14 +103,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             // resolve the expressions shape
             SelectExpressionResolver.Resolve(selector, this.Columns, this);
 
-            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Main);
+            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Select);
         }
 
         public ExpressionQuery<TResult> ResolveSelect<TSource, TResult>(Expression<Func<TSource, TResult>> selector, ExpressionQuery<TSource> source)
         {
             SelectExpressionResolver.Resolve(selector, this.Columns, this);
 
-            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Main);
+            return new ExpressionQueryResolvable<TResult>(this, ExpressionQueryConstructionType.Select);
         }
 
         public void ResolveTakeRows(int rows)
@@ -127,6 +126,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         public void ResolveExpression()
         {
             ResolveQuery();
+        }
+
+        public void ResoveMax()
+        {
+            Function = FunctionType.Max;
         }
         #endregion
     }

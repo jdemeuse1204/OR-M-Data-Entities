@@ -12,8 +12,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
         #endregion
 
         #region Constructor
-        protected DbJoinQuery()
-            : base()
+        protected DbJoinQuery(string viewId = null)
+            : base(viewId)
         {
             JoinResolution = new JoinResolutionContainer(ForeignKeyJoinPairs, this.Id);
         }

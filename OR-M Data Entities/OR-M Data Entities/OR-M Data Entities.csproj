@@ -52,6 +52,7 @@
     <Compile Include="Enumeration\ComparisonType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
     <Compile Include="Enumeration\ExpressionQueryConstructionType.cs" />
+    <Compile Include="Enumeration\FunctionType.cs" />
     <Compile Include="Enumeration\JoinType.cs" />
     <Compile Include="Commands\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Commands\Secure\SqlSecureObject.cs" />
@@ -95,10 +96,16 @@
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\Base\ResolutionContainerBase.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\ExpressionQueryViewResolvable.cs" />
+    <Compile Include="Expressions\Resolution\Functions\FunctionResolutionContainer.cs" />
+    <Compile Include="Expressions\Resolution\Functions\FunctionResolver.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\IExpressionQueryViewResolvable.cs" />
+    <Compile Include="Expressions\Resolution\IOrderedExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinColumnPair.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinTablePair.cs" />
+    <Compile Include="Expressions\Resolution\OrderedExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
     <Compile Include="Expressions\Resolution\Base\IQueryPart.cs" />
@@ -138,9 +145,7 @@
     <None Include="OR-M Data Entities.licenseheader" />
     <None Include="README.md" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Expressions\Resolution\Functions\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

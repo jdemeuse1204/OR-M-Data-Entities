@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -23,14 +24,15 @@ namespace OR_M_Data_Entities.Expressions.Query
 
         public string Sql { get; private set; }
 
-        
+        protected FunctionType Function { get; set; }
         #endregion
 
         #region Constructor
-        protected DbQuery(DatabaseReading context)
+        protected DbQuery(DatabaseReading context, string viewId = null)
             : base()
         {
             Context = context;
+            Function = FunctionType.None;
             IsSubQuery = context == null && ConstructionType == ExpressionQueryConstructionType.SubQuery;
         }
 
@@ -40,7 +42,12 @@ namespace OR_M_Data_Entities.Expressions.Query
             Context =
                 query.GetType().GetField("Context", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(query) as
                     DatabaseReading;
-            IsSubQuery = this.Id != query.Id;
+            Function =
+                (FunctionType)
+                    query.GetType()
+                        .GetProperty("Function", BindingFlags.NonPublic | BindingFlags.Instance)
+                        .GetValue(query);
+            IsSubQuery = this.ConstructionType != ExpressionQueryConstructionType.Main && this.Id != query.Id;
         }
         #endregion
 
@@ -51,12 +58,22 @@ namespace OR_M_Data_Entities.Expressions.Query
 
             var select = Columns.HasItems ? Columns.Resolve() : string.Empty;
 
+            switch (Function)
+            {
+                case FunctionType.Max:
+                    select = string.Format("MAX({0})", select);
+                    break;
+                case FunctionType.Min:
+                    select = string.Format("MIN({0})", select);
+                    break;
+            }
+
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
 
             var from = string.Format("[{0}] As [{1}]", DatabaseSchemata.GetTableName(Type),
                 Tables.FindAlias(Type, this.Id));
 
-            var order = IsSubQuery ? string.Empty : Columns.GetOrderStatement();
+            var order = IsSubQuery || Function != FunctionType.None ? string.Empty : Columns.GetOrderStatement();
 
             Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}",
                 Columns.IsSelectDistinct ? " DISTINCT" : string.Empty,
@@ -65,6 +82,6 @@ namespace OR_M_Data_Entities.Expressions.Query
                 join,
                 string.IsNullOrWhiteSpace(where) ? string.Empty : string.Format("WHERE {0}", where),
                 order);
-        }        
+        }
     }
 }

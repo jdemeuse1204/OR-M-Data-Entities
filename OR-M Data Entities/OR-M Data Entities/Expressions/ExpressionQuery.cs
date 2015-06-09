@@ -15,8 +15,8 @@ namespace OR_M_Data_Entities.Expressions
         #endregion
 
         #region Constructor
-        protected ExpressionQuery(DatabaseReading context)
-            : base(context)
+        protected ExpressionQuery(DatabaseReading context, string viewId = null)
+            : base(context, viewId)
         {
             
         }
@@ -24,7 +24,9 @@ namespace OR_M_Data_Entities.Expressions
         protected ExpressionQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
             : base(query, constructionType)
         {
-            
+            // for subquery's, joins, and such
+
+            // view cannot be in a sub query
         }
         #endregion
 

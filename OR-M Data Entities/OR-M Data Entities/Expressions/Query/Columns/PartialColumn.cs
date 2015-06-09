@@ -2,6 +2,7 @@
 using System.Reflection;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Query.Columns
 {
@@ -34,16 +35,17 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
             get { return Property != null && Property.IsList(); }
         }
 
-        public string _propertyName;
-
+        private string _propertyName;
         public string PropertyName
         {
             get
             {
-                if (string.IsNullOrWhiteSpace(_propertyName) && Property != null)
-                {
-                    _propertyName = Property.Name;
-                }
+                if (!string.IsNullOrWhiteSpace(_propertyName) || Property == null) return _propertyName;
+
+                var columnAttribute = Property.GetCustomAttribute<ColumnAttribute>();
+
+                _propertyName = columnAttribute == null ? Property.Name : columnAttribute.Name;
+
                 return _propertyName;
             }
         }

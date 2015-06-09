@@ -26,6 +26,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             get { return _tables; }
         }
 
+        public readonly string ViewId;
+
         public ExpressionQueryConstructionType ConstructionType { get; private set; }
 
         public Guid Id { get; private set; }
@@ -34,8 +36,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         #endregion
 
         #region Constructor
-        protected DbSelectQuery()
+        protected DbSelectQuery(string viewId = null)
         {
+            ViewId = viewId;
             Id = Guid.NewGuid();
             Columns = new SelectInfoResolutionContainer(this.Id);
             _foreignKeyJoinPairs = new List<JoinTablePair>();
@@ -54,7 +57,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             // never combine columns, selects don't matter, only tables and parameters do for aliasing
             Columns = new SelectInfoResolutionContainer(this.Id);
 
-            if (ConstructionType == ExpressionQueryConstructionType.Join)
+            if (ConstructionType == ExpressionQueryConstructionType.Join ||
+                ConstructionType == ExpressionQueryConstructionType.Select)
             {
                 Id = query.Id;
                 Columns =
@@ -78,7 +82,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                     .GetField("Type", BindingFlags.NonPublic | BindingFlags.Instance)
                     .GetValue(query) as Type;
 
-            if (!(this.Type == typeof(T)) && ConstructionType != ExpressionQueryConstructionType.Join)
+            if (!(this.Type == typeof(T)) && ConstructionType != ExpressionQueryConstructionType.Join &&
+                !typeof(T).IsValueType && typeof(T) != typeof(string))
             {
                 this.Type = typeof(T);
             }

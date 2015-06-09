@@ -10,6 +10,11 @@ namespace LambdaResolver
     {
         static void Main(string[] args)
         {
+            var x = new Stack<int>();
+
+            x.Push(1);
+            x.Push(2);
+
             var ctx = new DbSqlContext("sqlExpress");
 
             var lst = new List<int> { 1, 2, 3, 4, 5 };
