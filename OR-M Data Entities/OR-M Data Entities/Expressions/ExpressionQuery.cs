@@ -1,4 +1,10 @@
-﻿using System.Collections;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
@@ -10,10 +16,6 @@ namespace OR_M_Data_Entities.Expressions
 {
     public abstract class ExpressionQuery<T> : DbQuery<T>, IEnumerable<T>, IExpressionQuery
     {
-        #region Properties
-        private List<T> _queryResult { get; set; }
-        #endregion
-
         #region Constructor
         protected ExpressionQuery(DatabaseReading context, string viewId = null)
             : base(context, viewId)
@@ -35,17 +37,15 @@ namespace OR_M_Data_Entities.Expressions
         {
             if (IsSubQuery)
             {
-                this.GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null); 
-                return null;
+                // make sure sub query works with yield
+                GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null);
+                yield return default (T);
             }
 
-            if (_queryResult != null) return _queryResult.GetEnumerator();
-
-            _queryResult = new List<T>();
-
-            _queryResult = Context.ExecuteQuery(this).ToList();
-
-            return _queryResult.GetEnumerator();
+            foreach (var item in Context.ExecuteQuery(this))
+            {
+                yield return item;
+            }
         }
 
         IEnumerator IEnumerable.GetEnumerator()

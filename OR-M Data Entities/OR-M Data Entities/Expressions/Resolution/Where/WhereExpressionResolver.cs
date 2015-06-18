@@ -1,10 +1,18 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 
@@ -12,25 +20,55 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
     public class WhereExpressionResolver : ExpressionResolver
     {
-        public static void Resolve<T>(Expression<Func<T, bool>> expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery)
+        public static void Resolve<T>(Expression<Func<T, bool>> expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
         {
-            _evaluateTree(expression.Body as dynamic, container, baseQuery);
+            _evaluateTree(expression.Body as dynamic, container, baseQuery, viewId);
         }
 
-        private static void _evaluateTree(MethodCallExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery)
+        public static void ResolveFind<T>(object[] pks, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery)
         {
-            var result = _evaluate(expression, container, baseQuery, container.NextGroupNumber());
+            var table = baseQuery.Tables.Find(typeof(T), baseQuery.Id);
+            var infos =
+                baseQuery.SelectInfos.Where(w => w.IsPrimaryKey && w.Table.Type == typeof (T))
+                    .OrderBy(w => w.Ordinal)
+                    .ToList();
+
+            for (var i = 0; i < pks.Count(); i++)
+            {
+                var isConnector = (i%2) != 0;
+
+                if (isConnector)
+                {
+                    container.AddConnector(ConnectorType.And);
+                    continue;
+                }
+
+                container.AddResolution(new WhereResolutionPart
+                {
+                    ColumnName = infos[i].NewPropertyName,
+                    CompareValue = container.GetAndAddParameter(pks[i]),
+                    Comparison = CompareType.Equals,
+                    ExpressionQueryId = baseQuery.Id,
+                    TableAlias = table.Alias,
+                    TableName = table.Name
+                });
+            }
+        }
+
+        private static void _evaluateTree(MethodCallExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
+        {
+            var result = _evaluate(expression, container, baseQuery, viewId, container.NextGroupNumber());
 
             container.AddResolution(result);
         }
 
         // need to evaluate groupings
-        private static void _evaluateTree(BinaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery)
+        private static void _evaluateTree(BinaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
         {
             // check to see if we are at the end of the expression
             if (!HasComparison(expression))
             {
-                var result = _evaluate(expression as dynamic, container, baseQuery, container.NextGroupNumber());
+                var result = _evaluate(expression as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
 
                 container.AddResolution(result);
                 return;
@@ -46,13 +84,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 {
                     if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    _evaluateGroup(expression.Right as BinaryExpression, container, baseQuery);
+                    _evaluateGroup(expression.Right as BinaryExpression, container, baseQuery, viewId);
                 }
                 else
                 {
                     if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    var result = _evaluate(expression.Right as dynamic, container, baseQuery, container.NextGroupNumber());
+                    var result = _evaluate(expression.Right as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
 
                     container.AddResolution(result);
                     wasRightAdded = true;
@@ -65,7 +103,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
                     if (count == 0 && wasRightAdded) container.AddConnector(ConnectorType.And);
 
-                    _evaluateGroup(expression.Left as BinaryExpression, container, baseQuery);
+                    _evaluateGroup(expression.Left as BinaryExpression, container, baseQuery, viewId);
                     break;
                 }
 
@@ -76,7 +114,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
                     if (count == 0 && wasRightAdded) container.AddConnector(ConnectorType.And);
 
-                    var result = _evaluate(expression.Left as dynamic, container, baseQuery, container.NextGroupNumber());
+                    var result = _evaluate(expression.Left as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
 
                     container.AddResolution(result);
                     break;
@@ -89,13 +127,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
         #region Evaluate
 
-        private static void _evaluateGroup(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery)
+        private static void _evaluateGroup(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId)
         {
             var groupNumber = resolution.NextGroupNumber();
             // comparisons are always AND here, will be no groups in here
             while (true)
             {
-                var rightResult = _evaluate(expression.Right as dynamic, resolution, baseQuery);
+                var rightResult = _evaluate(expression.Right as dynamic, resolution, baseQuery, viewId);
 
                 rightResult.Group = groupNumber;
 
@@ -108,7 +146,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     continue;
                 }
 
-                var leftResult = _evaluate(expression.Left as dynamic, resolution, baseQuery);
+                var leftResult = _evaluate(expression.Left as dynamic, resolution, baseQuery, viewId);
 
                 leftResult.Group = groupNumber;
 
@@ -123,7 +161,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private static WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, int group = -1)
+        private static WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1)
         {
             var result = new WhereResolutionPart
             {
@@ -132,7 +170,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             var isParameterOnLeftSide = HasParameter(expression.Left as dynamic);
 
             // load the table and column name into the result
-            LoadColumnAndTableName((isParameterOnLeftSide ? expression.Left : expression.Right) as dynamic, result, baseQuery);
+            LoadColumnAndTableName((isParameterOnLeftSide ? expression.Left : expression.Right) as dynamic, result, baseQuery, viewId);
 
             // get the value from the expression
             var value = GetValue((isParameterOnLeftSide ? expression.Right : expression.Left) as dynamic, baseQuery);
@@ -152,7 +190,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private static WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, int group = -1, ExpressionType? expressionType = null)
+        private static WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
         {
             var result = new WhereResolutionPart
             {
@@ -163,13 +201,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
             if (isParameterOnLeftSide)
             {
-                LoadColumnAndTableName(expression.Object as dynamic, result, baseQuery);
+                LoadColumnAndTableName(expression.Object as dynamic, result, baseQuery, viewId);
 
                 value = GetValue(expression.Arguments[0] as dynamic, baseQuery);
             }
             else
             {
-                LoadColumnAndTableName(expression.Arguments[0] as dynamic, result, baseQuery);
+                LoadColumnAndTableName(expression.Arguments[0] as dynamic, result, baseQuery, viewId);
 
                 value = GetValue(expression.Object as dynamic, baseQuery);
             }
@@ -215,9 +253,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             return result;
         }
 
-        private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, int group = -1)
+        private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1)
         {
-            return _evaluate(expression.Operand as dynamic, resolution, baseQuery, group, expression.NodeType);
+            return _evaluate(expression.Operand as dynamic, resolution, baseQuery, viewId, group, expression.NodeType);
         }
         #endregion
 
@@ -249,8 +287,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         #endregion
 
         #region Load Table And Column Name
-        private static void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery)
+        private static void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery, string viewId)
         {
+            if (!string.IsNullOrWhiteSpace(viewId) && !DatabaseSchemata.IsPartOfView(expression.Expression.Type, viewId))
+            {
+                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                    expression.Expression.Type, viewId));
+            }
+
             if (expression.Expression.NodeType == ExpressionType.Parameter)
             {
                 // cannot come from a foriegn key, is the base type
@@ -260,6 +304,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             }
             else
             {
+
                 // will be from a foreign key, not the base type
                 result.ColumnName = expression.Member.Name;
                 result.TableName = ((MemberExpression)expression.Expression).Member.Name;
@@ -267,9 +312,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             }
         }
 
-        private static void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery)
+        private static void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery, string viewId)
         {
-            LoadColumnAndTableName(expression.Object as MemberExpression, result, baseQuery);
+            LoadColumnAndTableName(expression.Object as MemberExpression, result, baseQuery, viewId);
         }
         #endregion
 

@@ -3,6 +3,7 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
+    [View("ContactOnly")]
     [Table("Contacts")]
     public class Contact
     {
@@ -15,6 +16,16 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public int PhoneID { get; set; }
 
+        public int CreatedByUserID { get; set; }
+
+        public int EditedByUserID { get; set; }
+
+        [ForeignKey("CreatedByUserID")]
+        public User CreatedBy { get; set; }
+
+        [ForeignKey("EditedByUserID")]
+        public User EditedBy { get; set; }
+
         [ForeignKey("PhoneID")]
         public PhoneNumber Number { get; set; }
 
@@ -22,6 +33,6 @@ namespace OR_M_Data_Entities.Tests.Tables
         public List<Appointment> Appointments { get; set; }
 
         [ForeignKey("ContactID")]
-        public List<Name> Name { get; set; }
+        public List<Name> Names { get; set; }
     }
 }

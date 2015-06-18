@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -24,6 +30,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         bool IsLazyLoading { get; }
 
+        OSchematic LoadSchematic { get; }
+
+        bool HasForeignKeys { get; }
+
         string Sql { get; }
 
         void Initialize();
@@ -31,5 +41,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         Guid Id { get; }
 
         ExpressionQueryConstructionType ConstructionType { get; }
+
+        int GetOrdinalBySelectedColumns(int oldOrdinal);
     }
 }

@@ -69,6 +69,7 @@
     <Compile Include="Tables\PolicyInfo.cs" />
     <Compile Include="Tables\PolicyType.cs" />
     <Compile Include="Tables\StateCode.cs" />
+    <Compile Include="Tables\User.cs" />
     <Compile Include="Tables\Zip.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -12,44 +12,86 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
 
+           // var contact = new Contact
+           // {
+           //     FirstName = "James",
+           //     LastName = "Demeuse",
+           //     Name = new List<Name>()
+           //     {
+           //         new Name
+           //         {
+           //             Value = "NEW"
+           //         }
+           //     },
+           //     Number = new PhoneNumber
+           //     {
+           //         Phone = "414",
+           //         PhoneType = new PhoneType
+           //         {
+           //             Type = "CELL"
+           //         }
+           //     },
+           //     Appointments = new List<Appointment>
+           //     {
+           //         new Appointment
+           //         {
+           //             Description = "Date Added!",
+           //             Address = new List<Address>
+           //             {
+           //                 new Address
+           //                 {
+           //                     Addy = "MY ADDY!",
+           //                     State = new StateCode
+           //                     {
+           //                         Value = "MN"
+           //                     },
+           //                     ZipCode = new List<Zip>
+           //                     {
+           //                         new Zip
+           //                         {
+           //                             Zip4 = "0000",
+           //                             Zip5 = "55416"
+           //                         }
+           //                     }
+           //                 }
+           //             }
+           //         }
+           //     }
+           // };
+
+           //var saveType = context.SaveChanges(contact);
+
+           // if (saveType == ChangeStateType.Insert)
+           // {
+                
+           // }
+
+            var lst = new List<string>() {"james", "megan"};
+
             var s = DateTime.Now;
+            var c = new Contact();
+                //context.FromView<Contact>("ContactOnly")
+                //    .Where(w => w.FirstName == "James")
+                //    .Select(w => w.Number.Phone)
+                //    .ToList();
             var e = DateTime.Now;
             var f = e - s;
 
-            var result2 = context.From<Policy>().Select(w => w.StateID).Max();
-
-            e = DateTime.Now;
-            f = e - s;
-
-            if (f.Days == 1)
+            if (c != null && f.Days != 0)
             {
 
             }
 
             s = DateTime.Now;
-            var result =
-                context.From<Contact>()
-                    .Where(
-                        w =>
-                            w.ID == 2 &&
-                            w.FirstName ==
-                            context.From<Appointment>()
-                                .Where(x => x.ContactID == 2 && x.Description == "James")
-                                .Select(x => x.Description)
-                                .FirstOrDefault());
+            var a = context.From<Contact>().FirstOrDefault(w => w.ID == 2);
             e = DateTime.Now;
-
             f = e - s;
 
-            if (f.Days == 1)
+            if (a != null && f.Days != 0)
             {
 
             }
-
-            if (result != null && result2 != null)
-            {
-
-            }
+            //context.Delete(contact);
         }
     }
 }

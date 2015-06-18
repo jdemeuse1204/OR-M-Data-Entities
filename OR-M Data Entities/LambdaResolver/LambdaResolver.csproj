@@ -33,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="OR-M Data Entities.Tests">
+      <HintPath>..\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.Tests.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -44,15 +47,41 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tables\Address.cs" />
+    <Compile Include="Tables\AncillaryProduct.cs" />
+    <Compile Include="Tables\AncillaryProduct_Vendor.cs" />
+    <Compile Include="Tables\Ancillary_Note.cs" />
+    <Compile Include="Tables\aspnet_Role.cs" />
+    <Compile Include="Tables\Contact.cs" />
+    <Compile Include="Tables\County.cs" />
+    <Compile Include="Tables\MobileClosing.cs" />
+    <Compile Include="Tables\MobileClosingAddress.cs" />
+    <Compile Include="Tables\MobileClosingAssignment.cs" />
+    <Compile Include="Tables\MobileClosingCorrection.cs" />
+    <Compile Include="Tables\MobileClosingMembershipUserLogin.cs" />
+    <Compile Include="Tables\MobileClosingRoleMap.cs" />
+    <Compile Include="Tables\MobileClosingUserOrder.cs" />
+    <Compile Include="Tables\MobileClosingUserRole.cs" />
+    <Compile Include="Tables\Order.cs" />
+    <Compile Include="Tables\OrderAddress.cs" />
+    <Compile Include="Tables\OrderContact.cs" />
+    <Compile Include="Tables\Order_Note.cs" />
+    <Compile Include="Tables\Product.cs" />
+    <Compile Include="Tables\ProductType.cs" />
+    <Compile Include="Tables\State.cs" />
+    <Compile Include="Tables\Vendor.cs" />
+    <Compile Include="Tables\VendorAddress.cs" />
+    <Compile Include="Tables\VendorFeeByProduct.cs" />
+    <Compile Include="Tables\VendorOrderStatus.cs" />
+    <Compile Include="Tables\VendorPortalAccount.cs" />
+    <Compile Include="Tables\VendorProduct.cs" />
+    <Compile Include="Tables\VendorRanking.cs" />
+    <Compile Include="Tables\VendorStatus.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OR-M Data Entities.Tests\OR-M Data Entities.Tests.csproj">
-      <Project>{5878e940-4c5b-462e-b67b-017acc82120b}</Project>
-      <Name>OR-M Data Entities.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\OR-M Data Entities\OR-M Data Entities.csproj">
       <Project>{a7e402c6-3b5c-4477-950d-20772598fe4c}</Project>
       <Name>OR-M Data Entities</Name>

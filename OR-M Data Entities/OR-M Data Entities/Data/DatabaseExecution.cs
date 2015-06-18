@@ -1,9 +1,16 @@
-﻿using System.Collections.Generic;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 
@@ -43,6 +50,23 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking();
         }
 
+        /// <summary>
+        /// Execute the SqlBuilder on the database
+        /// </summary>
+        /// <param name="builder"></param>
+        protected void ExecuteReader(ISqlBuilder builder)
+        {
+            TryDisposeCloseReader();
+
+            DataQueryType queryType;
+
+            Command = builder.Build(Connection, out queryType);
+
+            Connect();
+
+            Reader = Command.ExecuteReaderWithPeeking();
+        }
+
         protected void ExecuteReader(IExpressionQueryResolvable query)
         {
             TryDisposeCloseReader();
@@ -53,7 +77,7 @@ namespace OR_M_Data_Entities.Data
 
             Connect();
 
-            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query));
+            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query, IsLazyLoadEnabled));
         }
 
         #region Query Execution

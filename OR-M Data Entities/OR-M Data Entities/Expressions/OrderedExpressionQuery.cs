@@ -1,12 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Expressions.Resolution;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    class OrderedExpressionQuery
+    public abstract class OrderedExpressionQuery<T> : ExpressionQuery<T>
     {
+        protected OrderedExpressionQuery(DatabaseReading context, string viewId = null)
+            : base(context, viewId)
+        {
+        }
+
+        protected OrderedExpressionQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
+            : base(query, constructionType)
+        {
+        }
     }
 }

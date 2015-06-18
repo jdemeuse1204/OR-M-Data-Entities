@@ -2,6 +2,7 @@
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
+    [View("ContactOnly")]
     [Table("PhoneNumbers")]
     public class PhoneNumber
     {

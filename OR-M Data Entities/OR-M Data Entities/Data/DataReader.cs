@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
@@ -40,7 +40,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        _reader.Read();
 
-            var result = _reader.ToObject<T>();
+            var result = _reader.ToObjectDefault<T>();
 
             Dispose();
 

@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query;
 using OR_M_Data_Entities.Expressions.Query.Columns;
@@ -74,22 +75,22 @@ namespace OR_M_Data_Entities.Data.Definition
             }
         }
 
-        public static ObjectSchematic GetObjectSchematic<T>(bool lasyLoad = false)
+        public static ObjectSchematic GetObjectSchematic<T>(string viewId, bool lasyLoad = false)
         {
-            return GetObjectSchematic(typeof(T));
+            return GetObjectSchematic(typeof(T), viewId);
         }
 
-        public static ObjectSchematic GetObjectSchematic(object entity, bool lasyLoad = false)
+        public static ObjectSchematic GetObjectSchematic(object entity, string viewId, bool lasyLoad = false)
         {
-            return GetObjectSchematic(entity.GetType());
+            return GetObjectSchematic(entity.GetType(), viewId);
         }
 
-        public static ObjectSchematic GetObjectSchematic(Type type, bool lasyLoad = false)
+        public static ObjectSchematic GetObjectSchematic(Type type, string viewId, bool lasyLoad = false)
         {
             var foreignKeys = new List<ObjectSchematic>();
             var resultingTypes = new List<PulledForeignKeyDetail>();
 
-            _addForeignKeyTypesRecursive(foreignKeys, type, resultingTypes, lasyLoad);
+            _addForeignKeyTypesRecursive(foreignKeys, type, resultingTypes, viewId, lasyLoad);
 
             var isList = type.IsList();
 
@@ -110,9 +111,9 @@ namespace OR_M_Data_Entities.Data.Definition
             return result;
         }
 
-        private static void _addForeignKeyTypesRecursive(List<ObjectSchematic> result, Type type, List<PulledForeignKeyDetail> resultingTypes, bool lasyLoad)
+        private static void _addForeignKeyTypesRecursive(List<ObjectSchematic> result, Type type, List<PulledForeignKeyDetail> resultingTypes, string viewId, bool lasyLoad)
         {
-            var foreignKeys = GetForeignKeys(type);
+            var foreignKeys = GetForeignKeys(type, viewId);
 
             foreach (var foreignKey in foreignKeys)
             {
@@ -157,7 +158,7 @@ namespace OR_M_Data_Entities.Data.Definition
                     _loadColumnSchematics(schematic, fkPropertyType, foreignKey.Name);
                 }
 
-                _getChildren(schematic.ChildTypes, fkPropertyType, resultingTypes, lasyLoad, foreignKey.Name);
+                _getChildren(schematic.ChildTypes, fkPropertyType, resultingTypes, viewId, lasyLoad, foreignKey.Name);
 
                 resultingTypes.Add(pulledForeignKeyDetail);
 
@@ -165,7 +166,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
                 if (HasForeignKeys(fkPropertyType))
                 {
-                    _addForeignKeyTypesRecursive(result, fkPropertyType, resultingTypes, lasyLoad);
+                    _addForeignKeyTypesRecursive(result, fkPropertyType, resultingTypes, viewId, lasyLoad);
                 }
             }
         }
@@ -181,9 +182,9 @@ namespace OR_M_Data_Entities.Data.Definition
             }
         }
 
-        private static void _getChildren(List<ObjectSchematic> result, Type type, List<PulledForeignKeyDetail> resultingTypes, bool lazyLoad, string tableNameFromProperty)
+        private static void _getChildren(List<ObjectSchematic> result, Type type, List<PulledForeignKeyDetail> resultingTypes, string viewId, bool lazyLoad, string tableNameFromProperty)
         {
-            var foreignKeys = GetForeignKeys(type);
+            var foreignKeys = GetForeignKeys(type, viewId);
 
             foreach (var foreignKey in foreignKeys)
             {
@@ -228,7 +229,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
                 if (HasForeignKeys(fkPropertyType))
                 {
-                    _getChildren(schematic.ChildTypes, fkPropertyType, resultingTypes, lazyLoad, tableNameFromProperty);
+                    _getChildren(schematic.ChildTypes, fkPropertyType, resultingTypes, viewId, lazyLoad, tableNameFromProperty);
                 }
             }
         }
@@ -329,25 +330,41 @@ namespace OR_M_Data_Entities.Data.Definition
             throw new Exception("Cannot find PrimaryKey(s)");
         }
 
+        public static string[] GetPrimaryKeyNames(Type type)
+        {
+            return
+                GetPrimaryKeys(type)
+                    .Select(
+                        w =>
+                            w.GetCustomAttribute<ColumnAttribute>() == null
+                                ? w.Name
+                                : w.GetCustomAttribute<ColumnAttribute>().Name).ToArray();
+        }
+
         public static PropertyInfo GetPrimaryKeyByName(string name, Type type)
         {
             return GetPrimaryKeys(type).FirstOrDefault(w => String.Equals(w.Name, name, StringComparison.CurrentCultureIgnoreCase));
         }
 
-        public static List<PropertyInfo> GetForeignKeys(object entity)
+        public static List<PropertyInfo> GetForeignKeys(object entity, string viewId = null)
         {
-            return GetForeignKeys(entity.GetType());
+            return GetForeignKeys(entity.GetType(), viewId);
         }
 
-        public static List<PropertyInfo> GetForeignKeys<T>()
+        public static List<PropertyInfo> GetForeignKeys<T>(string viewId = null)
         {
-            return GetForeignKeys(typeof(T));
+            return GetForeignKeys(typeof(T), viewId);
         }
 
-        public static List<PropertyInfo> GetForeignKeys(Type entityType)
+        public static List<PropertyInfo> GetForeignKeys(Type entityType, string viewId = null)
         {
-            return entityType.GetProperties().Where(w =>
-               w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
+            return string.IsNullOrWhiteSpace(viewId)
+                ? entityType.GetProperties().Where(w =>
+                    w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList()
+                : entityType.GetProperties().Where(w =>
+                    w.GetCustomAttribute<ForeignKeyAttribute>() != null
+                    && w.PropertyType.GetCustomAttribute<ViewAttribute>() != null
+                    && w.PropertyType.GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId)).ToList();
         }
 
         public static List<ForeignKeyAttribute> GetForeignKeyAttributes(Type entityType)
@@ -426,10 +443,23 @@ namespace OR_M_Data_Entities.Data.Definition
             return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadKeyAttribute>() == null).ToList();
         }
 
-        public static List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Type type, Guid expressionQueryId)
+        public static bool IsPartOfView(Type tabletype, string viewId)
         {
-            var autoLoadProperties =
-                type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null);
+            var viewAttribute = tabletype.GetCustomAttribute<ViewAttribute>();
+
+            return viewAttribute != null && viewAttribute.ViewIds.Contains(viewId);
+        }
+
+        public static List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Type type, Guid expressionQueryId, string viewId)
+        {
+            var autoLoadProperties = string.IsNullOrWhiteSpace(viewId)
+                ? type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
+                : type.GetProperties()
+                    .Where(
+                        w =>
+                            w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
+                            w.PropertyType.GetCustomAttribute<ViewAttribute>() != null &&
+                            w.PropertyType.GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId));
 
             return (from property in autoLoadProperties
                 let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
@@ -450,9 +480,11 @@ namespace OR_M_Data_Entities.Data.Definition
                                     ? GetPrimaryKeys(type).First().Name
                                     : fkAttribute.ForeignKeyColumnName
                                 : pskAttribute.ParentTableColumnName),
-                    JoinType = property.PropertyType.IsList() ? JoinType.Left : JoinType.Inner
+                    JoinType = property.PropertyType.IsList() ? JoinType.Left : JoinType.Inner,
+                    JoinPropertyName = property.Name,
+                    FromType = property.PropertyType
                 }).ToList();
-        } 
+        }
 
         public static PropertyInfo GetTableFieldByName(string name, Type type)
         {

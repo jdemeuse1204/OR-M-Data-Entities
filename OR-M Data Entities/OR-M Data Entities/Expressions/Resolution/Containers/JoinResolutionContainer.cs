@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -46,14 +53,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             _joins.Clear();
         }
 
-        public string Resolve()
+        public string Resolve(string viewId = null)
         {
             return _joins.Aggregate("",
                 (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
                     @join.HeirarchyContainsList ? "LEFT" : "INNER",
-                    string.Format("[{0}] As [{1}]", @join.ChildTable.Name, @join.ChildTable.Alias),
-                    @join.ParentTable.Alias, @join.ParentTable.ForeignKeyTableName, @join.ChildTable.Alias,
-                    @join.ChildTable.ForeignKeyTableName));
+                    string.Format("{0} As [{1}]", @join.ChildTable.TableInfo, @join.ChildTable.Alias),
+                    @join.ParentTable.Alias, @join.ParentTable.ForeignKeyPropertyName, @join.ChildTable.Alias,
+                    @join.ChildTable.ForeignKeyPropertyName));
         }
 
         private string _getJoinName(JoinType joinType)

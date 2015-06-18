@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
@@ -20,8 +20,11 @@ using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities
 {
@@ -123,70 +126,63 @@ namespace OR_M_Data_Entities
         #region Min
         public static decimal? Min(this ExpressionQuery<decimal?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _min(source);
         }
 
         public static decimal Min(this ExpressionQuery<decimal> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _min(source);
         }
 
         public static double? Min(this ExpressionQuery<double?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _min(source);
         }
 
         public static double Min(this ExpressionQuery<double> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _min(source);
         }
 
         public static float? Min(this ExpressionQuery<float?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _min(source);
         }
 
         public static float Min(this ExpressionQuery<float> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _min(source);
         }
 
         public static int? Min(this ExpressionQuery<int?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _min(source);
         }
 
         public static int Min(this ExpressionQuery<int> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _min(source);
         }
 
         public static long? Min(this ExpressionQuery<long?> source)
         {
-            // execute sql, and grab data
-            return null;
+            return _min(source);
         }
 
         public static long Min(this ExpressionQuery<long> source)
         {
-            // execute sql, and grab data
-            return 0;
+            return _min(source);
         }
         #endregion
 
         #region Count
         public static TSource Count<TSource>(this ExpressionQuery<TSource> source)
         {
-            // execute sql, and grab data
-            return default(TSource);
+            ((ExpressionQueryResolvable<TSource>)source).ResolveCount();
+
+            _execute(source);
+
+            return source.FirstOrDefault();
         }
 
         public static TSource Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -194,7 +190,7 @@ namespace OR_M_Data_Entities
             source.Where(expression);
 
             // execute sql, and grab data
-            return default(TSource);
+            return Count(source);
         }
         #endregion
 
@@ -212,6 +208,38 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
+        public static OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this ExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+
+            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
+        }
+
+        public static OrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this ExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+
+            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
+        }
+
+        public static OrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+
+            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
+        }
+
+        public static OrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+
+            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
+        }
+
         public static bool Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
@@ -221,6 +249,9 @@ namespace OR_M_Data_Entities
 
         public static bool Any<TSource>(this ExpressionQuery<TSource> source)
         {
+            // only take one, we only care if it exists or not
+            source.Take(1);
+
             return _execute(source).Any();
         }
 
@@ -287,6 +318,15 @@ namespace OR_M_Data_Entities
             return source.FirstOrDefault();
         }
 
+        private static T _min<T>(this ExpressionQuery<T> source)
+        {
+            ((ExpressionQueryResolvable<T>)source).ResoveMin();
+
+            _execute(source);
+
+            return source.FirstOrDefault();
+        }
+
         private static IEnumerable<T> _execute<T>(ExpressionQuery<T> source)
         {
             source.GetEnumerator();
@@ -295,53 +335,14 @@ namespace OR_M_Data_Entities
         }
     }
 
-    #region helpers
-    sealed class ObjectMapNode : IEquatable<ObjectMapNode>
-    {
-        public ObjectMapNode()
-        {
-            Children = new List<ObjectMapNode>();
-            CurrentKeyHashCodeList = new List<int>();
-        }
-
-        public ObjectMapNode(int parentKey)
-            : this()
-        {
-            ParentKey = parentKey;
-        }
-
-        public int ParentKey { get; set; }
-
-        // current hashcodes
-        public List<int> CurrentKeyHashCodeList { get; set; }
-
-        public List<ObjectMapNode> Children { get; set; }
-
-        public bool Equals(ObjectMapNode other)
-        {
-            //Check whether the compared object is null.
-            if (Object.ReferenceEquals(other, null)) return false;
-
-            //Check whether the compared object references the same data.
-            if (Object.ReferenceEquals(this, other)) return true;
-
-            //Check whether the products' properties are equal.
-            return ParentKey == other.ParentKey;
-        }
-
-        // If Equals() returns true for a pair of objects 
-        // then GetHashCode() must return the same value for these objects.
-        public override int GetHashCode()
-        {
-            //Calculate the hash code for the product.
-            return ParentKey.GetHashCode();
-        }
-    }
-    #endregion
-
     public static class PeekDataReaderExtensions
     {
-        public static dynamic ToObject(this PeekDataReader reader)
+        /// <summary>
+        /// Turns a record into a dynamic object
+        /// </summary>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        public static dynamic ToDynamic(this PeekDataReader reader)
         {
             if (!reader.HasRows)
             {
@@ -360,19 +361,31 @@ namespace OR_M_Data_Entities
             return result;
         }
 
+        /// <summary>
+        /// Will throw an error if no rows exist
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="reader"></param>
+        /// <returns></returns>
         public static T ToObject<T>(this PeekDataReader reader)
         {
-            if (!reader.HasRows) throw new Exception("Query contains no records");
+            if (!reader.HasRows) throw new DataException("Query contains no records");
 
             return reader._toObject<T>();
         }
 
+        /// <summary>
+        /// Will return default if no rows exist
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="reader"></param>
+        /// <returns></returns>
         public static T ToObjectDefault<T>(this PeekDataReader reader)
         {
             return !reader.HasRows ? default(T) : reader._toObject<T>();
         }
 
-        public static T _toObject<T>(this PeekDataReader reader)
+        private static T _toObject<T>(this PeekDataReader reader)
         {
             if (typeof(T).IsValueType
                 || typeof(T) == typeof(string))
@@ -384,238 +397,295 @@ namespace OR_M_Data_Entities
 
             if (typeof(T) == typeof(object))
             {
-                return reader.ToObject();
+                return reader.ToDynamic();
             }
 
             try
             {
-                return reader.GetObjectFromReaderWithForeignKeys<T>();
+                return typeof(T).IsAnonymousType()
+                    ? (T)reader._getAnonymousObject(typeof(T))
+                    : reader.Payload.Query.HasForeignKeys
+                        ? reader._getObjectFromReaderWithForeignKeys<T>()
+                        : reader._getObjectFromReader<T>();
             }
             catch (StackOverflowException)
             {
-                throw new StackOverflowException("Data Load Error:  Object has too many foreign keys, please consider making a view or making your model smaller");
-            }           
+                throw new StackOverflowException("Data Load Error:  Object has too many foreign/pseudo keys, please consider making a view or making your model smaller");
+            }
         }
 
-        #region Helpers
-        #region Load Object With Foreign Keys
-        private static bool LoadObjectWithForeignKeys(this PeekDataReader reader, object instance)
+        #region Load Object Methods
+        private static bool _loadObject(this PeekDataReader reader, object instance, string parentPropertyName)
         {
             try
             {
-                // find any unmapped attributes
-                var properties = reader.Payload.Query.SelectInfos.Where(w => w.NewTable.Type == instance.GetType() && w.IsSelected).ToList();
+                List<DbColumn> properties;
 
-                for (var i = 0; i < properties.Count; i++)
+                // decide how to select columns
+                // They should be ordered by the Primary key.  If the primary key is a dbnull then we do
+                // not want to load the object because the rest is null.  Set the object to null
+                if (parentPropertyName == null)
                 {
-                    var property = properties[i];
+                    // Parent object
+                    properties =
+                        reader.Payload.Query.SelectInfos.Where(
+                            w => w.NewTable.Type == instance.GetType() && w.IsSelected)
+                            .OrderByDescending(w => w.IsPrimaryKey)
+                            .ToList();
+                }
+                else
+                {
+                    // foreign/pseudo keys
+                    properties =
+                        reader.Payload.Query.SelectInfos.Where(
+                            w =>
+                                w.NewTable.Type == instance.GetType() && w.IsSelected &&
+                                w.ParentPropertyName == parentPropertyName).OrderByDescending(w => w.IsPrimaryKey).ToList();
+                }
 
-                    var dbValue = reader[i];
+                foreach (var property in properties)
+                {
+                    var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
+                    var dbValue = reader[ordinal];
 
-                    instance.SetPropertyInfoValue(property.NewProperty.Name, dbValue is DBNull ? null : dbValue);
+                    // the rest of the object will be null.  No data exists for the object
+                    if (property.IsPrimaryKey && dbValue is DBNull) return false;
+
+                    instance.SetPropertyInfoValue(property.NewPropertyName, dbValue is DBNull ? null : dbValue);
                 }
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                throw new DataLoadException(string.Format("PeekDataReader could not load object {0}.  Message: {1}",
+                    instance.GetType().Name, ex.Message));
             }
         }
 
-        private static T GetObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
+        private static object _getValue(this PeekDataReader reader, Type instanceType, string propertyName)
+        {
+            var table = reader.Payload.Query.Tables.Find(instanceType, reader.Payload.Query.Id);
+            var property = reader.Payload.Query.SelectInfos.First(w => w.Table.Type == table.Type && w.IsSelected && w.NewPropertyName == propertyName);
+            var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
+
+            return reader[ordinal];
+        }
+
+        private static T _getObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
         {
             // Create instance
             var instance = Activator.CreateInstance<T>();
-            var foreignKeys = DatabaseSchemata.GetObjectSchematic(instance);
-            var objectMapNodes = new List<ObjectMapNode>();
-            var pkValue = foreignKeys.GetCompositKey(reader);
-            var pkArray = foreignKeys.GetCompositKeyArray(reader);
+
+            // get the key so we can look at the key of each row
+            var compositeKeyArray = reader.Payload.Query.LoadSchematic._getCompositKeyArray(reader);
+
+            // grab the starting composite key
+            var compositeKey = reader.Payload.Query.LoadSchematic._getCompositKey(reader);
 
             // load the instance
-            reader.LoadObjectWithForeignKeys(instance);
+            reader._loadObject(instance, null);
 
-            _loadObjectWithForeignKeys(reader, instance, foreignKeys.ChildTypes, pkArray, pkValue, objectMapNodes);
+            // load first row, do not move next.  While loop will move next 
+            _loadObjectWithForeignKeys(reader, instance);
+
+            // Loop through the dataset and fill our object.  Check to see if the next PK is the same as the starting PK
+            // if it is then we need to stop and return our object
+            while (reader.Peek() &&
+                compositeKey.Equals(compositeKeyArray.Sum(w => reader[w].GetHashCode())) &&
+                reader.Read())
+            {
+                _loadObjectWithForeignKeys(reader, instance);
+            }
 
             return instance;
         }
 
-        private static void _recursiveLoadWithForeignKeys(
-            PeekDataReader reader,
-            object childInstance,
-            IEnumerable<ObjectSchematic> foreignKeys,
-            List<ObjectMapNode> objectMapNodes,
-            int lastCompositeKey)
+        private static T _getObjectFromReader<T>(this PeekDataReader reader)
         {
-            foreach (var foreignKey in foreignKeys)
+            // Create instance
+            var instance = Activator.CreateInstance<T>();
+
+            // load the instance
+            reader._loadObject(instance, null);
+
+            return instance;
+        }
+
+        private static object _getAnonymousObject(this PeekDataReader reader, Type type)
+        {
+            var constructorParameters = new Queue<object>();
+            var properties = type.GetProperties();
+
+            foreach (var property in properties)
             {
-                var property = childInstance.GetType().GetProperty(foreignKey.PropertyName);
-                var propertyInstance = property.GetValue(childInstance);
-                var currentCompositeKey = foreignKey.GetCompositKey(reader); //foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
-                var node = new ObjectMapNode(lastCompositeKey);
-                var index = objectMapNodes.IndexOf(node);
-                var canAddObject = index == -1;
+                var propertyType = property.PropertyType;
 
-                // need to make sure the object has not been mapped
-                if (canAddObject)
+                if (propertyType.IsSerializable)
                 {
-                    // last key not in list, need to add it and current
-                    node.CurrentKeyHashCodeList.Add(currentCompositeKey);
-                    objectMapNodes.Add(node);
-                }
-                else
-                {
-                    node = objectMapNodes[index];
-                    canAddObject = !node.CurrentKeyHashCodeList.Contains(currentCompositeKey);
-
-                    if (canAddObject)
+                    if (propertyType.IsList())
                     {
-                        node.CurrentKeyHashCodeList.Add(currentCompositeKey);
-                    }
-                }
-
-                if (foreignKey.IsList)
-                {
-                    var listItem = Activator.CreateInstance(foreignKey.Type);
-
-                    if (propertyInstance == null)
-                    {
-                        propertyInstance = Activator.CreateInstance(foreignKey.ListType);
-                        property.SetValue(childInstance, propertyInstance);
-
-                        if (!reader.LoadObjectWithForeignKeys(listItem)) continue; // can only happen on a list because its one to many
-
-                        _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
-                        propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
-                    }
-                    else
-                    {
-                        if (canAddObject)
-                        {
-                            if (!reader.LoadObjectWithForeignKeys(listItem)) continue; // can only happen on a list because its one to many
-
-                            _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
-                            propertyInstance.GetType().GetMethod("Add").Invoke(propertyInstance, new[] { listItem });
-                        }
-                        else
-                        {
-                            // find last loaded item
-                            var count = (int)propertyInstance.GetType().GetMethod("get_Count").Invoke(propertyInstance, null);
-
-                            if (count != 0)
-                            {
-                                listItem = propertyInstance.GetType()
-                                    .GetMethod("get_Item")
-                                    .Invoke(propertyInstance, new object[] { count - 1 });
-
-                                _recursiveLoadWithForeignKeys(reader, listItem, foreignKey.ChildTypes, node.Children, currentCompositeKey);
-                            }
-                        }
+                        // load the object
+                        constructorParameters.Enqueue(_getValue(reader, type, property.Name));
+                        continue;
                     }
 
+                    // the we assume its a value type
+                    constructorParameters.Enqueue(_getValue(reader, type, property.Name));
                     continue;
                 }
 
-                if (propertyInstance == null)
-                {
-                    propertyInstance = Activator.CreateInstance(foreignKey.Type);
-                    property.SetValue(childInstance, propertyInstance);
+                var propertyInstance = _getAnonymousObject(reader, propertyType);
 
-                    reader.LoadObjectWithForeignKeys(propertyInstance);
+                constructorParameters.Enqueue(propertyInstance);
+            }
 
-                    _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
-                }
-                else
+
+            // Do last because the constructor needs the premade properties to go into it
+            var instance = Activator.CreateInstance(type, constructorParameters.ToArray());
+
+            return instance;
+        }
+
+        public static T _buildAnonymousObject<T>(this PeekDataReader reader)
+        {
+            var constructor = new Stack<object>();
+            var properties = typeof(T).GetProperties();
+
+            foreach (var property in properties)
+            {
+                if (property.GetType().IsSerializable)
                 {
-                    _recursiveLoadWithForeignKeys(reader, propertyInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+
                 }
             }
+
+            return default(T);
         }
 
         private static void _loadObjectWithForeignKeys(
             PeekDataReader reader,
-            object instance,
-            IEnumerable<ObjectSchematic> foreignKeys,
-            int[] pkOrdinals,
-            object compositePkValue,
-            List<ObjectMapNode> objectMapNodes)
+            object startingInstance)
         {
-            foreach (var foreignKey in foreignKeys)
+            // after this method is completed we need to make sure we can read the next set.  This method should go in a loop
+            // load the instance before it comes into thos method
+
+            var schematic = reader.Payload.Query.LoadSchematic;
+            var schematicsToScan = new List<OSchematic>();
+            var parentInstance = startingInstance;
+
+            // initialize the list
+            schematicsToScan.AddRange(schematic.Children);
+
+            // set the original count so we know wether to look in the parent or reference to parent
+            var originalCount = schematicsToScan.Count - 1;
+
+            for (var i = 0; i < schematicsToScan.Count; i++)
             {
-                var childInstance = Activator.CreateInstance(foreignKey.Type);
-                var singleInstance = instance.GetType().GetProperty(foreignKey.PropertyName).GetValue(instance);
-                var currentCompositeKey = foreignKey.GetCompositKey(reader); //foreignKey.PrimaryKeyDatabaseNames.Sum(t => reader[t].GetHashCode());
-                var node = new ObjectMapNode(0);
-                var index = objectMapNodes.IndexOf(node);
+                var currentSchematic = schematicsToScan[i];
+                var compositeKeyArray = currentSchematic._getCompositKeyArray(reader);
+                var compositeKey = _getCompositKey(compositeKeyArray, reader);
+                var schematicKey = new OSchematicKey(compositeKey, compositeKeyArray);
 
-                if (singleInstance == null || singleInstance.IsList())
+                // if ReferenceToCurrent is null then its from the parent and we need to check the composite key.  If its not from the 
+                // parent we need to check the Reference to current and see if the property has a value.  If not we need to load
+                // the instance
+                var wasLoaded = currentSchematic.ReferenceToCurrent == null
+                    ? currentSchematic.LoadedCompositePrimaryKeys.Contains(schematicKey)
+                    : currentSchematic.ReferenceToCurrent.GetType()
+                        .GetProperty(currentSchematic.PropertyName)
+                        .GetValue(currentSchematic.ReferenceToCurrent) != null;
+
+                // add children of current instance so they can be scanned
+                schematicsToScan.AddRange(currentSchematic.Children);
+
+                // if it was already loaded, continue to next schematic
+                if (wasLoaded) continue;
+
+                // create the instance
+                var newInstance = Activator.CreateInstance(currentSchematic.Type);
+
+                // mark the object as loaded
+                currentSchematic.LoadedCompositePrimaryKeys.Add(schematicKey);
+
+                // load the data into new instance
+                // If load returns false, then its a left join, everything might be null
+                if (!reader._loadObject(newInstance, currentSchematic.PropertyName)) continue;
+
+                // List
+                if (currentSchematic.ActualType.IsList())
                 {
-                    if (!reader.LoadObjectWithForeignKeys(childInstance)) continue; // can only happen on a list because its one to many
-                }
+                    // check and see if the list was created
+                    var foundInstanceForListGetValue = _getInstance(i, originalCount, currentSchematic, parentInstance);
 
-                if (index == -1)
-                {
-                    node.CurrentKeyHashCodeList.Add(currentCompositeKey);
+                    var list =
+                        foundInstanceForListGetValue
+                            .GetType()
+                            .GetProperty(currentSchematic.PropertyName)
+                            .GetValue(foundInstanceForListGetValue);
 
-                    objectMapNodes.Add(node);
-                }
-                else
-                {
-                    node = objectMapNodes[index];
-                }
-
-                if (foreignKey.IsList)
-                {
-                    var wasListInstanceCreated = false;
-
-                    if (singleInstance == null)
+                    if (list == null)
                     {
-                        wasListInstanceCreated = true;
-                        singleInstance = Activator.CreateInstance(foreignKey.ListType); ;
+                        var foundInstanceForListSetValue = _getInstance(i, originalCount, currentSchematic, parentInstance);
+
+                        // create new list
+                        list = Activator.CreateInstance(currentSchematic.ActualType);
+
+                        // set the new list on the parent
+                        foundInstanceForListSetValue.GetType()
+                            .GetProperty(currentSchematic.PropertyName)
+                            .SetValue(foundInstanceForListSetValue, list);
                     }
 
-                    // go down each FK tree and create the child instance
-                    _recursiveLoadWithForeignKeys(reader, childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                    list.GetType().GetMethod("Add").Invoke(list, new[] { newInstance });
 
-                    singleInstance.GetType().GetMethod("Add").Invoke(singleInstance, new[] { childInstance });
-
-                    if (wasListInstanceCreated)
+                    // store references to the current instance so we can load the objects,
+                    // otherwise we will have to search through the object and look for the instance
+                    foreach (var child in currentSchematic.Children)
                     {
-                        instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, singleInstance);
+                        child.ReferenceToCurrent = newInstance;
                     }
+
                     continue;
                 }
 
-                _recursiveLoadWithForeignKeys(reader, singleInstance ?? childInstance, foreignKey.ChildTypes, node.Children, currentCompositeKey);
+                var foundInstanceForSingleSetValue = _getInstance(i, originalCount, currentSchematic, parentInstance);
 
-                if (singleInstance == null)
+                // Single Instance
+                foundInstanceForSingleSetValue.GetType()
+                    .GetProperty(currentSchematic.PropertyName)
+                    .SetValue(foundInstanceForSingleSetValue, newInstance);
+
+                // store references to the current instance so we can load the objects,
+                // otherwise we will have to search through the object and look for the instance
+                foreach (var child in currentSchematic.Children)
                 {
-                    instance.GetType().GetProperty(foreignKey.PropertyName).SetValue(instance, childInstance);
+                    child.ReferenceToCurrent = newInstance;
                 }
             }
+        }
 
-            // make sure we can peek
-            if (!reader.Peek()) return;
-
-            // if one column doesnt match then we do not have a match
-            if (!compositePkValue.Equals(pkOrdinals.Sum(w => reader[w].GetHashCode()))) return;
-
-            // read the next row
-            reader.Read();
-
-            _loadObjectWithForeignKeys(reader, instance, foreignKeys, pkOrdinals, compositePkValue, objectMapNodes);
+        private static object _getInstance(int index, int originalCount, OSchematic schematic, object parentInstance)
+        {
+            return index <= originalCount ? parentInstance : schematic.ReferenceToCurrent;
         }
         #endregion
 
-        private static int GetCompositKey(this ObjectSchematic schematic, PeekDataReader reader)
+        #region Helpers
+        private static int _getCompositKey(this OSchematic schematic, PeekDataReader reader)
         {
-            return schematic.GetCompositKeyArray(reader).Sum(t => reader[t].GetHashCode());
+            return schematic._getCompositKeyArray(reader).Sum(t => reader[t].GetHashCode());
         }
 
-        private static int[] GetCompositKeyArray(this ObjectSchematic schematic, PeekDataReader reader)
+        private static int _getCompositKey(int[] compositeKeyArray, PeekDataReader reader)
+        {
+            return compositeKeyArray.Sum(t => reader[t].GetHashCode());
+        }
+
+        private static int[] _getCompositKeyArray(this OSchematic schematic, PeekDataReader reader)
         {
             var infos = reader.Payload.Query.SelectInfos.Where(
-                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyDatabaseNames.Contains(w.NewPropertyName));
+                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyNames.Contains(w.NewPropertyName));
 
             return infos.Select(w => w.Ordinal).ToArray();
         }
@@ -694,7 +764,15 @@ namespace OR_M_Data_Entities
     {
         public static void SetPropertyInfoValue(this object entity, string propertyName, object value)
         {
-            entity.SetPropertyInfoValue(entity.GetType().GetProperty(propertyName), value);
+            var property = entity.GetType().GetProperty(propertyName) ??
+                           entity.GetType()
+                               .GetProperties()
+                               .First(
+                                   w =>
+                                       w.GetCustomAttribute<ColumnAttribute>() != null &&
+                                       w.GetCustomAttribute<ColumnAttribute>().Name == propertyName);
+
+            entity.SetPropertyInfoValue(property, value);
         }
 
         public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)

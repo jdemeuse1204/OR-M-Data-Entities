@@ -1,4 +1,12 @@
-﻿using OR_M_Data_Entities.Enumeration;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Join
@@ -9,6 +17,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
 
         public PartialColumn ChildColumn { get; set; }
 
-        public PartialColumn ParentColumn { get; set; } 
+        public PartialColumn ParentColumn { get; set; }
+
+        public string JoinPropertyName { get; set; }
+
+        public Type FromType { get; set; }
     }
 }

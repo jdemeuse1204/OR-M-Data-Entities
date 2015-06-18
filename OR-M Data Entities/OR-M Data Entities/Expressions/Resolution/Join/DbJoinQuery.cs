@@ -1,4 +1,10 @@
-﻿using System.Reflection;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Expressions.Resolution.Select;
@@ -23,7 +29,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
         {
             JoinResolution = new JoinResolutionContainer(ForeignKeyJoinPairs, this.Id);
 
-            if (ConstructionType == ExpressionQueryConstructionType.Join)
+            if (ConstructionType == ExpressionQueryConstructionType.Join || ConstructionType == ExpressionQueryConstructionType.Order)
             {
                 JoinResolution =
                     query.GetType()

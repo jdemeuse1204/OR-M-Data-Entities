@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Join
@@ -8,9 +14,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
         #region Properties
         public bool HeirarchyContainsList { get; private set; }
 
-        public ForeignKeyTable ChildTable { get; set; }
+        public ForeignKeyTable ChildTable { get; private set; }
 
-        public ForeignKeyTable ParentTable { get; set; }
+        public ForeignKeyTable ParentTable { get; private set; }
+
+        // FK or PK property name from the parent
+        public string ParentJoinPropertyName { get; private set; }
         #endregion
 
         #region Constructor
@@ -22,11 +31,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
         }
 
         public JoinTablePair(Guid expressionQueryId, Type parentType, Type childType, bool heirarchyContainsList, string computedParentAlias,
-            string computedChildAlias, string parentPropertyName, string childPropertyName)
+            string computedChildAlias, string parentPropertyName, string childPropertyName, string parentJoinPropertyName)
         {
             ChildTable = new ForeignKeyTable(expressionQueryId, childType, childPropertyName, computedChildAlias);
-            ParentTable = new ForeignKeyTable(expressionQueryId, parentType, parentPropertyName, computedParentAlias);
+            ParentTable = new ForeignKeyTable(expressionQueryId, parentType, parentPropertyName,  computedParentAlias);
             HeirarchyContainsList = heirarchyContainsList;
+            ParentJoinPropertyName = parentJoinPropertyName;
         }
 
         #endregion

@@ -43,13 +43,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\Transform\DbTransform.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
+    <Compile Include="Data\Definition\Base\TableInfo.cs" />
     <Compile Include="Data\Definition\ObjectSchematic.cs" />
+    <Compile Include="Data\Definition\OSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
+    <Compile Include="Data\Execution\ForeignKeySaveNode.cs" />
     <Compile Include="Data\Execution\ISqlPayload.cs" />
     <Compile Include="Data\Execution\SqlPayload.cs" />
     <Compile Include="Enumeration\ChangeStateType.cs" />
-    <Compile Include="Enumeration\ComparisonType.cs" />
+    <Compile Include="Enumeration\CompareType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
     <Compile Include="Enumeration\ExpressionQueryConstructionType.cs" />
     <Compile Include="Enumeration\FunctionType.cs" />
@@ -79,6 +83,10 @@
     <Compile Include="Data\DatabaseModifiable.cs" />
     <Compile Include="Enumeration\DataQueryType.cs" />
     <Compile Include="Data\DataReader.cs" />
+    <Compile Include="Enumeration\OrderType.cs" />
+    <Compile Include="Exceptions\DataLoadException.cs" />
+    <Compile Include="Exceptions\OrderByException.cs" />
+    <Compile Include="Exceptions\ViewException.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
@@ -101,11 +109,10 @@
     <Compile Include="Expressions\Resolution\Functions\FunctionResolver.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryViewResolvable.cs" />
-    <Compile Include="Expressions\Resolution\IOrderedExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinColumnPair.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinTablePair.cs" />
-    <Compile Include="Expressions\Resolution\OrderedExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\Order\OrderExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
     <Compile Include="Expressions\Resolution\Base\IQueryPart.cs" />

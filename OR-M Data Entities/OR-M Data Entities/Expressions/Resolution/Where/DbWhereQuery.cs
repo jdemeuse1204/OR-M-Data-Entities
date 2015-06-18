@@ -1,4 +1,10 @@
-﻿using System.Reflection;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
@@ -23,6 +29,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         {
             switch (ConstructionType)
             {
+                case ExpressionQueryConstructionType.Order:
                 case ExpressionQueryConstructionType.Select:
                 case ExpressionQueryConstructionType.Join:
                     WhereResolution = query.GetType()

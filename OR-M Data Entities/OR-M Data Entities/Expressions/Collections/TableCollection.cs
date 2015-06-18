@@ -1,11 +1,19 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+
+using System.Collections.Generic;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 
 namespace OR_M_Data_Entities.Expressions.Collections
 {
     public class TableCollection : ReadOnlyTableCollection
     {
+
+
         public string Add(ForeignKeyTable foreignKeyTable)
         {
             foreignKeyTable.Alias = string.Format("AkA{0}", Internal.Count);
@@ -26,10 +34,12 @@ namespace OR_M_Data_Entities.Expressions.Collections
 
         public void AddRange(IEnumerable<ForeignKeyTable> range)
         {
-            Internal.AddRange(
-                range.Select(
-                    w =>
-                        new ForeignKeyTable(w.ExpressionQueryId, w.Type, w.ForeignKeyTableName, string.Format("AkA{0}", Internal.Count))));
+            foreach (var foreignKeyTable in range)
+            {
+                Internal.Add(new ForeignKeyTable(foreignKeyTable.ExpressionQueryId, foreignKeyTable.Type,
+                    foreignKeyTable.ForeignKeyPropertyName,
+                    string.Format("AkA{0}", Internal.Count)));
+            }
         }
 
         public ForeignKeyTable this[int i]

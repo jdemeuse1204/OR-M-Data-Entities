@@ -1,8 +1,16 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Exceptions;
+using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
@@ -12,7 +20,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
     public sealed class SelectExpressionResolver : ExpressionResolver
     {
 
-        public static void Resolve<TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        public static void Resolve<TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
             // What if we are reshaping a reshaped container?
 
@@ -20,19 +28,25 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             selectList.UnSelectAll();
 
             // resolve the expressions shape
-            _resolveShape(selector.Body as dynamic, selectList, baseQuery);
+            _resolveShape(selector.Body as dynamic, selectList, baseQuery, viewId);
         }
 
-        public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> selector, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
             selectList.UnSelectAll();
 
-            _resolveShape(selector.Body as dynamic, selectList, baseQuery);
+            _resolveShape(selector.Body as dynamic, selectList, baseQuery, viewId);
         }
 
 
-        private static DbColumn _find(MemberExpression expression, SelectInfoResolutionContainer selectList)
+        private static DbColumn _find(MemberExpression expression, SelectInfoResolutionContainer selectList, string viewId)
         {
+            if (!string.IsNullOrWhiteSpace(viewId) && !DatabaseSchemata.IsPartOfView(expression.Expression.Type, viewId))
+            {
+                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                        expression.Expression.Type, viewId));
+            }
+
             // what if we are selecting a foreign key, then we need to select all from that table
             return selectList.Infos.First(
                     w =>
@@ -40,7 +54,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         w.NewProperty.Name == expression.Member.Name);
         }
 
-        private static void _resolveShape(ParameterExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        private static void _resolveShape(ParameterExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
             var infos = selectList.Infos.Where(w => w.Table.Type == expression.Type).ToList();
 
@@ -57,6 +71,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         tableName,
                         nextTableAlias,
                         tableName,
+                        null,
                         DatabaseSchemata.IsPrimaryKey(property));
                 }
             }
@@ -67,9 +82,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             }
         }
 
-        private static void _resolveShape(MemberExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        private static void _resolveShape(MemberExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
-            var info = _find(expression, selectList);
+            var info = _find(expression, selectList, viewId);
 
             // is it always the same ?
             info.NewTable.Type = expression.Expression.Type;
@@ -79,7 +94,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             selectList.ReturnPropertyOnly = true;
         }
 
-        private static void _resolveShape(NewExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        private static void _resolveShape(NewExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
             var count = expression.Members.Count;
 
@@ -89,12 +104,25 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                 var member = expression.Members[i];
                 var memberExpression = argument as MemberExpression;
                 var parameterExpression = argument as ParameterExpression;
+                var newExpression = argument as NewExpression;
+                var tables = (TableCollection)baseQuery.Tables;
+
+                if (newExpression != null)
+                {
+                    _resolveShape(newExpression, selectList, baseQuery, viewId);
+                    continue;
+                }
 
                 if (memberExpression != null)
                 {
                     if (!_isForeignKey(memberExpression, baseQuery))
                     {
-                        var info = _find(memberExpression, selectList);
+                        var info = _find(memberExpression, selectList, viewId);
+
+                        var table = tables.Find(info.Table.Type, baseQuery.Id);
+
+                        // so the table is searchable in the from clause
+                        table.ChangeType(member.ReflectedType);
 
                         info.NewTable.Type = member.ReflectedType;
                         info.NewProperty = member;
@@ -120,7 +148,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             }
         }
 
-        private static void _resolveShape(MemberInitExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery)
+        private static void _resolveShape(MemberInitExpression expression, SelectInfoResolutionContainer selectList, IExpressionQueryResolvable baseQuery, string viewId)
         {
             var newType = expression.Type;
 
@@ -136,7 +164,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
                         if (memberExpression != null)
                         {
-                            var info = _find(memberExpression, selectList);
+                            var info = _find(memberExpression, selectList, viewId);
 
                             info.NewTable.Type = newType;
                             info.NewProperty = assignment.Member;

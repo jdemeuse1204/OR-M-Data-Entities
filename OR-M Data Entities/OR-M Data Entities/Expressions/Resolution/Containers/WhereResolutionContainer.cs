@@ -1,4 +1,10 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -51,16 +57,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         }
         #endregion
 
-        #region Constructor
-
-        #endregion
-
 
         public SqlDbParameter GetAndAddParameter(object value)
         {
             var parameter = new SqlDbParameter
             {
-                Name = string.Format("@Param{0}",_parameters.Count),
+                Name = string.Format("@Param{0}", _parameters.Count),
                 Value = value
             };
 
@@ -111,7 +113,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             _resolutions.Clear();
         }
 
-        public string Resolve()
+        public string Resolve(string viewId = null)
         {
             var result = "";
             var currentGroupNumber = -1;
@@ -136,18 +138,22 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                         currentLambdaResolition.TableAlias,
                         currentLambdaResolition.ColumnName,
                         currentLambdaResolition.GetComparisonStringOperator(),
-                        currentLambdaResolition.CompareValue is SqlDbParameter && ((SqlDbParameter)currentLambdaResolition.CompareValue).Value.IsExpressionQuery()
-                            ? string.Format("({0})", _resolveSubQuery((SqlDbParameter)currentLambdaResolition.CompareValue))
-                            : ((SqlDbParameter) currentLambdaResolition.CompareValue).Name);
-
-                    // can be a list of sqldb parameters
+                        currentLambdaResolition.CompareValue.IsList()
+                            ? _getListEnumerationString((List<SqlDbParameter>) currentLambdaResolition.CompareValue)
+                            : currentLambdaResolition.CompareValue is SqlDbParameter &&
+                              ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.IsExpressionQuery()
+                                ? string.Format("({0})",
+                                    _resolveSubQuery((SqlDbParameter) currentLambdaResolition.CompareValue))
+                                : ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.Equals("IS NULL")
+                                    ? "IS NULL"
+                                    : ((SqlDbParameter) currentLambdaResolition.CompareValue).Name);
 
                     continue;
                 }
 
                 if (nextLambdaResolution != null)
                 {
-                    var connector = (SqlConnector) currentResolution;
+                    var connector = (SqlConnector)currentResolution;
 
                     result += nextLambdaResolution.Group != currentGroupNumber
                         ? string.Format(") {0} (", connector.Type) // switching groups
@@ -164,6 +170,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             // is a connector
 
+        }
+
+        private string _getListEnumerationString(IEnumerable<SqlDbParameter> parameters)
+        {
+            return string.Format("({0})",
+                parameters.Aggregate(string.Empty, (current, parameter) => current + (parameter.Name + ","))
+                    .TrimEnd(','));
         }
 
         private string _resolveSubQuery(SqlDbParameter subQuery)

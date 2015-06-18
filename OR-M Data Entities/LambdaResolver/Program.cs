@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ORSigningPro.Common.Data.ORTSigningPro.Tables;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -10,85 +11,35 @@ namespace LambdaResolver
     {
         static void Main(string[] args)
         {
-            var x = new Stack<int>();
+            var q = new Queue<int>();
 
-            x.Push(1);
-            x.Push(2);
+            q.Enqueue(1);
+            q.Enqueue(2);
 
-            var ctx = new DbSqlContext("sqlExpress");
+            var ctx = new DbSqlContext("ORTSigningProEntities");
 
-            var lst = new List<int> { 1, 2, 3, 4, 5 };
-            var s = DateTime.Now;
-            var item = ctx.From<Contact>().First(
-                w =>
-                    w.ID == 1 &&
-                    w.FirstName == "James" //||
-                    //w.FirstName == "Megan" &&
-                    //w.FirstName == "WIN" &&
-                    //w.FirstName == "AHHHH" ||
-                    //w.FirstName == "" &&
-                    //!w.FirstName.StartsWith("Coolness") &&
-                    //w.Number.PhoneType.Type == "Home" &&
-                    //lst.Contains(w.ID) &&
-                    //w.LastName == null &&
-                    //w.LastName.Equals("COOL") &&
-                    //w.LastName == ctx.From<Appointment>().Where(x => x.ContactID == 1).Select(x => x.Description).FirstOrDefault()
-                );
+            var sdf = ctx.Find<MobileClosing>(1);
 
-            if (item != null)
+            if (sdf != null)
             {
-
+                
             }
-            var e = DateTime.Now;
 
+            var s = DateTime.Now;
+            var x = ctx.FromView<MobileClosing>("ActiveOrder").All(w => w.VincaVendorID == 33159);
+            var e = DateTime.Now;
             var f = e - s;
 
-            if (f.Days == 1)
-            {
-
-            }
-
             s = DateTime.Now;
-
-            //item = ctx.From<Contact>().Where(
-            //    w =>
-            //        w.ID == 1 && w.FirstName == "James" ||
-            //        w.FirstName == "Megan" && w.FirstName == "WIN" && w.FirstName == "AHHHH" ||
-            //        w.FirstName == "" && !w.FirstName.StartsWith("Coolness") && w.Number.PhoneType.Type == "Home")
-            //    .InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
-            //        (contact, number) => new Contact
-            //        {
-            //            ID = contact.ID
-            //        });
+            var product = ctx.From<Product>()
+                .First<Product>(w => w.ProductNumber == "03N" && w.Order.OrderNumber == "01-15000317");
             e = DateTime.Now;
-
             f = e - s;
-            //.Select(w => new Contact
-            //{
-            //    ID = w.ID,
-            //    Appointments = ctx.From<Appointment>().Where(x => x.ContactID == w.ID).All(),
-            //    FirstName = w.FirstName,
-            //    LastName = w.LastName,
-            //    Name = w.Name,
-            //    Number = w.Number,
-            //    PhoneID = w.PhoneID
-            //});  
 
-
-            //.InnerJoin(ctx.From<Appointment>(), contact => contact.ID, appointment => appointment.ContactID,
-            //    (contact, appointment) => new Contact
-            //    {
-            //        ID = contact.ID,
-            //        Appointments = new List<Appointment>{appointment},
-            //        FirstName = contact.FirstName,
-            //        LastName = contact.LastName,
-            //        Name = contact.Name,
-            //        Number = contact.Number,
-            //        PhoneID = contact.PhoneID
-            //    })
-            //.InnerJoin(ctx.From<PhoneNumber>(), contact => contact.PhoneID, number => number.ID,
-            //    (contact, number) => contact);
-            //w.ID == ctx.From<Appointment>().Where(z => z.Description == "").Select(x => x.ContactID).First());
+            if (x != null && f.Days != 0 && product != null)
+            {
+                
+            }
         }
     }
 }

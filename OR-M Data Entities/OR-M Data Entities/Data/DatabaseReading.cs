@@ -1,10 +1,13 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v2.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
 
+using System.Linq;
+using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 
@@ -46,7 +49,7 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
 		protected dynamic Select()
         {
-            return Reader.ToObject();
+            return Reader.ToDynamic();
         }
 
         /// <summary>
@@ -68,7 +71,22 @@ namespace OR_M_Data_Entities.Data
 
         public ExpressionQuery<T> FromView<T>(string viewId)
         {
+            if (!DatabaseSchemata.IsPartOfView(typeof(T), viewId)) 
+            {
+                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                        typeof(T).Name, viewId));
+            }
+
             return new ExpressionQueryViewResolvable<T>(this, viewId);
+        }
+
+        public T Find<T>(params object[] pks)
+        {
+            var query = From<T>();
+
+            ((ExpressionQueryResolvable<T>)query).ResolveFind(pks);
+
+            return query.FirstOrDefault();  
         } 
         #endregion
     }

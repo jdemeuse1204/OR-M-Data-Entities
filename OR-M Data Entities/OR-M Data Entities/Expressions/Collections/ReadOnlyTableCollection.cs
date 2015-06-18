@@ -1,7 +1,14 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v2.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Copyright (c) 2015 James Demeuse
+ */
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 
 namespace OR_M_Data_Entities.Expressions.Collections
@@ -28,7 +35,22 @@ namespace OR_M_Data_Entities.Expressions.Collections
 
         public ForeignKeyTable Find(Type type, Guid expressionQueryId)
         {
-            return Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Type == type);
+            var table = Internal.FirstOrDefault(w => w.ExpressionQueryId == expressionQueryId && w.Type == type) ??
+                        Internal.FirstOrDefault(w => w.TypeChanges.Contains(type));
+
+            return table;
+        }
+
+        public ForeignKeyTable Find(Type type, string foreignKeyTableName, Guid expressionQueryId)
+        {
+            var table =
+                Internal.FirstOrDefault(
+                    w =>
+                        w.ExpressionQueryId == expressionQueryId && w.ForeignKeyPropertyName == foreignKeyTableName &&
+                        w.Type == type) ??
+                Internal.FirstOrDefault(w => w.TypeChanges.Contains(type));
+
+            return table;
         }
 
         public ForeignKeyTable Find(string alias, Guid expressionQueryId)
@@ -38,12 +60,21 @@ namespace OR_M_Data_Entities.Expressions.Collections
 
         public ForeignKeyTable FindByPropertyName(string propertyName, Guid expressionQueryId)
         {
-            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.ForeignKeyTableName == propertyName);
+            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.ForeignKeyPropertyName == propertyName);
         }
 
-        public string FindAlias(Type type, Guid expressionQueryId)
+        public string FindAlias(Type type, Guid expressionQueryId, string parentPropertyName)
         {
-            return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.Type == type).Alias;
+            return string.IsNullOrWhiteSpace(parentPropertyName)
+                ? Find(type, expressionQueryId).Alias
+                : Find(type, parentPropertyName, expressionQueryId).Alias;
+        }
+
+        public Type GetTableType(Type type, Guid expressionQueryId)
+        {
+            var table = Find(type, expressionQueryId);
+
+            return table.Type;
         }
 
         public bool ContainsType(Type type, Guid expressionQueryId)
