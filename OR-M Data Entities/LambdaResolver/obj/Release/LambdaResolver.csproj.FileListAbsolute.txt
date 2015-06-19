@@ -1,7 +1,7 @@
-C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\OR-M Data Entities.dll
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\LambdaResolver.exe.config
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\LambdaResolver.exe
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\LambdaResolver.pdb
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\OR-M Data Entities.dll
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\OR-M Data Entities.Tests.dll
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\OR-M Data Entities.pdb
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\LambdaResolver\bin\Release\OR-M Data Entities.Tests.pdb

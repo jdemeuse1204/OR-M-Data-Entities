@@ -10,11 +10,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
@@ -185,6 +187,33 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             return result;
         }
 
+        private static WhereResolutionPart _evaluateLinqSubQuery(MethodCallExpression expression,
+            WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1,
+            ExpressionType? expressionType = null)
+        {
+            for (var i = 1; i < expression.Arguments.Count; i++)
+            {
+                var argument = expression.Arguments[i];
+
+                // evaluate the argument
+                var result =_evaluate(((LambdaExpression)argument).Body as dynamic, resolution, baseQuery, viewId, group);
+
+                result.Group = group;
+
+                result.ExpressionQueryId = baseQuery.Id;
+
+                // will be added when the value is returned from the method
+                if (i == (expression.Arguments.Count - 1))
+                {
+                    return result;
+                }
+
+                resolution.AddResolution(result);
+            }
+
+            throw new Exception("Subquery Could not be evaluated");
+        }
+
         /// <summary>
         /// Happens when the method uses a method to compare values, IE: Contains, Equals
         /// </summary>
@@ -192,10 +221,16 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// <param name="resolution"></param>
         private static WhereResolutionPart _evaluate(MethodCallExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
         {
+            if (expression.Object == null)
+            {
+                return _evaluateLinqSubQuery(expression, resolution, baseQuery, viewId, group, expressionType);
+            }
+
             var result = new WhereResolutionPart
             {
                 Group = group
             };
+
             var isParameterOnLeftSide = HasParameter(expression.Object as dynamic);
             object value;
 
@@ -295,18 +330,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     expression.Expression.Type, viewId));
             }
 
+            var columnAttribute = expression.Member.GetCustomAttribute<ColumnAttribute>();
+
             if (expression.Expression.NodeType == ExpressionType.Parameter)
             {
                 // cannot come from a foriegn key, is the base type
-                result.ColumnName = expression.Member.Name;
+                result.ColumnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
                 result.TableName = DatabaseSchemata.GetTableName(expression.Expression.Type);
                 result.TableAlias = baseQuery.Tables.Find(expression.Expression.Type, baseQuery.Id).Alias;
             }
             else
             {
-
                 // will be from a foreign key, not the base type
-                result.ColumnName = expression.Member.Name;
+                result.ColumnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
                 result.TableName = ((MemberExpression)expression.Expression).Member.Name;
                 result.TableAlias = baseQuery.Tables.FindByPropertyName(((MemberExpression)expression.Expression).Member.Name, baseQuery.Id).Alias;
             }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
@@ -14,6 +15,7 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -141,7 +143,15 @@ namespace OR_M_Data_Entities.Data
                         var update = new SqlUpdateBuilder();
                         update.Table(tableName);
 
-                        foreach (var property in from property in tableColumns let columnName = DatabaseSchemata.GetColumnName(property) where !primaryKeys.Select(w => w.Name).Contains(property.Name) select property)
+                        foreach (var property in from property in (from property in tableColumns
+                            let columnName = DatabaseSchemata.GetColumnName(property)
+                            where
+                                !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
+                                property.GetCustomAttribute<NonSelectableAttribute>() == null
+                            select property)
+                            let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
+                            where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
+                            select property)
                         {
                             // Skip unmapped fields
                             update.AddUpdate(property, entity);
@@ -273,7 +283,7 @@ namespace OR_M_Data_Entities.Data
             // we want to look at one-one relationships before one-many
             foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity).OrderBy(w => w.PropertyType.IsList()))
             {
-                var index = 0;
+                int index;
                 var foreignKeyValue = foreignKey.GetValue(entity);
                 var foreignKeyIsList = foreignKey.PropertyType.IsList();
 

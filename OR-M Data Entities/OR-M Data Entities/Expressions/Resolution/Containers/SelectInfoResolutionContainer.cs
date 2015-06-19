@@ -152,10 +152,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public string GetPrimaryKeyOrderStatement()
         {
-            var order = _infos.Where(w => w.IsPrimaryKey)
+            var order = _infos.Where(w => w.IsPrimaryKey && w.IsSelected)
                 .OrderBy(w => w.Ordinal)
-                .Aggregate(string.Empty, (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.GetTableAlias(),
-                    DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
+                .Aggregate(string.Empty,
+                    (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.GetTableAlias(),
+                        DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
 
             return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);
         }

@@ -5,7 +5,6 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System.Linq;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;

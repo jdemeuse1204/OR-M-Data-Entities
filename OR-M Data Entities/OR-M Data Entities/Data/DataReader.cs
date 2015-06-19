@@ -44,7 +44,7 @@ namespace OR_M_Data_Entities.Data
 
             Dispose();
 
-            return result == null ? default(T) : result;
+            return result;
 	    }
 
         public T First()

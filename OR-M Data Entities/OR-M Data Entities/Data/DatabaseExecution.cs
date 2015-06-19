@@ -4,6 +4,7 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
+
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -92,7 +93,7 @@ namespace OR_M_Data_Entities.Data
         {
             ExecuteReader(sql, parameters);
 
-            return new DataReader<T>(Reader); ;
+            return new DataReader<T>(Reader);
         }
 
         public DataReader<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)

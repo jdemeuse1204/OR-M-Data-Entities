@@ -83,7 +83,9 @@ namespace OR0M_Data_Entities.Console
             }
 
             s = DateTime.Now;
-            var a = context.From<Contact>().FirstOrDefault(w => w.ID == 2);
+            var a =
+                context.From<Contact>().First(w => w.ID == 2 && w.Appointments.Any(x => x.Description == "James"));
+
             e = DateTime.Now;
             f = e - s;
 

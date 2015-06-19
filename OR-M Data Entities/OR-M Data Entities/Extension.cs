@@ -25,6 +25,7 @@ using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities
 {
@@ -402,11 +403,13 @@ namespace OR_M_Data_Entities
 
             try
             {
-                return typeof(T).IsAnonymousType()
-                    ? (T)reader._getAnonymousObject(typeof(T))
-                    : reader.Payload.Query.HasForeignKeys
-                        ? reader._getObjectFromReaderWithForeignKeys<T>()
-                        : reader._getObjectFromReader<T>();
+                return typeof (T).IsAnonymousType()
+                    ? (T) reader._getAnonymousObject(typeof (T))
+                    : reader.Payload == null
+                        ? reader._getObjectFromReaderUsingDatabaseColumnNames<T>()
+                        : reader.Payload.Query.HasForeignKeys
+                            ? reader._getObjectFromReaderWithForeignKeys<T>()
+                            : reader._getObjectFromReader<T>();
             }
             catch (StackOverflowException)
             {
@@ -463,6 +466,34 @@ namespace OR_M_Data_Entities
             }
         }
 
+        private static bool _loadObjectByColumnNames(this PeekDataReader reader, object instance)
+        {
+            try
+            {
+                var properties =
+                    instance.GetType()
+                        .GetProperties()
+                        .Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null)
+                        .ToList();
+
+                foreach (var property in properties)
+                {
+                    var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+                    var dbValue = reader[columnAttribute == null ? property.Name : columnAttribute.Name];
+
+                    instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new DataLoadException(string.Format("PeekDataReader could not load object {0}.  Message: {1}",
+                    instance.GetType().Name, ex.Message));
+            }
+        }
+
         private static object _getValue(this PeekDataReader reader, Type instanceType, string propertyName)
         {
             var table = reader.Payload.Query.Tables.Find(instanceType, reader.Payload.Query.Id);
@@ -508,6 +539,17 @@ namespace OR_M_Data_Entities
 
             // load the instance
             reader._loadObject(instance, null);
+
+            return instance;
+        }
+
+        private static T _getObjectFromReaderUsingDatabaseColumnNames<T>(this PeekDataReader reader)
+        {
+            // Create instance
+            var instance = Activator.CreateInstance<T>();
+
+            // load the instance
+            reader._loadObjectByColumnNames(instance);
 
             return instance;
         }
@@ -589,8 +631,10 @@ namespace OR_M_Data_Entities
 
                 // if ReferenceToCurrent is null then its from the parent and we need to check the composite key.  If its not from the 
                 // parent we need to check the Reference to current and see if the property has a value.  If not we need to load
-                // the instance
-                var wasLoaded = currentSchematic.ReferenceToCurrent == null
+                // the instance.  is null property check should only be for a single instance.  If its a list we need 
+                // to fall back to checking the composite key to see if it was loaded.  The property is the list, that 
+                // is the incorrect check
+                var wasLoaded = currentSchematic.ReferenceToCurrent == null || currentSchematic.ActualType.IsList()
                     ? currentSchematic.LoadedCompositePrimaryKeys.Contains(schematicKey)
                     : currentSchematic.ReferenceToCurrent.GetType()
                         .GetProperty(currentSchematic.PropertyName)
