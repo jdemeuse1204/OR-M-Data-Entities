@@ -5,6 +5,19 @@ OR-M Data Entities
 Overview:  <br><br>
 This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, OR-M Data Entities is much faster than ORM's like Entity Framework.  The catch is there is less "micro managing" of code going on, which makes the framework much faster.  The great thing about OR-M Data Entities are the two different data context's you can use.  DbSqlContext is for those familiar with Sql.  DbSqlContext is a derivative of Entity Framework, the difference is there are no DbSets to declare.  Instead your classes (tables) will perform the direct manipluation (See code below).  Also, there is DbEntityContext, which is almost an exact mirror of Entity Framework, just lighter and different inner workings.  Simple operations are the same such as saving and deleting.  If there is more demand I can add onto it.
 
+
+######Changes in 2.0
+######1. Added support for Foreign Keys
+######2. Added support for Linked Servers
+######3. Fixed updating of TimeStamps
+######4. Added Pseudo Key (On the fly Foreign Key)
+######5. Added ReadOnly Attribute for Tables
+######6. Added View Attribute for Tables
+######7. Changed the way queries are written.  This needed to be done for Foreign Key support.
+######8. Better data shaping
+######8. Took out recursion in the object loader
+######9. Huge refactor, which made the ORM even faster
+
 ###Example Classes to be used below:
 ```C#
 	[Table("Contacts")] // Only needed if your table name is not the same as the class name
@@ -34,16 +47,17 @@ This solution is a micro Object-Relational Mapper aimed at speed.  Others out th
 
 #####Methods:
 ```C#
-List<T> All<T>()
 bool Delete<T>(T entity) where T : class
 void Disconnect()
 DataReader<T> ExecuteQuery<T>(string sql)
-DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
+DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters)
+DataReader<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)
 DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
+DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
 T Find<T>(params object[] pks)
-ExpressionQuery From<T>()
-void SaveChanges<T>(T entity) where T : class
-ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : class
+ExpressionQuery<T> From<T>()
+ExpressionQuery<T> FromView<T>(string viewId)
+ChangeStateType SaveChanges<T>(T entity) where T : class
 ````
 #####Method Examples
 ```C#
@@ -55,11 +69,6 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 	
 		static void main(string[] args)
 		{
-			// ALL
-			
-			// NOTES - Returns everything from the corresponding table
-			var allItems = context.All<Contact>();  // Returns everything from Contacts table
-			
 			// DELETE
 			
 			// NOTES - Deletes the entity from the corresponding table, 
@@ -76,25 +85,13 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 			// Disconnects the existing connection
 			context.Disconnect();
 			
-			// EXECUTE QUERY
+			// EXPRESSION QUERY
 			
-			// ** All execute queries return a DataReader, which is custom
+			// Expression queries are intented to be just like linq queries. 
 			
-			// This can be unsafe as no parameters are used
-			var sql = "Select * From Contacts";
-			var reader = ExecuteQuery<Contact>(sql);  
+			// see below for more examples
+			var contact = context.From<Contact>()..Where(w => w.Name == "James").First();
 			
-			// Safest option for regular sql
-			sql = "Select * From Contacts Where Id = @Param1";
-			var parameters = new Dictionary<string, object>();
-			parameters.Add("@Param1",1);
-			reader = ExecuteQuery<Contact>(sql, parameters);
-			
-			// Safe option as well, uses Sql Builders
-			var builder = new SqlQueryBuilder();
-        		builder.SelectAll<Contact>();
-        		
-        		reader = ExecuteQuery<Contact>(builder);
         		
         		// FIND
         		
@@ -117,11 +114,6 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
         		context.SaveChanges(contact);
         		// Insert contact because the Primary Key is 0.  the Contact object will automatically have 
         		// the Primary Key set after it is saved
-        		
-        		// WHERE
-        		
-        		// Default is select all records that pass the validation.  Returns ExpressionQuery
-        		var expressionQuery = context.Where<Contact>(w => w.Id == 1);
 		}
 	}
     
@@ -134,9 +126,10 @@ ExpressionQuery Where<T>(Expression<Func<T, bool>> propertyLambda) where T : cla
 #####Methods
 ```C#
 bool HasRows {get;}
-T Select()
-List<T> All()
-IEnumerator<T> GetEnumerator()
+T FirstOrDefault()
+T First()
+List<T> ToList()
+void Dispose()
 ```
 
 #####Methods Examples:
@@ -159,12 +152,12 @@ IEnumerator<T> GetEnumerator()
         		}
         		
         		// Get All example
-        		var allItems = context.All();
+        		var allItems = context.ToList();
 		}
 	}
 ```
 
-######3.	ExpressionQuery : DataTransform, IEnumerable
+######3.	ExpressionQuery<T> : DbQuery<T>, IEnumerator<T>, IExpressionQuery
 
 #####Namespace: OR_M_Data_Entities.Expressions<br>
 
