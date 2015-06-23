@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console
@@ -12,59 +13,71 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
 
-           // var contact = new Contact
-           // {
-           //     FirstName = "James",
-           //     LastName = "Demeuse",
-           //     Name = new List<Name>()
-           //     {
-           //         new Name
-           //         {
-           //             Value = "NEW"
-           //         }
-           //     },
-           //     Number = new PhoneNumber
-           //     {
-           //         Phone = "414",
-           //         PhoneType = new PhoneType
-           //         {
-           //             Type = "CELL"
-           //         }
-           //     },
-           //     Appointments = new List<Appointment>
-           //     {
-           //         new Appointment
-           //         {
-           //             Description = "Date Added!",
-           //             Address = new List<Address>
-           //             {
-           //                 new Address
-           //                 {
-           //                     Addy = "MY ADDY!",
-           //                     State = new StateCode
-           //                     {
-           //                         Value = "MN"
-           //                     },
-           //                     ZipCode = new List<Zip>
-           //                     {
-           //                         new Zip
-           //                         {
-           //                             Zip4 = "0000",
-           //                             Zip5 = "55416"
-           //                         }
-           //                     }
-           //                 }
-           //             }
-           //         }
-           //     }
-           // };
+            var contact = new Contact
+            {
+                FirstName = "James",
+                LastName = "Demeuse",
+                Names = new List<Name>()
+                {
+                    new Name
+                    {
+                        Value = "NEW"
+                    }
+                },
+                Number = new PhoneNumber
+                {
+                    Phone = "414",
+                    PhoneType = new PhoneType
+                    {
+                        Type = "CELL"
+                    }
+                },
+                CreatedBy = new User
+                {
+                    ID  = 1,
+                    Name = "James"
+                },
+                EditedBy = new User
+                {
+                    ID = 1,
+                    Name = "James"
+                },
+                EditedByUserID = 1,
+                CreatedByUserID = 1,
+                Appointments = new List<Appointment>
+                {
+                    new Appointment
+                    {
+                        Description = "Date Added!",
+                        Address = new List<Address>
+                        {
+                            new Address
+                            {
+                                Addy = "MY ADDY!",
+                                State = new StateCode
+                                {
+                                    Value = "MN"
+                                },
+                                ZipCode = new List<Zip>
+                                {
+                                    new Zip
+                                    {
+                                        Zip4 = "0000",
+                                        Zip5 = "55416"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
 
-           //var saveType = context.SaveChanges(contact);
+            var saveType = context.SaveChanges(contact);
 
-           // if (saveType == ChangeStateType.Insert)
-           // {
-                
-           // }
+            if (saveType == ChangeStateType.Insert)
+            {
+
+            }
 
             var lst = new List<string>() {"james", "megan"};
 

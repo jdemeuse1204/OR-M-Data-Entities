@@ -17,6 +17,10 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DatabaseReading : DatabaseExecution
     {
+        #region Fields
+        protected object Lock = new object();
+        #endregion
+
         #region Constructor
         protected DatabaseReading(string connectionStringOrName)
             : base(connectionStringOrName)
@@ -65,27 +69,36 @@ namespace OR_M_Data_Entities.Data
         #region Data Execution
         public ExpressionQuery<T> From<T>()
         {
-            return new ExpressionQueryResolvable<T>(this);
+            lock (Lock)
+            {
+                return new ExpressionQueryResolvable<T>(this);
+            }
         }
 
         public ExpressionQuery<T> FromView<T>(string viewId)
         {
-            if (!DatabaseSchemata.IsPartOfView(typeof(T), viewId)) 
+            lock (Lock)
             {
-                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
-                        typeof(T).Name, viewId));
-            }
+                if (!DatabaseSchemata.IsPartOfView(typeof (T), viewId))
+                {
+                    throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                        typeof (T).Name, viewId));
+                }
 
-            return new ExpressionQueryViewResolvable<T>(this, viewId);
+                return new ExpressionQueryViewResolvable<T>(this, viewId);
+            }
         }
 
         public T Find<T>(params object[] pks)
         {
-            var query = From<T>();
+            lock (Lock)
+            {
+                var query = From<T>();
 
-            ((ExpressionQueryResolvable<T>)query).ResolveFind(pks);
+                ((ExpressionQueryResolvable<T>) query).ResolveFind(pks);
 
-            return query.FirstOrDefault();  
+                return query.FirstOrDefault();
+            }
         } 
         #endregion
     }

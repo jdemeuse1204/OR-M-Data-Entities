@@ -29,10 +29,8 @@ namespace OR_M_Data_Entities.Commands
 		#endregion
 
 		#region Methods
-		public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
+		public SqlCommand Build(SqlConnection connection)
 		{
-            dataQueryType = DataQueryType.NoForeignKeys;
-
 			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("UPDATE table missing");
@@ -43,7 +41,7 @@ namespace OR_M_Data_Entities.Commands
 				throw new QueryNotValidException("UPDATE SET values missing");
 			}
 
-            var sql = string.Format("UPDATE {0} SET {1} {2}", TableName, _set.TrimEnd(','), GetValidation());
+            var sql = string.Format("UPDATE [{0}] SET {1} {2}", TableName, _set.TrimEnd(','), GetValidation());
 			var cmd = new SqlCommand(sql, connection);
 
 			InsertParameters(cmd);

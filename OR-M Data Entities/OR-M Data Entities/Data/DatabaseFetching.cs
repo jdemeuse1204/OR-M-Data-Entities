@@ -15,10 +15,6 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DatabaseFetching : DatabaseReading
     {
-        #region Fields
-        protected object Lock = new object();
-        #endregion
-
         #region Constructor
         protected DatabaseFetching(string connectionStringOrName)
             : base(connectionStringOrName)

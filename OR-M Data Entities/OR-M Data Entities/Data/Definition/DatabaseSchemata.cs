@@ -393,6 +393,16 @@ namespace OR_M_Data_Entities.Data.Definition
             return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
         }
 
+        public static bool IsTableReadOnly(Type type)
+        {
+            return type.GetCustomAttribute<ReadOnlyAttribute>() != null;
+        }
+
+        public static bool IsTableReadOnly(object entity)
+        {
+            return IsTableReadOnly(entity.GetType());
+        }
+
         public static bool HasForeignKeys(object entity)
         {
             return HasForeignKeys(entity.GetType());

@@ -5,13 +5,13 @@
  * Copyright (c) 2015 James Demeuse
  */
 
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 
@@ -46,7 +46,14 @@ namespace OR_M_Data_Entities.Data
 
             _addParameters(parameters);
 
-            Connect();
+            if (!Connect())
+            {
+                Command = new SqlCommand(sql, Connection);
+
+                _addParameters(parameters);
+
+                if (!Connect()) throw new Exception("Cannot connect to server");
+            }
 
             Reader = Command.ExecuteReaderWithPeeking();
         }
@@ -59,11 +66,14 @@ namespace OR_M_Data_Entities.Data
         {
             TryDisposeCloseReader();
 
-            DataQueryType queryType;
+            Command = builder.Build(Connection);
 
-            Command = builder.Build(Connection, out queryType);
+            if (!Connect())
+            {
+                Command = builder.Build(Connection);
 
-            Connect();
+                if (!Connect()) throw new Exception("Cannot connect to server");
+            }
 
             Reader = Command.ExecuteReaderWithPeeking();
         }
@@ -76,7 +86,14 @@ namespace OR_M_Data_Entities.Data
 
             _addParameters(query.Parameters);
 
-            Connect();
+            if (!Connect())
+            {
+                Command = new SqlCommand(query.Sql, Connection);
+
+                _addParameters(query.Parameters);
+
+                if (!Connect()) throw new Exception("Cannot connect to server");
+            }
 
             Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query, IsLazyLoadEnabled));
         }
@@ -103,7 +120,7 @@ namespace OR_M_Data_Entities.Data
 
         public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
         {
-
+            ExecuteReader(builder);
 
             return new DataReader<T>(Reader);
         }

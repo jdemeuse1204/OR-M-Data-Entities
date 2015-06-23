@@ -8,7 +8,6 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands
 {
@@ -28,10 +27,8 @@ namespace OR_M_Data_Entities.Commands
         #endregion
 
         #region Methods
-        public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
+        public SqlCommand Build(SqlConnection connection)
         {
-            dataQueryType = DataQueryType.NoForeignKeys;
-
             if (string.IsNullOrWhiteSpace(TableName))
             {
                 throw new QueryNotValidException("Table statement missing");

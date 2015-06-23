@@ -77,6 +77,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public void AddResolution(WhereResolutionPart resolution)
         {
+            if (resolution == null) return; // sub query
+
             resolution.ExpressionQueryId = ExpressionQueryId;
 
             _resolutions.Add(resolution);

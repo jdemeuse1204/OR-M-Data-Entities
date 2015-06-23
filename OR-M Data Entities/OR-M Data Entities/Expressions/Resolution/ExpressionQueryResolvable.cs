@@ -52,6 +52,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return SelectInfos.Count(w => w.Ordinal <= oldOrdinal && w.IsSelected) - 1;
         }
 
+        public DatabaseReading DbContext {
+            get { return this.Context; }
+        }
+
         public IEnumerable<DbColumn> SelectInfos
         {
             get { return this.Columns.Infos; }

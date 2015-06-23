@@ -29,10 +29,8 @@ namespace OR_M_Data_Entities.Commands
 		#endregion
 
 		#region Methods
-		public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
+		public SqlCommand Build(SqlConnection connection)
 		{
-            dataQueryType = DataQueryType.NoForeignKeys;
-
 			if (string.IsNullOrWhiteSpace(TableName))
 			{
 				throw new QueryNotValidException("INSERT statement needs Table Name");
@@ -113,10 +111,11 @@ namespace OR_M_Data_Entities.Commands
 		        }
 		    }
 
-		    var sql = string.Format("{0} {1} INSERT INTO {2} ({3}) VALUES ({4});{5}",
+		    var sql = string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
 				string.IsNullOrWhiteSpace(declare) ? "" : string.Format("DECLARE {0}", declare.TrimEnd(',')),
 				set,
-                TableName, fields.TrimEnd(','),
+                TableName, 
+                fields.TrimEnd(','),
 				values.TrimEnd(','),
 				string.IsNullOrWhiteSpace(identity) ? "" : string.Format("Select {0}", identity.TrimEnd(',')));
 

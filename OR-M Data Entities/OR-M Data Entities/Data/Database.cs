@@ -58,12 +58,22 @@ namespace OR_M_Data_Entities.Data
         /// <summary>
         /// Connect our SqlConnection
         /// </summary>
-        protected void Connect()
+        protected bool Connect()
         {
-            // Open the connection if its closed
-            if (Connection.State == ConnectionState.Closed)
+            try
             {
-                Connection.Open();
+                // Open the connection if its closed
+                if (Connection.State == ConnectionState.Closed)
+                {
+                    Connection.Open();
+                }
+                return true;
+            }
+            catch (Exception)
+            {
+                Connection = new SqlConnection(ConnectionString);
+
+                return false;
             }
         }
 
@@ -79,6 +89,7 @@ namespace OR_M_Data_Entities.Data
         protected void TryDisposeCloseReader()
         {
             if (Reader == null) return;
+
             Reader.Close();
             Reader.Dispose();
         }

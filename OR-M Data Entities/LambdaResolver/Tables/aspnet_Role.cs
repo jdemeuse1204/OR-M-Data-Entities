@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using OR_M_Data_Entities.Mapping;
 
 namespace ORSigningPro.Common.Data.ORTSigningPro.Tables

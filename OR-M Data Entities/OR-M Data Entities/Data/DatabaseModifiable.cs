@@ -14,6 +14,7 @@ using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -44,6 +45,14 @@ namespace OR_M_Data_Entities.Data
             lock (Lock)
             {
                 var state = ChangeStateType.Insert;
+
+                // check to see if the table is marked as readonly
+                if (DatabaseSchemata.IsTableReadOnly(entity))
+                {
+                    throw new SqlSaveException(string.Format(
+                        "Table Is ReadOnly.  Table: {0}",
+                        DatabaseSchemata.GetTableName(entity)));
+                }
 
                 if (DatabaseSchemata.HasForeignKeys(entity))
                 {
@@ -293,7 +302,15 @@ namespace OR_M_Data_Entities.Data
 
                     // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
                     // maintaining the relationship
-                    throw new Exception(string.Format("SAVE CANCELLED!  Reason: Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
+                    throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
+                }
+
+                // Check for readonly attribute and see if we should throw an error
+                if (DatabaseSchemata.IsTableReadOnly(foreignKey.GetPropertyType()))
+                {
+                    throw new SqlSaveException(string.Format(
+                        "Table Is ReadOnly.  Table: {0}",
+                        DatabaseSchemata.GetTableName(entity)));
                 }
 
                 // doesnt have dependencies

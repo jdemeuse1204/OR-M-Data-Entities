@@ -4,6 +4,7 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
+
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -14,13 +15,17 @@ using OR_M_Data_Entities.Expressions.Resolution;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public abstract class ExpressionQuery<T> : DbQuery<T>, IEnumerable<T>, IExpressionQuery
+    public abstract class ExpressionQuery<T> : DbQuery<T>, IEnumerator<T>, IExpressionQuery
     {
+        #region Fields
+        private readonly object _lock = new object();
+        #endregion
+
         #region Constructor
         protected ExpressionQuery(DatabaseReading context, string viewId = null)
             : base(context, viewId)
         {
-            
+
         }
 
         protected ExpressionQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
@@ -35,23 +40,45 @@ namespace OR_M_Data_Entities.Expressions
         #region Enumeration Methods
         public IEnumerator<T> GetEnumerator()
         {
-            if (IsSubQuery)
+            lock (_lock)
             {
-                // make sure sub query works with yield
-                GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null);
-                yield return default (T);
-            }
+                if (IsSubQuery)
+                {
+                    // make sure sub query works with yield
+                    GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null);
+                    yield return default(T);
+                }
 
-            foreach (var item in Context.ExecuteQuery(this))
-            {
-                yield return item;
-            }
-        }
+                foreach (var item in Context.ExecuteQuery(this))
+                {
+                    yield return item;
+                }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
+                Context.Dispose();
+            }
         }
         #endregion
+
+        public void Dispose()
+        {
+            Context.Dispose();
+        }
+
+        public bool MoveNext()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public T Current { get; private set; }
+
+        object IEnumerator.Current
+        {
+            get { return Current; }
+        }
     }
 }

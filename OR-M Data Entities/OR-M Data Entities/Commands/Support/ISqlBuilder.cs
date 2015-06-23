@@ -6,13 +6,13 @@
  */
 
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands.Support
 {
 	public interface ISqlBuilder
 	{
 		void Table(string tableName);
-		SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType);
+
+		SqlCommand Build(SqlConnection connection);
 	}
 }

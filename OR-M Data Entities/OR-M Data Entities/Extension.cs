@@ -34,7 +34,18 @@ namespace OR_M_Data_Entities
         #region First
         public static TSource First<TSource>(this ExpressionQuery<TSource> source)
         {
-            return _execute(source).First();
+            var resolvable = ((IExpressionQueryResolvable) source);
+
+            TSource result;
+
+            using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            {
+                result = reader.First();
+            }
+
+            resolvable.DbContext.Dispose();
+
+            return result;
         }
 
         public static TSource First<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -46,7 +57,18 @@ namespace OR_M_Data_Entities
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
         {
-            return _execute(source).FirstOrDefault();
+            var resolvable = ((IExpressionQueryResolvable)source);
+
+            TSource result;
+
+            using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            {
+                result = reader.FirstOrDefault();
+            }
+
+            resolvable.DbContext.Dispose();
+
+            return result;
         }
 
         public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -181,8 +203,6 @@ namespace OR_M_Data_Entities
         {
             ((ExpressionQueryResolvable<TSource>)source).ResolveCount();
 
-            _execute(source);
-
             return source.FirstOrDefault();
         }
 
@@ -196,16 +216,27 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region To List
-        public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source)
+        public static List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source)
         {
-            return _execute(source).ToList();
+            var resolvable = ((IExpressionQueryResolvable)source);
+
+            List<TSource> result;
+
+            using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            {
+                result = reader.ToList();
+            }
+
+            resolvable.DbContext.Dispose();
+
+            return result;
         }
 
-        public static List<TSource> All<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
-            return All(source);
+            return ToList(source);
         }
         #endregion
 
@@ -253,7 +284,18 @@ namespace OR_M_Data_Entities
             // only take one, we only care if it exists or not
             source.Take(1);
 
-            return _execute(source).Any();
+            var resolvable = ((IExpressionQueryResolvable)source);
+
+            bool result;
+
+            using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            {
+                result = reader.HasRows;
+            }
+
+            resolvable.DbContext.Dispose();
+
+            return result;
         }
 
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -314,8 +356,6 @@ namespace OR_M_Data_Entities
         {
             ((ExpressionQueryResolvable<T>)source).ResoveMax();
 
-            _execute(source);
-
             return source.FirstOrDefault();
         }
 
@@ -323,16 +363,7 @@ namespace OR_M_Data_Entities
         {
             ((ExpressionQueryResolvable<T>)source).ResoveMin();
 
-            _execute(source);
-
             return source.FirstOrDefault();
-        }
-
-        private static IEnumerable<T> _execute<T>(ExpressionQuery<T> source)
-        {
-            source.GetEnumerator();
-
-            return source;
         }
     }
 

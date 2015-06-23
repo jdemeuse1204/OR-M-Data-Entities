@@ -31,13 +31,13 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         {
             var table = baseQuery.Tables.Find(typeof(T), baseQuery.Id);
             var infos =
-                baseQuery.SelectInfos.Where(w => w.IsPrimaryKey && w.Table.Type == typeof (T))
+                baseQuery.SelectInfos.Where(w => w.IsPrimaryKey && w.Table.Type == typeof(T))
                     .OrderBy(w => w.Ordinal)
                     .ToList();
 
             for (var i = 0; i < pks.Count(); i++)
             {
-                var isConnector = (i%2) != 0;
+                var isConnector = (i % 2) != 0;
 
                 if (isConnector)
                 {
@@ -137,7 +137,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             {
                 var rightResult = _evaluate(expression.Right as dynamic, resolution, baseQuery, viewId);
 
-                rightResult.Group = groupNumber;
+                if (rightResult != null)
+                {
+                    rightResult.Group = groupNumber;
+                }
 
                 resolution.AddResolution(rightResult);
                 resolution.AddConnector(ConnectorType.And);
@@ -195,12 +198,23 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             {
                 var argument = expression.Arguments[i];
 
+                var lambdaExpression = (LambdaExpression) argument;
+
+                if (lambdaExpression.Body is BinaryExpression)
+                {
+                    _evaluateTree(lambdaExpression.Body as dynamic, resolution, baseQuery, viewId);
+                    return null;
+                }
+
                 // evaluate the argument
-                var result =_evaluate(((LambdaExpression)argument).Body as dynamic, resolution, baseQuery, viewId, group);
+                var result = _evaluate(lambdaExpression.Body as dynamic, resolution, baseQuery, viewId, group);
 
-                result.Group = group;
+                if (result != null)
+                {
+                    result.Group = group;
 
-                result.ExpressionQueryId = baseQuery.Id;
+                    result.ExpressionQueryId = baseQuery.Id;
+                }
 
                 // will be added when the value is returned from the method
                 if (i == (expression.Arguments.Count - 1))
@@ -269,7 +283,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     {
                         result.CompareValue = new List<SqlDbParameter>();
 
-                        foreach (var item in ((ICollection) value))
+                        foreach (var item in ((ICollection)value))
                         {
                             ((List<SqlDbParameter>)result.CompareValue).Add(resolution.GetAndAddParameter(string.Format("{0}", item)));
                         }
@@ -281,7 +295,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     break;
                 case "ENDSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value));;
+                    result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value)); ;
                     break;
             }
 

@@ -6,6 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Collections;
@@ -20,6 +21,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         IReadOnlyList<SqlDbParameter> Parameters { get; }
 
         ReadOnlyTableCollection Tables { get; }
+
+        DatabaseReading DbContext { get; }
 
         // for use with payload
         IEnumerable<DbColumn> SelectInfos { get; }

@@ -11,7 +11,6 @@ using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Commands
@@ -40,12 +39,8 @@ namespace OR_M_Data_Entities.Commands
         #endregion
 
         #region Methods
-        public SqlCommand Build(SqlConnection connection, out DataQueryType dataQueryType)
+        public SqlCommand Build(SqlConnection connection)
         {
-            dataQueryType = _tableType != null
-                ? DatabaseSchemata.HasForeignKeys(_tableType) ? DataQueryType.ForeignKeys : DataQueryType.NoForeignKeys
-                : DataQueryType.NoForeignKeys;
-
             if (string.IsNullOrWhiteSpace(_select) && string.IsNullOrWhiteSpace(_straightSelect))
             {
                 throw new QueryNotValidException("SELECT statement missing");
