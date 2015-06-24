@@ -5,6 +5,7 @@ OR-M Data Entities
 Overview:  <br><br>
 This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, OR-M Data Entities is much faster than ORM's like Entity Framework.  The catch is there is less "micro managing" of code going on, which makes the framework much faster.  The great thing about OR-M Data Entities are the two different data context's you can use.  DbSqlContext is for those familiar with Sql.  DbSqlContext is a derivative of Entity Framework, the difference is there are no DbSets to declare.  Instead your classes (tables) will perform the direct manipluation (See code below).  Also, there is DbEntityContext, which is almost an exact mirror of Entity Framework, just lighter and different inner workings.  Simple operations are the same such as saving and deleting.  If there is more demand I can add onto it.
 
+OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo Keys, ReadOnly Tables, and VIEWS!  Yes thats right, Views now exist!  When writing the new code I realized some models that have foreign keys can get pretty big and you might not want to always select everything.  Sure you could shape your data with a select, but that can be a lot of code for bigger models.  Enter views!  Just put the ViewAttribute on each Foreign Key class and specify which view you want it to be a part of.  Then in the context do FromView<T>(string viewId) to select your data. 
 
 ######Changes in 2.0
 ######1. Added support for Foreign Keys
@@ -13,31 +14,134 @@ This solution is a micro Object-Relational Mapper aimed at speed.  Others out th
 ######4. Added Pseudo Key (On the fly Foreign Key)
 ######5. Added ReadOnly Attribute for Tables
 ######6. Added View Attribute for Tables
-######7. Changed the way queries are written.  This needed to be done for Foreign Key support.
+######7. Changed the way queries are written.  This needed to be done for Foreign Key support
 ######8. Better data shaping
 ######8. Took out recursion in the object loader
-######9. Huge refactor, which made the ORM even faster
+######9. Huge refactor, which made the ORM even faster with large queries
+######10. Fixed null issue in where statements
+######11. First will now throw an error if no data rows exist from the query
 
 ###Example Classes to be used below:
 ```C#
-	[Table("Contacts")] // Only needed if your table name is not the same as the class name
-	public class Contact
-	{
-		public int Id {get;set;}
-		
-		public string Name {get;set;}
-	}
+    [View("ContactOnly")]
+    [Table("Contacts")]  <----- ONLY NEEDED IF CLASS NAME DIFFERENT FROM DB TABLE NAME
+    public class Contact
+    {
+        [DbGenerationOption(DbGenerationOption.Generate)]
+        public int ID { get; set; }
+
+        public string FirstName { get; set; }
+
+        public string LastName { get; set; }
+
+        public int PhoneID { get; set; }
+
+        public int CreatedByUserID { get; set; }
+
+        public int EditedByUserID { get; set; }
+
+        [ForeignKey("CreatedByUserID")]
+        public User CreatedBy { get; set; }
+
+        [ForeignKey("EditedByUserID")]
+        public User EditedBy { get; set; }
+
+        [ForeignKey("PhoneID")]
+        public PhoneNumber Number { get; set; }
+
+        [ForeignKey("ContactID")]
+        public List<Appointment> Appointments { get; set; }
+
+        [ForeignKey("ContactID")]
+        public List<Name> Names { get; set; }
+    }
 	
-	[Table("Appointments")]
-	public class Appointment 
-	{
-		public int Id {get;set;}
-		
-		[Column("AppointmentAddress")]  // only needed if you want your property name to be different than the corresponding column name in the table
-		public string Address {get;set;}
-		
-		public int ContactId {get;set;
-	}
+    public class User
+    {
+        public int ID { get; set; }
+
+        public string Name { get; set; }
+    }
+    
+    [View("ContactOnly")]
+    [Table("PhoneNumbers")]
+    public class PhoneNumber
+    {
+        public int ID { get; set; }
+
+        public string Phone{ get; set; }
+
+        public int PhoneTypeID { get; set; }
+
+        [ForeignKey("PhoneTypeID")]
+        public PhoneType PhoneType { get; set; }
+    }
+    
+    public class PhoneType
+    {
+        public int ID { get; set; }
+
+        public string Type { get; set; }
+    }
+    
+    [Table("Appointments")]
+    public class Appointment
+    {   
+        [DbGenerationOption(DbGenerationOption.Generate)]
+        public Guid ID { get; set; }
+
+        public int ContactID { get; set; }
+
+        public string Description { get; set; }
+
+        [ForeignKey("AppointmentID")]
+        public List<Address> Address { get; set; }
+    }
+        
+    public class Address
+    {
+        public int ID { get; set; }
+
+        public string Addy { get; set; }
+
+        public Guid AppointmentID { get; set; }
+
+        public int StateID { get; set; }
+
+        [ForeignKey("StateID")]
+        public StateCode State { get; set; }
+
+        [ForeignKey("AddressID")]
+        public List<Zip> ZipCode { get; set; }
+    }
+    
+    public class StateCode
+    {
+        public int ID { get; set; }
+
+        public string Value { get; set; }
+    }
+    
+    [Table("ZipCode")]
+    public class Zip
+    {
+        public int ID { get; set; }
+
+        public string Zip5 { get; set; }
+
+        public string Zip4 { get; set; }
+
+        public int AddressID { get; set; }
+    }
+    
+    public class Name
+    {
+        public int ID { get; set; }
+
+        public string Value { get; set; }
+
+        public int ContactID { get; set; }
+    }
 ```
 
 ####Objects:
@@ -74,6 +178,8 @@ ChangeStateType SaveChanges<T>(T entity) where T : class
 			// NOTES - Deletes the entity from the corresponding table, 
 			// returns true if deleted and false if no action taken.
 			// **Looks up the value to delete based on the primary key
+			
+			// *** For foreign keys, everything will be delete in order
 			var contact = new Contact
 			{
 				Id = 1
@@ -90,18 +196,24 @@ ChangeStateType SaveChanges<T>(T entity) where T : class
 			// Expression queries are intented to be just like linq queries. 
 			
 			// see below for more examples
-			var contact = context.From<Contact>()..Where(w => w.Name == "James").First();
+			var contact = context.From<Contact>().Where(w => w.Name == "James").First();
 			
-        		
+				// Sub Queries
+				var contact = context.From<Contact>().Where(w => w.Name == context.From<Appointment>().First(x => x.Description == "James").Description).First();
+				
+				// Query from foreign key list
+        			var contact = context.From<Contact>().Where(w => w.Name == "James" && w.Appointments.Any(x => x.Description == "James").First();
         		// FIND
         		
         		var contact = context.Find<Contact>(1); // Finds a contact where ids Primary Key is 1
         		
-        		// FROM
+        		// VIEW
         		
-        		var expressionQuery = context.From<Contact>(); 
-        		// Returns a ExpressionQuery which is custom
-        		// Best option to use when selecting data
+        		var expressionQuery = context.FromView<Contact>("ContactOnly").FirstOrDefault(); 
+        		
+        		// Returns a contact and any corresponding foreign key that has the "ContactOnly" view attribute
+        		// ** Will throw an error if you try to select a property from a foreign key
+        		// that does not have the "ContactOnly" view attribute
         		
         		// SAVE CHANGES
         		
@@ -109,7 +221,8 @@ ChangeStateType SaveChanges<T>(T entity) where T : class
         		// else the record will be updated.  Strings not supported for primary keys.
         		// ** If a table has no keys and you would like to insert a record, you must specifiy 
         		// at least one key with the KeyAttribute and set the DbGenerationAttribute to None. 
-        		
+        		// ** All foreign keys will be inserted/updated in the correct order and their 
+        		// corresponding keys will be loaded into their respective models
         		var contact = new Contact();
         		context.SaveChanges(contact);
         		// Insert contact because the Primary Key is 0.  the Contact object will automatically have 
@@ -157,34 +270,57 @@ void Dispose()
 	}
 ```
 
-######3.	ExpressionQuery<T> : DbQuery<T>, IEnumerator<T>, IExpressionQuery
+######3.	ExpressionQuery<T> : DbQuery<T>, IExpressionQuery
 
 #####Namespace: OR_M_Data_Entities.Expressions<br>
 
-#####Methods
+#####Extension Methods
 ```C#
-ExpressionQuery Where<T>(Expression<Func<T, bool>> whereExpression)
-ExpressionQuery Join<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
-            where TParent : class
-            where TChild : class
-ExpressionQuery Join<TParent, TChild>()
-            where TParent : class
-            where TChild : class
-ExpressionQuery LeftJoin<TParent, TChild>(Expression<Func<TParent, TChild, bool>> joinExpression)
-            where TParent : class
-            where TChild : class
-ExpressionQuery LeftJoin<TParent, TChild>()
-            where TParent : class
-            where TChild : class
-ExpressionQuery Select<T>(Expression<Func<T, object>> result)
-ExpressionQuery Select<T>()
-ExpressionQuery Distinct()
-ExpressionQuery Take(int rows)
-object First()
-T First<T>()
-ICollection All()
-List<T> All<T>()
-IEnumerator GetEnumerator<T>()
+TSource First<TSource>(this ExpressionQuery<TSource> source)
+TSource First<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
+TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+decimal? Max(this ExpressionQuery<decimal?> source)
+decimal Max(this ExpressionQuery<decimal> source)
+double? Max(this ExpressionQuery<double?> source)
+double Max(this ExpressionQuery<double> source)
+float? Max(this ExpressionQuery<float?> source)
+float Max(this ExpressionQuery<float> source)
+int? Max(this ExpressionQuery<int?> source)
+int Max(this ExpressionQuery<int> source)
+long? Max(this ExpressionQuery<long?> source)
+long Max(this ExpressionQuery<long> source)
+decimal? Min(this ExpressionQuery<decimal?> source)
+decimal Min(this ExpressionQuery<decimal> source)
+double? Min(this ExpressionQuery<double?> source)
+double Min(this ExpressionQuery<double> source)
+float? Min(this ExpressionQuery<float?> source)
+float Min(this ExpressionQuery<float> source)
+int? Min(this ExpressionQuery<int?> source)
+int Min(this ExpressionQuery<int> source)
+long? Min(this ExpressionQuery<long?> source)
+long Min(this ExpressionQuery<long> source)
+ExpressionQuery<T> Distinct<T>(this ExpressionQuery<T> source)
+ExpressionQuery<T> Take<T>(this ExpressionQuery<T> source, int rows)
+TSource Count<TSource>(this ExpressionQuery<TSource> source)
+TSource Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source)
+List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this ExpressionQuery<TSource> source, Expression<Func<TSource, TKey>> keySelector)
+OrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this ExpressionQuery<TSource> source, Expression<Func<TSource, TKey>> keySelector)
+OrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this OrderedExpressionQuery<TSource> source, Expression<Func<TSource, TKey>> keySelector)
+OrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this OrderedExpressionQuery<TSource> source, Expression<Func<TSource, TKey>> keySelector)
+bool Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+bool Any<TSource>(this ExpressionQuery<TSource> source)
+ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+ExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
+            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            Expression<Func<TOuter, TInner, TResult>> resultSelector)
+            ExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
+            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            Expression<Func<TOuter, TInner, TResult>> resultSelector)
+ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
+            Expression<Func<TSource, TResult>> selector)
 ```
 
 #####Methods Examples:
@@ -196,9 +332,11 @@ See _Performing Queries Using ExpressionQuery_ Section (Below)
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public ColumnAttribute(string name) : base(SearchablePrimaryKeyType.Column)
+
 #####Usage: Properties or Fields
 ```C#
-public class Contact
+public class MyClass
 {
 	[Column("Name From Database")]
 	public string MyName {get;set;}
@@ -212,9 +350,11 @@ public class Contact
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public DbGenerationOptionAttribute(DbGenerationOption option)
+
 #####Usage: Properties or Fields
 ```C#
-public class Contact
+public class MyClass
 {
 	// example if Identity Specification is not set to true
 	[DbGenerationOption(DbGenerationOption.Generate)]
@@ -232,38 +372,42 @@ public class Contact
 <br><br>
 
 
-######3.	DbTranslationAttribute : Attribute
+######3.	DbTypeAttribute : Attribute
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public DbTypeAttribute(SqlDbType type) 
+
 #####Usage: Properties or Fields
 ```C#
-public class Contact
+public class MyClass
 {
 	// If database is datetime2(7)
-	[DbTranslationAttribute(SqlDbType.datetime2)]
+	[DbType(SqlDbType.datetime2)]
 	public DateTime Date {get;set;}
 }
 ```
-#####Notes: If you would like to change your Sql Type you need this attribute.
+#####Notes: If you have a time stamp you need to make sure you put this attribute on it and say it is a SqlDbType.Timestamp.  If you do not do this you will get errors when you try to update because timestamps cannot be updated
 <br><br>
 
 ######4.	KeyAttribute : SearchablePrimaryKeyAttribute
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public KeyAttribute()
+
 #####Usage: Properties or Fields
 ```C#
-public class Contact
+public class MyClass
 {
 	// Clustered key
 	[Key]
 	[DbGenerationOption(DbGenerationOption.None)] // set to none if you want to insert into a table with no PK
-	public int FkId_1 {get;set;}
+	public int PkId_1 {get;set;}
 	
 	[Key]
 	[DbGenerationOption(DbGenerationOption.None)]  // set to none if you want to insert into a table with no PK
-	public int FkId_2 {get;set;}
+	public int PkId_2 {get;set;}
 }
 ```
 #####Notes: If a column is your primary key and it is not named "Id" or "ID" then you need to add this attribute to identity it
@@ -274,10 +418,12 @@ public class Contact
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public TableAttribute(string name)
+
 #####Usage: Class
 ```C#
-[Table("Contacts")]  // only needed if your class name is not the same as your table name
-public class Contact
+[Table("MyTableName")]  // only needed if your class name is not the same as your table name
+public class MyClass
 {
 	public int Id {get;set;}
 }
@@ -289,9 +435,11 @@ public class Contact
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
+#####Constructor: public UnmappedAttribute()
+
 #####Usage: Properties or Fields
 ```C#
-public class Contact
+public class MyClass
 {
 	public int Id {get;set;}
 	
@@ -302,100 +450,129 @@ public class Contact
 #####Notes: Needed if you wish to keep this property from being pushed or pulled from the database
 <br><br>
 
-######7.	ForeignKeyAttribute : NonSelectableAttribute
+######7.	ForeignKeyAttribute : AutoLoadKeyAttribute
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ForeignKeyAttribute(string foreignKeyColumnName)
 
 #####Usage: Properties or Fields
 ```C#
 public class Contact
 {
-	public int Id {get;set;}
+	public int ID {get;set;}
 	
-	public int AddressID {get;set;}
+	public int PhoneID {get;set;}
+	
+	... See above classes ...
 	
 	// Assumes a one-one relationship between Contact and Address. 
-	// Looks for the AddressID in the Contact Class
-	[ForeignKey("AddressID")]
-	public Address Address {get;set;}
+	// Looks for the AddressID in the Contact Class.  Inner Join is performed.
 	
+	// In your database your foreign key would be from Contact/PhoneID and point to PhoneNumber/(PrimaryKey)
+	[PseudoKey("PhoneID")]
+        public PhoneNumber Number { get; set; }
+
 	// Assumes a one-many relationship between Contact and PhoneNumber. 
-	// Looks for the ContactID in the PhoneNumber table
-	[ForeignKey("ContactID")]
-	public List<PhoneNumber> PhoneNumbers {get;set;}
+	// Looks for the ContactID in the PhoneNumber table.  Left Join is performed.
+	// ** NOTE:  All subsequent joins after the left join will also be a left join regardless of the relationship.
+	
+	// In your database your foreign key would be from Appointment/ContactID and point to Contact/(PrimaryKey)
+        [PseudoKey("ContactID")]
+        public List<Appointment> Appointments { get; set; }
 }
 ```
 #####Notes: Whether or not your foreign key object is a list or not will determine the relationship.  A List assumes a one-many relationship and a class reference assumes a one-one relationship.
 <br><br>
 
+######8.	PseudoKeyAttribute : AutoLoadKeyAttribute
 
+#####Namespace: OR_M_Data_Entities.Mapping<br>
 
-####Performing Queries Using ExpressionQuery:
-#####The aim of the ExpressionQuery class is to make writing sql in C# much easier.  Know how to write a join in Lambda without StackOverflow?  Know how to write a left join in Lambda?  Hate using DbFunctions in Entity Framework to truncate time.  Now all of this is easier than ever!
+#####Constructor: public PseudoKeyAttribute(string parentTableColumnName, string childTableColumnName)
 
+#####Usage: Properties or Fields
 ```C#
-[Table("Contacts")]
 public class Contact
 {
-	public int Id {get;set;}
+	public int ID {get;set;}
 	
-	public DateTime DateAdded {get;set;}
+	public int PhoneID {get;set;}
 	
-	public string CreatedBy {get;set;}
-}
-
-[Table("Appointments")]
-public class Appointment
-{
-	public int Id {get;set;}
+	... See above classes ...
 	
-	public int ContactId {get;set;}
-}
-
-
+	// Assumes a one-one relationship between Contact and Address. 
+	// Looks for the AddressID in the Contact Class.  Inner Join is performed.
 	
-class Program
-{
+	// In your database your foreign key would be from Contacts/PhoneID and point to PhoneNumber/(PrimaryKey)
+	[ForeignKey("PhoneID")]
+        public PhoneNumber Number { get; set; }
 
-	DbSqlContext context = new DbSqlContext("your connection string"); 
-
-	static void main(string[] args)
-	{
-		// Lets write the following with ExpressionQuery syntax
-		// Select * From Contacts Where Cast(CreatedBy as date) = Cast(getdate() as date)
-		
-		var query = context.From<Contact>().Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
-		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
-		
-		// The great thing about ExpressionQuery is order does not matter.  From always needs to come first, 
-		// after that it does not matter.
-		// The above can also be written as:
-		
-		var query = context.From<Contact>().Select<Contact>().Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
-		== Cast.As(DateTime.Now, SqlDbType.date);
-		
-		// Lets write an Inner Join
-		var query = context.From<Contact>().Join<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
-		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
-		
-		// Lets write an Left Join
-		var query = context.From<Contact>().LeftJoin<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
-		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>();
-		
-		// Lets write an Select Top 10
-		var query = context.From<Contact>().LeftJoin<Contact, Appointment>((c,a) => c.Id == a.ContactId).Where<Contact>(w => Cast.As(w.CreatedBy,SqlDbType.date)
-		== Cast.As(DateTime.Now, SqlDbType.date).Select<Contact>().Take(10);
-		
-		// Dont have a class to return, use Select<dynamic>() and it will return everything in your 
-		// select.  Want to return a struct?  Use Select<int>() to return your value.  More examples to come!
-	}
+	// Assumes a one-many relationship between Contact and PhoneNumber. 
+	// Looks for the ContactID in the PhoneNumber table.  Left Join is performed.
+	// ** NOTE:  All subsequent joins after the left join will also be a left join regardless of the relationship.
+	
+	// In your database your foreign key would be from Appointment/ContactID and point to Contacts/(PrimaryKey)
+        [ForeignKey("ContactID")]
+        public List<Appointment> Appointments { get; set; }
 }
 ```
+#####Notes: Pseudo Keys act just like a foreign key, but allows you to specify a key that is not actually a foreign key in the database.  Think of it as a programatic join.
+<br><br>
 
-####Noted Issues:
-######5.	Linq Joins
-_Linq joins are not supported at this time because I simply don't use them.  I use my ExpresssionQuery Joins instead.  If you would like them to be supported please contact me_
+######9.	LinkedServerAttribute : Attribute
 
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public LinkedServerAttribute(string serverName, string databaseName, string schemaName)
+
+#####Usage: Class
+```C#
+[LinkedServer("MyServer", "MyDatabase", "MySchema")]
+public class Contact
+{
+
+}
+```
+#####Notes: Linked Server Attribute will format your sql for any linked server queries.
+<br><br>
+
+######10.	ViewAttribute : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ViewAttribute(params string[] viewIds)
+
+#####Usage: Class
+```C#
+[View("ContactOnly", "OtherView")]
+public class Contact
+{
+
+}
+```
+#####Notes: You can make as many views as you want on each class.  Only classes with the same view will be returned in the query, everything else will be null.  BE CAREFUL SAVING!  Should be used for data shaping only.
+<br><br>
+
+######11.	ReadOnlyAttribute : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ReadOnlyAttribute()
+
+#####Usage: Class
+```C#
+[ReadOnly]
+public class Contact
+{
+
+}
+```
+#####Notes: Like the name suggests, this table is a read only table, nothing can be saved or deleted
+<br><br>
+
+####Performing Queries Using ExpressionQuery:
+#####The aim of ExpressionQuery is to load data from the server into a generic list without regard for its state.  With the addition of Foreign Keys all queries had to be changed to Linq.
 
 Issues/Questions/Comments:
 
