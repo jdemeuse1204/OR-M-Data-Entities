@@ -16,10 +16,10 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######6. Added View Attribute for Tables
 ######7. Changed the way queries are written.  This needed to be done for Foreign Key support
 ######8. Better data shaping
-######8. Took out recursion in the object loader
-######9. Huge refactor, which made the ORM even faster with large queries
-######10. Fixed null issue in where statements
-######11. First will now throw an error if no data rows exist from the query
+######9. Took out recursion in the object loader
+######10. Huge refactor, which made the ORM even faster with large queries
+######11. Fixed null issue in where statements
+######12. First will now throw an error if no data rows exist from the query
 
 ###Example Classes to be used below:
 ```C#
