@@ -10,7 +10,6 @@ using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
@@ -115,7 +114,7 @@ namespace OR_M_Data_Entities.Commands
 		    var sql = string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
 				string.IsNullOrWhiteSpace(declare) ? "" : string.Format("DECLARE {0}", declare.TrimEnd(',')),
 				set,
-                TableName, 
+                TableName.TrimStart('[').TrimEnd(']'), 
                 fields.TrimEnd(','),
 				values.TrimEnd(','),
 				string.IsNullOrWhiteSpace(identity) ? "" : string.Format("Select {0}", identity.TrimEnd(',')));

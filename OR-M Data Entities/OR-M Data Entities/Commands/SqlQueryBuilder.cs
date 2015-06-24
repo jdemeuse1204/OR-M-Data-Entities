@@ -55,7 +55,7 @@ namespace OR_M_Data_Entities.Commands
             var joinSql = _joins.Aggregate(string.Empty, (current, @join) => current + @join.Value.GetJoinText());
 
             var sql = string.IsNullOrWhiteSpace(_straightSelect) ?
-                _select + _columns.TrimEnd(',') + string.Format(" FROM {0} ", TableName) + joinSql + GetValidation() :
+                _select + _columns.TrimEnd(',') + string.Format(" FROM [{0}] ", TableName.TrimStart('[').TrimEnd(']')) + joinSql + GetValidation() :
                 _straightSelect;
 
             var cmd = new SqlCommand(sql, connection);

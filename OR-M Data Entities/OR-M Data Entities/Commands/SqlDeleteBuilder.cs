@@ -35,7 +35,7 @@ namespace OR_M_Data_Entities.Commands
                 throw new QueryNotValidException("Table statement missing");
             }
 
-            _delete = string.Format(" DELETE FROM {0} ", TableName);
+            _delete = string.Format(" DELETE FROM [{0}] ", TableName.TrimStart('[').TrimEnd(']'));
 
             var sql = _delete + GetValidation() + ";Select @@ROWCOUNT as 'int';";
             var cmd = new SqlCommand(sql, connection);

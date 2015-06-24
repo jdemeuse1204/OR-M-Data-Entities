@@ -41,7 +41,7 @@ namespace OR_M_Data_Entities.Commands
 				throw new QueryNotValidException("UPDATE SET values missing");
 			}
 
-            var sql = string.Format("UPDATE [{0}] SET {1} {2}", TableName, _set.TrimEnd(','), GetValidation());
+            var sql = string.Format("UPDATE [{0}] SET {1} {2}", TableName.TrimStart('[').TrimEnd(']'), _set.TrimEnd(','), GetValidation());
 			var cmd = new SqlCommand(sql, connection);
 
 			InsertParameters(cmd);
