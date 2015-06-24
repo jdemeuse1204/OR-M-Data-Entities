@@ -8,12 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
@@ -147,7 +147,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                     (current, info) =>
                         current +
                         string.Format("[{0}].[{1}],", info.GetTableAlias(),
-                            DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
+                            info.Property.GetColumnName())).TrimEnd(',');
         }
 
         public string GetPrimaryKeyOrderStatement()
@@ -156,7 +156,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 .OrderBy(w => w.Ordinal)
                 .Aggregate(string.Empty,
                     (current, info) => current + string.Format("[{0}].[{1}] ASC,", info.GetTableAlias(),
-                        DatabaseSchemata.GetColumnName(info.Property))).TrimEnd(',');
+                        info.Property.GetColumnName())).TrimEnd(',');
 
             return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);
         }
@@ -167,7 +167,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 .OrderBy(w => w.Order.Value)
                 .Aggregate(string.Empty,
                     (current, info) => current + string.Format("[{0}].[{1}] {2},", info.GetTableAlias(),
-                        DatabaseSchemata.GetColumnName(info.Property), _getOrderTypeString(info.OrderType)))
+                        info.Property.GetColumnName(), _getOrderTypeString(info.OrderType)))
                 .TrimEnd(',');
 
             return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);

@@ -9,8 +9,7 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
@@ -37,7 +36,7 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
         #region Methods
         public string GetColumnName()
         {
-            return DatabaseSchemata.GetColumnName(Column);
+            return Column.GetColumnName();
         }
 
         public string GetColumnText(string tableName)

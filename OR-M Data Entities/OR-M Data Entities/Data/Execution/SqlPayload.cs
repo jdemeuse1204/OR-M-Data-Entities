@@ -10,14 +10,11 @@ namespace OR_M_Data_Entities.Data.Execution
 {
     public class SqlPayload : ISqlPayload
     {
-        public SqlPayload(IExpressionQueryResolvable query, bool isLazyLoading)
+        public SqlPayload(IExpressionQueryResolvable query)
         {
             Query = query;
-            IsLazyLoading = isLazyLoading;
         }
 
         public IExpressionQueryResolvable Query { get; private set; }
-
-        public bool IsLazyLoading { get; private set; }
     }
 }

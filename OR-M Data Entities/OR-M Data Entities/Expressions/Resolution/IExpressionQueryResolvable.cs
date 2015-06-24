@@ -31,8 +31,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         bool IsSubQuery { get; }
 
-        bool IsLazyLoading { get; }
-
         OSchematic LoadSchematic { get; }
 
         bool HasForeignKeys { get; }

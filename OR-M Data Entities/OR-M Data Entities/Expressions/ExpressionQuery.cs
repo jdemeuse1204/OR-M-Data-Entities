@@ -5,7 +5,6 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
@@ -15,7 +14,7 @@ using OR_M_Data_Entities.Expressions.Resolution;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public abstract class ExpressionQuery<T> : DbQuery<T>, IEnumerator<T>, IExpressionQuery
+    public abstract class ExpressionQuery<T> : DbQuery<T>, IExpressionQuery
     {
         #region Fields
         private readonly object _lock = new object();
@@ -58,27 +57,5 @@ namespace OR_M_Data_Entities.Expressions
             }
         }
         #endregion
-
-        public void Dispose()
-        {
-            Context.Dispose();
-        }
-
-        public bool MoveNext()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void Reset()
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public T Current { get; private set; }
-
-        object IEnumerator.Current
-        {
-            get { return Current; }
-        }
     }
 }

@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -17,7 +18,7 @@ namespace OR_M_Data_Entities.Data.Definition
             Type = type;
             ActualType = actualType;
             PropertyName = propertyName;
-            PrimaryKeyNames = DatabaseSchemata.GetPrimaryKeyNames(type);
+            PrimaryKeyNames = type.GetPrimaryKeyNames();
             LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
             Children = new List<OSchematic>();
         }

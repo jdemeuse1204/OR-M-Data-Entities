@@ -9,9 +9,9 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Commands
 {
@@ -60,7 +60,7 @@ namespace OR_M_Data_Entities.Commands
 
 			//string fieldName, object value
 			var value = property.GetValue(entity);
-            var fieldName = DatabaseSchemata.GetColumnName(property);
+            var fieldName = property.GetColumnName();
 			var data = GetNextParameter();
 			_set += string.Format("[{0}] = {1},", fieldName, data);
 

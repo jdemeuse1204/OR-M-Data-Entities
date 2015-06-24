@@ -6,8 +6,7 @@
  */
 
 using System;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
@@ -32,12 +31,12 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 
         public void Table(Type tableType)
         {
-            Table(DatabaseSchemata.GetTableNameWithLinkedServer(tableType));
+            Table(tableType.GetTableNameWithLinkedServer());
         }
 
         public void Table<T>()
         {
-            Table(DatabaseSchemata.GetTableNameWithLinkedServer(typeof(T)));
+            Table(typeof(T).GetTableNameWithLinkedServer());
         }
         #endregion
     }

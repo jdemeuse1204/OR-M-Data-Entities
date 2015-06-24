@@ -7,9 +7,8 @@
 
 using System.Data;
 using System.Reflection;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
@@ -44,11 +43,11 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
         public InsertItem(PropertyInfo property, object entity)
 		{
 			PropertyName = property.Name;
-            DatabaseColumnName = DatabaseSchemata.GetColumnName(property);
-            IsPrimaryKey = DatabaseSchemata.IsPrimaryKey(property);
+            DatabaseColumnName = property.GetColumnName();
+            IsPrimaryKey = property.IsPrimaryKey();
 			Value = property.GetValue(entity);
 			PropertyDataType = property.PropertyType.Name.ToUpper();
-            Generation = IsPrimaryKey ? DatabaseSchemata.GetGenerationOption(property) : DbGenerationOption.None;
+            Generation = IsPrimaryKey ? property.GetGenerationOption() : DbGenerationOption.None;
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
 			var translation = property.GetCustomAttribute<DbTypeAttribute>();

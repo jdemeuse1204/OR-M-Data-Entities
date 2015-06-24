@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using OR_M_Data_Entities;
+using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Tests.Tables;
 
@@ -12,7 +14,7 @@ namespace OR0M_Data_Entities.Console
         static void Main(string[] args)
         {
             var context = new DbSqlContext("sqlExpress");
-
+            //context.Delete()
             var contact = new Contact
             {
                 FirstName = "James",
@@ -72,21 +74,21 @@ namespace OR0M_Data_Entities.Console
                 }
             };
 
-            var saveType = context.SaveChanges(contact);
+            //var saveType = context.SaveChanges(contact);
 
-            if (saveType == ChangeStateType.Insert)
-            {
+            //if (saveType == ChangeStateType.Insert)
+            //{
 
-            }
+            //}
 
             var lst = new List<string>() {"james", "megan"};
 
             var s = DateTime.Now;
-            var c = new Contact();
-                //context.FromView<Contact>("ContactOnly")
-                //    .Where(w => w.FirstName == "James")
-                //    .Select(w => w.Number.Phone)
-                //    .ToList();
+            var c =
+                context.From<Policy>()
+                    .InnerJoin(context.From<PolicyType>(), policy => policy.PolicyInfoId, type => type.ID,
+                        (policy, type) => new { policy.Id })
+                    .ToList();
             var e = DateTime.Now;
             var f = e - s;
 
@@ -97,7 +99,15 @@ namespace OR0M_Data_Entities.Console
 
             s = DateTime.Now;
             var a =
-                context.From<Contact>().First(w => w.ID == 2 && w.Appointments.Any(x => x.Description == "James"));
+                context.From<Contact>()
+                    .First(
+                        w =>
+                            DbTransform.Convert(SqlDbType.BigInt, 1, 1)
+                                == DbTransform.Convert(SqlDbType.Float, w.ID, 1) &&
+                            w.Appointments.Any(
+                                x =>
+                                    DbTransform.Cast(x.Description, SqlDbType.VarChar) ==
+                                    DbTransform.Cast("JAMES", SqlDbType.VarChar)));
 
             e = DateTime.Now;
             f = e - s;

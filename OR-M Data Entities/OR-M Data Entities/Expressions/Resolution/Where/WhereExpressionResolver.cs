@@ -8,15 +8,19 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
+using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Where
 {
@@ -24,7 +28,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
     {
         public static void Resolve<T>(Expression<Func<T, bool>> expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
         {
-            _evaluateTree(expression.Body as dynamic, container, baseQuery, viewId);
+            _evaluateTree(expression.Body as dynamic, container, baseQuery, viewId, expression.Body.NodeType);
         }
 
         public static void ResolveFind<T>(object[] pks, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery)
@@ -57,20 +61,25 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             }
         }
 
-        private static void _evaluateTree(MethodCallExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
+        private static void _evaluateTree(MethodCallExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId, ExpressionType? expressionType = null)
         {
-            var result = _evaluate(expression, container, baseQuery, viewId, container.NextGroupNumber());
+            var result = _evaluate(expression, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
 
             container.AddResolution(result);
         }
 
+        private static void _evaluateTree(UnaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId, ExpressionType? expressionType = null)
+        {
+            _evaluateTree(expression.Operand as dynamic, container, baseQuery, viewId, expressionType);
+        }
+
         // need to evaluate groupings
-        private static void _evaluateTree(BinaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId)
+        private static void _evaluateTree(BinaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId, ExpressionType? expressionType = null)
         {
             // check to see if we are at the end of the expression
             if (!HasComparison(expression))
             {
-                var result = _evaluate(expression as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
+                var result = _evaluate(expression as dynamic, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
 
                 container.AddResolution(result);
                 return;
@@ -92,7 +101,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 {
                     if (count != 0) container.AddConnector(ConnectorType.Or);
 
-                    var result = _evaluate(expression.Right as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
+                    var result = _evaluate(expression.Right as dynamic, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
 
                     container.AddResolution(result);
                     wasRightAdded = true;
@@ -116,7 +125,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
                     if (count == 0 && wasRightAdded) container.AddConnector(ConnectorType.And);
 
-                    var result = _evaluate(expression.Left as dynamic, container, baseQuery, viewId, container.NextGroupNumber());
+                    var result = _evaluate(expression.Left as dynamic, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
 
                     container.AddResolution(result);
                     break;
@@ -166,7 +175,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         /// </summary>
         /// <param name="expression"></param>
         /// <param name="resolution"></param>
-        private static WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1)
+        private static WhereResolutionPart _evaluate(BinaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
         {
             var result = new WhereResolutionPart
             {
@@ -183,6 +192,34 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             // if its an expression query we need to combine parameters into the main query
             result.CompareValue = IsExpressionQuery(value) ? value : resolution.GetAndAddParameter(value);
 
+            var rigthMethodCallTransformExpression = expression.Right as MethodCallExpression;
+            var leftMethodCallTransformExpression = expression.Left as MethodCallExpression;
+
+            // casting and converting
+            if (rigthMethodCallTransformExpression != null && rigthMethodCallTransformExpression.Method.DeclaringType == typeof(DbTransform))
+            {
+                var isConverting =
+                    rigthMethodCallTransformExpression.Method.DeclaringType == typeof (DbTransform) &&
+                    rigthMethodCallTransformExpression.Method.Name == "Convert";
+                var type = (SqlDbType?)GetValue(rigthMethodCallTransformExpression.Arguments[isConverting ? 0 : 1] as dynamic, baseQuery);
+
+                (isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).CastType = rigthMethodCallTransformExpression.Method.Name == "Cast" ? type : null;
+                (isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).ConvertStyle = rigthMethodCallTransformExpression.Method.Name == "Convert" ? (int?)GetValue(rigthMethodCallTransformExpression.Arguments[2] as dynamic, baseQuery) : null;
+                (isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).ConvertType = rigthMethodCallTransformExpression.Method.Name == "Convert" ? type : null;
+            }
+
+            if (leftMethodCallTransformExpression != null && leftMethodCallTransformExpression.Method.DeclaringType == typeof(DbTransform))
+            {
+                var isConverting =
+                    leftMethodCallTransformExpression.Method.DeclaringType == typeof(DbTransform) &&
+                    leftMethodCallTransformExpression.Method.Name == "Convert";
+                var type = (SqlDbType?)GetValue(leftMethodCallTransformExpression.Arguments[isConverting ? 0 : 1] as dynamic, baseQuery);
+
+                (!isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).CastType = leftMethodCallTransformExpression.Method.Name == "Cast" ? type : null;
+                (!isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).ConvertStyle = leftMethodCallTransformExpression.Method.Name == "Convert" ? (int?)GetValue(leftMethodCallTransformExpression.Arguments[2] as dynamic, baseQuery) : null;
+                (!isParameterOnLeftSide ? result.Transform : ((SqlDbParameter)result.CompareValue).Transform).ConvertType = leftMethodCallTransformExpression.Method.Name == "Convert" ? type : null;
+            }
+
             // get the comparison tyoe
             LoadComparisonType(expression, result);
 
@@ -198,11 +235,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             {
                 var argument = expression.Arguments[i];
 
-                var lambdaExpression = (LambdaExpression) argument;
+                var lambdaExpression = (LambdaExpression)argument;
 
                 if (lambdaExpression.Body is BinaryExpression)
                 {
-                    _evaluateTree(lambdaExpression.Body as dynamic, resolution, baseQuery, viewId);
+                    _evaluateTree(lambdaExpression.Body as BinaryExpression, resolution, baseQuery, viewId);
+                    return null;
+                }
+
+                if (lambdaExpression.Body is UnaryExpression)
+                {
+                    _evaluateTree(lambdaExpression.Body as UnaryExpression, resolution, baseQuery, viewId, expressionType);
                     return null;
                 }
 
@@ -237,7 +280,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         {
             if (expression.Object == null)
             {
-                return _evaluateLinqSubQuery(expression, resolution, baseQuery, viewId, group, expressionType);
+                return expression.Arguments.Any(
+                    w =>
+                        w is MethodCallExpression &&
+                        ((MethodCallExpression)w).Method.DeclaringType == typeof(DbTransform))
+                    ? _evaluateTransform(expression, resolution, baseQuery, viewId, @group, expressionType)
+                    : _evaluateLinqSubQuery(expression, resolution, baseQuery, viewId, @group, expressionType);
             }
 
             var result = new WhereResolutionPart
@@ -295,16 +343,134 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                     break;
                 case "ENDSWITH":
                     result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value)); ;
+                    result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value));
                     break;
             }
 
             return result;
         }
 
-        private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1)
+        private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
         {
             return _evaluate(expression.Operand as dynamic, resolution, baseQuery, viewId, group, expression.NodeType);
+        }
+
+        private static WhereResolutionPart _evaluateTransform(MethodCallExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
+        {
+            var result = new WhereResolutionPart
+            {
+                Group = group
+            };
+
+            var isParameterOnLeftSide = HasParameter(expression.Arguments[1] as dynamic);
+            var isConverting =
+                expression.Arguments.Any(
+                    w =>
+                        w is MethodCallExpression &&
+                        ((MethodCallExpression)w).Method.DeclaringType == typeof(DbTransform) &&
+                        ((MethodCallExpression)w).Method.Name == "Convert");
+
+            object value;
+
+            if (!isParameterOnLeftSide)
+            {
+                LoadColumnAndTableName(((MethodCallExpression)expression.Arguments[0]).Arguments[isConverting ? 1 : 0] as dynamic, result, baseQuery, viewId);
+
+                value = GetValue(expression.Arguments[1] as dynamic, baseQuery);
+            }
+            else
+            {
+                LoadColumnAndTableName(((MethodCallExpression)expression.Arguments[1]).Arguments[isConverting ? 1 : 0] as dynamic, result, baseQuery, viewId);
+
+                value = GetValue(expression.Arguments[0] as dynamic, baseQuery);
+            }
+
+            var invertComparison = expressionType.HasValue && expressionType.Value == ExpressionType.Not;
+
+            switch (expression.Method.Name.ToUpper())
+            {
+                case "EQUALS":
+                case "OP_EQUALITY":
+                    result.Comparison = invertComparison ? CompareType.NotEqual : CompareType.Equals;
+                    result.CompareValue = resolution.GetAndAddParameter(value);
+                    break;
+
+
+                case "CONTAINS":
+                    result.Comparison = value.IsList()
+                        ? (invertComparison ? CompareType.NotIn : CompareType.In)
+                        : (invertComparison ? CompareType.NotLike : CompareType.Like);
+
+                    if (!value.IsList())
+                    {
+                        result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}%", value));
+                    }
+                    else
+                    {
+                        result.CompareValue = new List<SqlDbParameter>();
+
+                        foreach (var item in ((ICollection)value))
+                        {
+                            ((List<SqlDbParameter>)result.CompareValue).Add(resolution.GetAndAddParameter(string.Format("{0}", item)));
+                        }
+                    }
+                    return result;
+                case "STARTSWITH":
+                    result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
+                    result.CompareValue = resolution.GetAndAddParameter(string.Format("{0}%", value));
+                    break;
+                case "ENDSWITH":
+                    result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
+                    result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value));
+                    break;
+
+
+                case "GREATERTHAN":
+                    result.Comparison = CompareType.GreaterThan;
+                    result.InvertComparison = invertComparison;
+                    result.CompareValue = resolution.GetAndAddParameter(value);
+                    break;
+                case "GREATERTHANOREQUAL":
+                    result.Comparison = CompareType.GreaterThanEquals;
+                    result.InvertComparison = invertComparison;
+                    result.CompareValue = resolution.GetAndAddParameter(value);
+                    break;
+                case "LESSTHAN":
+                    result.Comparison = CompareType.LessThan;
+                    result.InvertComparison = invertComparison;
+                    result.CompareValue = resolution.GetAndAddParameter(value);
+                    break;
+                case "LESSTHANOREQUAL":
+                    result.Comparison = CompareType.LessThanEquals;
+                    result.InvertComparison = invertComparison;
+                    result.CompareValue = resolution.GetAndAddParameter(value);
+                    break;
+            }
+
+            var firstArgMethodCallExpression = expression.Arguments[0] as MethodCallExpression;
+            var secondArgMethodCallExpression = expression.Arguments[1] as MethodCallExpression;
+
+            if (firstArgMethodCallExpression != null &&
+                firstArgMethodCallExpression.Method.DeclaringType == typeof(DbTransform))
+            {
+                var type = (SqlDbType?)((ConstantExpression)firstArgMethodCallExpression.Arguments[isConverting ? 0 : 1]).Value;
+
+                ((SqlDbParameter)result.CompareValue).Transform.CastType = firstArgMethodCallExpression.Method.Name == "Cast" ? type : null;
+                ((SqlDbParameter)result.CompareValue).Transform.ConvertStyle = firstArgMethodCallExpression.Method.Name == "Convert" ? (int?)GetValue(firstArgMethodCallExpression.Arguments[2] as dynamic, baseQuery) : null;
+                ((SqlDbParameter)result.CompareValue).Transform.ConvertType = firstArgMethodCallExpression.Method.Name == "Convert" ? type : null;
+            }
+
+            if (secondArgMethodCallExpression != null &&
+               secondArgMethodCallExpression.Method.DeclaringType == typeof(DbTransform))
+            {
+                var type = (SqlDbType?)((ConstantExpression)secondArgMethodCallExpression.Arguments[isConverting ? 0 : 1]).Value;
+
+                result.Transform.CastType = secondArgMethodCallExpression.Method.Name == "Cast" ? type : null; ;
+                result.Transform.ConvertStyle = secondArgMethodCallExpression.Method.Name == "Convert" ? (int?)GetValue(secondArgMethodCallExpression.Arguments[2] as dynamic, baseQuery) : null;
+                result.Transform.ConvertType = secondArgMethodCallExpression.Method.Name == "Convert" ? type : null;
+            }
+
+            return result;
         }
         #endregion
 
@@ -338,7 +504,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         #region Load Table And Column Name
         private static void LoadColumnAndTableName(MemberExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery, string viewId)
         {
-            if (!string.IsNullOrWhiteSpace(viewId) && !DatabaseSchemata.IsPartOfView(expression.Expression.Type, viewId))
+            if (!string.IsNullOrWhiteSpace(viewId) && !expression.Expression.Type.IsPartOfView(viewId))
             {
                 throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
                     expression.Expression.Type, viewId));
@@ -350,7 +516,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             {
                 // cannot come from a foriegn key, is the base type
                 result.ColumnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
-                result.TableName = DatabaseSchemata.GetTableName(expression.Expression.Type);
+                result.TableName = expression.Expression.Type.GetTableName();
                 result.TableAlias = baseQuery.Tables.Find(expression.Expression.Type, baseQuery.Id).Alias;
             }
             else
@@ -364,7 +530,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
         private static void LoadColumnAndTableName(MethodCallExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery, string viewId)
         {
+            if (expression.Object == null)
+            {
+                LoadColumnAndTableName(expression.Arguments.First(w => HasParameter(w as dynamic)) as dynamic,
+                    result, baseQuery, viewId);
+                return;
+            }
+
             LoadColumnAndTableName(expression.Object as MemberExpression, result, baseQuery, viewId);
+        }
+
+        private static void LoadColumnAndTableName(UnaryExpression expression, WhereResolutionPart result, IExpressionQueryResolvable baseQuery, string viewId)
+        {
+            LoadColumnAndTableName(expression.Operand as MemberExpression, result, baseQuery, viewId);
         }
         #endregion
 

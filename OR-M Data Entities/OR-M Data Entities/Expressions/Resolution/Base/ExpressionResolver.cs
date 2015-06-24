@@ -8,8 +8,8 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Base
 {
@@ -19,7 +19,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         {
             if (expression.Expression is ParameterExpression)
             {
-                return DatabaseSchemata.GetColumnName(expression.Member);
+                return expression.Member.GetColumnName();
             }
 
             return expression.Member.Name;
@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         {
             if (expression.Expression is ParameterExpression)
             {
-                return DatabaseSchemata.GetTableName(expression.Expression.Type);
+                return expression.Expression.Type.GetTableName();
             }
 
             return ((MemberExpression)expression.Expression).Member.Name;
@@ -49,7 +49,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         {
             if (expression.Expression is ParameterExpression)
             {
-                return DatabaseSchemata.GetTableName(expression.Expression.Type);
+                return expression.Expression.Type.GetTableName();
             }
 
             return ((MemberExpression)expression.Expression).Member.Name;
@@ -101,7 +101,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         protected static bool IsSubQuery(MethodCallExpression expression)
         {
             return
-                expression.Arguments.Select(argument => argument as MethodCallExpression)
+                expression.Arguments.OfType<MethodCallExpression>()
                     .Select(
                         methodCallExpression =>
                             methodCallExpression.IsExpressionQuery() || IsSubQuery(methodCallExpression))

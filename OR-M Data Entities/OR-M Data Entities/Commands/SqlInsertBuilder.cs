@@ -11,6 +11,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands

@@ -5,7 +5,6 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -17,6 +16,7 @@ using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -47,14 +47,14 @@ namespace OR_M_Data_Entities.Data
                 var state = ChangeStateType.Insert;
 
                 // check to see if the table is marked as readonly
-                if (DatabaseSchemata.IsTableReadOnly(entity))
+                if (entity.IsTableReadOnly())
                 {
                     throw new SqlSaveException(string.Format(
                         "Table Is ReadOnly.  Table: {0}",
-                        DatabaseSchemata.GetTableName(entity)));
+                        entity.GetTableName()));
                 }
 
-                if (DatabaseSchemata.HasForeignKeys(entity))
+                if (entity.HasForeignKeys())
                 {
                     var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
@@ -104,7 +104,7 @@ namespace OR_M_Data_Entities.Data
             if (parent == null) return;
 
             var foreignKeyProperty =
-                DatabaseSchemata.GetForeignKeys(parent)
+                parent.GetForeignKeys()
                     .First(
                         w =>
                             (w.PropertyType.IsList()
@@ -115,14 +115,14 @@ namespace OR_M_Data_Entities.Data
 
             if (foreignKeyProperty.PropertyType.IsList())
             {
-                var parentPrimaryKey = DatabaseSchemata.GetPrimaryKeys(parent).First();
+                var parentPrimaryKey = parent.GetPrimaryKeys().First();
                 var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
 
                 DatabaseEntity.SetPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
             }
             else
             {
-                var childPrimaryKey = DatabaseSchemata.GetPrimaryKeys(child).First();
+                var childPrimaryKey = child.GetPrimaryKeys().First();
                 var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
 
                 DatabaseEntity.SetPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
@@ -132,13 +132,13 @@ namespace OR_M_Data_Entities.Data
         private ChangeStateType _saveObjectToDatabase<T>(T entity)
         {
             // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableNameWithLinkedServer(entity);
+            var tableName = entity.GetTableNameWithLinkedServer();
 
             // ID is the default primary key name
-            var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
+            var primaryKeys = entity.GetPrimaryKeys();
 
             // all table properties
-            var tableColumns = DatabaseSchemata.GetTableFields(entity);
+            var tableColumns = entity.GetTableFields();
 
             // check to see whether we have an insert or update
             var state = DatabaseEntity.GetState(entity, primaryKeys);
@@ -152,15 +152,16 @@ namespace OR_M_Data_Entities.Data
                         var update = new SqlUpdateBuilder();
                         update.Table(tableName);
 
-                        foreach (var property in from property in (from property in tableColumns
-                            let columnName = DatabaseSchemata.GetColumnName(property)
-                            where
-                                !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                                property.GetCustomAttribute<NonSelectableAttribute>() == null
-                            select property)
-                            let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
-                            where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
-                            select property)
+                        foreach (var property in from property in
+                                                     (from property in tableColumns
+                                                      let columnName = property.GetColumnName()
+                                                      where
+                                                          !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
+                                                          property.GetCustomAttribute<NonSelectableAttribute>() == null
+                                                      select property)
+                                                 let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
+                                                 where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
+                                                 select property)
                         {
                             // Skip unmapped fields
                             update.AddUpdate(property, entity);
@@ -219,7 +220,15 @@ namespace OR_M_Data_Entities.Data
         {
             lock (Lock)
             {
-                if (!DatabaseSchemata.HasForeignKeys(entity)) return _deleteObjectFromDatabase(entity);
+                // Check for readonly attribute and see if we should throw an error
+                if (entity.IsTableReadOnly())
+                {
+                    throw new SqlSaveException(string.Format(
+                        "Table Is ReadOnly.  Table: {0}",
+                        entity.GetTableName()));
+                }
+
+                if (!entity.HasForeignKeys()) return _deleteObjectFromDatabase(entity);
 
                 var result = true;
                 var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
@@ -242,10 +251,10 @@ namespace OR_M_Data_Entities.Data
         private bool _deleteObjectFromDatabase<T>(T entity)
         {
             // Check to see if the PK is defined
-            var tableName = DatabaseSchemata.GetTableName(entity);
+            var tableName = entity.GetTableName();
 
             // ID is the default primary key name
-            var primaryKeys = DatabaseSchemata.GetPrimaryKeys(entity);
+            var primaryKeys = entity.GetPrimaryKeys();
 
             // delete Data
             var builder = new SqlDeleteBuilder();
@@ -255,7 +264,7 @@ namespace OR_M_Data_Entities.Data
             foreach (var property in primaryKeys)
             {
                 var value = property.GetValue(entity);
-                var columnName = DatabaseSchemata.GetColumnName(property);
+                var columnName = property.GetColumnName();
                 builder.AddWhere(tableName, columnName, CompareType.Equals, value);
             }
 
@@ -290,7 +299,7 @@ namespace OR_M_Data_Entities.Data
         {
             // make sure FKs have values before saving, if they dont you need to throw an error
             // we want to look at one-one relationships before one-many
-            foreach (var foreignKey in DatabaseSchemata.GetForeignKeys(entity).OrderBy(w => w.PropertyType.IsList()))
+            foreach (var foreignKey in entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()))
             {
                 int index;
                 var foreignKeyValue = foreignKey.GetValue(entity);
@@ -306,11 +315,11 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 // Check for readonly attribute and see if we should throw an error
-                if (DatabaseSchemata.IsTableReadOnly(foreignKey.GetPropertyType()))
+                if (foreignKey.GetPropertyType().IsTableReadOnly())
                 {
                     throw new SqlSaveException(string.Format(
                         "Table Is ReadOnly.  Table: {0}",
-                        DatabaseSchemata.GetTableName(entity)));
+                        entity.GetTableName()));
                 }
 
                 // doesnt have dependencies
@@ -324,7 +333,7 @@ namespace OR_M_Data_Entities.Data
 
                         savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, entity));
 
-                        if (DatabaseSchemata.HasForeignKeys(item))
+                        if (SchemaExtensions.HasForeignKeys(item))
                         {
                             _analyzeObjectWithForeignKeysAndGetModificationOrder(item, savableObjects);
                         }
@@ -340,7 +349,7 @@ namespace OR_M_Data_Entities.Data
                     savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));
 
                     // has dependencies
-                    if (DatabaseSchemata.HasForeignKeys(foreignKeyValue))
+                    if (foreignKeyValue.HasForeignKeys())
                     {
                         _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects);
                     }

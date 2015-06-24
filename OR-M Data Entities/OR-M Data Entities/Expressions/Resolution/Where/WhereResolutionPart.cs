@@ -5,6 +5,8 @@
  * Copyright (c) 2015 James Demeuse
  */
 using System;
+using System.Data;
+using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
@@ -19,6 +21,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             ColumnName = string.Empty;
             Comparison = CompareType.None;
             Group = -1;
+            Transform = new TransformContainer();
         }
 
         public Guid ExpressionQueryId { get; set; }
@@ -32,6 +35,10 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         public CompareType Comparison { get; set; }
 
         public object CompareValue { get; set; }
+
+        public bool InvertComparison { get; set; }
+
+        public readonly TransformContainer Transform;
 
         public int Group { get; set; }
 

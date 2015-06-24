@@ -17,6 +17,7 @@ using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping.Base;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {
@@ -117,7 +118,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             // if its a subquery the type doesnt exist, we need to add it
             if (ConstructionType == ExpressionQueryConstructionType.SubQuery)
             {
-                if (!string.IsNullOrWhiteSpace(this.ViewId) && !DatabaseSchemata.IsPartOfView(Type, this.ViewId))
+                if (!string.IsNullOrWhiteSpace(this.ViewId) && !Type.IsPartOfView(this.ViewId))
                 {
                     throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
                         Type.Name, ViewId));
@@ -135,7 +136,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             {
                 var currentType = _tables[i];
                 var parentOfCurrent = i == 0 ? null : _foreignKeyJoinPairs.FirstOrDefault(w => w.ChildTable.Type == currentType.Type && w.ParentJoinPropertyName == currentType.ForeignKeyPropertyName);
-                var foreignKeys = DatabaseSchemata.GetAllForeignKeysAndPseudoKeys(currentType.Type, this.Id, this.ViewId);
+                var foreignKeys = currentType.Type.GetAllForeignKeysAndPseudoKeys(this.Id, this.ViewId);
 
                 if (i == 0)
                 {
@@ -226,11 +227,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
         private void _addPropertiesByType(Type type, string foreignKeyPropertyName, string foreignKeyTableName, string alias)
         {
-            var tableName = DatabaseSchemata.GetTableName(type);
+            var tableName = type.GetTableName();
 
             foreach (var info in type.GetProperties().Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null))
             {
-                Columns.Add(info, type, tableName, alias, foreignKeyPropertyName, foreignKeyTableName, DatabaseSchemata.IsPrimaryKey(type, info.Name));
+                Columns.Add(info, type, tableName, alias, foreignKeyPropertyName, foreignKeyTableName, type.IsPrimaryKey(info.Name));
             }
         }
         #endregion

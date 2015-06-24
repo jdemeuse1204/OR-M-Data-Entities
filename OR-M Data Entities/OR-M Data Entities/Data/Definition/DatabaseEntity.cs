@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -22,7 +23,7 @@ namespace OR_M_Data_Entities.Data.Definition
             {
                 var key = primaryKeys[i];
                 var pkValue = key.GetValue(entity);
-                var generationOption = DatabaseSchemata.GetGenerationOption(key);
+                var generationOption = key.GetGenerationOption();
                 var isUpdating = false;
 
                 if (generationOption != DbGenerationOption.None)

@@ -95,7 +95,7 @@ namespace OR_M_Data_Entities.Data
                 if (!Connect()) throw new Exception("Cannot connect to server");
             }
 
-            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query, IsLazyLoadEnabled));
+            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query));
         }
 
         #region Query Execution

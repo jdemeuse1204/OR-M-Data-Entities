@@ -21,11 +21,6 @@ namespace OR_M_Data_Entities.Expressions.Query
         #endregion
 
         #region Properties
-        public bool IsLazyLoadEnabled
-        {
-            get { return Context == null || Context.IsLazyLoadEnabled; }
-        }
-
         public bool IsSubQuery { get; private set; }
 
         public string Sql { get; private set; }

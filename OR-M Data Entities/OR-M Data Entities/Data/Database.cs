@@ -6,11 +6,9 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -21,18 +19,6 @@ namespace OR_M_Data_Entities.Data
         protected SqlConnection Connection { get; set; }
         protected SqlCommand Command { get; set; }
         protected PeekDataReader Reader { get; set; }
-
-        private string _schemaName;
-
-        public string SchemaName
-        {
-            get { return string.IsNullOrWhiteSpace(_schemaName) ? "DBO" : _schemaName; }
-            set { _schemaName = value; }
-        }
-
-        public bool IsLazyLoadEnabled { get; set; }
-
-        public Dictionary<string, ObjectSchematic> SavedTableSchematics { get; private set; }
         #endregion
 
         protected Database(string connectionStringOrName)
@@ -51,8 +37,6 @@ namespace OR_M_Data_Entities.Data
             }
             
             Connection = new SqlConnection(ConnectionString);
-
-            SavedTableSchematics = new Dictionary<string, ObjectSchematic>();
         }
 
         /// <summary>

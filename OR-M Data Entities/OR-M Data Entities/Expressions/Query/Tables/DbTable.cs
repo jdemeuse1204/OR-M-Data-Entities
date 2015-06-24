@@ -5,8 +5,8 @@
  * Copyright (c) 2015 James Demeuse
  */
 using System;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
@@ -29,7 +29,7 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
             {
                 if (string.IsNullOrWhiteSpace(_name) && Type != null)
                 {
-                    _name = DatabaseSchemata.GetTableName(Type);
+                    _name = Type.GetTableName();
                 }
                 return _name;
             }

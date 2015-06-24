@@ -4,7 +4,7 @@
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Copyright (c) 2015 James Demeuse
  */
-using System;
+
 using System.Data;
 
 namespace OR_M_Data_Entities.Commands.Transform
@@ -16,15 +16,10 @@ namespace OR_M_Data_Entities.Commands.Transform
         {
             return entity;
         }
-
-        public static DateTime Cast(DateTime entity, SqlDbType targetTransformType)
-        {
-            return entity;
-        }
         #endregion
 
         #region Convert
-        public static object Convert(SqlDbType targetTransformType, object entity, int? style = null)
+        public static object Convert(SqlDbType targetTransformType, object entity, int? style)
         {
             return entity;
         }

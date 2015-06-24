@@ -136,19 +136,36 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                     currentGroupNumber = currentLambdaResolition.Group;
                     // on current container
 
-                    result += string.Format("[{0}].[{1}] {2} {3}",
-                        currentLambdaResolition.TableAlias,
-                        currentLambdaResolition.ColumnName,
-                        currentLambdaResolition.GetComparisonStringOperator(),
-                        currentLambdaResolition.CompareValue.IsList()
-                            ? _getListEnumerationString((List<SqlDbParameter>) currentLambdaResolition.CompareValue)
-                            : currentLambdaResolition.CompareValue is SqlDbParameter &&
-                              ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.IsExpressionQuery()
-                                ? string.Format("({0})",
-                                    _resolveSubQuery((SqlDbParameter) currentLambdaResolition.CompareValue))
-                                : ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.Equals("IS NULL")
-                                    ? "IS NULL"
-                                    : ((SqlDbParameter) currentLambdaResolition.CompareValue).Name);
+                    result +=
+                        string.Format(
+                            currentLambdaResolition.InvertComparison
+                                ? "NOT({0} {1} {2})"
+                                : "{0} {1} {2}",
+
+                            currentLambdaResolition.Transform.IsTransforming
+                                ? string.Format(currentLambdaResolition.Transform.TransformString,
+                                    string.Format("[{0}].[{1}]", currentLambdaResolition.TableAlias,
+                                        currentLambdaResolition.ColumnName))
+                                : string.Format("[{0}].[{1}]", currentLambdaResolition.TableAlias,
+                                    currentLambdaResolition.ColumnName),
+
+                            currentLambdaResolition.GetComparisonStringOperator(),
+
+                            currentLambdaResolition.CompareValue.IsList()
+                                ? _getListEnumerationString((List<SqlDbParameter>) currentLambdaResolition.CompareValue)
+                                : currentLambdaResolition.CompareValue is SqlDbParameter &&
+                                  ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.IsExpressionQuery()
+                                    ? string.Format("({0})",
+                                        _resolveSubQuery((SqlDbParameter) currentLambdaResolition.CompareValue))
+                                    : ((SqlDbParameter) currentLambdaResolition.CompareValue).Value.Equals("IS NULL")
+                                        ? "IS NULL"
+                                        : ((SqlDbParameter) currentLambdaResolition.CompareValue).Transform
+                                            .IsTransforming
+                                            ? string.Format(
+                                                ((SqlDbParameter) currentLambdaResolition.CompareValue).Transform
+                                                    .TransformString,
+                                                ((SqlDbParameter) currentLambdaResolition.CompareValue).Name)
+                                            : ((SqlDbParameter) currentLambdaResolition.CompareValue).Name);
 
                     continue;
                 }

@@ -32,11 +32,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         private readonly List<SqlDbParameter> _parameters;
 
-        public bool IsLazyLoading
-        {
-            get { return Context != null && Context.IsLazyLoadEnabled; }
-        }
-
         public OSchematic LoadSchematic
         {
             get { return QuerySchematic; }

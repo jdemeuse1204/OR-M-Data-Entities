@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\Transform\DbTransform.cs" />
+    <Compile Include="Commands\Transform\TransformContainer.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
     <Compile Include="Data\Definition\Base\TableInfo.cs" />
     <Compile Include="Data\Definition\ObjectSchematic.cs" />
@@ -78,7 +79,6 @@
     <Compile Include="Data\Definition\DatabaseEntity.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
     <Compile Include="Data\DatabaseReading.cs" />
-    <Compile Include="Data\Definition\DatabaseSchemata.cs" />
     <Compile Include="Data\DatabaseFetching.cs" />
     <Compile Include="Data\DatabaseModifiable.cs" />
     <Compile Include="Enumeration\DataQueryType.cs" />
@@ -130,7 +130,7 @@
     <Compile Include="Expressions\Resolution\SubQuery\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereExpressionResolver.cs" />
     <Compile Include="Expressions\ViewExpressionQuery.cs" />
-    <Compile Include="Extension.cs" />
+    <Compile Include="Extensions\Extension.cs" />
     <Compile Include="Mapping\Base\AutoLoadKey.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />
@@ -148,7 +148,8 @@
     <Compile Include="Mapping\View.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="QueryNotValidException.cs" />
+    <Compile Include="Exceptions\QueryNotValidException.cs" />
+    <Compile Include="Extensions\SchemaExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="OR-M Data Entities.licenseheader" />

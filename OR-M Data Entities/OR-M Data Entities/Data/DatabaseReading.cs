@@ -5,10 +5,10 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -45,25 +45,6 @@ namespace OR_M_Data_Entities.Data
             Reader.Dispose();
             return false;
         }
-
-        /// <summary>
-        /// Converts an object to a dynamic
-        /// </summary>
-        /// <returns></returns>
-		protected dynamic Select()
-        {
-            return Reader.ToDynamic();
-        }
-
-        /// <summary>
-        /// Converts a datareader to an object of type T
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-		protected T Select<T>()
-        {
-            return Reader.ToObject<T>();
-        }
         #endregion
 
         #region Data Execution
@@ -79,7 +60,7 @@ namespace OR_M_Data_Entities.Data
         {
             lock (Lock)
             {
-                if (!DatabaseSchemata.IsPartOfView(typeof (T), viewId))
+                if (!typeof (T).IsPartOfView(viewId))
                 {
                     throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
                         typeof (T).Name, viewId));

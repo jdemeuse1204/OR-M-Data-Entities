@@ -8,12 +8,12 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {
@@ -41,7 +41,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
         private static DbColumn _find(MemberExpression expression, SelectInfoResolutionContainer selectList, string viewId)
         {
-            if (!string.IsNullOrWhiteSpace(viewId) && !DatabaseSchemata.IsPartOfView(expression.Expression.Type, viewId))
+            if (!string.IsNullOrWhiteSpace(viewId) && !expression.Expression.Type.IsPartOfView(viewId))
             {
                 throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
                         expression.Expression.Type, viewId));
@@ -64,7 +64,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
                 foreach (var property in expression.Type.GetProperties())
                 {
-                    var tableName = DatabaseSchemata.GetTableName(expression.Type);
+                    var tableName = expression.Type.GetTableName();
 
                     selectList.Add(property,
                         expression.Type,
@@ -72,7 +72,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         nextTableAlias,
                         tableName,
                         null,
-                        DatabaseSchemata.IsPrimaryKey(property));
+                        property.IsPrimaryKey());
                 }
             }
 

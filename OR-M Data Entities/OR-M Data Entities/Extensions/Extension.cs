@@ -132,6 +132,7 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
+        #region Functions
         public static ExpressionQuery<T> Distinct<T>(this ExpressionQuery<T> source)
         {
             ((ExpressionQueryResolvable<T>)source).ResolveDistinct();
@@ -145,6 +146,7 @@ namespace OR_M_Data_Entities
 
             return source;
         }
+        #endregion
 
         #region Min
         public static decimal? Min(this ExpressionQuery<decimal?> source)
@@ -329,9 +331,9 @@ namespace OR_M_Data_Entities
 
         public static bool IsExpressionQuery(this MethodCallExpression expression)
         {
-            return expression.Method.ReturnType.IsGenericType &&
-                   expression.Method.ReturnType.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQuery<>));
+            return expression != null && (expression.Method.ReturnType.IsGenericType &&
+                                          expression.Method.ReturnType.GetGenericTypeDefinition()
+                                              .IsAssignableFrom(typeof (ExpressionQuery<>)));
         }
 
         public static bool IsExpressionQuery(this Type type)
@@ -612,7 +614,6 @@ namespace OR_M_Data_Entities
 
                 constructorParameters.Enqueue(propertyInstance);
             }
-
 
             // Do last because the constructor needs the premade properties to go into it
             var instance = Activator.CreateInstance(type, constructorParameters.ToArray());
@@ -900,6 +901,29 @@ namespace OR_M_Data_Entities
             }
 
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+        }
+    }
+
+    public static class SqlCompareObjectExtensions
+    {
+        public static bool GreaterThan(this object first, object second)
+        {
+            return false;
+        }
+
+        public static bool GreaterThanOrEqual(this object first, object second)
+        {
+            return false;
+        }
+
+        public static bool LessThan(this object first, object second)
+        {
+            return false;
+        }
+
+        public static bool LessThanOrEqual(this object first, object second)
+        {
+            return false;
         }
     }
 }
