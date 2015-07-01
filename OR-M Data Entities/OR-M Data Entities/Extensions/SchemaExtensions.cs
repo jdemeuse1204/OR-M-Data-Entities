@@ -210,10 +210,9 @@ namespace OR_M_Data_Entities.Schema
                 ? type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
                 : type.GetProperties()
                     .Where(
-                        w =>
-                            w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
-                            w.PropertyType.GetCustomAttribute<ViewAttribute>() != null &&
-                            w.PropertyType.GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId));
+                        w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
+                            w.GetPropertyType().GetCustomAttribute<ViewAttribute>() != null &&
+                             w.GetPropertyType().GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId));
 
             return (from property in autoLoadProperties
                     let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()

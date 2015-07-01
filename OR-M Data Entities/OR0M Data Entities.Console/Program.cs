@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Enumeration;
@@ -85,9 +86,7 @@ namespace OR0M_Data_Entities.Console
 
             var s = DateTime.Now;
             var c =
-                context.From<Policy>()
-                    .InnerJoin(context.From<PolicyType>(), policy => policy.PolicyInfoId, type => type.ID,
-                        (policy, type) => new { policy.Id })
+                context.From<Contact>().Where(w => w.FirstName == "")
                     .ToList();
             var e = DateTime.Now;
             var f = e - s;

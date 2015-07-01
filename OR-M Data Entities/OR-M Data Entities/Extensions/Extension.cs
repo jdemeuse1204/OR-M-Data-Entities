@@ -347,11 +347,7 @@ namespace OR_M_Data_Entities
 
         public static bool IsExpressionQuery(this object o)
         {
-            return o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQuery<>)) || o.GetType().IsGenericType &&
-                   o.GetType().GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQueryResolvable<>));
+            return IsExpressionQuery(o.GetType());
         }
 
         private static T _max<T>(this ExpressionQuery<T> source)

@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR0M Data Entities.Console"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LambdaResolver", "LambdaResolver\LambdaResolver.csproj", "{DF72715A-47DD-4D57-A934-9D2A24B5221F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR-M Data Entities 3.0", "OR-M Data Entities 3.0\OR-M Data Entities 3.0.csproj", "{4FD7CCC4-2855-4F4D-9762-7ECDFBF2C38C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{DF72715A-47DD-4D57-A934-9D2A24B5221F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF72715A-47DD-4D57-A934-9D2A24B5221F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DF72715A-47DD-4D57-A934-9D2A24B5221F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FD7CCC4-2855-4F4D-9762-7ECDFBF2C38C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FD7CCC4-2855-4F4D-9762-7ECDFBF2C38C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FD7CCC4-2855-4F4D-9762-7ECDFBF2C38C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FD7CCC4-2855-4F4D-9762-7ECDFBF2C38C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
