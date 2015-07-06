@@ -115,6 +115,11 @@ namespace OR_M_Data_Entities.Schema
             return entity.GetType().GetForeignKeys(viewId);
         }
 
+        public static ForeignKeyAttribute FindForeignKeyAttribute(this Type type, string propertyName)
+        {
+            return type.GetProperty(propertyName).GetCustomAttribute<ForeignKeyAttribute>();
+        }
+
         public static List<PropertyInfo> GetForeignKeys(this Type entityType, string viewId = null)
         {
             return string.IsNullOrWhiteSpace(viewId)

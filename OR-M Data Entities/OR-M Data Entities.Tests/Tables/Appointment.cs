@@ -14,6 +14,8 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string Description { get; set; }
 
+        public bool IsScheduled { get; set; }
+
         [ForeignKey("AppointmentID")]
         public List<Address> Address { get; set; }
     }

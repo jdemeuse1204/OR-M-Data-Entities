@@ -5,7 +5,6 @@
  * Copyright (c) 2015 James Demeuse
  */
 using System;
-using System.Data;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;

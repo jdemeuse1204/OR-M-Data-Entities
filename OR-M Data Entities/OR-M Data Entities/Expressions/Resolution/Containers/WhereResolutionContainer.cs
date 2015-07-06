@@ -134,7 +134,16 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 if (currentLambdaResolition != null)
                 {
                     currentGroupNumber = currentLambdaResolition.Group;
+
+                    var exists = currentLambdaResolition.CompareValue as SqlExistsString;
+
                     // on current container
+                    if (exists != null)
+                    {
+                        result += string.Format("{0}EXISTS(SELECT 1 FROM [{1}] WHERE {2})",
+                            exists.Invert ? "NOT " : string.Empty, exists.FromTableName, exists.JoinString);
+                        continue;
+                    }
 
                     result +=
                         string.Format(

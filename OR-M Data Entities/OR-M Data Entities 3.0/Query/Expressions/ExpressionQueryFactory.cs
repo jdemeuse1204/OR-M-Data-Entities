@@ -22,7 +22,7 @@
 
             public ExpressionQuery Analyze()
             {
-                
+                return null;
             }
         }
     }

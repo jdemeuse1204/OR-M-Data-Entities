@@ -12,7 +12,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -70,7 +69,17 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
 
         private static void _evaluateTree(UnaryExpression expression, WhereResolutionContainer container, IExpressionQueryResolvable baseQuery, string viewId, ExpressionType? expressionType = null)
         {
-            _evaluateTree(expression.Operand as dynamic, container, baseQuery, viewId, expressionType);
+            var memberExpresssion = expression.Operand as MemberExpression;
+
+            if (memberExpresssion == null)
+            {
+                _evaluateTree(expression.Operand as dynamic, container, baseQuery, viewId, expressionType);
+                return;
+            }
+
+            var result = _evaluate(memberExpresssion, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
+
+            container.AddResolution(result);
         }
 
         // need to evaluate groupings
@@ -231,6 +240,30 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1,
             ExpressionType? expressionType = null)
         {
+            if (expression.Method.Name.ToUpper() == "ANY" && expression.Arguments.Count == 1)
+            {
+                var e = (MemberExpression)expression.Arguments[0];
+                var table = baseQuery.Tables.FindByPropertyName(e.Member.Name,
+                    baseQuery.Id);
+                var baseTable = baseQuery.Tables.Find(e.Expression.Type, baseQuery.Id);
+
+                var foreignKey = e.Expression.Type.FindForeignKeyAttribute(table.ForeignKeyPropertyName);
+
+                // always comes from a list
+                var joinString = string.Format("[{0}].[{1}] = [{2}].[{3}]", table.Name, foreignKey.ForeignKeyColumnName,
+                    baseTable.Alias, e.Expression.Type.GetPrimaryKeyNames()[0]);
+
+                var result = new WhereResolutionPart
+                {
+                    Group = @group,
+                    ExpressionQueryId = baseQuery.Id,
+                    CompareValue =
+                        new SqlExistsString(expressionType.HasValue && expressionType.Value == ExpressionType.Not, joinString, table.Name)
+                };
+
+                return result;
+            }
+
             for (var i = 1; i < expression.Arguments.Count; i++)
             {
                 var argument = expression.Arguments[i];
@@ -353,6 +386,24 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
         private static WhereResolutionPart _evaluate(UnaryExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
         {
             return _evaluate(expression.Operand as dynamic, resolution, baseQuery, viewId, group, expression.NodeType);
+        }
+
+        private static WhereResolutionPart _evaluate(MemberExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)
+        {
+            // bit comparison
+            var result = new WhereResolutionPart
+            {
+                Group = group
+            };
+            
+            LoadColumnAndTableName(expression as dynamic, result, baseQuery, viewId);
+
+            var value = expressionType.HasValue && expressionType.Value == ExpressionType.Not ? 0 : 1;
+
+            result.Comparison = CompareType.Equals;
+            result.CompareValue = resolution.GetAndAddParameter(value);
+
+            return result;
         }
 
         private static WhereResolutionPart _evaluateTransform(MethodCallExpression expression, WhereResolutionContainer resolution, IExpressionQueryResolvable baseQuery, string viewId, int group = -1, ExpressionType? expressionType = null)

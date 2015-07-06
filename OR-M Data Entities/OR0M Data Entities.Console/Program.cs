@@ -86,7 +86,7 @@ namespace OR0M_Data_Entities.Console
 
             var s = DateTime.Now;
             var c =
-                context.From<Contact>().Where(w => w.FirstName == "")
+                context.From<Contact>().Where(w => !w.Appointments.Any(x => x.ContactID == 1))
                     .ToList();
             var e = DateTime.Now;
             var f = e - s;
