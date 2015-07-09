@@ -22,6 +22,9 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######12. First will now throw an error if no data rows exist from the query
 ######13. Because of added support for foreign keys, all queries must now use Linq
 
+######Changes in 2.1
+######1. Added entity state tracking, see below how to turn on/off
+
 ###Example Classes to be used below:
 ```C#
     [View("ContactOnly")]
@@ -142,6 +145,30 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
         public string Value { get; set; }
 
         public int ContactID { get; set; }
+    }
+```
+
+####Entity State Tracking:
+######How To Use<br/><br/>
+Entity State Tracking has the ability to be turned on/off.  To turn on simply inherit from EntityStateTrackable on your class, to turn off either remove EntityStateTrackable or do not inherit from it.<br/><br/>
+When Entity State Tracking is on, the entity has an underlying 'pristine' state that it is compared to on save.  If there are no changes the save will be skipped, otherwise an update on only the changed columns will be performed.  Without Entity State Tracking an insert or update will always be performed.<br/><br/>
+
+#####Example:
+```C#
+    // Entity Tracking is on
+    public class MyClass : EntityStateTrackable
+    {
+        public int Id { get; set; }
+
+        public string MyProperty { get; set; }
+    }
+   
+    // Entity Tracking is off
+    public class MyClass
+    {
+        public int Id { get; set; }
+
+        public string MyProperty { get; set; }
     }
 ```
 
