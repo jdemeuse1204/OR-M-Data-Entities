@@ -1,7 +1,8 @@
 ﻿/*
- * OR-M Data Entities v2.0
+ * OR-M Data Entities v2.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
 
@@ -17,6 +18,7 @@ using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Schema;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -39,12 +41,12 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        public virtual ChangeStateType SaveChanges<T>(T entity)
+        public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
             lock (Lock)
             {
-                var state = ChangeStateType.Insert;
+                var state = UpdateType.Insert;
 
                 // check to see if the table is marked as readonly
                 if (entity.IsTableReadOnly())
@@ -129,8 +131,22 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private ChangeStateType _saveObjectToDatabase<T>(T entity)
+        private UpdateType _saveObjectToDatabase<T>(T entity)
         {
+            // Check to see if the user is using entity state tracking
+            var entityTrackable = entity as EntityStateTrackable;
+
+            EntityStateComparePackage entityStatePackage = null;
+
+            // check to see if EntityTrackable is being used, if so check
+            // to see if we have any changes
+            if (entityTrackable != null)
+            {
+                entityStatePackage = EntityStateAnalyzer.Analyze(entityTrackable);
+
+                if (entityStatePackage.State == EntityState.UnChanged) return UpdateType.Skip;
+            }
+
             // Check to see if the PK is defined
             var tableName = entity.GetTableNameWithLinkedServer();
 
@@ -146,22 +162,30 @@ namespace OR_M_Data_Entities.Data
             // Update Or Insert data
             switch (state)
             {
-                case ChangeStateType.Update:
+                case UpdateType.Update:
                     {
                         // Update Data
                         var update = new SqlUpdateBuilder();
                         update.Table(tableName);
 
-                        foreach (var property in from property in
-                                                     (from property in tableColumns
-                                                      let columnName = property.GetColumnName()
-                                                      where
-                                                          !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                                                          property.GetCustomAttribute<NonSelectableAttribute>() == null
-                                                      select property)
-                                                 let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
-                                                 where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
-                                                 select property)
+                        var properties = from property in
+                            (from property in tableColumns
+                                let columnName = property.GetColumnName()
+                                where
+                                    !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
+                                    property.GetCustomAttribute<NonSelectableAttribute>() == null
+                                select property)
+                            let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
+                            where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
+                            select property;
+
+                        // are we using a trackable entity? If so only grab the fields to update
+                        if (entityTrackable != null)
+                        {
+                            properties = properties.Where(w => entityStatePackage.ChangeList.Contains(w.Name));
+                        }
+
+                        foreach (var property in properties)
                         {
                             // Skip unmapped fields
                             update.AddUpdate(property, entity);
@@ -170,13 +194,13 @@ namespace OR_M_Data_Entities.Data
                         // add validation to only update the row
                         foreach (var primaryKey in primaryKeys)
                         {
-                            update.AddWhere("", primaryKey.Name, CompareType.Equals, primaryKey.GetValue(entity));
+                            update.AddWhere("", primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
                         }
 
                         ExecuteReader(update);
                     }
                     break;
-                case ChangeStateType.Insert:
+                case UpdateType.Insert:
                     {
                         // Insert Data
                         var insert = new SqlInsertBuilder();
@@ -204,6 +228,12 @@ namespace OR_M_Data_Entities.Data
                         }
                     }
                     break;
+            }
+
+            // Mark the table as unchanged again
+            if (entityTrackable != null)
+            {
+                EntityStateAnalyzer.TrySetTableOnLoad(entity);
             }
 
             // close our readers

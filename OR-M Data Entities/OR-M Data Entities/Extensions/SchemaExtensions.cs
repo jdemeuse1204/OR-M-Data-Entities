@@ -1,9 +1,11 @@
 ﻿/*
- * OR-M Data Entities v2.0
+ * OR-M Data Entities v2.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -256,6 +258,17 @@ namespace OR_M_Data_Entities.Schema
         {
             return columnName.ToUpper() == "ID" ||
                    type.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
+        }
+
+        public static bool IsColumn(this PropertyInfo info)
+        {
+            var attributes = info.GetCustomAttributes();
+
+            var isNonSelectable = attributes.Any(w => w is NonSelectableAttribute);
+            var isPrimaryKey = attributes.Any(w => w is SearchablePrimaryKeyAttribute);
+            var hasAttributes = attributes != null && attributes.Any();
+
+            return (hasAttributes && (isPrimaryKey || !isNonSelectable)) || !hasAttributes;
         }
     }
 }

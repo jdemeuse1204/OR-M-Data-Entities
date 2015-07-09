@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
-    public class Address
+    public class Address : EntityStateTrackable
     {
         public int ID { get; set; }
 

@@ -1,7 +1,8 @@
 ﻿/*
- * OR-M Data Entities v2.0
+ * OR-M Data Entities v2.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
 
@@ -26,6 +27,7 @@ using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities
 {
@@ -546,6 +548,9 @@ namespace OR_M_Data_Entities
             // load the instance
             reader._loadObject(instance, null);
 
+            // set the table on load if possible, we don't care about foreign keys
+            EntityStateAnalyzer.TrySetTableOnLoad(instance);
+
             // load first row, do not move next.  While loop will move next 
             _loadObjectWithForeignKeys(reader, instance);
 
@@ -569,6 +574,9 @@ namespace OR_M_Data_Entities
             // load the instance
             reader._loadObject(instance, null);
 
+            // set the table on load if possible, we don't care about foreign keys
+            EntityStateAnalyzer.TrySetTableOnLoad(instance);
+
             return instance;
         }
 
@@ -579,6 +587,9 @@ namespace OR_M_Data_Entities
 
             // load the instance
             reader._loadObjectByColumnNames(instance);
+
+            // set the table on load if possible
+            EntityStateAnalyzer.TrySetTableOnLoad(instance);
 
             return instance;
         }
@@ -683,6 +694,9 @@ namespace OR_M_Data_Entities
                 // load the data into new instance
                 // If load returns false, then its a left join, everything might be null
                 if (!reader._loadObject(newInstance, currentSchematic.PropertyName)) continue;
+
+                // set the table on load if possible, we don't care about foreign keys
+                EntityStateAnalyzer.TrySetTableOnLoad(newInstance);
 
                 // List
                 if (currentSchematic.ActualType.IsList())

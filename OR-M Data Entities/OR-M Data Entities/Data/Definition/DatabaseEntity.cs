@@ -1,7 +1,8 @@
 ﻿/*
- * OR-M Data Entities v2.0
+ * OR-M Data Entities v2.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
 
@@ -17,7 +18,7 @@ namespace OR_M_Data_Entities.Data.Definition
 {
     public static class DatabaseEntity
     {
-        public static ChangeStateType GetState(object entity, List<PropertyInfo> primaryKeys)
+        public static UpdateType GetState(object entity, List<PropertyInfo> primaryKeys)
         {
             for (var i = 0; i < primaryKeys.Count; i++)
             {
@@ -56,10 +57,10 @@ namespace OR_M_Data_Entities.Data.Definition
                     continue;
                 }
 
-                return ChangeStateType.Update;
+                return UpdateType.Update;
             }
 
-            return ChangeStateType.Insert;
+            return UpdateType.Insert;
         }
 
         public static void SetPropertyValue(object entity, string propertyName, object value)

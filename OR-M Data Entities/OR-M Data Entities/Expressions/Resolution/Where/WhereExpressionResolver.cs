@@ -1,7 +1,8 @@
 ﻿/*
- * OR-M Data Entities v2.0
+ * OR-M Data Entities v2.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
 
@@ -12,6 +13,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Remoting.Contexts;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -100,7 +102,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             while (true)
             {
                 // if the right has a left then its a group expression
-                if (IsGroup(expression.Right))
+                if (IsAnd(expression.Right))
                 {
                     if (count != 0) container.AddConnector(ConnectorType.Or);
 
@@ -117,7 +119,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 }
 
                 // check to see if the end is a group
-                if (IsGroup(expression.Left))
+                if (IsAnd(expression.Left))
                 {
                     if (count != 0) container.AddConnector(ConnectorType.Or);
 
@@ -153,27 +155,44 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             // comparisons are always AND here, will be no groups in here
             while (true)
             {
-                var rightResult = _evaluate(expression.Right as dynamic, resolution, baseQuery, viewId);
-
-                if (rightResult != null)
+                if (IsAnd(expression.Right) || IsOr(expression.Right))
                 {
-                    rightResult.Group = groupNumber;
+                    _evaluateGroup(expression.Right as BinaryExpression, resolution, baseQuery, viewId);
+                }
+                else
+                {
+                    var rightResult = _evaluate(expression.Right as dynamic, resolution, baseQuery, viewId);
+
+                    if (rightResult != null)
+                    {
+                        rightResult.Group = groupNumber;
+                    }
+
+                    resolution.AddResolution(rightResult);
+                    resolution.AddConnector(GetConnectorType(expression.NodeType));
+
+                    if (HasComparison(expression.Left))
+                    {
+                        expression = expression.Left as BinaryExpression;
+                        continue;
+                    }
                 }
 
-                resolution.AddResolution(rightResult);
-                resolution.AddConnector(ConnectorType.And);
-
-                if (HasComparison(expression.Left))
+                if (IsAnd(expression.Left) || IsOr(expression.Left))
                 {
-                    expression = expression.Left as BinaryExpression;
-                    continue;
+                    _evaluateGroup(expression.Left as BinaryExpression, resolution, baseQuery, viewId);
+                }
+                else
+                {
+                    var leftResult = _evaluate(expression.Left as dynamic, resolution, baseQuery, viewId);
+
+                    leftResult.Group = groupNumber;
+
+                    resolution.AddResolution(leftResult);
+
+                    if (IsOr(expression)) resolution.AddConnector(GetConnectorType(expression.NodeType));
                 }
 
-                var leftResult = _evaluate(expression.Left as dynamic, resolution, baseQuery, viewId);
-
-                leftResult.Group = groupNumber;
-
-                resolution.AddResolution(leftResult);
                 break;
             }
         }
@@ -605,13 +624,22 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 || expression.NodeType == ExpressionType.OrElse;
         }
 
-        private static bool IsGroup(Expression expression)
+        private static bool IsAnd(Expression expression)
         {
             var binaryExpression = expression as BinaryExpression;
 
             return binaryExpression != null &&
                    (binaryExpression.NodeType == ExpressionType.And ||
                     binaryExpression.NodeType == ExpressionType.AndAlso);
+        }
+
+        private static bool IsOr(Expression expression)
+        {
+            var binaryExpression = expression as BinaryExpression;
+
+            return binaryExpression != null &&
+                   (binaryExpression.NodeType == ExpressionType.Or ||
+                    binaryExpression.NodeType == ExpressionType.OrElse);
         }
 
         private static bool HasParameter(ConstantExpression expression)
@@ -641,6 +669,21 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             return e != null
                 ? HasParameter(expression.Object as dynamic)
                 : expression.Arguments.Select(arg => HasParameter(arg as dynamic)).Any(hasParameter => hasParameter);
+        }
+
+        private static ConnectorType GetConnectorType(ExpressionType expressionType)
+        {
+            if (expressionType == ExpressionType.And || expressionType == ExpressionType.AndAlso)
+            {
+                return ConnectorType.And;
+            }
+
+            if (expressionType == ExpressionType.Or || expressionType == ExpressionType.OrElse)
+            {
+                return ConnectorType.Or;
+            }
+                
+            throw new Exception("Cannot get connector");
         }
     }
 }

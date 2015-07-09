@@ -1,1 +1,5 @@
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities 3.0\obj\Release\OR-M Data Entities 3.0.csprojResolveAssemblyReference.cache
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities 3.0\bin\Release\OR-M Data Entities 3.0.dll
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities 3.0\bin\Release\OR-M Data Entities 3.0.pdb
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities 3.0\obj\Release\OR-M Data Entities 3.0.dll
+C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities 3.0\obj\Release\OR-M Data Entities 3.0.pdb

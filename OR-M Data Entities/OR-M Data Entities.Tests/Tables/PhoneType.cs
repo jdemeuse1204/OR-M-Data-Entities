@@ -1,6 +1,8 @@
-﻿namespace OR_M_Data_Entities.Tests.Tables
+﻿using OR_M_Data_Entities.Tracking;
+
+namespace OR_M_Data_Entities.Tests.Tables
 {
-    public class PhoneType
+    public class PhoneType : EntityStateTrackable
     {
         public int ID { get; set; }
 

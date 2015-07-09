@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
     [View("ContactOnly")]
     [Table("Contacts")]
-    public class Contact
+    public class Contact : EntityStateTrackable
     {
         [DbGenerationOption(DbGenerationOption.Generate)]
         public int ID { get; set; }
