@@ -152,6 +152,12 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######How To Use<br/><br/>
 Entity State Tracking has the ability to be turned on/off.  To turn on simply inherit from EntityStateTrackable on your class, to turn off either remove EntityStateTrackable or do not inherit from it.<br/><br/>
 When Entity State Tracking is on, the entity has an underlying 'pristine' state that it is compared to on save.  If there are no changes the save will be skipped, otherwise an update on only the changed columns will be performed.  Without Entity State Tracking an insert or update will always be performed.<br/><br/>
+The state can be checked by calling GetState() on your table class.
+
+######Methods Added<br/><br/>
+```C#
+public EntityState GetState();
+```
 
 #####Example:
 ```C#
