@@ -7,7 +7,7 @@ This solution is a micro Object-Relational Mapper aimed at speed.  Others out th
 
 OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo Keys, ReadOnly Tables, and VIEWS!  Yes thats right, Views now exist!  When writing the new code I realized some models that have foreign keys can get pretty big and you might not want to always select everything.  Sure you could shape your data with a select, but that can be a lot of code for bigger models.  Enter views!  Just put the ViewAttribute on each Foreign Key class and specify which view you want it to be a part of.  Then in the context do FromView<T>(string viewId) to select your data. 
 
-######Changes in 2.0
+#####Changes in 2.0
 ######1. Added support for Foreign Keys
 ######2. Added support for Linked Servers
 ######3. Fixed updating of TimeStamps
@@ -22,7 +22,7 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######12. First will now throw an error if no data rows exist from the query
 ######13. Because of added support for foreign keys, all queries must now use Linq
 
-######Changes in 2.1
+#####Changes in 2.1
 ######1. Added entity state tracking, see below how to turn on/off
 
 ###Example Classes to be used below:
