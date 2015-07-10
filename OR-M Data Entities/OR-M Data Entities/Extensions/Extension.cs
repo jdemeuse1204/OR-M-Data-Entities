@@ -549,7 +549,7 @@ namespace OR_M_Data_Entities
             reader._loadObject(instance, null);
 
             // set the table on load if possible, we don't care about foreign keys
-            EntityStateAnalyzer.TrySetTableOnLoad(instance);
+            EntityStateAnalyzer.TrySetPristineEntity(instance);
 
             // load first row, do not move next.  While loop will move next 
             _loadObjectWithForeignKeys(reader, instance);
@@ -575,7 +575,7 @@ namespace OR_M_Data_Entities
             reader._loadObject(instance, null);
 
             // set the table on load if possible, we don't care about foreign keys
-            EntityStateAnalyzer.TrySetTableOnLoad(instance);
+            EntityStateAnalyzer.TrySetPristineEntity(instance);
 
             return instance;
         }
@@ -589,7 +589,7 @@ namespace OR_M_Data_Entities
             reader._loadObjectByColumnNames(instance);
 
             // set the table on load if possible
-            EntityStateAnalyzer.TrySetTableOnLoad(instance);
+            EntityStateAnalyzer.TrySetPristineEntity(instance);
 
             return instance;
         }
@@ -696,7 +696,7 @@ namespace OR_M_Data_Entities
                 if (!reader._loadObject(newInstance, currentSchematic.PropertyName)) continue;
 
                 // set the table on load if possible, we don't care about foreign keys
-                EntityStateAnalyzer.TrySetTableOnLoad(newInstance);
+                EntityStateAnalyzer.TrySetPristineEntity(newInstance);
 
                 // List
                 if (currentSchematic.ActualType.IsList())

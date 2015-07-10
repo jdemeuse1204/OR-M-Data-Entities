@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Tracking
                 changes);
         }
 
-        public static void TrySetTableOnLoad(object instance)
+        public static void TrySetPristineEntity(object instance)
         {
             var entityTrackable = instance as EntityStateTrackable;
 

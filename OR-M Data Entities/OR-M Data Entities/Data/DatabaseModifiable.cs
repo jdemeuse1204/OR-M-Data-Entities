@@ -233,7 +233,7 @@ namespace OR_M_Data_Entities.Data
             // Mark the table as unchanged again
             if (entityTrackable != null)
             {
-                EntityStateAnalyzer.TrySetTableOnLoad(entity);
+                EntityStateAnalyzer.TrySetPristineEntity(entity);
             }
 
             // close our readers
