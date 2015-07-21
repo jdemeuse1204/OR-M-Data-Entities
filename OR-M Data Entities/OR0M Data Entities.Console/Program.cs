@@ -16,6 +16,13 @@ namespace OR0M_Data_Entities.Console
         {
             // after save, need to update the _tableOnLoad to match
             var context = new DbSqlContext("sqlExpress");
+            var appointment = new Appointment();
+            appointment.ContactID = 10;
+            appointment.Description = "NEW";
+            appointment.IsScheduled = false;
+
+            context.SaveChanges(appointment);
+
             var policy = context.Find<Contact>(10);
 
 

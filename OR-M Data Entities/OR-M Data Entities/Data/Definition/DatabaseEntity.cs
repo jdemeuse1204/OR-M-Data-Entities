@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
@@ -20,6 +21,8 @@ namespace OR_M_Data_Entities.Data.Definition
     {
         public static UpdateType GetState(object entity, List<PropertyInfo> primaryKeys)
         {
+            if (primaryKeys.All(w => w.GetGenerationOption() == DbGenerationOption.None)) return UpdateType.TryInsert;
+
             for (var i = 0; i < primaryKeys.Count; i++)
             {
                 var key = primaryKeys[i];

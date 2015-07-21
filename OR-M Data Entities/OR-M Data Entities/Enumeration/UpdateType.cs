@@ -11,6 +11,7 @@ namespace OR_M_Data_Entities.Enumeration
     public enum UpdateType
     {
         Insert,
+        TryInsert,
         Update,
         Skip
     }

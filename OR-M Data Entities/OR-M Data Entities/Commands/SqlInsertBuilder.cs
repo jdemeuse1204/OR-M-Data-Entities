@@ -13,6 +13,7 @@ using OR_M_Data_Entities.Commands.Secure.StatementParts;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Schema;
 
 namespace OR_M_Data_Entities.Commands
 {
@@ -20,6 +21,8 @@ namespace OR_M_Data_Entities.Commands
 	{
 		#region Properties
 		private List<InsertItem> _insertItems { get; set; }
+        private bool _isTryInsert { get; set; }
+        private string _tryInsertStatement { get; set; }
 		#endregion
 
 		#region Constructor
@@ -112,13 +115,20 @@ namespace OR_M_Data_Entities.Commands
 		        }
 		    }
 
-		    var sql = string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
-				string.IsNullOrWhiteSpace(declare) ? "" : string.Format("DECLARE {0}", declare.TrimEnd(',')),
-				set,
-                TableName.TrimStart('[').TrimEnd(']'), 
-                fields.TrimEnd(','),
-				values.TrimEnd(','),
-				string.IsNullOrWhiteSpace(identity) ? "" : string.Format("Select {0}", identity.TrimEnd(',')));
+		    var tryInsertSplit = string.IsNullOrWhiteSpace(_tryInsertStatement)
+		        ? new[] {"", ""}
+		        : _tryInsertStatement.Split('#');
+            var tryInsertSplitOne = tryInsertSplit[0];
+            var tryinsertSplitTwo = tryInsertSplit[1];
+		    var sql = string.Format("{0} {1} {2} INSERT INTO [{3}] ({4}) VALUES ({5});{6}{7}",
+		        string.IsNullOrWhiteSpace(declare) ? "" : string.Format("DECLARE {0}", declare.TrimEnd(',')),
+		        set,
+		        tryInsertSplitOne,
+		        TableName.TrimStart('[').TrimEnd(']'),
+		        fields.TrimEnd(','),
+		        values.TrimEnd(','),
+		        string.IsNullOrWhiteSpace(identity) ? "" : string.Format("Select {0}", identity.TrimEnd(',')),
+		        tryinsertSplitTwo);
 
 			var cmd = new SqlCommand(sql, connection);
 
@@ -131,6 +141,28 @@ namespace OR_M_Data_Entities.Commands
 		{
 			_insertItems.Add(new InsertItem(property, entity));
 		}
+
+        public void MakeTryInsert(IEnumerable<PropertyInfo> primaryKeys, object entitty)
+        {
+            var where = string.Empty;
+
+            foreach (var propertyInfo in primaryKeys)
+            {
+                var parameterKey = GetNextParameter();
+                var parameterValue = propertyInfo.GetValue(entitty);
+                var columnName = propertyInfo.GetColumnName();
+
+                AddParameter(parameterKey, parameterValue);
+
+                where += string.Format("{0}{1} = {2}", (string.IsNullOrWhiteSpace(where) ? string.Empty : " AND "),
+                    columnName, parameterKey);
+            }
+
+            _tryInsertStatement =
+                string.Format("IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{0}] WHERE {1}))) BEGIN # END",
+                    entitty.GetTableNameWithLinkedServer().TrimStart('[').TrimEnd(']'), where);
+            _isTryInsert = true;
+        }
 		#endregion
 	}
 }

@@ -163,70 +163,92 @@ namespace OR_M_Data_Entities.Data
             switch (state)
             {
                 case UpdateType.Update:
+                {
+                    // Update Data
+                    var update = new SqlUpdateBuilder();
+                    update.Table(tableName);
+
+                    var properties = from property in
+                        (from property in tableColumns
+                            let columnName = property.GetColumnName()
+                            where
+                                !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
+                                property.GetCustomAttribute<NonSelectableAttribute>() == null
+                            select property)
+                        let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
+                        where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
+                        select property;
+
+                    // are we using a trackable entity? If so only grab the fields to update
+                    if (entityTrackable != null)
                     {
-                        // Update Data
-                        var update = new SqlUpdateBuilder();
-                        update.Table(tableName);
-
-                        var properties = from property in
-                            (from property in tableColumns
-                                let columnName = property.GetColumnName()
-                                where
-                                    !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                                    property.GetCustomAttribute<NonSelectableAttribute>() == null
-                                select property)
-                            let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
-                            where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
-                            select property;
-
-                        // are we using a trackable entity? If so only grab the fields to update
-                        if (entityTrackable != null)
-                        {
-                            properties = properties.Where(w => entityStatePackage.ChangeList.Contains(w.Name));
-                        }
-
-                        foreach (var property in properties)
-                        {
-                            // Skip unmapped fields
-                            update.AddUpdate(property, entity);
-                        }
-
-                        // add validation to only update the row
-                        foreach (var primaryKey in primaryKeys)
-                        {
-                            update.AddWhere("", primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
-                        }
-
-                        ExecuteReader(update);
+                        properties = properties.Where(w => entityStatePackage.ChangeList.Contains(w.Name));
                     }
+
+                    foreach (var property in properties)
+                    {
+                        // Skip unmapped fields
+                        update.AddUpdate(property, entity);
+                    }
+
+                    // add validation to only update the row
+                    foreach (var primaryKey in primaryKeys)
+                    {
+                        update.AddWhere("", primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
+                    }
+
+                    ExecuteReader(update);
+                }
                     break;
                 case UpdateType.Insert:
+                {
+                    // Insert Data
+                    var insert = new SqlInsertBuilder();
+
+                    insert.Table(tableName);
+
+                    // Loop through all mapped properties
+                    foreach (var property in tableColumns)
                     {
-                        // Insert Data
-                        var insert = new SqlInsertBuilder();
-
-                        insert.Table(tableName);
-
-                        // Loop through all mapped properties
-                        foreach (var property in tableColumns)
-                        {
-                            insert.AddInsert(property, entity);
-                        }
-
-                        // Execute the insert statement
-                        ExecuteReader(insert);
-
-                        // set the resulting pk(s) and db generated columns in the entity object
-                        foreach (var item in SelectIdentity())
-                        {
-                            // find the property first in case the column name change attribute is used
-                            // Key is property name, value is the db value
-                            DatabaseEntity.SetPropertyValue(
-                                entity,
-                                item.Key,
-                                item.Value);
-                        }
+                        insert.AddInsert(property, entity);
                     }
+
+                    // Execute the insert statement
+                    ExecuteReader(insert);
+
+                    // set the resulting pk(s) and db generated columns in the entity object
+                    foreach (var item in SelectIdentity())
+                    {
+                        // find the property first in case the column name change attribute is used
+                        // Key is property name, value is the db value
+                        DatabaseEntity.SetPropertyValue(
+                            entity,
+                            item.Key,
+                            item.Value);
+                    }
+                }
+                    break;
+                case UpdateType.TryInsert:
+                {
+                    // Insert Data
+                    var insert = new SqlInsertBuilder();
+
+                    insert.Table(tableName);
+
+                    // Loop through all mapped properties
+                    foreach (var property in tableColumns)
+                    {
+                        insert.AddInsert(property, entity);
+                    }
+
+                    insert.MakeTryInsert(primaryKeys, entity);
+
+                    // Execute the insert statement
+                    ExecuteReader(insert);
+
+                    // do not need to read back the values because they are already in the database, if not they will be inserted.
+                    // db generation option is always none so there is no need to load any PK's in to the object
+                }
                     break;
             }
 
@@ -242,6 +264,7 @@ namespace OR_M_Data_Entities.Data
 
             return state;
         }
+
         #endregion
 
         #region Delete Methods

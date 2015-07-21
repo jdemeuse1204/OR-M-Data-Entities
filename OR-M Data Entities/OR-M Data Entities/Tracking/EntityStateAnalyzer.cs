@@ -23,11 +23,12 @@ namespace OR_M_Data_Entities.Tracking
             var changes = (from item in entity.GetType().GetProperties().Where(w => w.IsColumn())
                 let current = item.GetValue(entity)
                 let field =
-                    typeof(EntityStateTrackable).GetField("_pristineEntity", BindingFlags.Instance | BindingFlags.NonPublic)
+                    typeof (EntityStateTrackable).GetField("_pristineEntity",
+                        BindingFlags.Instance | BindingFlags.NonPublic)
                 let tableOnLoad = field.GetValue(entity)
                 let original =
                     tableOnLoad == null
-                        ? current
+                        ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
                         : tableOnLoad.GetType().GetProperty(item.Name).GetValue(tableOnLoad)
                 where
                     ((current == null && original != null) || (current != null && original == null))
