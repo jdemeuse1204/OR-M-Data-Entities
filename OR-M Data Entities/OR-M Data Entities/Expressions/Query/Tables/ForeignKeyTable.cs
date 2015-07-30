@@ -14,15 +14,18 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
     public class ForeignKeyTable : AliasTable
     {
-        public ForeignKeyTable(Guid expressionQueryId, Type type, string foreignKeyTableName,  string alias = "")
+        public ForeignKeyTable(Guid expressionQueryId, Type type, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
             : base(expressionQueryId, type, alias)
         {
             TableInfo = new TableInfo(type);
             ForeignKeyPropertyName = foreignKeyTableName;
             _typeChanges = new List<Type>();
+            ParentTableAlias = parentTableAlias;
         }
 
         public readonly TableInfo TableInfo;
+
+        public readonly string ParentTableAlias;
 
         public readonly string ForeignKeyPropertyName;
          

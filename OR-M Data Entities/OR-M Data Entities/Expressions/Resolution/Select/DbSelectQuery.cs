@@ -137,7 +137,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             for (var i = 0; i < _tables.Count; i++)
             {
                 var currentType = _tables[i];
-                var parentOfCurrent = i == 0 ? null : _foreignKeyJoinPairs.FirstOrDefault(w => w.ChildTable.Type == currentType.Type && w.ParentJoinPropertyName == currentType.ForeignKeyPropertyName);
+                var parentOfCurrent = i == 0
+                    ? null
+                    : _foreignKeyJoinPairs.FirstOrDefault(
+                        w =>
+                            w.ChildTable.Type == currentType.Type &&
+                            w.ParentJoinPropertyName == currentType.ForeignKeyPropertyName &&
+                            w.ParentTable.Alias == currentType.ParentTableAlias);
+
                 var foreignKeys = currentType.Type.GetAllForeignKeysAndPseudoKeys(this.Id, this.ViewId);
 
                 if (i == 0)
@@ -169,7 +176,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         joinColumnPair.JoinPropertyName));
 
                     _tables.Add(new ForeignKeyTable(this.Id, joinColumnPair.ChildColumn.Property.DeclaringType,
-                        joinColumnPair.JoinPropertyName, joinColumnPair.JoinPropertyName));
+                        joinColumnPair.JoinPropertyName, joinColumnPair.JoinPropertyName, currentType.Alias));
 
                     _foreignKeyJoinPairs.Add(new JoinTablePair(
                         this.Id,
@@ -177,7 +184,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                         ((parentOfCurrent != null && parentOfCurrent.HeirarchyContainsList) ||
                          joinColumnPair.JoinType == JoinType.Left),
                         parentOfCurrent == null ? currentType.Alias : parentOfCurrent.ChildTable.Alias,
-                        _tables.FindAlias(joinColumnPair.ChildColumn.Table.Type, this.Id, joinColumnPair.JoinPropertyName),
+                        _tables.FindAlias(joinColumnPair.ChildColumn.Table.Type, this.Id, joinColumnPair.JoinPropertyName, currentType.Alias),
                         joinColumnPair.ParentColumn.PropertyName,
                         joinColumnPair.ChildColumn.PropertyName,
                         joinColumnPair.JoinPropertyName));

@@ -10,7 +10,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 
 namespace OR_M_Data_Entities.Expressions.Collections
@@ -43,13 +42,13 @@ namespace OR_M_Data_Entities.Expressions.Collections
             return table;
         }
 
-        public ForeignKeyTable Find(Type type, string foreignKeyTableName, Guid expressionQueryId)
+        public ForeignKeyTable Find(Type type, string foreignKeyTableName, string parentTableAlias, Guid expressionQueryId)
         {
             var table =
                 Internal.FirstOrDefault(
                     w =>
                         w.ExpressionQueryId == expressionQueryId && w.ForeignKeyPropertyName == foreignKeyTableName &&
-                        w.Type == type) ??
+                        w.Type == type && w.ParentTableAlias == parentTableAlias) ??
                 Internal.FirstOrDefault(w => w.TypeChanges.Contains(type));
 
             return table;
@@ -65,11 +64,30 @@ namespace OR_M_Data_Entities.Expressions.Collections
             return Internal.First(w => w.ExpressionQueryId == expressionQueryId && w.ForeignKeyPropertyName == propertyName);
         }
 
-        public string FindAlias(Type type, Guid expressionQueryId, string parentPropertyName)
+        /// <summary>
+        /// Only to be used in the resolve method
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="expressionQueryId"></param>
+        /// <returns></returns>
+        public string FindAlias(Type type, Guid expressionQueryId)
+        {
+            return Find(type, expressionQueryId).Alias;
+        }
+
+        /// <summary>
+        /// Need to match on parent table alias because parent property name can be the same if nested inside other properties
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="expressionQueryId"></param>
+        /// <param name="parentPropertyName"></param>
+        /// <param name="parentTableAlias"></param>
+        /// <returns></returns>
+        public string FindAlias(Type type, Guid expressionQueryId, string parentPropertyName, string parentTableAlias)
         {
             return string.IsNullOrWhiteSpace(parentPropertyName)
                 ? Find(type, expressionQueryId).Alias
-                : Find(type, parentPropertyName, expressionQueryId).Alias;
+                : Find(type, parentPropertyName, parentTableAlias, expressionQueryId).Alias;
         }
 
         public Type GetTableType(Type type, Guid expressionQueryId)

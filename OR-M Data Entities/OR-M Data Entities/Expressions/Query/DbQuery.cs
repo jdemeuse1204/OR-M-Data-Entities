@@ -80,7 +80,7 @@ namespace OR_M_Data_Entities.Expressions.Query
             var fromType = Tables.GetTableType(Type, this.Id);
             var tableInfo = new TableInfo(fromType);
             var from = string.Format("{0} As [{1}]", tableInfo,
-                Tables.FindAlias(Type, this.Id, null));
+                Tables.FindAlias(Type, this.Id));
 
             var order = IsSubQuery || Function != FunctionType.None
                 ? string.Empty
