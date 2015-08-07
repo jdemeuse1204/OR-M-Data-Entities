@@ -47,14 +47,21 @@ namespace OR_M_Data_Entities.Data
             lock (Lock)
             {
                 var state = UpdateType.Insert;
+                var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
 
-                // check to see if the table is marked as readonly
-                if (entity.IsTableReadOnly())
+                if (readOnlyAttribute != null)
                 {
-                    throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}",
-                        entity.GetTableName()));
-                }
+                    // skip children(foreign keys) if option is set
+                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) return UpdateType.Skip;
+
+                    // Check for readonly attribute and see if we should throw an error
+                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
+                    {
+                        throw new SqlSaveException(string.Format(
+                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                            entity.GetTableName()));
+                    }
+                } 
 
                 if (entity.HasForeignKeys())
                 {
@@ -268,18 +275,32 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Delete Methods
+
+        //public virtual bool DeleteAll<T>(Expression<Func<T, bool>> expression)
+        //{
+        //    return false;
+        //}
+
         public virtual bool Delete<T>(T entity)
             where T : class
         {
             lock (Lock)
             {
-                // Check for readonly attribute and see if we should throw an error
-                if (entity.IsTableReadOnly())
+                var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
+
+                if (readOnlyAttribute != null)
                 {
-                    throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}",
-                        entity.GetTableName()));
-                }
+                    // skip children(foreign keys) if option is set
+                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) return false;
+
+                    // Check for readonly attribute and see if we should throw an error
+                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
+                    {
+                        throw new SqlSaveException(string.Format(
+                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                            entity.GetTableName()));
+                    }
+                } 
 
                 if (!entity.HasForeignKeys()) return _deleteObjectFromDatabase(entity);
 
@@ -357,6 +378,10 @@ namespace OR_M_Data_Entities.Data
                 int index;
                 var foreignKeyValue = foreignKey.GetValue(entity);
                 var foreignKeyIsList = foreignKey.PropertyType.IsList();
+                var readOnlyAttribute = foreignKey.GetPropertyType().GetCustomAttribute<ReadOnlyAttribute>();
+
+                // skip children(foreign keys) if option is set
+                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) continue;
 
                 if (foreignKeyValue == null)
                 {
@@ -368,11 +393,11 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 // Check for readonly attribute and see if we should throw an error
-                if (foreignKey.GetPropertyType().IsTableReadOnly())
+                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
                 {
                     throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}",
-                        entity.GetTableName()));
+                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                            entity.GetTableName()));
                 }
 
                 // doesnt have dependencies
@@ -410,6 +435,5 @@ namespace OR_M_Data_Entities.Data
             }
         }
         #endregion
-
     }
 }

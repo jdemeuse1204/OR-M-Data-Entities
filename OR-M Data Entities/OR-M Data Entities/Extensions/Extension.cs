@@ -815,6 +815,13 @@ namespace OR_M_Data_Entities
                    && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
 
         }
+
+        public static Type GetTypeWithListCheck(this Type type)
+        {
+            return type.IsList()
+                ? type.GetGenericArguments()[0]
+                : type;
+        }
     }
 
     public static class SqlCommandExtensions

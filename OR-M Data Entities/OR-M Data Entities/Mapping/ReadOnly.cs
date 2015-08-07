@@ -17,6 +17,17 @@ namespace OR_M_Data_Entities.Mapping
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	public sealed class ReadOnlyAttribute : Attribute
 	{
+        public ReadOnlyAttribute(ReadOnlySaveOption readOnlySaveOption)
+        {
+            ReadOnlySaveOption = readOnlySaveOption;
+        }
 
+        public ReadOnlySaveOption ReadOnlySaveOption { get; private set; }
 	}
+
+    public enum ReadOnlySaveOption
+    {
+        ThrowException,
+        Skip
+    }
 }

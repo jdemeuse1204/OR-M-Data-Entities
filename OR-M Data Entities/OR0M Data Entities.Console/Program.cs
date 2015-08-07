@@ -21,7 +21,7 @@ namespace OR0M_Data_Entities.Console
             appointment.Description = "NEW";
             appointment.IsScheduled = false;
 
-            context.SaveChanges(appointment);
+            //context.Delete(appointment);
 
             var policy = context.Find<Contact>(10);
 
