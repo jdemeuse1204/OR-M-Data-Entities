@@ -60,8 +60,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
                     @join.HeirarchyContainsList ? "LEFT" : "INNER",
                     string.Format("{0} As [{1}]", @join.ChildTable.TableInfo, @join.ChildTable.Alias),
-                    @join.ParentTable.Alias, @join.ParentTable.ForeignKeyPropertyName, @join.ChildTable.Alias,
-                    @join.ChildTable.ForeignKeyPropertyName));
+                    @join.ParentTable.Alias, @join.ParentTable.GetForeignKeyDatabaseColumnName(), @join.ChildTable.Alias,
+                    @join.ChildTable.GetForeignKeyDatabaseColumnName()));
         }
 
         private string _getJoinName(JoinType joinType)

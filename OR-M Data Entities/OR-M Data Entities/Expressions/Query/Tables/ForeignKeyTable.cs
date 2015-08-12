@@ -8,7 +8,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.Remoting.Proxies;
 using OR_M_Data_Entities.Data.Definition.Base;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
@@ -36,6 +39,14 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
         public void ChangeType(Type newType)
         {
             if (!_typeChanges.Contains(newType)) _typeChanges.Add(newType);
+        }
+
+        public string GetForeignKeyDatabaseColumnName()
+        {
+            var property = this.Type.GetProperty(ForeignKeyPropertyName);
+            var attribute = property.GetCustomAttribute<ColumnAttribute>();
+
+            return attribute == null ? property.Name : attribute.Name;
         }
     }
 }
