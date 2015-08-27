@@ -138,6 +138,18 @@ namespace OR_M_Data_Entities.Data
 
             return new DataReader<T>(Reader);
         }
+
+        public void ExecuteQuery(string sql, List<SqlDbParameter> parameters)
+        {
+            ExecuteReader(sql, parameters);
+
+            Dispose();
+        }
+
+        public void ExecuteQuery(string sql, params SqlDbParameter[] parameters)
+        {
+            ExecuteQuery(sql, parameters.ToList());
+        }
         #endregion
     }
 }

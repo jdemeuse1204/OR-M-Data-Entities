@@ -266,6 +266,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             // close our readers
+            Connection.Close();
             Reader.Close();
             Reader.Dispose();
 
@@ -352,6 +353,7 @@ namespace OR_M_Data_Entities.Data
             var rowsAffected = Reader.GetInt32(0);
 
             // close our readers
+            Connection.Close();
             Reader.Close();
             Reader.Dispose();
 
