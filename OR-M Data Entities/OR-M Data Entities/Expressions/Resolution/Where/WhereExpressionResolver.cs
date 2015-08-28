@@ -13,7 +13,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Remoting.Contexts;
 using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
@@ -47,7 +46,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
                 if (isConnector)
                 {
                     container.AddConnector(ConnectorType.And);
-                    continue;
                 }
 
                 container.AddResolution(new WhereResolutionPart
