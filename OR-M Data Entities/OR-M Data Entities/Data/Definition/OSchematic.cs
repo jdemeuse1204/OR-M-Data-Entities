@@ -32,7 +32,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public readonly string[] PrimaryKeyNames;
 
-        public readonly OSchematicLoadedKeys LoadedCompositePrimaryKeys;
+        public OSchematicLoadedKeys LoadedCompositePrimaryKeys { get; private set; }
 
         public object ReferenceToCurrent { get; set; }
 
@@ -43,6 +43,22 @@ namespace OR_M_Data_Entities.Data.Definition
         public readonly string PropertyName;
 
         public readonly Type Type;
+
+        public void ClearLoadedCompositePrimaryKeys()
+        {
+            LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+
+            var toClear = Children;
+
+            for (var i = 0; i < toClear.Count; i++)
+            {
+                var child = toClear[i];
+
+                if (child.Children.Count > 0) toClear.AddRange(child.Children);
+
+                child.LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+            }
+        }
     }
 
     public class OSchematicLoadedKeys

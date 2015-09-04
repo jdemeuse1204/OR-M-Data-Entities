@@ -563,6 +563,9 @@ namespace OR_M_Data_Entities
                 _loadObjectWithForeignKeys(reader, instance);
             }
 
+            // Rows with a PK from the initial object are done loading.  Clear Schematics
+            reader.Payload.Query.LoadSchematic.ClearLoadedCompositePrimaryKeys();
+
             return instance;
         }
 
