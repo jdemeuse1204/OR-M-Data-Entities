@@ -359,9 +359,9 @@ namespace OR_M_Data_Entities.Data
 
             if (!Reader.HasRows) return false;
 
-            Read();
+            if (!Reader.IsClosed) Read();
 
-            var rowsAffected = Reader.GetInt32(0);
+            var rowsAffected = Reader.IsClosed ? 0 : Reader.GetInt32(0);
 
             // close our readers
             Connection.Close();
