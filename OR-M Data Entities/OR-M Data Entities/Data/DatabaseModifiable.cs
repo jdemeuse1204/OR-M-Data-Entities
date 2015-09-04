@@ -6,8 +6,10 @@
  * Copyright (c) 2015 James Demeuse
  */
 
+using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Commands;
@@ -343,8 +345,17 @@ namespace OR_M_Data_Entities.Data
                 builder.AddWhere(tableName, columnName, CompareType.Equals, value);
             }
 
-            // Execute the insert statement
-            ExecuteReader(builder);
+            try
+            {
+                // Execute the insert statement
+                ExecuteReader(builder);
+            }
+            catch (SqlException exception)
+            {
+                // if there is a reference constraint skip it, just means it cannot be deleted.
+                // we can look for all possbile uses of this class, add in later... might take longer than catching the error.... test
+                if (!exception.Message.ToUpper().Contains("REFERENCE CONSTRAINT")) throw;
+            }
 
             if (!Reader.HasRows) return false;
 
