@@ -88,6 +88,7 @@
     <Compile Include="Enumeration\OrderType.cs" />
     <Compile Include="Exceptions\DataLoadException.cs" />
     <Compile Include="Exceptions\OrderByException.cs" />
+    <Compile Include="Exceptions\SqlReferenceConstraintException.cs" />
     <Compile Include="Exceptions\SqlSaveException.cs" />
     <Compile Include="Exceptions\ViewException.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
@@ -144,6 +145,7 @@
     <Compile Include="Mapping\Key.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\LinkedServer.cs" />
+    <Compile Include="Mapping\LookupTable.cs" />
     <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\ReadOnly.cs" />
     <Compile Include="Mapping\Table.cs" />

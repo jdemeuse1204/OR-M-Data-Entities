@@ -6,7 +6,6 @@
  * Copyright (c) 2015 James Demeuse
  */
 
-using System.Collections.Generic;
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Exceptions;
@@ -17,14 +16,12 @@ namespace OR_M_Data_Entities.Commands
     {
         #region Properties
         private string _delete { get; set; }
-        private Dictionary<string, object> _parameters { get; set; }
         #endregion
 
         #region Constructor
         public SqlDeleteBuilder()
         {
             _delete = string.Empty;
-            _parameters = new Dictionary<string, object>();
         }
         #endregion
 

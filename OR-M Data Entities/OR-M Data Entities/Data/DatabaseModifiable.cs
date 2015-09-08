@@ -352,9 +352,17 @@ namespace OR_M_Data_Entities.Data
             }
             catch (SqlException exception)
             {
-                // if there is a reference constraint skip it, just means it cannot be deleted.
-                // we can look for all possbile uses of this class, add in later... might take longer than catching the error.... test
-                if (!exception.Message.ToUpper().Contains("REFERENCE CONSTRAINT")) throw;
+                // If there is a reference constraint error throw exception noting that the user should try and use a lookup table
+                // if they do not want the data to be deleted
+                if (!exception.Message.ToUpper().Contains("REFERENCE CONSTRAINT"))
+                {
+                    throw new SqlReferenceConstraintException(
+                        string.Format(
+                            "Reference Constraint Violated, consider using a LookupTable to preserve FK Data.  Original Exception: {0}",
+                            exception.Message));
+                };
+
+                throw;
             }
 
             if (!Reader.HasRows) return false;
@@ -392,6 +400,10 @@ namespace OR_M_Data_Entities.Data
                 var foreignKeyValue = foreignKey.GetValue(entity);
                 var foreignKeyIsList = foreignKey.PropertyType.IsList();
                 var readOnlyAttribute = foreignKey.GetPropertyType().GetCustomAttribute<ReadOnlyAttribute>();
+                var isLookupTable = foreignKey.GetPropertyType().GetCustomAttribute<LookupTableAttribute>() != null;
+
+                // skip lookup tables
+                if (isLookupTable) continue;
 
                 // skip children(foreign keys) if option is set
                 if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) continue;

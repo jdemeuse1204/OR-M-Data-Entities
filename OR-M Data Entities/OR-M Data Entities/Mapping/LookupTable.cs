@@ -1,0 +1,17 @@
+﻿using System;
+
+namespace OR_M_Data_Entities.Mapping
+{
+    /// <summary>
+    /// Mark any lookup table with this attribute so any item from a lookup table that is being used as a foreign key will not be deleted.
+    /// To delete an item from a lookup table you must delete the base object.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+    public class LookupTableAttribute : TableAttribute
+    {
+        public LookupTableAttribute(string name) : 
+            base(name)
+        {
+        }
+    }
+}
