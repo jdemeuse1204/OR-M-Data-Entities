@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.1
+ * OR-M Data Entities v2.2
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -44,11 +44,14 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public readonly Type Type;
 
-        public void ClearLoadedCompositePrimaryKeys()
+        public void ClearRowReadCache()
         {
             LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
 
-            var toClear = Children;
+            var toClear = new List<OSchematic>();
+
+            // do not keep reference to the original list
+            toClear.AddRange(Children);
 
             for (var i = 0; i < toClear.Count; i++)
             {
