@@ -572,7 +572,7 @@ public class MyClass
 #####Notes: LookupTable Attribute is for use on tables that are use primary for lookup data.  When using Foriegn Key Attributes and you wish to delete a record and its children, if you delete the record, but one if its children is being used in another table we do not want to remove that entity.  If we mark that table as a Lookup Table it will be skipped when deleting the parent record.  You can still delete from a lookup table if you have the actual entity.  The only time deletion will be skipped is if it's a child record.
 #####Example:
 ```C#
-[LookupTable("MyTableName")]  // Always put in your table name
+[LookupTable("State")]  // Always put in your table name
 public class State
 {
 	public int Id {get;set;}
