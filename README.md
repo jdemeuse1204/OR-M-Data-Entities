@@ -555,7 +555,60 @@ public class Contact
 }
 ```
 
-######9.	LookupTableAttribute : TableAttribute
+<br/><br/>
+
+######9.	LinkedServerAttribute : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public LinkedServerAttribute(string serverName, string databaseName, string schemaName)
+
+#####Usage: Class
+```C#
+[LinkedServer("MyServer", "MyDatabase", "MySchema")]
+public class Contact
+{
+
+}
+```
+#####Notes: Linked Server Attribute will format your sql for any linked server queries.
+<br><br>
+
+######10.	ViewAttribute : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ViewAttribute(params string[] viewIds)
+
+#####Usage: Class
+```C#
+[View("ContactOnly", "OtherView")]
+public class Contact
+{
+
+}
+```
+#####Notes: You can make as many views as you want on each class.  Only classes with the same view will be returned in the query, everything else will be null.  BE CAREFUL SAVING!  Should be used for data shaping only.
+<br><br>
+
+######11.	ReadOnlyAttribute : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ReadOnlyAttribute()
+
+#####Usage: Class
+```C#
+[ReadOnly]
+public class Contact
+{
+
+}
+```
+#####Notes: Like the name suggests, this table is a read only table, nothing can be saved or deleted
+<br><br>
+
+######12.	LookupTableAttribute : TableAttribute
 
 #####Namespace: OR_M_Data_Entities.Mapping<br>
 
@@ -616,57 +669,6 @@ class program(string[] args)
 	}
 }
 ```
-<br><br>
-
-######9.	LinkedServerAttribute : Attribute
-
-#####Namespace: OR_M_Data_Entities.Mapping<br>
-
-#####Constructor: public LinkedServerAttribute(string serverName, string databaseName, string schemaName)
-
-#####Usage: Class
-```C#
-[LinkedServer("MyServer", "MyDatabase", "MySchema")]
-public class Contact
-{
-
-}
-```
-#####Notes: Linked Server Attribute will format your sql for any linked server queries.
-<br><br>
-
-######10.	ViewAttribute : Attribute
-
-#####Namespace: OR_M_Data_Entities.Mapping<br>
-
-#####Constructor: public ViewAttribute(params string[] viewIds)
-
-#####Usage: Class
-```C#
-[View("ContactOnly", "OtherView")]
-public class Contact
-{
-
-}
-```
-#####Notes: You can make as many views as you want on each class.  Only classes with the same view will be returned in the query, everything else will be null.  BE CAREFUL SAVING!  Should be used for data shaping only.
-<br><br>
-
-######11.	ReadOnlyAttribute : Attribute
-
-#####Namespace: OR_M_Data_Entities.Mapping<br>
-
-#####Constructor: public ReadOnlyAttribute()
-
-#####Usage: Class
-```C#
-[ReadOnly]
-public class Contact
-{
-
-}
-```
-#####Notes: Like the name suggests, this table is a read only table, nothing can be saved or deleted
 <br><br>
 
 ####Performing Queries Using ExpressionQuery:
