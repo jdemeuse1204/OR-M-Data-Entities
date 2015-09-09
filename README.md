@@ -25,6 +25,9 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 #####Changes in 2.1
 ######1. Added entity state tracking, see below how to turn on/off
 
+#####Changes in 2.2
+######1. Added LookupTable Attribute, see below
+
 ###Example Classes to be used below:
 ```C#
     [View("ContactOnly")]
@@ -551,7 +554,68 @@ public class Contact
         public List<Appointment> Appointments { get; set; }
 }
 ```
-#####Notes: Pseudo Keys act just like a foreign key, but allows you to specify a key that is not actually a foreign key in the database.  Think of it as a programatic join.
+
+######9.	LookupTableAttribute : TableAttribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public LookupTableAttribute(string name)
+
+#####Usage: Properties or Fields
+```C#
+[LookupTable("MyTableName")]  // Always put in your table name
+public class MyClass
+{
+	public int Id {get;set;}
+}
+```
+#####Notes: LookupTable Attribute is for use on tables that are use primary for lookup data.  When using Foriegn Key Attributes and you wish to delete a record and its children, if you delete the record, but one if its children is being used in another table we do not want to remove that entity.  If we mark that table as a Lookup Table it will be skipped when deleting the parent record.  You can still delete from a lookup table if you have the actual entity.  The only time deletion will be skipped is if it's a child record.
+#####Example:
+```C#
+[LookupTable("MyTableName")]  // Always put in your table name
+public class State
+{
+	public int Id {get;set;}
+	
+	public string Name {get;set;}
+}
+
+public class PropertyAddress
+{
+	public int Id {get;set;}
+	
+	public int StateId {get;set;}
+	
+	[ForeignKey("StateId")]
+	public State State {get;set;}
+}
+
+public class HomeAddress 
+{
+	public int Id {get;set;}
+	
+	public int StateId {get;set;}
+	
+	[ForeignKey("StateId")]
+	public State State {get;set;}
+}
+
+class program(string[] args) 
+{
+	using (var ctx = new MyContext())
+	{
+		var homeAddress = ctx.Find<HomeAddress>(1);
+		
+		// since state is a lookup table it will be skipped on delete only.  Save works as normal
+		ctx.Delete(homeAddress);
+		
+		var state = ctx.Find<State>(1);
+		
+		// since its not a child record, state will be deleted as normal
+		ctx.Delete(state);
+	}
+}
+```
 <br><br>
 
 ######9.	LinkedServerAttribute : Attribute
