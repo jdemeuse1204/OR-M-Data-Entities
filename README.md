@@ -622,7 +622,7 @@ public class MyClass
 	public int Id {get;set;}
 }
 ```
-#####Notes: LookupTable Attribute is for use on tables that are use primary for lookup data.  When using Foriegn Key Attributes and you wish to delete a record and its children, if you delete the record, but one if its children is being used in another table we do not want to remove that entity.  If we mark that table as a Lookup Table it will be skipped when deleting the parent record.  You can still delete from a lookup table if you have the actual entity.  The only time deletion will be skipped is if it's a child record.
+#####Notes: LookupTable Attribute is for use on tables that are use primary for lookup data.  When using Foriegn Key Attributes and you wish to save/delete a record and its children, if you save/delete the record, but one or more if its children are being used in another table we do not want to remove that entity.  If we mark that table as a Lookup Table it will be skipped when saving/deleting the parent record.  You can still delete from a lookup table if you have the actual entity.  The only time deletion will be skipped is if it's a child record.
 #####Example:
 ```C#
 [LookupTable("State")]  // Always put in your table name
@@ -657,6 +657,7 @@ class program(string[] args)
 {
 	using (var ctx = new MyContext())
 	{
+		// DELETE
 		var homeAddress = ctx.Find<HomeAddress>(1);
 		
 		// since state is a lookup table it will be skipped on delete only.  Save works as normal
@@ -666,6 +667,18 @@ class program(string[] args)
 		
 		// since its not a child record, state will be deleted as normal
 		ctx.Delete(state);
+		
+		// SAVE
+		
+		var propertyAddress = ctx.Find<PropertyAddress>(2);
+		
+		// since state is a lookup table it will be skipped on delete only.  Save works as normal
+		ctx.SaveChanges(propertyAddress);
+		
+		var state = ctx.Find<State>(2);
+		
+		// since its not a child record, state will be saved as normal
+		ctx.SaveChanges(state);
 	}
 }
 ```
