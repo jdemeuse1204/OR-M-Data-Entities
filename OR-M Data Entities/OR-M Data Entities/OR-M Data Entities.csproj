@@ -148,6 +148,7 @@
     <Compile Include="Mapping\LookupTable.cs" />
     <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\ReadOnly.cs" />
+    <Compile Include="Mapping\Script.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
     <Compile Include="Mapping\View.cs" />
@@ -155,6 +156,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Exceptions\QueryNotValidException.cs" />
     <Compile Include="Extensions\SchemaExtensions.cs" />
+    <Compile Include="Scripts\StoredSql.cs" />
     <Compile Include="Tracking\EntityCloner.cs" />
     <Compile Include="Tracking\EntityStateAnalyzer.cs" />
     <Compile Include="Tracking\EntityStateComparePackage.cs" />
