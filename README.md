@@ -28,6 +28,9 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 #####Changes in 2.2
 ######1. Added LookupTable Attribute, see below
 
+#####Changes in 2.3
+######1. Added support for custom written Sql (stored sql) to be centrally located in one file.  Allows for use of .sql files or straight sql.  See below
+
 ###Example Classes to be used below:
 ```C#
     [View("ContactOnly")]
@@ -180,6 +183,57 @@ public EntityState GetState();
         public string MyProperty { get; set; }
     }
 ```
+
+####Stored Sql:
+######How To Use<br/><br/>
+The idea of stored sql is to mimic stored procedures, but house them in the ORM instead of the database.  This way going from a DEV to TEST environment should require no changes.  Likewise if you add a Stored Procedure to your DEV database you will need to add it to TEST, this way all you need to do is just change your connection string.
+#####Setup
+```C#
+public class MyStoredSql : StoredSql
+{
+    // refers to custom written sql with no parameters
+    public string GetUserName = "Select Top 1 Username From Users";
+    
+    // refers to custom written sql with parameters
+    public string GetUserNameById = "Select Top 1 Username From Users Where UserId = @UserId"
+    
+    // refers to a sql script
+    public string UpdateUsername { get;set; }
+    
+    // refers to a sql script in a different location
+    [Script("UpdateUsernameCustomPath", "../MyFolder")]
+    public string UpdateUsernameCustomPath { get;set; }
+}
+````
+#####Adding Sql Scripts
+You can add sql scripts (.sql) to your project and reference them.  By default if you add .sql scripts the ORM will look for a Scripts folder at the Project level.  This can be reconfigured through attrbutes for one script or through the webconfig for all scripts
+
+#####Web Configuration
+```XML 
+    <!-- IMPORTANT!! -->
+    <!-- configSections must go before the startup section -->
+  <configSections>
+    <section name="ORMDataEntitiesConfigurationSection" type="OR_M_Data_Entities.Configuration.ORMDataEntitiesConfigurationSection, OR-M Data Entities" />
+  </configSections>
+    <startup> 
+        <supportedRuntime version="v4.0" sku=".NETFramework,Version=v4.5" />
+    </startup>
+    
+    <!-- IMPORTANT!! -->
+    <!-- ORMDataEntitiesConfigurationSection must go after the startup section -->
+  <ORMDataEntitiesConfigurationSection>
+    <StoredSql>
+      <add defaultPath="../../MyFolder/"/> 
+    </StoredSql>
+  </ORMDataEntitiesConfigurationSection> 
+````
+
+#####Example
+```C#
+	DbSqlContext context = new DbSqlContext("your connection string"); 
+	
+
+````
 
 ####Objects:
 ######1.	DbSqlContext
