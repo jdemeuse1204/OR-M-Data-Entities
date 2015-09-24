@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -8,18 +8,20 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Commands.Support;
+using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -158,71 +160,175 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Stored Procedures And Functions
-        public DataReader<TReturnType> ExecuteStoredSql<TSource, TReturnType>(Expression<Func<TSource, string>> scriptSelector, params SqlDbParameter[] parameters)
-            where TSource : StoredSql
+        public DataReader<T> ExecuteScript<T>(IReadScript<T> script)
         {
-            var script = _returnStoredSql(scriptSelector);
-
-            return ExecuteQuery<TReturnType>(script, parameters);
+            return _executeScript<T>(script as dynamic);
         }
 
-        public void ExecuteStoredSql<TSource>(Expression<Func<TSource, string>> scriptSelector, params SqlDbParameter[] parameters)
-            where TSource : StoredSql
+        public void ExecuteScript(IWriteScript script)
         {
-            var script = _returnStoredSql(scriptSelector);
-
-            ExecuteQuery(script, parameters);
+            _executeScript(script as dynamic);
         }
 
-        private string _returnStoredSql<TSource>(Expression<Func<TSource, string>> scriptSelector)
-            where TSource : StoredSql
+        private DataReader<T> _executeScript<T>(StoredProcedure<T> script)
         {
-            string script;
-            var member = scriptSelector.Body as MemberExpression;
+            var package = _getStoredProcedureParametersAndSql(script);
 
-            if (member == null) throw new Exception("Usage of stored procedure incorrect.  Ex. ctx.ExecuteStoredProcedure<MyClass>(x => x.MyProcedure)");
-
-            var property = typeof(TSource).GetProperty(member.Member.Name);
-            var field = typeof(TSource).GetField(member.Member.Name);
-
-            if (property == null)
-            {
-                script = field.GetValue(Activator.CreateInstance<TSource>()) as string;
-
-                if (string.IsNullOrWhiteSpace(script))
-                {
-                    throw new Exception("Fields must have a return type of string and must not be null.");
-                }
-            }
-            else
-            {
-                script = _getScriptText(property);
-            }
-
-            return script;
+            return ExecuteQuery<T>(package.Key, package.Value);
         }
 
-        private string _getScriptText(PropertyInfo property)
+
+        private DataReader<T> _executeScript<T>(CustomScript<T> script)
         {
-            var path = "../../Scripts/";
-            var scriptAttribute = property.GetCustomAttribute<Script>();
-            var fileName = property.Name;
+            var package = _getCustomScriptParametersAndSql(script);
 
-            if (scriptAttribute != null)
+            return ExecuteQuery<T>(package.Key, package.Value);
+        }
+
+        private DataReader<T> _executeScript<T>(StoredScript<T> script)
+        {
+            var package = _getStoredScriptParametersAndSql(script);
+
+            return ExecuteQuery<T>(package.Key, package.Value);
+        }
+
+        private DataReader<T> _executeScript<T>(ScalarFunction<T> script)
+        {
+            var package = _getStoredProcedureParametersAndSql(script);
+
+            return ExecuteQuery<T>(package.Key, package.Value);
+        }
+
+        private void _executeScript(StoredProcedure script)
+        {
+            var package = _getStoredProcedureParametersAndSql(script);
+
+            ExecuteQuery(package.Key, package.Value);
+
+            Dispose();
+        }
+
+
+        private void _executeScript(CustomScript script)
+        {
+            var package = _getCustomScriptParametersAndSql(script);
+
+            ExecuteQuery(package.Key, package.Value);
+
+            Dispose();
+        }
+
+        private void _executeScript(StoredScript script)
+        {
+            var package = _getStoredScriptParametersAndSql(script);
+
+            ExecuteQuery(package.Key, package.Value);
+
+            Dispose();
+        }
+
+        private KeyValuePair<string, List<SqlDbParameter>> _getCustomScriptParametersAndSql(CustomScript script)
+        {
+            return new KeyValuePair<string, List<SqlDbParameter>>(script.GetSql(), _getParameters(script));
+        }
+
+        private KeyValuePair<string, List<SqlDbParameter>> _getStoredScriptParametersAndSql(StoredScript script)
+        {
+            return new KeyValuePair<string, List<SqlDbParameter>>(_getSqlFromFile(script), _getParameters(script));
+        }
+
+        private KeyValuePair<string, List<SqlDbParameter>> _getStoredProcedureParametersAndSql(StoredProcedure script)
+        {
+            var scriptType = script.GetType();
+            var schemaAttribute = scriptType.GetCustomAttribute<ScriptSchema>();
+            var scriptAttribute = scriptType.GetCustomAttribute<Script>();
+            var config = ConfigurationManager.GetSection(ORMDataEntitiesConfigurationSection.SectionName) as ORMDataEntitiesConfigurationSection;
+            var schema = schemaAttribute != null
+                ? schemaAttribute.SchemaName
+                : config != null ? config.StoredSql.First("schema").DefaultValue : "dbo";
+            bool wasIndexUsed;
+            var parameters = _getParameters(script, out wasIndexUsed);
+            var scriptName = scriptAttribute != null ? scriptAttribute.ScriptName : scriptType.Name;
+            var scriptSplit = scriptName.Split(' ');
+            var scriptHasParameters = scriptSplit.Count() >= 2 && scriptSplit[1].Contains("@");
+            var baseType = script.GetType().BaseType;
+            var isScalarFunction = baseType != null && (baseType.IsGenericType &&
+                                                        baseType.GetGenericTypeDefinition()
+                                                            .IsAssignableFrom(typeof (ScalarFunction<>)));
+
+            if (parameters.Count > 1 && !scriptHasParameters && !wasIndexUsed)
             {
-                if (!string.IsNullOrWhiteSpace(scriptAttribute.Path))
-                {
-                    path = string.Format("../../{0}", scriptAttribute.Path);
-                }
-
-                if (!string.IsNullOrWhiteSpace(scriptAttribute.FileName))
-                {
-                    fileName = scriptAttribute.FileName;
-                }
+                throw new Exception(
+                    "ScriptName has no parameters when parameters are specified.  Please either use the index attribute on your parameters denoting the order they should be in OR include the attributes in your script name");
             }
 
+            if ((wasIndexUsed) || (parameters.Count == 1 && !scriptHasParameters))
+            {
+                if (scriptHasParameters) throw new Exception("Script Name cannot have parameters if Index is being used.");
+
+                // add parameters into the script
+                scriptName = isScalarFunction
+                    ? _getScalarFunctionScriptName(scriptName, parameters)
+                    : _getStoredProcedureScriptName(scriptName, parameters);
+            }
+
+            return
+                new KeyValuePair<string, List<SqlDbParameter>>(
+                    string.Format(isScalarFunction ? "Select {0}.{1}" : "{0}.{1}", schema, scriptName), parameters);
+        }
+
+        private string _getStoredProcedureScriptName(string scriptName, List<SqlDbParameter> parameters)
+        {
+            return
+                parameters.Aggregate(scriptName,
+                    (current, sqlDbParameter) => current + string.Format(" @{0},", sqlDbParameter.Name)).TrimEnd(',');
+        }
+
+        private string _getScalarFunctionScriptName(string scriptName, List<SqlDbParameter> parameters)
+        {
+            var parametersString = parameters.Aggregate(string.Empty,
+                (current1, parameter) => current1 + string.Format("@{0},", parameter.Name)).TrimEnd(',');
+
+            return string.Format("{0}({1})", scriptName, parametersString);
+        }
+
+        private List<SqlDbParameter> _getParameters(IScript script)
+        {
+            return script.GetType().GetProperties().Select(w => new SqlDbParameter(w.Name, w.GetValue(script))).ToList();
+        }
+
+        private List<SqlDbParameter> _getParameters(StoredProcedure script, out bool wasIndexUsed)
+        {
+            var namesToSkip = new string[] {"ScriptName", "SchemaName"};
+            var properties = script.GetType().GetProperties().Where(w => !namesToSkip.Contains(w.Name)).ToList();
+            wasIndexUsed = properties.Any(w => w.GetCustomAttribute<Index>() != null);
+
+            if (wasIndexUsed && !properties.All(w => w.GetCustomAttribute<Index>() != null))
+            {
+                throw new Exception("If Index attribute is used, all properties must have the index attribute!");
+            }
+
+            return wasIndexUsed
+                ? properties.OrderBy(w => w.GetCustomAttribute<Index>().Value)
+                    .Select(w => new SqlDbParameter(w.Name, w.GetValue(script)))
+                    .ToList()
+                : properties.Select(w => new SqlDbParameter(w.Name, w.GetValue(script)))
+                    .ToList();
+        } 
+
+        private string _getSqlFromFile(StoredScript storedScript)
+        {
+            var scriptType = storedScript.GetType();
+            var scriptAttribute = scriptType.GetCustomAttribute<Script>();
+            var scriptPathAttribute = scriptType.GetCustomAttribute<ScriptPath>();
+            var config = ConfigurationManager.GetSection(ORMDataEntitiesConfigurationSection.SectionName) as ORMDataEntitiesConfigurationSection;
+            var pathFromScript = scriptPathAttribute != null ? scriptPathAttribute.Path : string.Empty;
+            var path = !string.IsNullOrWhiteSpace(pathFromScript)
+                ? pathFromScript
+                : config != null ? config.StoredSql.First("path").DefaultValue : "../../Scripts/";
+            var fileName = scriptAttribute == null ? storedScript.GetType().Name : scriptAttribute.ScriptName;
             var fullScriptPath = Path.Combine(path,
-                string.Format("{0}{1}", fileName, fileName.ToUpper().Contains(".SQL") ? string.Empty : ".sql"));
+                string.Format("{0}{1}", fileName, ".sql"));
             var result = string.Empty;
 
             // open the file as readonly and read line by line in case the script is large
@@ -237,7 +343,7 @@ namespace OR_M_Data_Entities.Data
 
                     while ((line = sr.ReadLine()) != null)
                     {
-                        result += line;
+                        result += string.Format("{0} ", line);
                     }
                 }
             }

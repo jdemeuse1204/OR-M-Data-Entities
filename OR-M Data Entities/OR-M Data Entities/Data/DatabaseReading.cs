@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -9,7 +9,7 @@
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Schema;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data
 {

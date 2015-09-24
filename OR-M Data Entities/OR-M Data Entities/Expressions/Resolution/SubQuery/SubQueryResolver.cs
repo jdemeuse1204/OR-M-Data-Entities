@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -10,7 +10,6 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Resolution.Base;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {

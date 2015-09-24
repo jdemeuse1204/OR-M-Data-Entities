@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.Remoting.Proxies;
 using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Mapping;
 

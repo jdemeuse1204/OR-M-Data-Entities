@@ -1,12 +1,11 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2015 James Demeuse
  */
 
-using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -17,9 +16,9 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
+using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
-using OR_M_Data_Entities.Schema;
 using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data

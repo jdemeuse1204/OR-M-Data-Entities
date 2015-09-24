@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="Commands\Transform\DbTransform.cs" />
     <Compile Include="Commands\Transform\TransformContainer.cs" />
+    <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
     <Compile Include="Data\Definition\Base\TableInfo.cs" />
     <Compile Include="Data\Definition\ObjectSchematic.cs" />
@@ -142,13 +143,16 @@
     <Compile Include="Mapping\DbGenerationOption.cs" />
     <Compile Include="Mapping\DbType.cs" />
     <Compile Include="Mapping\ForeignKey.cs" />
+    <Compile Include="Mapping\Index.cs" />
     <Compile Include="Mapping\Key.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\LookupTable.cs" />
     <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\ReadOnly.cs" />
+    <Compile Include="Mapping\ScriptSchema.cs" />
     <Compile Include="Mapping\Script.cs" />
+    <Compile Include="Mapping\ScriptPath.cs" />
     <Compile Include="Mapping\Table.cs" />
     <Compile Include="Mapping\Unmapped.cs" />
     <Compile Include="Mapping\View.cs" />
@@ -156,7 +160,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Exceptions\QueryNotValidException.cs" />
     <Compile Include="Extensions\SchemaExtensions.cs" />
-    <Compile Include="Scripts\StoredSql.cs" />
+    <Compile Include="Scripts\CustomScript.cs" />
+    <Compile Include="Scripts\Base\IReadScript.cs" />
+    <Compile Include="Scripts\Base\IScript.cs" />
+    <Compile Include="Scripts\Base\IWriteScript.cs" />
+    <Compile Include="Scripts\ScalarFunction.cs" />
+    <Compile Include="Scripts\StoredProcedure.cs" />
+    <Compile Include="Scripts\StoredScript.cs" />
     <Compile Include="Tracking\EntityCloner.cs" />
     <Compile Include="Tracking\EntityStateAnalyzer.cs" />
     <Compile Include="Tracking\EntityStateComparePackage.cs" />

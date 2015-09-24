@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.2
+ * OR-M Data Entities v2.3
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -14,7 +14,7 @@ using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
-using OR_M_Data_Entities.Schema;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {
