@@ -506,7 +506,7 @@ This script is used to read data from the server and refers to a scalar function
 
 Parameters can be used two ways, you may include them in the script name (not advisable) OR you can give an index to each property in your class indication where the parameter goes in the overload sequence.  For example if we have a scalar function dbo.GetName(@Id, @CurrentTime) then your class should be decorated as follows:
 ```C#
-public class GetName : StoredProcedure<
+public class GetName : StoredProcedure<int>
 {
     [Index(1)]
     public int Id { get; set; } // refers to the parameter @Id
