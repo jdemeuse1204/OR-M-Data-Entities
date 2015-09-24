@@ -29,7 +29,7 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######1. Added LookupTable Attribute, see below
 
 #####Changes in 2.3
-######1. Added support for custom written Sql (stored sql) to be centrally located in one file.  Allows for use of .sql files or straight sql.  See below
+######1. Added support for Stored Procedures, Scalar Functions, Custom Sql, and .Sql files located in the project. See Stored Sql below
 
 ###Example Classes to be used below:
 ```C#
@@ -186,29 +186,388 @@ public EntityState GetState();
 
 ####Stored Sql:
 ######How To Use<br/><br/>
-The idea of stored sql is to mimic stored procedures, but house them in the ORM instead of the database.  This way going from a DEV to TEST environment should require no changes.  Likewise if you add a Stored Procedure to your DEV database you will need to add it to TEST, this way all you need to do is just change your connection string.
-#####Setup
+The idea of Stored Sql is the ability to use Stored Procedures, Scalar Functions, Custom Sql, and .sql files easier within the ORM.  All types listed above rely on properties to act as the parameters, see below for usage examples.
+
+###### Execution Methods
 ```C#
-public class MyStoredSql : StoredSql
+DataReader<T> ExecuteScript<T>(IReadScript<T> script);
+void ExecuteScript(IWriteScript script);
+````
+
+####Objects:
+######1.	CustomScript : IWriteScript<br>
+This script is used to write data to the server, not to read.  Updates/Inserts/Deletes should only be used because it has no return type.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+```C#
+public class MyCustomScript : CustomScript
 {
-    // refers to custom written sql with no parameters
-    public string GetUserName = "Select Top 1 Username From Users";
-    
-    // refers to custom written sql with parameters
-    public string GetUserNameById = "Select Top 1 Username From Users Where UserId = @UserId"
-    
-    // refers to a sql script
-    public string UpdateUsername { get;set; }
-    
-    // refers to a sql script in a different location
-    [Script("UpdateUsernameCustomPath", "../MyFolder")]
-    public string UpdateUsernameCustomPath { get;set; }
+    public int Id { get; set; } // refers to the parameter @Id
+
+    public string Changed { get; set; } // refers to the parameter @Changed
+
+    protected override string Sql
+    {
+        get
+        {
+            return @"
+
+            Update Contacts Set LastName = @Changed Where Id = @Id
+
+        ";
+        }
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        context.ExecuteScript(new MyCustomScript
+        {
+            Id = 10,
+            Changed = "LastName"
+        }); // returns a void
+    }
 }
 ````
-#####Adding Sql Scripts
-You can add sql scripts (.sql) to your project and reference them.  By default if you add .sql scripts the ORM will look for a Scripts folder at the Project level.  This can be reconfigured through attrbutes for one script or through the webconfig for all scripts
+
+######2.	CustomScript<T> : CustomScript
+This script is used to read data from the server, should be used with Select statements, or queries that return data.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+```C#
+public class MyOtherCustomScript : CustomScript<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+
+    protected override string Sql
+    {
+        get
+        {
+            return @"
+
+            Select Top 1 Id From Contacts Where Id = @Id
+
+        ";
+        }
+    }
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        var id = context.ExecuteScript(new MyOtherCustomScript
+        {
+            Id = 10,
+            Changed = "LastName"
+        }).First();
+    }
+}
+````
+
+######3.	StoredProcedure : IWriteScript
+This script is used to write data to the server and refers to a stored procedure located in the database.  Updates/Inserts/Deletes should only be used because it has no return type. Schema is always defaulted to DBO.  This can be changed through attributes or the config file.  See the configuration below to see how to change the default schema.
+
+Parameters can be used two ways, you may include them in the script name (not advisable) OR you can give an index to each property in your class indication where the parameter goes in the overload sequence.  For example if we have a stored procedure dbo.GetName(@Id, @CurrentTime) then your class should be decorated as follows:
+```C#
+public class GetName : StoredProcedure
+{
+    [Index(1)]
+    public int Id { get; set; } // refers to the parameter @Id
+    
+    [Index(2)]
+    public DateTime CurrentTime { get; set; } // refers to the parameter @Id
+}
+````
+NOTE: If you have one parameter it is not necessary to decorate your properties with an Index attribute.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+The class name is the name of the stored procedure.  You can use attributes to rename the name of the script or change schemas.  See below.
+```C#
+public class MyStoredProcedure : StoredProcedure
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindName")] // name from the database
+public class SomeCoolProcedure : StoredProcedure
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindMyId")] // name from the database
+[ScriptSchema("myschema")] // name from the schema
+public class DifferentSchemaStoredProcedure : StoredProcedure
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        context.ExecuteScript(new MyStoredProcedure
+        {
+            Id = 5
+        });
+        
+        context.ExecuteScript(new SomeCoolProcedure
+        {
+            Id = 5
+        });
+        
+        context.ExecuteScript(new DifferentSchemaStoredProcedure
+        {
+            Id = 5
+        });
+    }
+}
+````
+
+######4.	StoredProcedure<T> : StoredProcedure, IReadScript<T>
+This script is used to read data from the server and refers to a stored procedure located in the database.  Select should be used because it has a return type. Schema is always defaulted to DBO.  This can be changed through attributes or the config file.  See the configuration below to see how to change the default schema.
+
+Parameters can be used two ways, you may include them in the script name (not advisable) OR you can give an index to each property in your class indication where the parameter goes in the overload sequence.  For example if we have a stored procedure dbo.GetName(@Id, @CurrentTime) then your class should be decorated as follows:
+```C#
+public class GetName : StoredProcedure<int>
+{
+    [Index(1)]
+    public int Id { get; set; } // refers to the parameter @Id
+    
+    [Index(2)]
+    public DateTime CurrentTime { get; set; } // refers to the parameter @Id
+}
+````
+NOTE: If you have one parameter it is not necessary to decorate your properties with an Index attribute.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+The class name is the name of the stored procedure.  You can use attributes to rename the name of the script or change schemas.  See below.
+```C#
+public class MyStoredProcedure : StoredProcedure<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindName")] // name from the database
+public class SomeCoolProcedure : StoredProcedure<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindMyId")] // name from the database
+[ScriptSchema("myschema")] // name from the schema
+public class DifferentSchemaStoredProcedure : StoredProcedure<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        var id = context.ExecuteScript(new MyStoredProcedure
+        {
+            Id = 100
+        }).First();
+        
+        var id = context.ExecuteScript(new SomeCoolProcedure
+        {
+            Id = 100
+        }).First();
+        
+        var id = context.ExecuteScript(new DifferentSchemaStoredProcedure
+        {
+            Id = 100
+        }).First();
+    }
+}
+````
+
+######5.	StoredScript : IWriteScript
+This script is used to write data to the server and refers to a (.sql) file stored within the project or a directory of your chosing.  Updates/Inserts/Deletes should only be used because it has no return type. The file name and path can be changed through attributes, however the default path can be changed through the config file.  See the configuration below to see how to change the default path. The default path is always the Scripts folder under your main project.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+The class name is the name of the stored (.sql) file.  You can use attributes to rename the name of the script or change the path.  See below.
+```C#
+public class MyStoredScript : StoredScript
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("TheActualScriptName")]
+public class SomeCoolScript : StoredScript
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("GetNameById")] // name from the database
+[ScriptPath("../../OtherScripts")] // new path
+public class DifferentPathScript: StoredScript
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        context.ExecuteScript(new MyStoredScript
+        {
+            Id = 5
+        });
+        
+        context.ExecuteScript(new SomeCoolScript
+        {
+            Id = 5
+        });
+        
+        context.ExecuteScript(new DifferentPathScript
+        {
+            Id = 5
+        });
+    }
+}
+````
+
+######6.	StoredScript<T> : StoredScript
+This script is used to read data from the server and refers to a (.sql) file stored within the project or a directory of your chosing.  Select statements should be used because it returns data. The file name and path can be changed through attributes, however the default path can be changed through the config file.  See the configuration below to see how to change the default path. The default path is always the Scripts folder under your main project.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+The class name is the name of the stored (.sql) file.  You can use attributes to rename the name of the script or change the path.  See below.
+```C#
+public class MyStoredScript : StoredScript<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("TheActualScriptName")]
+public class SomeCoolScript : StoredScript<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("GetNameById")] // name from the database
+[ScriptPath("../../OtherScripts")] // new path
+public class DifferentPathScript: StoredScript<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        var id = context.ExecuteScript(new MyStoredScript
+        {
+            Id = 5
+        }).First();
+        
+        var id = context.ExecuteScript(new SomeCoolScript
+        {
+            Id = 5
+        }).First();
+        
+        var id = context.ExecuteScript(new DifferentPathScript
+        {
+            Id = 5
+        }).First();
+    }
+}
+````
+
+######7.	ScalarFunction<T> : StoredProcedure, IReadScript<T>
+This script is used to read data from the server and refers to a scalar function located in the database.  Select should be used because it has a return type. Schema is always defaulted to DBO.  This can be changed through attributes or the config file.  See the configuration below to see how to change the default schema.
+
+Parameters can be used two ways, you may include them in the script name (not advisable) OR you can give an index to each property in your class indication where the parameter goes in the overload sequence.  For example if we have a scalar function dbo.GetName(@Id, @CurrentTime) then your class should be decorated as follows:
+```C#
+public class GetName : StoredProcedure<
+{
+    [Index(1)]
+    public int Id { get; set; } // refers to the parameter @Id
+    
+    [Index(2)]
+    public DateTime CurrentTime { get; set; } // refers to the parameter @Id
+}
+````
+NOTE: If you have one parameter it is not necessary to decorate your properties with an Index attribute.
+
+#####Namespace: OR_M_Data_Entities.Scripts<br>
+
+#####Example:
+The class name is the name of the stored (.sql) file.  You can use attributes to rename the name of the script or change the path.  See below.
+```C#
+public class MyScalarFunction : ScalarFunction<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindFirstUserName")] // name from the database
+public class SomeCoolScalarFunction : ScalarFunction<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+[Script("sp_FindSomeId")] // name from the database
+[ScriptSchema("myschema")] // name from the schema
+public class DifferentSchemaScalarFunction : ScalarFunction<int>
+{
+    public int Id { get; set; } // refers to the parameter @Id
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        DbSqlContext context = new DbSqlContext("your connection string"); 
+        
+        var id = context.ExecuteScript(new MyScalarFunction
+        {
+            Id = 100
+        }).First();
+        
+        var id = context.ExecuteScript(new SomeCoolScalarFunction
+        {
+            Id = 100
+        }).First();
+        
+        var id = context.ExecuteScript(new DifferentSchemaScalarFunction
+        {
+            Id = 100
+        }).First();
+    }
+}
+````
 
 #####Web Configuration
+With no configuration the default values are <br>
+1. Default Schema: DBO <br>
+2. Default Script Path: ../../Scripts (Scripts folder under your project)
 ```XML 
     <!-- IMPORTANT!! -->
     <!-- configSections must go before the startup section -->
@@ -222,17 +581,11 @@ You can add sql scripts (.sql) to your project and reference them.  By default i
     <!-- IMPORTANT!! -->
     <!-- ORMDataEntitiesConfigurationSection must go after the startup section -->
   <ORMDataEntitiesConfigurationSection>
-    <StoredSql>
-      <add defaultPath="../../MyFolder/"/> 
-    </StoredSql>
-  </ORMDataEntitiesConfigurationSection> 
-````
-
-#####Example
-```C#
-	DbSqlContext context = new DbSqlContext("your connection string"); 
-	
-
+    <SqlScripts>
+      <add name="path" defaultValue="../../Scripts"/>
+      <add name="schema" defaultValue="dbo"/>
+    </SqlScripts>
+  </ORMDataEntitiesConfigurationSection>
 ````
 
 ####Objects:
@@ -249,6 +602,8 @@ DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters)
 DataReader<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)
 DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
 DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
+DataReader<T> ExecuteScript<T>(IReadScript<T> script);
+void ExecuteScript(IWriteScript script);
 T Find<T>(params object[] pks)
 ExpressionQuery<T> From<T>()
 ExpressionQuery<T> FromView<T>(string viewId)
@@ -737,7 +1092,77 @@ class program(string[] args)
 }
 ```
 <br><br>
+######13.	Script : Attribute
 
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public Script(string scriptName)
+
+#####Usage: Class <br>
+Only use with Stored Procedures, Scalar Functions, and StoredScripts
+```C#
+[Script("sp_FindName")]
+public class Contact : StoredProcedure
+{
+
+}
+```
+#####Notes: Gives you the ability to change the name of your script
+<br><br>
+######14.	ScriptPath : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ScriptPath(string path)
+
+#####Usage: Class <br>
+Only use with StoredScripts
+```C#
+[ScriptPath("../../SomeOtherFolder")]
+public class Contact : StoredProcedure
+{
+
+}
+```
+#####Notes: Gives you the ability to change lookup path of your StoredScripts
+<br><br>
+######15.	ScriptSchema : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public ScriptSchema(string schemaName)
+
+#####Usage: Class <br>
+Only use with Stored Procedures and Scalar Functions
+```C#
+[ScriptSchema("myschema")]
+public class Contact : StoredProcedure
+{
+
+}
+```
+#####Notes: Gives you the ability to change schema of your Stored Procedures or Scalar Functions
+<br><br>
+######16.	Index : Attribute
+
+#####Namespace: OR_M_Data_Entities.Mapping<br>
+
+#####Constructor: public Index(string value)
+
+#####Usage: Property <br>
+Only use with Stored Procedures and Scalar Functions.  Denotes the order the parameters should be inserted into the script.
+```C#
+public class Contact : StoredProcedure
+{
+    [Index(1)]
+    public int Id { get;set; }
+    
+    [Index(2)]
+    public string FirstName { get;set }
+}
+```
+#####Notes: Gives you the ability to specify what the order of parameters is for the Stored Procedure or Scalar Function.  If we have a Scalar Function dbo.FindName(@Id, @FirstName), labeling the index on your propertes will ensure they are inserted into the function in the correct order
+<br><br>
 ####Performing Queries Using ExpressionQuery:
 #####The aim of ExpressionQuery is to load data from the server into a generic list without regard for its state.  With the addition of Foreign Keys all queries had to be changed to Linq.
 
