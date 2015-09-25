@@ -916,7 +916,7 @@ public class Contact
 	// Looks for the AddressID in the Contact Class.  Inner Join is performed.
 	
 	// In your database your foreign key would be from Contact/PhoneID and point to PhoneNumber/(PrimaryKey)
-	[PseudoKey("PhoneID")]
+	[ForeignKey("PhoneID")]
         public PhoneNumber Number { get; set; }
 
 	// Assumes a one-many relationship between Contact and PhoneNumber. 
@@ -924,7 +924,7 @@ public class Contact
 	// ** NOTE:  All subsequent joins after the left join will also be a left join regardless of the relationship.
 	
 	// In your database your foreign key would be from Appointment/ContactID and point to Contact/(PrimaryKey)
-        [PseudoKey("ContactID")]
+        [ForeignKey("ContactID")]
         public List<Appointment> Appointments { get; set; }
 }
 ```
@@ -951,7 +951,7 @@ public class Contact
 	// Looks for the AddressID in the Contact Class.  Inner Join is performed.
 	
 	// In your database your foreign key would be from Contacts/PhoneID and point to PhoneNumber/(PrimaryKey)
-	[ForeignKey("PhoneID")]
+	[PseudoKey("PhoneID")]
         public PhoneNumber Number { get; set; }
 
 	// Assumes a one-many relationship between Contact and PhoneNumber. 
@@ -959,7 +959,7 @@ public class Contact
 	// ** NOTE:  All subsequent joins after the left join will also be a left join regardless of the relationship.
 	
 	// In your database your foreign key would be from Appointment/ContactID and point to Contacts/(PrimaryKey)
-        [ForeignKey("ContactID")]
+        [PseudoKey("ContactID")]
         public List<Appointment> Appointments { get; set; }
 }
 ```
