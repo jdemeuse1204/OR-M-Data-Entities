@@ -18,6 +18,11 @@ namespace OR_M_Data_Entities.Mapping
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public sealed class ForeignKeyAttribute : AutoLoadKeyAttribute
     {
+        /// <summary>
+        /// One-Many - Reference Column in Other Table which links to PK of This Table
+        /// One-One - Reference Column in This Table which links to PK of Other Table
+        /// </summary>
+        /// <param name="foreignKeyColumnName">ONE-MANY: Reference Column in Other Table which links to PK of This Table, ONE-ONE: Reference Column in This Table which links to PK of Other Table</param>
         public ForeignKeyAttribute(string foreignKeyColumnName)
         {
             ForeignKeyColumnName = foreignKeyColumnName;

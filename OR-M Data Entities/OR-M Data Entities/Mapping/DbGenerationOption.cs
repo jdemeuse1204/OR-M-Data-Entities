@@ -10,6 +10,10 @@ using System;
 
 namespace OR_M_Data_Entities.Mapping
 {
+    /// <summary>
+    /// This attribute should be used to specify how a primary key is generated.  When set to Identity Specification, the ORM relies on the 
+    /// database to create the key.  When set to Generate, the ORM will create the key for you.  If set to None, then no key will be generated.
+    /// </summary>
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
 	public sealed class DbGenerationOptionAttribute : Attribute
 	{

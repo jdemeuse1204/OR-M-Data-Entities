@@ -11,6 +11,9 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Mapping
 {
+    /// <summary>
+    /// This attribute should be used when renaming a column on your table
+    /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public sealed class ColumnAttribute : SearchablePrimaryKeyAttribute
     {
