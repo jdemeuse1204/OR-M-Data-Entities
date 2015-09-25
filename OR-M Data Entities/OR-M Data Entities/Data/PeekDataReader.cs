@@ -21,6 +21,7 @@ namespace OR_M_Data_Entities.Data
         #region Fields
         private readonly IDataReader _wrappedReader;
         private bool _lastResult;
+        private readonly SqlConnection _connection;
         #endregion
 
         #region Properties
@@ -55,12 +56,13 @@ namespace OR_M_Data_Entities.Data
 
         #region Constructor
 
-        public PeekDataReader(SqlCommand cmd)
-            : this(cmd, null)
+        public PeekDataReader(SqlCommand cmd, SqlConnection connection)
+            : this(cmd, connection, null)
         {
+            _connection = connection;
         }
 
-        public PeekDataReader(SqlCommand cmd, ISqlPayload payload)
+        public PeekDataReader(SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
         {
             var wrappedReader = cmd.ExecuteReader();
 
@@ -69,6 +71,8 @@ namespace OR_M_Data_Entities.Data
             FieldCount = wrappedReader.FieldCount;
 
             Payload = payload;
+
+            _connection = connection;
         }
         #endregion
 
@@ -104,6 +108,7 @@ namespace OR_M_Data_Entities.Data
         public void Close()
         {
             _wrappedReader.Close();
+            _connection.Close();
         }
 
         public DataTable GetSchemaTable()
@@ -120,6 +125,8 @@ namespace OR_M_Data_Entities.Data
         public void Dispose()
         {
             _wrappedReader.Dispose();
+            _connection.Close();
+            _connection.Dispose();
         }
 
         public string GetName(int i)

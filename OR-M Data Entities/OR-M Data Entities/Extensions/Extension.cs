@@ -829,14 +829,14 @@ namespace OR_M_Data_Entities
 
     public static class SqlCommandExtensions
     {
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection)
         {
-            return ExecuteReaderWithPeeking(cmd, null);
+            return new PeekDataReader(cmd, connection);
         }
 
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, ISqlPayload payload)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
         {
-            return new PeekDataReader(cmd, payload);
+            return new PeekDataReader(cmd, connection, payload);
         }
     }
 

@@ -7,9 +7,14 @@
  */
 
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Reflection;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -47,6 +52,7 @@ namespace OR_M_Data_Entities.Data
         {
             try
             {
+                test();
                 // Open the connection if its closed
                 if (Connection.State == ConnectionState.Closed)
                 {
@@ -54,11 +60,43 @@ namespace OR_M_Data_Entities.Data
                 }
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 Connection = new SqlConnection(ConnectionString);
 
                 return false;
+            }
+        }
+
+        protected void test()
+        {
+            var sqlConnType = typeof(SqlConnection);
+            var _poolGroupFieldInfo =
+              sqlConnType.GetField("_poolGroup", BindingFlags.NonPublic | BindingFlags.Instance);
+            var dbConnectionPoolGroup =
+              _poolGroupFieldInfo.GetValue(Connection);
+            var _poolCollectionFieldInfo =
+              dbConnectionPoolGroup.GetType().GetField("_poolCollection",
+                 BindingFlags.NonPublic | BindingFlags.Instance);
+            var poolConnection =
+                _poolCollectionFieldInfo.GetValue(dbConnectionPoolGroup) as IEnumerable;
+
+            foreach (dynamic poolEntry in poolConnection)
+            {
+                var foundPool = poolEntry.GetType().GetProperty("Value").GetValue(poolEntry); 
+                var _objectListFieldInfo =
+                   foundPool.GetType().GetField("_objectList",
+                      BindingFlags.NonPublic | BindingFlags.Instance);
+                var listTDbConnectionInternal =
+                   _objectListFieldInfo.GetValue(foundPool);
+                var get_CountMethodInfo =
+                    listTDbConnectionInternal.GetType().GetMethod("get_Count");
+                var numConnex = (int)get_CountMethodInfo.Invoke(listTDbConnectionInternal, null);
+
+                if (numConnex != 0)
+                {
+                    
+                }
             }
         }
 

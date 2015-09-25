@@ -63,7 +63,7 @@ namespace OR_M_Data_Entities.Data
                 if (!Connect()) throw new Exception("Cannot connect to server");
             }
 
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
 
         /// <summary>
@@ -83,7 +83,7 @@ namespace OR_M_Data_Entities.Data
                 if (!Connect()) throw new Exception("Cannot connect to server");
             }
 
-            Reader = Command.ExecuteReaderWithPeeking();
+            Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
 
         protected void ExecuteReader(IExpressionQueryResolvable query)
@@ -103,7 +103,7 @@ namespace OR_M_Data_Entities.Data
                 if (!Connect()) throw new Exception("Cannot connect to server");
             }
 
-            Reader = Command.ExecuteReaderWithPeeking(new SqlPayload(query));
+            Reader = Command.ExecuteReaderWithPeeking(Connection, new SqlPayload(query));
         }
 
         #region Query Execution
