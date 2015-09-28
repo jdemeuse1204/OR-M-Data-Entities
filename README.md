@@ -31,6 +31,10 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 #####Changes in 2.3
 ######1. Added support for Stored Procedures, Scalar Functions, Custom Sql, and .Sql files located in the project. See Stored Sql below
 
+#####Changes in 2.3.1
+######1. Added support for one-to-one nullable foreign keys
+
+
 ###Example Classes to be used below:
 ```C#
     [View("ContactOnly")]
@@ -910,10 +914,12 @@ public class Contact
 	
 	public int PhoneID {get;set;}
 	
+	public int? PersonID {get;set;} 
+	
 	... See above classes ...
 	
-	// Assumes a one-one relationship between Contact and Address. 
-	// Looks for the AddressID in the Contact Class.  Inner Join is performed.
+	// Assumes a one-one relationship between Contact and PhoneNumber. 
+	// Looks for the PhoneID in the Contact Class.  Inner Join is performed.
 	
 	// In your database your foreign key would be from Contact/PhoneID and point to PhoneNumber/(PrimaryKey)
 	[ForeignKey("PhoneID")]
@@ -926,6 +932,24 @@ public class Contact
 	// In your database your foreign key would be from Appointment/ContactID and point to Contact/(PrimaryKey)
         [ForeignKey("ContactID")]
         public List<Appointment> Appointments { get; set; }
+}
+```
+Nullable one-one foreign keys
+```C#
+public class Contact
+{
+	public int ID {get;set;}
+	
+	public int? PhoneID {get;set;}
+	
+	... See above classes ...
+	
+	// Assumes NULLABLE a one-one relationship between Contact and PhoneNumber. 
+	// Looks for the PhoneID in the Contact Class.  Left Join is performed since it is nullable.
+	
+	// In your database your foreign key would be from Contact/PhoneID and point to PhoneNumber/(PrimaryKey)
+	[ForeignKey("PhoneID")]
+        public PhoneNumber Number { get; set; }
 }
 ```
 #####Notes: Whether or not your foreign key object is a list or not will determine the relationship.  A List assumes a one-many relationship and a class reference assumes a one-one relationship.
