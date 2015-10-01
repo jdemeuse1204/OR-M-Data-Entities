@@ -19,10 +19,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
     {
         protected static string GetColumnName(MemberExpression expression)
         {
-            if (expression.Expression is ParameterExpression)
-            {
-                return expression.Member.GetColumnName();
-            }
+            // we want the actual property name, not the sql property name.  
+            // The resolvers will grab the correct property name
 
             return expression.Member.Name;
         }

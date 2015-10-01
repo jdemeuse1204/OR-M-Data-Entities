@@ -825,6 +825,11 @@ namespace OR_M_Data_Entities
                 ? type.GetGenericArguments()[0]
                 : type;
         }
+
+        public static bool IsNullable(this Type type)
+        {
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>);
+        }
     }
 
     public static class SqlCommandExtensions

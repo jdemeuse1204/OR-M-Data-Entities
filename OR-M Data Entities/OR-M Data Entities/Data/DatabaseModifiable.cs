@@ -411,9 +411,15 @@ namespace OR_M_Data_Entities.Data
                 {
                     if (foreignKeyIsList) continue;
 
+                    var columnName = foreignKey.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
+                    var isNullable = entity.GetType().GetProperty(columnName).PropertyType.IsNullable();
+
+                    // we can skip the foreign key if its nullable and one to one
+                    if (isNullable) continue;
+
                     // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
                     // maintaining the relationship
-                    throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}", foreignKey.Name));
+                    throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", foreignKey.Name));
                 }
 
                 // Check for readonly attribute and see if we should throw an error

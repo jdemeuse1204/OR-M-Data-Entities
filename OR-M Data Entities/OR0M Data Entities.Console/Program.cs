@@ -23,85 +23,27 @@ namespace OR0M_Data_Entities.Console
             // after save, need to update the _tableOnLoad to match
             var context = new DbSqlContext("sqlExpress");
 
-            context.ExecuteScript(new CS2
-            {
-                Id = 10,
-                Changed = "LastName"
-            });
+            var c = context.Find<Contact>(1);
 
-            context.ExecuteScript(new SS3
-            {
-                Id = 10,
-                FirstName = "Tony"
-            });
-
-            var reader = context.ExecuteScript<Contact>(new CS1
-            {
-                Id = 10
-            }).First();
-
-            reader = context.ExecuteScript<Contact>(new SS1
-            {
-                Id = 10
-            }).First();
-
-            reader = context.ExecuteScript<Contact>(new SS2()).First();
-
-            context.ExecuteScript(new SP2
-            {
-                Id = 10,
-                FirstName = "Megan"
-            });
-
-            reader = context.ExecuteScript<Contact>(new SP1
-            {
-                Id = 10
-            }).First();
-
-            var name = context.ExecuteScript<string>(new SF1
-            {
-                Id = 10,
-                FirstName = "Megan"
-            }).First();
-
-            name = context.ExecuteScript<string>(new GetLastName2
-            {
-                Id = 10
-            }).First();
-
-            if (reader != null && name != null)
+            if (c != null)
             {
                 
             }
 
-            var appointment = new Appointment();
-            appointment.ContactID = 10;
-            appointment.Description = "NEW";
-            appointment.IsScheduled = false;
+            var user = context.Find<User>(1);
+            var user2 = context.Find<User>(2);
 
-            //context.Delete(appointment);
-
-            var policy = context.Find<Contact>(10);
-
-            // Change first or default/first?  do select top 1 (primary key(s)) to get the keys, then to select for first /firstdefault?
-
-
-            context.SaveChanges(policy);
-
-            var entityState = policy.GetState();
-
-            policy.FirstName = "CHANGED!";
-
-            entityState = policy.GetState();
-
-            if (entityState == EntityState.Modified)
+            var contact = new Contact
             {
-                context.SaveChanges(policy);
+                CreatedBy = user,
+                CreatedByUserID = user.ID,
+                EditedBy = user2,
+                EditedByUserID = user2.ID,
+                FirstName = "James",
+                LastName = "Demeuse"
+            };
 
-            }
-
-
-            entityState = policy.GetState();
+            context.SaveChanges(contact);
         }
 
         public class CS1 : CustomScript<Contact>

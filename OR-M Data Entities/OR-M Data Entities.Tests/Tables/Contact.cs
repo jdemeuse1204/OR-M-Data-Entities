@@ -15,7 +15,7 @@ namespace OR_M_Data_Entities.Tests.Tables
 
         public string LastName { get; set; }
 
-        public int PhoneID { get; set; }
+        public int? PhoneID { get; set; }
 
         public int CreatedByUserID { get; set; }
 

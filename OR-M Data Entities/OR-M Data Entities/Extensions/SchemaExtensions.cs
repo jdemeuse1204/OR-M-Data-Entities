@@ -221,28 +221,33 @@ namespace OR_M_Data_Entities.Extensions
                              w.GetPropertyType().GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId));
 
             return (from property in autoLoadProperties
-                    let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
-                    let pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>()
-                    select new JoinColumnPair
-                    {
-                        ChildColumn =
-                            new PartialColumn(expressionQueryId, property.GetPropertyType(),
-                                fkAttribute != null
-                                    ? property.PropertyType.IsList()
-                                        ? fkAttribute.ForeignKeyColumnName
-                                        : GetPrimaryKeys(property.PropertyType).First().Name
-                                    : pskAttribute.ChildTableColumnName),
-                        ParentColumn =
-                            new PartialColumn(expressionQueryId, type,
-                                fkAttribute != null
-                                    ? property.PropertyType.IsList()
-                                        ? GetPrimaryKeys(type).First().Name
-                                        : fkAttribute.ForeignKeyColumnName
-                                    : pskAttribute.ParentTableColumnName),
-                        JoinType = property.PropertyType.IsList() ? JoinType.Left : JoinType.Inner,
-                        JoinPropertyName = property.Name,
-                        FromType = property.PropertyType
-                    }).ToList();
+                let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
+                let pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>()
+                select new JoinColumnPair
+                {
+                    ChildColumn =
+                        new PartialColumn(expressionQueryId, property.GetPropertyType(),
+                            fkAttribute != null
+                                ? property.PropertyType.IsList()
+                                    ? fkAttribute.ForeignKeyColumnName
+                                    : GetPrimaryKeys(property.PropertyType).First().Name
+                                : pskAttribute.ChildTableColumnName),
+                    ParentColumn =
+                        new PartialColumn(expressionQueryId, type,
+                            fkAttribute != null
+                                ? property.PropertyType.IsList()
+                                    ? GetPrimaryKeys(type).First().Name
+                                    : fkAttribute.ForeignKeyColumnName
+                                : pskAttribute.ParentTableColumnName),
+                    JoinType =
+                        property.PropertyType.IsList()
+                            ? JoinType.Left
+                            : type.GetProperty(fkAttribute.ForeignKeyColumnName).PropertyType.IsNullable()
+                                ? JoinType.Left
+                                : JoinType.Inner,
+                    JoinPropertyName = property.Name,
+                    FromType = property.PropertyType
+                }).ToList();
         }
 
         public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(this Type tableType)
