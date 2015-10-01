@@ -1187,8 +1187,97 @@ public class Contact : StoredProcedure
 ```
 #####Notes: Gives you the ability to specify what the order of parameters is for the Stored Procedure or Scalar Function.  If we have a Scalar Function dbo.FindName(@Id, @FirstName), labeling the index on your propertes will ensure they are inserted into the function in the correct order
 <br><br>
-####Performing Queries Using ExpressionQuery:
-#####The aim of ExpressionQuery is to load data from the server into a generic list without regard for its state.  With the addition of Foreign Keys all queries had to be changed to Linq.
+####ExpressionQuery:
+
+Note: ExpressionQuery is based off of Entity Framework's lambda queries. However, when it comes to complex queries it is not as robust.  If you are writing a complex query it is best to write it in sql not linq or lambda, it takes a lot longer to compile a complex query and run it than running straight sql.  The aim of this ORM is speed, not complexity.  If you use ForeignKeys you should not need complex queries because your object will be constructed for you.  See ForeignKeys
+
+#####Joins
+
+######Helper Classes
+```C#
+public class Policy : EntityStateTrackable
+    {
+        [Column("PolicyID")]
+        public int Id { get; set; }
+
+        public int FileNumber { get; set; }
+
+        [Column("PolicyTypeID")] // changing the name for my join
+        public int PolicyInfoId { get; set; }
+
+        public int? StateID { get; set; }
+
+        public string County { get; set; }
+
+        public DateTime CreatedDate { get; set; }
+
+        public string FeeOwnerName { get; set; }
+
+        public string InsuredName { get; set; }
+
+        public decimal? PolicyAmount { get; set; }
+
+        public DateTime? PolicyDate { get; set; }
+
+        public string PolicyNumber { get; set; }
+
+        public DateTime? UpdatedDate { get; set; }
+
+        public string CreatedBy { get; set; }
+
+        public string UpdatedBy { get; set; }
+    }
+    
+    public class PolicyInfo
+    {
+        [DbGenerationOption(DbGenerationOption.Generate)]
+        public int Id { get; set; }
+
+        public string FirstName { get; set; }
+
+        public string LastName { get; set; }
+
+        public string Description { get; set; }
+
+        public Guid Stamp { get; set; }
+    }
+```
+######Examples: Inner Join
+```C#
+class program(string[] args) 
+{
+	using (var ctx = new MyContext())
+	{
+		// find policy where id is 20 and return its data
+		var policy = ctx.From<Policy>()
+	                .InnerJoin(
+	                    ctx.From<PolicyInfo>(),
+	                    p => p.PolicyInfoId, // parent table join column
+	                    pi => pi.Id,  // child table join column
+	                    (p, pi) => p) // selector
+	                    .FirstOrDefault(w => w.Id == 20);
+	}
+}
+```
+
+######Examples: Left Join<br>
+Written the same as an Inner Join, only a Left Join is performed
+```C#
+class program(string[] args) 
+{
+	using (var ctx = new MyContext())
+	{
+		// find policy where id is 20 and return its data
+		var policy = ctx.From<Policy>()
+	                .InnerJoin(
+	                    ctx.From<PolicyInfo>(),
+	                    p => p.PolicyInfoId, // parent table join column
+	                    pi => pi.Id,  // child table join column
+	                    (p, pi) => p) // selector
+	                    .FirstOrDefault(w => w.Id == 20);
+	}
+}
+```
 
 Issues/Questions/Comments:
 
