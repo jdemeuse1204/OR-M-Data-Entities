@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using OR_M_Data_Entities.Extensions;
+using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR_M_Data_Entities.Tests
@@ -166,7 +166,45 @@ namespace OR_M_Data_Entities.Tests
             Assert.AreEqual(policy.Id, policies.Key.Id);
         }
 
+        [TestMethod]
+        public void Test_12()
+        {
+            // Test connection opening and closing
+            for (var i = 0; i < 100; i++)
+            {
+                var item = ctx.From<Policy>().FirstOrDefault(w => w.Id == 1);
 
+                if (item != null)
+                {
+                }
+            }
+
+            Assert.IsTrue(true);
+        }
+
+        [TestMethod]
+        public void Test_13()
+        {
+            // Disconnnect Test With Execute Script
+            ctx.ExecuteScript<int>(new CustomScript1()).First();
+
+            var state = ctx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
+
+        [TestMethod]
+        public void Test_14()
+        {
+            // Disconnnect Test With Execute Script
+            ctx.ExecuteScript(new CustomScript2());
+
+            var state = ctx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
 
         #region helpers
         private Policy _addPolicy()
@@ -240,5 +278,21 @@ namespace OR_M_Data_Entities.Tests
         }
 
         #endregion
+    }
+
+    public class CustomScript1 : CustomScript<int>
+    {
+        protected override string Sql
+        {
+            get { return "Select Top 1 1"; }
+        }
+    }
+
+    public class CustomScript2 : CustomScript
+    {
+        protected override string Sql
+        {
+            get { return "Select Top 1 1"; }
+        }
     }
 }

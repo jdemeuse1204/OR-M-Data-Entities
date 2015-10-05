@@ -7,10 +7,6 @@
  */
 
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
@@ -41,29 +37,41 @@ namespace OR_M_Data_Entities.Data
 
                 ConnectionString = conn.ConnectionString;
             }
-            
+
             Connection = new SqlConnection(ConnectionString);
         }
+
 
         /// <summary>
         /// Connect our SqlConnection
         /// </summary>
-        protected bool Connect()
+        protected void Connect()
         {
-            try
-            {
-                // Open the connection if its closed
-                if (Connection.State == ConnectionState.Closed)
-                {
-                    Connection.Open();
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Connection = new SqlConnection(ConnectionString);
+            const string errorMessage = "Data Context in the middle of an operation, consider locking your threads to avoid this.  Operation: {0}";
 
-                return false;
+            switch (Connection.State)
+            {
+                case ConnectionState.Closed:
+                case ConnectionState.Broken:
+
+                    // if the connection was opened before we need to renew it
+                    if (_wasConnectionPreviouslyOpened())
+                    {
+                        Connection.Dispose();
+                        Connection = null;
+                        Connection = new SqlConnection(ConnectionString);
+                    }
+
+                    Connection.Open();
+                    return;
+                case ConnectionState.Connecting:
+                    throw new Exception(string.Format(errorMessage,"Connecting to database"));
+                case ConnectionState.Executing:
+                    throw new Exception(string.Format(errorMessage, "Executing Query"));
+                case ConnectionState.Fetching:
+                    throw new Exception(string.Format(errorMessage, "Fetching Data"));
+                case ConnectionState.Open:
+                    return;
             }
         }
 
@@ -82,6 +90,18 @@ namespace OR_M_Data_Entities.Data
 
             Reader.Close();
             Reader.Dispose();
+        }
+
+        private bool _wasConnectionPreviouslyOpened()
+        {
+            var innerConnection = Connection.GetType()
+                .GetField("_innerConnection", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (innerConnection == null) throw new Exception("Cannot connect to database, inner connection not found");
+
+            var connection = innerConnection.GetValue(Connection).GetType().Name;
+
+            return connection.Contains("PreviouslyOpened");
         }
 
         public void Dispose()

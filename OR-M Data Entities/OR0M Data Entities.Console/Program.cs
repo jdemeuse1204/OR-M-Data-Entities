@@ -23,6 +23,14 @@ namespace OR0M_Data_Entities.Console
             // after save, need to update the _tableOnLoad to match
             var context = new DbSqlContext("sqlExpress");
 
+            for (int i = 0; i < 100; i++)
+            {
+                var v = context.ExecuteScript<Contact>(new CS1
+                {
+                    Id = 1
+                }).ToList();
+            }
+
             var c = context.Find<Contact>(1);
 
             if (c != null)

@@ -50,18 +50,11 @@ namespace OR_M_Data_Entities.Data
         {
             TryDisposeCloseReader();
 
+            Connect();
+
             Command = new SqlCommand(sql, Connection);
 
             _addParameters(parameters);
-
-            if (!Connect())
-            {
-                Command = new SqlCommand(sql, Connection);
-
-                _addParameters(parameters);
-
-                if (!Connect()) throw new Exception("Cannot connect to server");
-            }
 
             Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
@@ -74,14 +67,9 @@ namespace OR_M_Data_Entities.Data
         {
             TryDisposeCloseReader();
 
+            Connect();
+
             Command = builder.Build(Connection);
-
-            if (!Connect())
-            {
-                Command = builder.Build(Connection);
-
-                if (!Connect()) throw new Exception("Cannot connect to server");
-            }
 
             Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
@@ -90,18 +78,11 @@ namespace OR_M_Data_Entities.Data
         {
             TryDisposeCloseReader();
 
+            Connect();
+
             Command = new SqlCommand(query.Sql, Connection);
 
             _addParameters(query.Parameters);
-
-            if (!Connect())
-            {
-                Command = new SqlCommand(query.Sql, Connection);
-
-                _addParameters(query.Parameters);
-
-                if (!Connect()) throw new Exception("Cannot connect to server");
-            }
 
             Reader = Command.ExecuteReaderWithPeeking(Connection, new SqlPayload(query));
         }
