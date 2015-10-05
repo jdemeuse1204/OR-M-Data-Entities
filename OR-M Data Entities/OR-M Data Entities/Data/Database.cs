@@ -101,7 +101,7 @@ namespace OR_M_Data_Entities.Data
 
             var connection = innerConnection.GetValue(Connection).GetType().Name;
 
-            return connection.Contains("PreviouslyOpened");
+            return connection.EndsWith("PreviouslyOpened");
         }
 
         public void Dispose()
