@@ -20,7 +20,7 @@ OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo
 ######10. Huge refactor, which made the ORM even faster with large queries
 ######11. Fixed null issue in where statements
 ######12. First will now throw an error if no data rows exist from the query
-######13. Because of added support for foreign keys, all queries must now use Linq
+######13. Because of added support for foreign keys, all queries must now use Lambda
 
 #####Changes in 2.1
 ######1. Added entity state tracking, see below how to turn on/off
