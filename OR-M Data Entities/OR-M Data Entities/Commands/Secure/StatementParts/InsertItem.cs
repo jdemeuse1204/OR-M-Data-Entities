@@ -48,7 +48,11 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
             IsPrimaryKey = property.IsPrimaryKey();
 			Value = property.GetValue(entity);
 			PropertyDataType = property.PropertyType.Name.ToUpper();
-            Generation = IsPrimaryKey ? property.GetGenerationOption() : DbGenerationOption.None;
+            Generation = IsPrimaryKey
+                ? property.GetGenerationOption()
+                : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
+                    ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
+                    : DbGenerationOption.None;
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
 			var translation = property.GetCustomAttribute<DbTypeAttribute>();

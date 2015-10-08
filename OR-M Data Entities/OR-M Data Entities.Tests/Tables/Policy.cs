@@ -35,5 +35,8 @@ namespace OR_M_Data_Entities.Tests.Tables
         public string CreatedBy { get; set; }
 
         public string UpdatedBy { get; set; }
+
+        [Unmapped]
+        public string Test { get; set; }
     }
 }

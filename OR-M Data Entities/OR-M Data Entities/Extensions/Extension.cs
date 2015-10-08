@@ -3,7 +3,7 @@
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
- * Copyright (c) 2015 James Demeuse
+ * Copyright (c) 2014 James Demeuse
  */
 
 using System;
@@ -203,14 +203,32 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Count
-        public static TSource Count<TSource>(this ExpressionQuery<TSource> source)
+        public static int Count<TSource>(this ExpressionQuery<TSource> source)
         {
+            //public static int Count<TSource>(this IEnumerable<TSource> source);
             ((ExpressionQueryResolvable<TSource>)source).ResolveCount();
 
-            return source.FirstOrDefault();
+            var resolvable = ((IExpressionQueryResolvable)source);
+            var result = 0;
+
+            using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            {
+                var peekDataReaderField = reader.GetType()
+                    .GetField("_reader", BindingFlags.Instance | BindingFlags.NonPublic);
+                var peekDataReader = peekDataReaderField.GetValue(reader);
+
+                using (var dbReader = new DataReader<int>(peekDataReader as PeekDataReader))
+                {
+                    result = dbReader.FirstOrDefault();
+                }
+            }
+
+            resolvable.DbContext.Dispose();
+
+            return result;
         }
 
-        public static TSource Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static int Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 

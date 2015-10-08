@@ -3,7 +3,7 @@
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
- * Copyright (c) 2015 James Demeuse
+ * Copyright (c) 2014 James Demeuse
  */
 
 using System;
@@ -18,12 +18,6 @@ namespace OR_M_Data_Entities.Data
         private readonly PeekDataReader _reader;
 
         public bool HasRows 
-        {
-            get { return _reader.HasRows; }
-        }
-
-        [Obsolete("Use HasRows instead.  NOTE: Do not use with while loop, use foreach iteration.")]
-        public bool IsEOF
         {
             get { return _reader.HasRows; }
         }

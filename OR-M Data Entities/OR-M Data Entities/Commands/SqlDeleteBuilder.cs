@@ -3,8 +3,9 @@
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
- * Copyright (c) 2015 James Demeuse
+ * Copyright (c) 2014 James Demeuse
  */
+
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Exceptions;

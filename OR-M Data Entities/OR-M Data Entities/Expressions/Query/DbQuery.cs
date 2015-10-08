@@ -3,9 +3,10 @@
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
- * Copyright (c) 2015 James Demeuse
+ * Copyright (c) 2014 James Demeuse
  */
 
+using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition.Base;
@@ -60,7 +61,7 @@ namespace OR_M_Data_Entities.Expressions.Query
         {
             // views
             var where = WhereResolution.HasItems ? WhereResolution.Resolve() : string.Empty;
-
+            
             var select = Columns.HasItems ? Columns.Resolve() : string.Empty;
 
             switch (Function)
@@ -72,7 +73,10 @@ namespace OR_M_Data_Entities.Expressions.Query
                     select = string.Format("MIN({0})", select);
                     break;
                 case FunctionType.Count:
-                    select = string.Format("COUNT({0})", select);
+                    // if we are counting just select the PK and count that column
+                    Columns.UnSelectAll();
+                    Columns.Infos.OrderBy(w => w.Ordinal).First(w => w.IsPrimaryKey).IsSelected = true;
+                    select = string.Format("COUNT({0})", Columns.Resolve());
                     break;
             }
 

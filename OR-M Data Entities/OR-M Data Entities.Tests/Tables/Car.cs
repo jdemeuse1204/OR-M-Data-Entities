@@ -1,5 +1,8 @@
-﻿namespace OR_M_Data_Entities.Tests.Tables
+﻿using OR_M_Data_Entities.Mapping;
+
+namespace OR_M_Data_Entities.Tests.Tables
 {
+    [ReadOnly(ReadOnlySaveOption.Skip)]
     public class Car
     {
         public Car()
