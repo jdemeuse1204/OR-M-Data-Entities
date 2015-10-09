@@ -14,7 +14,7 @@
     </RootPath>
     <RootNamespace>OR_M_Data_Entities.Tests.Database</RootNamespace>
     <AssemblyName>OR_M_Data_Entities.Tests.Database</AssemblyName>
-    <ModelCollation>1033, CI</ModelCollation>
+    <ModelCollation>1033,CI</ModelCollation>
     <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
     <DeployToDatabase>True</DeployToDatabase>
     <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
@@ -23,6 +23,8 @@
     <SqlServerVerification>False</SqlServerVerification>
     <IncludeCompositeObjects>True</IncludeCompositeObjects>
     <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
+    <DefaultFilegroup>PRIMARY</DefaultFilegroup>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -57,5 +59,39 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Functions\" />
+    <Folder Include="dbo\Stored Procedures\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\Contacts.sql" />
+    <Build Include="dbo\Tables\Appointments.sql" />
+    <Build Include="dbo\Tables\PhoneNumbers.sql" />
+    <Build Include="dbo\Tables\PolicyInfo.sql" />
+    <Build Include="dbo\Tables\Address.sql" />
+    <Build Include="dbo\Tables\StateCode.sql" />
+    <Build Include="dbo\Tables\ZipCode.sql" />
+    <Build Include="dbo\Tables\Name.sql" />
+    <Build Include="dbo\Tables\Parent.sql" />
+    <Build Include="dbo\Tables\Child.sql" />
+    <Build Include="dbo\Tables\Person.sql" />
+    <Build Include="dbo\Tables\Car.sql" />
+    <Build Include="dbo\Tables\Pizza.sql" />
+    <Build Include="dbo\Tables\Topping.sql" />
+    <Build Include="dbo\Tables\Crust.sql" />
+    <Build Include="dbo\Tables\DeliveryMan.sql" />
+    <Build Include="dbo\Tables\PhoneType.sql" />
+    <Build Include="dbo\Tables\Linking.sql" />
+    <Build Include="dbo\Tables\Computer.sql" />
+    <Build Include="dbo\Tables\Processor.sql" />
+    <Build Include="dbo\Tables\History.sql" />
+    <Build Include="dbo\Tables\Policy.sql" />
+    <Build Include="dbo\Tables\PolicyType.sql" />
+    <Build Include="dbo\Tables\User.sql" />
+    <Build Include="dbo\Functions\GetLastName.sql" />
+    <Build Include="dbo\Functions\GetLastName2.sql" />
+    <Build Include="dbo\Stored Procedures\GetFirstName.sql" />
+    <Build Include="dbo\Stored Procedures\UpdateFirstName.sql" />
   </ItemGroup>
 </Project>
