@@ -663,6 +663,162 @@ namespace OR_M_Data_Entities.Tests
             ctx.Delete(policy);
         }
 
+        [TestMethod]
+        public void Test_35()
+        {
+            try
+            {
+                // make sure first is working, should fail when no records found
+                ctx.From<Policy>().First(w => w.Id == -1);
+
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_36()
+        {
+            try
+            {
+                // make sure first finds records
+                var policy = _addPolicy();
+
+                Assert.IsTrue(ctx.From<Policy>().First(w => w.Id == policy.Id) != null);
+
+                // cleanup
+                ctx.Delete(policy);
+
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_37()
+        {
+            try
+            {
+                // make sure first is working, should fail when no records found
+                Assert.IsTrue(ctx.From<Policy>().FirstOrDefault(w => w.Id == -1) == null);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_38()
+        {
+            try
+            {
+                // make sure first finds records
+                var policy = _addPolicy();
+
+                Assert.IsTrue(ctx.From<Policy>().FirstOrDefault(w => w.Id == policy.Id) != null);
+
+                // cleanup
+                ctx.Delete(policy);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_39()
+        {
+            // max should return the max id
+            var max = ctx.From<Policy>().Select(w => w.Id).Max();
+
+            Assert.IsTrue(max != 0);
+        }
+
+        [TestMethod]
+        public void Test_40()
+        {
+            // min should return the min id
+            var max = ctx.From<Policy>().Select(w => w.Id).Min();
+
+            Assert.IsTrue(max != 0);
+        }
+
+        [TestMethod]
+        public void Test_41()
+        {
+            // make sure order by is working
+            var allItems = ctx.From<Policy>().OrderByDescending(w => w.Id).Take(2).ToList();
+
+            Assert.IsTrue(allItems[0].Id > allItems[1].Id);
+        }
+
+        [TestMethod]
+        public void Test_42()
+        {
+            // make sure order by is working
+            var allItems = ctx.From<Policy>().OrderBy(w => w.Id).Take(2).ToList();
+
+            Assert.IsTrue(allItems[1].Id > allItems[0].Id);
+        }
+
+        [TestMethod]
+        public void Test_43()
+        {
+            // make sure then by is working
+            var allItems = ctx.From<Policy>().OrderByDescending(w => w.Id).ThenBy(w => w.PolicyDate).Take(500).ToList();
+
+            Assert.IsTrue(allItems[0].Id > allItems[499].Id && allItems[0].PolicyDate > allItems[499].PolicyDate);
+        }
+
+        [TestMethod]
+        public void Test_44()
+        {
+            // make sure select is working properly
+            var allItems = ctx.From<Policy>().Where(w => w.Id == 1).Select(w => w.InsuredName).First();
+
+            Assert.IsTrue(!string.IsNullOrWhiteSpace(allItems));
+        }
+
+
+        [TestMethod]
+        public void Test_45()
+        {
+            // individual method for take, even though it is test above
+            var allItems = ctx.From<Policy>().Take(10).Select(w => w.InsuredName).ToList();
+
+            Assert.IsTrue(allItems.Count == 10);
+        }
+
+        [TestMethod]
+        public void Test_46()
+        {
+            // individual method for take, even though it is test above
+            var allItems = ctx.From<Policy>().Select(w => w.PolicyInfoId).Distinct().ToList();
+
+            Assert.IsTrue(allItems.Count > 0);
+        }
+
+        [TestMethod]
+        public void Test_47()
+        {
+            // Should be able to select child of a child (not a list) and perform query from it
+            var allItems = ctx.From<Contact>().Where(w => w.Number.PhoneType.Type == "Cell").ToList();
+
+            Assert.IsTrue(allItems.Select(w => w.Number.PhoneType.Type).All(w => w == "Cell"));
+        }
+
+
+
+
+
+
         #region helpers
         private Policy _addPolicy()
         {

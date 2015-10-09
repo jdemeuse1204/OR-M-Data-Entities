@@ -209,7 +209,7 @@ namespace OR_M_Data_Entities
             ((ExpressionQueryResolvable<TSource>)source).ResolveCount();
 
             var resolvable = ((IExpressionQueryResolvable)source);
-            var result = 0;
+            int result;
 
             using (var reader = resolvable.DbContext.ExecuteQuery(source))
             {

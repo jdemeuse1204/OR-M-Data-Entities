@@ -74,8 +74,12 @@ namespace OR_M_Data_Entities.Expressions.Query
                     break;
                 case FunctionType.Count:
                     // if we are counting just select the PK and count that column
+                    var column = Columns.Infos.Where(w => w.IsSelected).OrderBy(w => w.Ordinal).First();
+
                     Columns.UnSelectAll();
-                    Columns.Infos.OrderBy(w => w.Ordinal).First(w => w.IsPrimaryKey).IsSelected = true;
+
+                    column.IsSelected = true;
+
                     select = string.Format("COUNT({0})", Columns.Resolve());
                     break;
             }
