@@ -11,9 +11,9 @@ using System;
 namespace OR_M_Data_Entities.Mapping
 {
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-	public class ScriptSchema : Attribute
+	public class ScriptSchemaAttribute : Attribute
 	{
-		public ScriptSchema(string schemaName)
+		public ScriptSchemaAttribute(string schemaName)
 		{
             SchemaName = schemaName;
 		}

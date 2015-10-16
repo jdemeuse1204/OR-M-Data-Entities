@@ -14,7 +14,7 @@ namespace OR_M_Data_Entities.Mapping
     /// <summary>
     /// Used to identify the primary key of a table if it is not explicitly called "Id" or "ID"
     /// </summary>
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class KeyAttribute : SearchablePrimaryKeyAttribute
 	{
 		// SearchableKeyType needed for quick lookup in iterator

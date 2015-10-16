@@ -221,8 +221,8 @@ namespace OR_M_Data_Entities.Data
         private KeyValuePair<string, List<SqlDbParameter>> _getStoredProcedureParametersAndSql(StoredProcedure script)
         {
             var scriptType = script.GetType();
-            var schemaAttribute = scriptType.GetCustomAttribute<ScriptSchema>();
-            var scriptAttribute = scriptType.GetCustomAttribute<Script>();
+            var schemaAttribute = scriptType.GetCustomAttribute<ScriptSchemaAttribute>();
+            var scriptAttribute = scriptType.GetCustomAttribute<ScriptAttribute>();
             var config = ConfigurationManager.GetSection(ORMDataEntitiesConfigurationSection.SectionName) as ORMDataEntitiesConfigurationSection;
             var schema = schemaAttribute != null
                 ? schemaAttribute.SchemaName
@@ -300,8 +300,8 @@ namespace OR_M_Data_Entities.Data
         private string _getSqlFromFile(StoredScript storedScript)
         {
             var scriptType = storedScript.GetType();
-            var scriptAttribute = scriptType.GetCustomAttribute<Script>();
-            var scriptPathAttribute = scriptType.GetCustomAttribute<ScriptPath>();
+            var scriptAttribute = scriptType.GetCustomAttribute<ScriptAttribute>();
+            var scriptPathAttribute = scriptType.GetCustomAttribute<ScriptPathAttribute>();
             var config = ConfigurationManager.GetSection(ORMDataEntitiesConfigurationSection.SectionName) as ORMDataEntitiesConfigurationSection;
             var pathFromScript = scriptPathAttribute != null ? scriptPathAttribute.Path : string.Empty;
             var path = !string.IsNullOrWhiteSpace(pathFromScript)

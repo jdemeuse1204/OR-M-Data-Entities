@@ -11,7 +11,7 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Mapping
 {
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public sealed class UnmappedAttribute : NonSelectableAttribute
     {
 

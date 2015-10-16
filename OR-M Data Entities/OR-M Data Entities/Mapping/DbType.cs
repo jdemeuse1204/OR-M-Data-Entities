@@ -14,7 +14,7 @@ namespace OR_M_Data_Entities.Mapping
     /// <summary>
     /// Used to denote the type in the database.  If you have a timestamp, these cannot be updated, you must mark your property as a timestamp so it is skipped.
     /// </summary>
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class DbTypeAttribute : Attribute
 	{
         public DbTypeAttribute(SqlDbType type) 

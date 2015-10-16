@@ -1028,4 +1028,9 @@ namespace OR_M_Data_Entities.Tests
             get { return "Select Top 1 1"; }
         }
     }
+
+    public class ScalarFunction1 : ScalarFunction<int>
+    {
+        
+    }
 }

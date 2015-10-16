@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace OR_M_Data_Entities.Data
 {
-	public sealed class DataReader<T> : IEnumerable, IDisposable
+	public class DataReader<T> : IEnumerable, IDisposable
     {
         #region Properties and Fields
         private readonly PeekDataReader _reader;

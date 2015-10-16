@@ -15,7 +15,7 @@ namespace OR_M_Data_Entities.Mapping
     /// One-Many - Reference Column in Other Table which links to PK of This Table
     /// One-One - Reference Column in This Table which links to PK of Other Table
     /// </summary>
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public sealed class ForeignKeyAttribute : AutoLoadKeyAttribute
     {
         /// <summary>

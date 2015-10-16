@@ -11,9 +11,9 @@ using System;
 namespace OR_M_Data_Entities.Mapping
 {
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-	public class ScriptPath : Attribute
+	public class ScriptPathAttribute : Attribute
 	{
-		public ScriptPath(string path)
+		public ScriptPathAttribute(string path)
 		{
             Path = path;
 		}

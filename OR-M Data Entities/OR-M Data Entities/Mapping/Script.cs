@@ -11,9 +11,9 @@ using System;
 namespace OR_M_Data_Entities.Mapping
 {
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-	public class Script : Attribute
+	public class ScriptAttribute : Attribute
 	{
-		public Script(string scriptName)
+		public ScriptAttribute(string scriptName)
 		{
             ScriptName = scriptName;
 		}

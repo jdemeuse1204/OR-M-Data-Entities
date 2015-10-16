@@ -87,19 +87,19 @@ namespace OR0M_Data_Entities.Console
             }
         }
 
-        [Script("GetLastName")]
-        [ScriptPath("../../Scripts2")]
+        [ScriptAttribute("GetLastName")]
+        [ScriptPathAttribute("../../Scripts2")]
         public class SS1 : StoredScript<Contact>
         {
             public int Id { get; set; }
         }
 
-        [Script("GetFirstName")]
+        [ScriptAttribute("GetFirstName")]
         public class SS2 : StoredScript<Contact>
         {
         }
 
-        [Script("UpdateFirstName")]
+        [ScriptAttribute("UpdateFirstName")]
         public class SS3 : StoredScript
         {
             public string FirstName { get; set; }
@@ -107,7 +107,7 @@ namespace OR0M_Data_Entities.Console
             public int Id { get; set; }
         }
 
-        [Script("GetFirstName")]
+        [ScriptAttribute("GetFirstName")]
         public class SP1 : StoredProcedure<Contact>
         {
             public int Id { get; set; }
@@ -124,7 +124,7 @@ namespace OR0M_Data_Entities.Console
             public string FirstName { get; set; }
         }
 
-        [Script("GetLastName")]
+        [ScriptAttribute("GetLastName")]
         public class SF1 : ScalarFunction<string>
         {
             [Index(1)]

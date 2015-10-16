@@ -15,7 +15,7 @@ namespace OR_M_Data_Entities.Mapping
     /// To delete an item from a lookup table you must delete the base object.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
-    public class LookupTableAttribute : TableAttribute
+    public sealed class LookupTableAttribute : TableAttribute
     {
         public LookupTableAttribute(string name) : 
             base(name)
