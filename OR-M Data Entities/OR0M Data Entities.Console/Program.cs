@@ -1,15 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using OR_M_Data_Entities;
-using OR_M_Data_Entities.Commands.Transform;
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Enumeration;
+﻿using OR_M_Data_Entities;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
