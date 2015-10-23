@@ -342,7 +342,7 @@ namespace OR_M_Data_Entities.Tests
         public void Test_20()
         {
             // check to see if we can read from a readonly table
-            var person = ctx.Find<Person>(1);
+            var person = ctx.Find<Person>(2);
 
             Assert.IsNotNull(person);
         }
@@ -771,6 +771,11 @@ namespace OR_M_Data_Entities.Tests
         [TestMethod]
         public void Test_43()
         {
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    _addPolicyWithPolicyInfo();
+            //}
+
             // make sure then by is working
             var allItems = ctx.From<Policy>().OrderByDescending(w => w.Id).ThenBy(w => w.PolicyDate).Take(500).ToList();
 

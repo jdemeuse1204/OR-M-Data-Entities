@@ -14,6 +14,8 @@ namespace OR0M_Data_Entities.Console
 
             for (int i = 0; i < 100; i++)
             {
+
+
                 var v = context.ExecuteScript<Contact>(new CS1
                 {
                     Id = 1

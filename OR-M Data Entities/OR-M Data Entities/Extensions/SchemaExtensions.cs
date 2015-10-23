@@ -243,7 +243,7 @@ namespace OR_M_Data_Entities.Extensions
                     JoinType =
                         property.PropertyType.IsList()
                             ? JoinType.Left
-                            : type.GetProperty(fkAttribute.ForeignKeyColumnName).PropertyType.IsNullable()
+                            : type.GetProperty(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ParentTableColumnName).PropertyType.IsNullable()
                                 ? JoinType.Left
                                 : JoinType.Inner,
                     JoinPropertyName = property.Name,

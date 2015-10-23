@@ -58,7 +58,7 @@ namespace OR_M_Data_Entities.Data
                         case ReadOnlySaveOption.Skip:
                             return UpdateType.Skip;
 
-                            // Check for readonly attribute and see if we should throw an error
+                            // Check for readonly attribute and see if we should throw an error   
                         case ReadOnlySaveOption.ThrowException:
                             throw new SqlSaveException(string.Format(
                                 "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",

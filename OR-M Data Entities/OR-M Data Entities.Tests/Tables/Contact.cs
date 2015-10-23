@@ -18,7 +18,6 @@ namespace OR_M_Data_Entities.Tests.Tables
         [DbGenerationOption(DbGenerationOption.Generate)]
         public int Test { get; set; }
 
-        [DbType(SqlDbType.Timestamp)]
         [DbGenerationOption(DbGenerationOption.Generate)]
         public Guid TestUnique { get; set; }
 
