@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR-M Data Entities", "OR-M Data Entities\OR-M Data Entities.csproj", "{A7E402C6-3B5C-4477-950D-20772598FE4C}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR0M Data Entities.Console", "OR0M Data Entities.Console\OR0M Data Entities.Console.csproj", "{7097E39C-8C12-4DC3-989F-FB1EAC2F6F95}"
 EndProject
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "OR-M Data Entities.Tests.Database", "OR-M Data Entities.Tests.Database\OR-M Data Entities.Tests.Database.sqlproj", "{62701E5D-0445-4EDD-B19E-4800BE4652EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR-M Data Entities.Diagnostics", "OR-M Data Entities.Diagnostics\OR-M Data Entities.Diagnostics.csproj", "{39041FA9-2A16-4541-A5DC-A55B422BB3F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,10 @@ Global
 		{62701E5D-0445-4EDD-B19E-4800BE4652EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62701E5D-0445-4EDD-B19E-4800BE4652EB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{62701E5D-0445-4EDD-B19E-4800BE4652EB}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{39041FA9-2A16-4541-A5DC-A55B422BB3F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39041FA9-2A16-4541-A5DC-A55B422BB3F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39041FA9-2A16-4541-A5DC-A55B422BB3F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39041FA9-2A16-4541-A5DC-A55B422BB3F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

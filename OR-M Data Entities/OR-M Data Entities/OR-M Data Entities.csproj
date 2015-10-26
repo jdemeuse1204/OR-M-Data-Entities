@@ -57,7 +57,6 @@
     <Compile Include="Data\Execution\ForeignKeySaveNode.cs" />
     <Compile Include="Data\Execution\ISqlPayload.cs" />
     <Compile Include="Data\Execution\SqlPayload.cs" />
-    <Compile Include="Data\SecurityDataReader.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />

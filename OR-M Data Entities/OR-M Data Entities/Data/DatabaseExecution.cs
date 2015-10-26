@@ -27,10 +27,12 @@ namespace OR_M_Data_Entities.Data
 {
     public abstract class DatabaseExecution : Database
     {
+        #region Constructor
         protected DatabaseExecution(string connectionStringOrName)
             : base(connectionStringOrName)
         {
         }
+        #endregion
 
         private void _addParameters(IEnumerable<SqlDbParameter> parameters)
         {
@@ -235,7 +237,7 @@ namespace OR_M_Data_Entities.Data
             var baseType = script.GetType().BaseType;
             var isScalarFunction = baseType != null && (baseType.IsGenericType &&
                                                         baseType.GetGenericTypeDefinition()
-                                                            .IsAssignableFrom(typeof (ScalarFunction<>)));
+                                                            .IsAssignableFrom(typeof(ScalarFunction<>)));
 
             if (parameters.Count > 1 && !scriptHasParameters && !wasIndexUsed)
             {
@@ -280,7 +282,7 @@ namespace OR_M_Data_Entities.Data
 
         private List<SqlDbParameter> _getParameters(StoredProcedure script, out bool wasIndexUsed)
         {
-            var namesToSkip = new string[] {"ScriptName", "SchemaName"};
+            var namesToSkip = new string[] { "ScriptName", "SchemaName" };
             var properties = script.GetType().GetProperties().Where(w => !namesToSkip.Contains(w.Name)).ToList();
             wasIndexUsed = properties.Any(w => w.GetCustomAttribute<Index>() != null);
 
@@ -295,7 +297,7 @@ namespace OR_M_Data_Entities.Data
                     .ToList()
                 : properties.Select(w => new SqlDbParameter(w.Name, w.GetValue(script)))
                     .ToList();
-        } 
+        }
 
         private string _getSqlFromFile(StoredScript storedScript)
         {
