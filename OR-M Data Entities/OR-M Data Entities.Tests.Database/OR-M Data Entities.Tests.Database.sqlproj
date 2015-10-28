@@ -93,5 +93,12 @@
     <Build Include="dbo\Functions\GetLastName2.sql" />
     <Build Include="dbo\Stored Procedures\GetFirstName.sql" />
     <Build Include="dbo\Stored Procedures\UpdateFirstName.sql" />
+    <Build Include="dbo\Tables\Artist.sql" />
+    <Build Include="dbo\Tables\RecordLabel.sql" />
+    <Build Include="dbo\Tables\Agent.sql" />
+    <Build Include="dbo\Tables\Album.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="OR-M Data Entities.Tests.Database.refactorlog" />
   </ItemGroup>
 </Project>

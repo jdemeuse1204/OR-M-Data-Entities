@@ -1,4 +1,6 @@
-﻿using OR_M_Data_Entities;
+﻿using System.Reflection;
+using OR_M_Data_Entities;
+using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
@@ -9,13 +11,25 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
-            // after save, need to update the _tableOnLoad to match
             var context = new DbSqlContext("sqlExpress");
+
+            var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
+            var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
+            if (test != null)
+            {
+
+            }
+
+            foreach (var health in tests)
+            {
+                
+            }
+
+            // after save, need to update the _tableOnLoad to match
+
 
             for (int i = 0; i < 100; i++)
             {
-
-
                 var v = context.ExecuteScript<Contact>(new CS1
                 {
                     Id = 1

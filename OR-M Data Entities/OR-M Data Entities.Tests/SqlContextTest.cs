@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Scripts;
@@ -819,7 +818,46 @@ namespace OR_M_Data_Entities.Tests
             Assert.IsTrue(allItems.Select(w => w.Number.PhoneType.Type).All(w => w == "Cell"));
         }
 
+        [TestMethod]
+        public void Test_48()
+        {
+            // Test Pseudo Keys
+            //var artist = new Artist
+            //{
+            //    ActiveDate = DateTime.Now,
+            //    Albums = new List<Album>
+            //    {
+            //        new Album
+            //        {
+            //            Name = "COOLE",
+            //            TimesDownloaded = 1000
+            //        },
+            //        new Album
+            //        {
+            //            Name = "EP",
+            //            TimesDownloaded = 165
+            //        }
+            //    },
+            //    Agent = new Agent
+            //    {
+            //        Name = "James Demeuse"
+            //    },
+            //    FirstName = "Some",
+            //    LastName = "Singer",
+            //    Genre = "Country"
+            //};
 
+            //5,6
+
+            //ctx.SaveChanges(artist);
+
+            var artist1 = ctx.Find<Artist>(5);
+            var artist2 = ctx.Find<Artist>(6);
+
+            Assert.IsTrue(artist1 != null && artist2 != null && artist1.Albums.All(w => w.ArtistId == artist1.Id) &&
+                          artist2.Albums.All(w => w.ArtistId == artist2.Id) && artist1.Agent.Id == artist1.AgentId &&
+                          artist2.Agent.Id == artist2.AgentId);
+        }
 
 
 

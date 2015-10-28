@@ -56,7 +56,10 @@
     <Compile Include="SqlContextTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tables\Address.cs" />
+    <Compile Include="Tables\Agent.cs" />
+    <Compile Include="Tables\Album.cs" />
     <Compile Include="Tables\Appointment.cs" />
+    <Compile Include="Tables\Artist.cs" />
     <Compile Include="Tables\Car.cs" />
     <Compile Include="Tables\Computer.cs" />
     <Compile Include="Tables\Contact.cs" />
@@ -73,6 +76,7 @@
     <Compile Include="Tables\PolicyInfo.cs" />
     <Compile Include="Tables\PolicyType.cs" />
     <Compile Include="Tables\Processor.cs" />
+    <Compile Include="Tables\RecordLabel.cs" />
     <Compile Include="Tables\StateCode.cs" />
     <Compile Include="Tables\Topping.cs" />
     <Compile Include="Tables\User.cs" />
