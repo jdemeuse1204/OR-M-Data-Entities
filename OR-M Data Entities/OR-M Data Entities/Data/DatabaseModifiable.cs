@@ -45,72 +45,70 @@ namespace OR_M_Data_Entities.Data
         public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
-            lock (Lock)
+
+            var state = UpdateType.Insert;
+            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
+
+            if (readOnlyAttribute != null)
             {
-                var state = UpdateType.Insert;
-                var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
-
-                if (readOnlyAttribute != null)
+                switch (readOnlyAttribute.ReadOnlySaveOption)
                 {
-                    switch (readOnlyAttribute.ReadOnlySaveOption)
-                    {
-                            // skip children(foreign keys) if option is set
-                        case ReadOnlySaveOption.Skip:
-                            return UpdateType.Skip;
+                    // skip children(foreign keys) if option is set
+                    case ReadOnlySaveOption.Skip:
+                        return UpdateType.Skip;
 
-                            // Check for readonly attribute and see if we should throw an error   
-                        case ReadOnlySaveOption.ThrowException:
-                            throw new SqlSaveException(string.Format(
-                                "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                                entity.GetTableName()));
-                    }
+                    // Check for readonly attribute and see if we should throw an error   
+                    case ReadOnlySaveOption.ThrowException:
+                        throw new SqlSaveException(string.Format(
+                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                            entity.GetTableName()));
                 }
+            }
 
-                if (entity.HasForeignKeys())
-                {
-                    var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+            if (entity.HasForeignKeys())
+            {
+                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
-                    // creates the save order based on the primary and foreign keys
-                    _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
-
-                    if (OnBeforeSave != null)
-                    {
-                        OnBeforeSave(this, entity);
-                    }
-
-                    foreach (var savableObject in savableObjects)
-                    {
-                        var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
-
-                        if (isList)
-                        {
-                            // relationship is one-many.  Need to set the foreign key before saving
-                            _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
-                        }
-
-                        state = _saveObjectToDatabase(savableObject.Value);
-
-                        if (savableObject.Parent == null) continue;
-
-                        if (!isList)
-                        {
-                            // relationship is one-one.  Need to set the foreign key after saving
-                            _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
-                        }
-                    }
-
-                    return state;
-                }
+                // creates the save order based on the primary and foreign keys
+                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
 
                 if (OnBeforeSave != null)
                 {
                     OnBeforeSave(this, entity);
                 }
 
-                state = _saveObjectToDatabase(entity);
+                foreach (var savableObject in savableObjects)
+                {
+                    var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
+
+                    if (isList)
+                    {
+                        // relationship is one-many.  Need to set the foreign key before saving
+                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                    }
+
+                    state = _saveObjectToDatabase(savableObject.Value);
+
+                    if (savableObject.Parent == null) continue;
+
+                    if (!isList)
+                    {
+                        // relationship is one-one.  Need to set the foreign key after saving
+                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                    }
+                }
 
                 return state;
             }
+
+            if (OnBeforeSave != null)
+            {
+                OnBeforeSave(this, entity);
+            }
+
+            state = _saveObjectToDatabase(entity);
+
+            return state;
         }
 
         private void _setValue(object parent, object child, string propertyNameToSet)
@@ -160,9 +158,6 @@ namespace OR_M_Data_Entities.Data
                 if (entityStatePackage.State == EntityState.UnChanged) return UpdateType.Skip;
             }
 
-            // Check to see if the PK is defined
-            var tableName = entity.GetTableNameWithLinkedServer();
-
             // ID is the default primary key name
             var primaryKeys = entity.GetPrimaryKeys();
 
@@ -179,14 +174,15 @@ namespace OR_M_Data_Entities.Data
                     {
                         // Update Data
                         var update = new SqlUpdateBuilder();
-                        update.Table(tableName);
+
+                        update.Table(entity.GetType());
 
                         var properties = from property in
                                              (from property in tableColumns
                                               let columnName = property.GetColumnName()
                                               where
                                                   !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                                                  property.GetCustomAttribute<NonSelectableAttribute>() == null
+                                                  property.GetCustomAttribute<NonSelectableAttribute>() == null // Skip unmapped fields
                                               select property)
                                          let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
                                          where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
@@ -200,7 +196,6 @@ namespace OR_M_Data_Entities.Data
 
                         foreach (var property in properties)
                         {
-                            // Skip unmapped fields
                             update.AddUpdate(property, entity);
                         }
 
@@ -210,22 +205,30 @@ namespace OR_M_Data_Entities.Data
                             update.AddWhere("", primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
                         }
 
+                        // if its only an update, perform the update
                         ExecuteReader(update);
+
+                        // set the resulting pk(s) and db generated columns in the entity object
+                        foreach (var item in SelectIdentity())
+                        {
+                            // find the property first in case the column name change attribute is used
+                            // Key is property name, value is the db value
+                            DatabaseEntity.SetPropertyValue(
+                                entity,
+                                item.Key,
+                                item.Value);
+                        }
                     }
                     break;
                 case UpdateType.Insert:
+                case UpdateType.TryInsert: // only for tables that have PK's only, no other columns
+                case UpdateType.TryInsertUpdate:
                     {
-                        // Insert Data
-                        var insert = new SqlInsertBuilder();
+                        // Get The Insert Data
+                        var insert = _getInsertBuilder(entity, tableColumns, state);
 
-                        insert.Table(tableName);
-
-                        // Loop through all mapped properties
-                        foreach (var property in tableColumns)
-                        {
-                            insert.AddInsert(property, entity);
-                        }
-
+                        // do not need to read back the values because they are already in the database, if not they will be inserted.
+                        // db generation option is always none so there is no need to load any PK's in to the object
                         // Execute the insert statement
                         ExecuteReader(insert);
 
@@ -241,35 +244,10 @@ namespace OR_M_Data_Entities.Data
                         }
                     }
                     break;
-                case UpdateType.TryInsert:
-                    {
-                        // Insert Data
-                        var insert = new SqlInsertBuilder();
-
-                        insert.Table(tableName);
-
-                        // Loop through all mapped properties
-                        foreach (var property in tableColumns)
-                        {
-                            insert.AddInsert(property, entity);
-                        }
-
-                        insert.MakeTryInsert(primaryKeys, entity);
-
-                        // Execute the insert statement
-                        ExecuteReader(insert);
-
-                        // do not need to read back the values because they are already in the database, if not they will be inserted.
-                        // db generation option is always none so there is no need to load any PK's in to the object
-                    }
-                    break;
             }
 
             // Mark the table as unchanged again
-            if (entityTrackable != null)
-            {
-                EntityStateAnalyzer.TrySetPristineEntity(entity);
-            }
+            if (entityTrackable != null) EntityStateAnalyzer.TrySetPristineEntity(entity);
 
             // close our readers
             Connection.Close();
@@ -277,6 +255,25 @@ namespace OR_M_Data_Entities.Data
             Reader.Dispose();
 
             return state;
+        }
+
+        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType)
+        {
+            SqlInsertBuilder insert;
+
+            if (updateType == UpdateType.Insert) insert = new SqlInsertBuilder();
+            else if (updateType == UpdateType.TryInsert) insert = new SqlTryInsertBuilder();
+            else insert = new SqlTryInsertUpdateBuilder();
+
+            insert.Table(entity.GetType());
+
+            // Loop through all mapped properties
+            foreach (var property in tableColumns)
+            {
+                insert.AddInsert(property, entity);
+            }
+
+            return insert;
         }
 
         #endregion
@@ -291,42 +288,40 @@ namespace OR_M_Data_Entities.Data
         public virtual bool Delete<T>(T entity)
             where T : class
         {
-            lock (Lock)
+
+            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
+
+            if (readOnlyAttribute != null)
             {
-                var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
+                // skip children(foreign keys) if option is set
+                if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) return false;
 
-                if (readOnlyAttribute != null)
+                // Check for readonly attribute and see if we should throw an error
+                if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
                 {
-                    // skip children(foreign keys) if option is set
-                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) return false;
-
-                    // Check for readonly attribute and see if we should throw an error
-                    if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
-                    {
-                        throw new SqlSaveException(string.Format(
-                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                            entity.GetTableName()));
-                    }
+                    throw new SqlSaveException(string.Format(
+                        "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                        entity.GetTableName()));
                 }
-
-                if (!entity.HasForeignKeys()) return _deleteObjectFromDatabase(entity);
-
-                var result = true;
-                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
-
-                // creates the save order based on the primary and foreign keys
-                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
-
-                // need to reverse the save order for a delete
-                savableObjects.Reverse();
-
-                foreach (var savableObject in savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
-                {
-                    result = false;
-                }
-
-                return result;
             }
+
+            if (!entity.HasForeignKeys()) return _deleteObjectFromDatabase(entity);
+
+            var result = true;
+            var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+
+            // creates the save order based on the primary and foreign keys
+            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+
+            // need to reverse the save order for a delete
+            savableObjects.Reverse();
+
+            foreach (var savableObject in savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
+            {
+                result = false;
+            }
+
+            return result;
         }
 
         private bool _deleteObjectFromDatabase<T>(T entity)
@@ -440,6 +435,10 @@ namespace OR_M_Data_Entities.Data
                 {
                     foreach (var item in (foreignKeyValue as dynamic))
                     {
+
+                        // make sure there are no saving issues
+                        DatabaseEntity.GetState(item);
+
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
                         index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
@@ -454,6 +453,9 @@ namespace OR_M_Data_Entities.Data
                 }
                 else
                 {
+                    // make sure there are no saving issues
+                    DatabaseEntity.GetState(foreignKeyValue);
+
                     // must be saved before the parent
                     // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                     // the value property

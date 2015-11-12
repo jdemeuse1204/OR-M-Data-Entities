@@ -6,12 +6,14 @@
  * Copyright (c) 2014 James Demeuse
  */
 
+using System;
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Exceptions;
 
 namespace OR_M_Data_Entities.Commands
 {
+    [Obsolete("Expression Query should be used instead.  If using please contact me and I will leave these in.")]
     public sealed class SqlDeleteBuilder : SqlValidation, ISqlBuilder
     {
         #region Properties

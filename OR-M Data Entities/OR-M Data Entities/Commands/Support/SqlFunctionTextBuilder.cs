@@ -12,6 +12,9 @@ using System.Data;
 
 namespace OR_M_Data_Entities.Commands.Support
 {
+    /// <summary>
+    /// Used for casting and converting columns in the select statement part of a query.  Only used when reading data
+    /// </summary>
     public abstract class SqlFunctionTextBuilder
     {
         #region Constructor

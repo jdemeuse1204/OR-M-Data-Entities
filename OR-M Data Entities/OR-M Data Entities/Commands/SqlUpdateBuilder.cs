@@ -6,6 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 
+using System;
 using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
@@ -16,6 +17,7 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Commands
 {
+    [Obsolete("Expression Query should be used instead.  If using please contact me and I will leave these in.")]
     public sealed class SqlUpdateBuilder : SqlValidation, ISqlBuilder
 	{
 		#region Properties
@@ -62,29 +64,29 @@ namespace OR_M_Data_Entities.Commands
 			//string fieldName, object value
 			var value = property.GetValue(entity);
             var fieldName = property.GetColumnName();
-			var data = GetNextParameter();
-			_set += string.Format("[{0}] = {1},", fieldName, data);
 
 			// check for sql data translation, used mostly for datetime2 inserts and updates
             var translation = property.GetCustomAttribute<DbTypeAttribute>();
 
 			if (translation != null)
 			{
-				AddParameter(value, translation.Type);
+				var key = AddParameter(property.GetColumnName(), value, translation.Type);
+
+                _set += string.Format("[{0}] = {1},", fieldName, key);
 			}
 			else
 			{
-				AddParameter(value);
+                var key = AddParameter(property.GetColumnName(), value);
+
+                _set += string.Format("[{0}] = {1},", fieldName, key);
 			}
 		}
 
         public void AddUpdate(string column, object newValue)
         {
             //string fieldName, object value
-            var data = GetNextParameter();
+            var data = AddParameter(column, newValue);
             _set += string.Format("[{0}] = {1},", column, data);
-
-           AddParameter(newValue);
         }
 		#endregion
 	}

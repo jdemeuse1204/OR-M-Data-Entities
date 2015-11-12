@@ -12,6 +12,7 @@ namespace OR_M_Data_Entities.Enumeration
     {
         Insert,
         TryInsert,
+        TryInsertUpdate,
         Update,
         Skip
     }

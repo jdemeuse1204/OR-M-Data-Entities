@@ -9,6 +9,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 
 namespace OR_M_Data_Entities.Commands.Secure
 {
@@ -17,41 +18,50 @@ namespace OR_M_Data_Entities.Commands.Secure
 	/// </summary>
 	public abstract class SqlSecureExecutable
 	{
-		#region Properties
-		private Dictionary<string, SqlSecureObject> _parameters { get; set; }
+		#region Fields
+	    private readonly List<SqlSecureQueryParameter> _parameters;
 		#endregion
 
 		#region Constructor
 	    protected SqlSecureExecutable()
 		{
-			_parameters = new Dictionary<string, SqlSecureObject>();
+			_parameters = new List<SqlSecureQueryParameter>();
 		}
 		#endregion
 
 		#region Methods
-		protected string GetNextParameter()
+        // key where the data will be insert into the secure command
+		protected string GetNextKey()
 		{
 			return string.Format("@DATA{0}", _parameters.Count);
 		}
 
-        public void AddParameter(object parameterValue)
-		{
-			_parameters.Add(GetNextParameter(), new SqlSecureObject(parameterValue));
-		}
+        public string AddParameter(string dbColumnName, object value)
+        {
+            var parameterKey = GetNextKey();
 
-        public void AddParameter(string parameterKey, object parameterValue)
-		{
-			_parameters.Add(parameterKey, new SqlSecureObject(parameterValue));
-		}
+            _parameters.Add(new SqlSecureQueryParameter
+            {
+                Key = parameterKey,
+                DbColumnName = dbColumnName,
+                Value = new SqlSecureObject(value)
+            });
 
-        public void AddParameter(object parameterValue, SqlDbType type)
-		{
-			_parameters.Add(GetNextParameter(), new SqlSecureObject(parameterValue, type));
-		}
+            return parameterKey;
+        }
 
-        public void AddParameter(string parameterKey, object parameterValue, SqlDbType type)
+        public string AddParameter(string dbColumnName, object value, SqlDbType type)
 		{
-			_parameters.Add(parameterKey, new SqlSecureObject(parameterValue, type));
+            var parameterKey = GetNextKey();
+
+            _parameters.Add(new SqlSecureQueryParameter
+            {
+                Key = parameterKey,
+                DbColumnName = dbColumnName,
+                Value = new SqlSecureObject(value, type)
+            });
+
+            return parameterKey;
 		}
 
 		protected void InsertParameters(SqlCommand cmd)
@@ -67,6 +77,18 @@ namespace OR_M_Data_Entities.Commands.Secure
 				}
 			}
 		}
+
+	    public IEnumerable<SqlSecureQueryParameter> GetParameters()
+	    {
+	        return _parameters;
+	    }
+
+        public string FindParameterKey(string dbColumnName)
+        {
+            var parameter = _parameters.FirstOrDefault(w => w.DbColumnName == dbColumnName);
+
+            return parameter != null ? parameter.Key : null;
+	    }
 		#endregion
 	}
 }

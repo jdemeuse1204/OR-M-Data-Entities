@@ -33,6 +33,7 @@ namespace OR_M_Data_Entities.Mapping
     {
         None,
         IdentitySpecification,
-        Generate
+        Generate,
+        DbDefault
     }
 }

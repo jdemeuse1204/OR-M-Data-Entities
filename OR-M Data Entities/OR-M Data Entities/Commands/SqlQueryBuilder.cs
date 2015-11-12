@@ -17,6 +17,7 @@ using OR_M_Data_Entities.Exceptions;
 
 namespace OR_M_Data_Entities.Commands
 {
+    [Obsolete("Expression Query should be used instead.  If using please contact me and I will leave these in.")]
     public sealed class SqlQueryBuilder : SqlValidation, ISqlBuilder
     {
         #region Properties

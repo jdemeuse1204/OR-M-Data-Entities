@@ -63,6 +63,8 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\Functions\" />
     <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="ts" />
+    <Folder Include="ts\Tables" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Contacts.sql" />
@@ -97,8 +99,21 @@
     <Build Include="dbo\Tables\RecordLabel.sql" />
     <Build Include="dbo\Tables\Agent.sql" />
     <Build Include="dbo\Tables\Album.sql" />
+    <Build Include="dbo\Tables\TestDbGenerationOptionNone.sql" />
+    <Build Include="dbo\Tables\TestTryInsert.sql" />
+    <Build Include="dbo\Tables\TryInsertWithGeneration.sql" />
+    <Build Include="dbo\Tables\TryInsert.sql" />
+    <Build Include="dbo\Tables\TestDefaultInsert.sql" />
+    <Build Include="dbo\Tables\TestUpdateWithKeyDbGenerationOptionNone.sql" />
+    <Build Include="ts\Tables\SchemaChangeOne.sql" />
+    <Build Include="dbo\Tables\SchemaChangeOne.sql" />
+    <Build Include="ts\Tables\TestUpdateWithKeyDbGenerationOptionNone.sql" />
+    <Build Include="ts\Tables\TestUpdateNewSchema.sql" />
   </ItemGroup>
   <ItemGroup>
     <RefactorLog Include="OR-M Data Entities.Tests.Database.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="AddSchema.sql" />
   </ItemGroup>
 </Project>

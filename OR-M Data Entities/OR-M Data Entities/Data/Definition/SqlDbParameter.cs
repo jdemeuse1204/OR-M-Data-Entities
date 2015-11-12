@@ -6,6 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 
+using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Commands.Transform;
 
 namespace OR_M_Data_Entities.Data.Definition
@@ -21,6 +22,12 @@ namespace OR_M_Data_Entities.Data.Definition
         {
             Name = name;
             Value = value;
+        }
+
+        public SqlDbParameter(SqlSecureQueryParameter parameter)
+        {
+            Name = parameter.Key;
+            Value = parameter.Value.Value;
         }
 
         public string Name { get; set; }

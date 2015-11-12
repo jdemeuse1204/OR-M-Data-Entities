@@ -17,10 +17,6 @@ namespace OR_M_Data_Entities.Expressions
 {
     public abstract class ExpressionQuery<T> : DbQuery<T>, IExpressionQuery
     {
-        #region Fields
-        private readonly object _lock = new object();
-        #endregion
-
         #region Constructor
         protected ExpressionQuery(DatabaseReading context, string viewId = null)
             : base(context, viewId)
@@ -40,22 +36,19 @@ namespace OR_M_Data_Entities.Expressions
         #region Enumeration Methods
         public IEnumerator<T> GetEnumerator()
         {
-            lock (_lock)
+            if (IsSubQuery)
             {
-                if (IsSubQuery)
-                {
-                    // make sure sub query works with yield
-                    GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null);
-                    yield return default(T);
-                }
-
-                foreach (var item in Context.ExecuteQuery(this))
-                {
-                    yield return item;
-                }
-
-                Context.Dispose();
+                // make sure sub query works with yield
+                GetType().GetMethod("ResolveExpression", BindingFlags.Public | BindingFlags.Instance).Invoke(this, null);
+                yield return default(T);
             }
+
+            foreach (var item in Context.ExecuteQuery(this))
+            {
+                yield return item;
+            }
+
+            Context.Dispose();
         }
         #endregion
     }

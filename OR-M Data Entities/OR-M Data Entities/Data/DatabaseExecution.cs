@@ -223,7 +223,7 @@ namespace OR_M_Data_Entities.Data
         private KeyValuePair<string, List<SqlDbParameter>> _getStoredProcedureParametersAndSql(StoredProcedure script)
         {
             var scriptType = script.GetType();
-            var schemaAttribute = scriptType.GetCustomAttribute<ScriptSchemaAttribute>();
+            var schemaAttribute = scriptType.GetCustomAttribute<SchemaAttribute>();
             var scriptAttribute = scriptType.GetCustomAttribute<ScriptAttribute>();
             var config = ConfigurationManager.GetSection(ORMDataEntitiesConfigurationSection.SectionName) as ORMDataEntitiesConfigurationSection;
             var schema = schemaAttribute != null

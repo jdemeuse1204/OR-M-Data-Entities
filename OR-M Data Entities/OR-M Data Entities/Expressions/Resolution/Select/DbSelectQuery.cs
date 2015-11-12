@@ -180,20 +180,28 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
                     _foreignKeyJoinPairs.Add(new JoinTablePair(
                         this.Id,
+
                         currentType.Type, joinColumnPair.ChildColumn.Property.DeclaringType,
+
                         ((parentOfCurrent != null && parentOfCurrent.HeirarchyContainsList) ||
                          joinColumnPair.JoinType == JoinType.Left),
+
                         parentOfCurrent == null ? currentType.Alias : parentOfCurrent.ChildTable.Alias,
-                        _tables.FindAlias(joinColumnPair.ChildColumn.Table.Type, this.Id, joinColumnPair.JoinPropertyName, currentType.Alias),
+
+                        _tables.FindAlias(joinColumnPair.ChildColumn.Table.Type, this.Id,
+                            joinColumnPair.JoinPropertyName, currentType.Alias),
+
                         joinColumnPair.ParentColumn.PropertyName,
+
                         joinColumnPair.ChildColumn.PropertyName,
+
                         joinColumnPair.JoinPropertyName));
                 }
             }
         }
 
         /// <summary>
-        /// Search through the curent schematic to find the reference to the schematic we are looking for.
+        /// Search through the current schematic to find the reference to the schematic we are looking for.
         /// Do not alter the QuerySchematic!!!!!!!!  Stored reference to it as schematicsToSearch.
         /// </summary>
         /// <param name="beginningSchematic"></param>

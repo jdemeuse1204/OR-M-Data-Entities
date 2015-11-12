@@ -98,7 +98,7 @@ namespace OR_M_Data_Entities.Extensions
                 return keyList;
             }
 
-            throw new Exception("Cannot find PrimaryKey(s)");
+            throw new Exception(string.Format("Cannot find PrimaryKey(s) for type of {0}", type.Name));
         }
 
         public static string[] GetPrimaryKeyNames(this Type type)
@@ -274,6 +274,12 @@ namespace OR_M_Data_Entities.Extensions
             var hasAttributes = attributes != null && attributes.Any();
 
             return (hasAttributes && (isPrimaryKey || !isNonSelectable)) || !hasAttributes;
+        }
+
+        public static bool HasPrimaryKeysOnly(this object entity)
+        {
+            var properties = entity.GetType().GetProperties();
+            return properties.Count(w => w.IsColumn()) == properties.Count(w => w.IsPrimaryKey());
         }
     }
 }

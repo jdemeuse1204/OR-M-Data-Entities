@@ -19,10 +19,17 @@ namespace OR_M_Data_Entities.Data.Definition.Base
             ClassName = type.Name;
             _linkedServerAttribute = type.GetCustomAttribute<LinkedServerAttribute>();
             _tableAttribute = type.GetCustomAttribute<TableAttribute>();
+            _schema = type.GetCustomAttribute<SchemaAttribute>();
+
+            if (_linkedServerAttribute != null && _schema != null)
+            {
+                throw new Exception(string.Format("Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other", ClassName));
+            }
         }
 
         private readonly LinkedServerAttribute _linkedServerAttribute;
         private readonly TableAttribute _tableAttribute;
+        private readonly SchemaAttribute _schema;
 
         public string ClassName { get; private set; }
 
@@ -39,7 +46,12 @@ namespace OR_M_Data_Entities.Data.Definition.Base
         }
 
         public string SchemaName {
-            get { return _linkedServerAttribute == null ? string.Empty : _linkedServerAttribute.SchemaName; }
+            get
+            {
+                return _linkedServerAttribute == null
+                    ? _schema == null ? "dbo" : _schema.SchemaName
+                    : _linkedServerAttribute.SchemaName;
+            }
         }
 
         public override string ToString()
@@ -47,7 +59,8 @@ namespace OR_M_Data_Entities.Data.Definition.Base
             var tableName = string.Format("{0}",
                 _linkedServerAttribute != null ? _linkedServerAttribute.FormattedLinkedServerText : string.Empty);
 
-            tableName += string.Format(_linkedServerAttribute == null ? "[{0}]" : ".[{0}]",
+            tableName += string.Format(_linkedServerAttribute == null ? "[{0}].[{1}]" : "{0}.[{1}]",
+                _linkedServerAttribute == null ? SchemaName : string.Empty,
                 string.IsNullOrWhiteSpace(TableAttributeName) ? ClassName : TableAttributeName);
 
             return tableName;

@@ -17,15 +17,15 @@ namespace OR_M_Data_Entities.Configuration
     {
         public const string SectionName = "ORMDataEntitiesConfigurationSection";
 
-        private const string EndpointCollectionName = "SqlScripts";
+        private const string _sqlScriptsCollectionName = "SqlScripts";
 
-        [ConfigurationProperty(EndpointCollectionName)]
+        [ConfigurationProperty(_sqlScriptsCollectionName)]
         [ConfigurationCollection(typeof (StoredSqlConfigurationCollection), AddItemName = "add")]
         public StoredSqlConfigurationCollection StoredSql
         {
             get
             {
-                return (StoredSqlConfigurationCollection)base[EndpointCollectionName];
+                return (StoredSqlConfigurationCollection)base[_sqlScriptsCollectionName];
             }
         }
     }

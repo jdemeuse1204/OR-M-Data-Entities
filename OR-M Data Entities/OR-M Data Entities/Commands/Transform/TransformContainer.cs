@@ -27,9 +27,9 @@ namespace OR_M_Data_Entities.Commands.Transform
         public string TransformString { get
         {
             return IsCasting
-                ? "CAST({0} AS " + CastType + ")"
+                ? "CAST([{0}] AS " + CastType + ")"
                 : IsConverting
-                    ? "CONVERT(" + ConvertType + ",{0}" +
+                    ? "CONVERT(" + ConvertType + ",[{0}]" +
                       (ConvertStyle == null ? ")" : "," + ConvertStyle + ")")
                     : string.Empty;
         } }

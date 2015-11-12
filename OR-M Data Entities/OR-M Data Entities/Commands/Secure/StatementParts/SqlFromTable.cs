@@ -7,10 +7,14 @@
  */
 
 using System;
+using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 {
+    /// <summary>
+    /// Base class for all query builders.  Each query builder must have a Table that is being referenced.
+    /// </summary>
     public abstract class SqlFromTable : SqlSecureExecutable
     {
         #region Properties
@@ -32,7 +36,9 @@ namespace OR_M_Data_Entities.Commands.Secure.StatementParts
 
         public void Table(Type tableType)
         {
-            Table(tableType.GetTableNameWithLinkedServer());
+            var tableInfo = new TableInfo(tableType);
+
+            Table(tableInfo.ToString());
         }
 
         public void Table<T>()

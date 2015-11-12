@@ -11,6 +11,10 @@ using System.Data;
 
 namespace OR_M_Data_Entities.Commands.Secure
 {
+    /// <summary>
+    /// Ensures that an object is used with query builders in a secure manner (used as a query parameter).  
+    /// Also has translation type for translating values to sql types.
+    /// </summary>
 	public sealed class SqlSecureObject
     {
         #region Constructor

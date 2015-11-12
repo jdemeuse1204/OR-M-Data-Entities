@@ -859,8 +859,294 @@ namespace OR_M_Data_Entities.Tests
                           artist2.Agent.Id == artist2.AgentId);
         }
 
+        [TestMethod]
+        public void Test_49()
+        {
+            // try insert, happens when a table has only PK's
+            var newRefId = ctx.From<TryInsert>().Select(w => w.RefId).Max() + 1;
+            var newSomeId = ctx.From<TryInsert>().Select(w => w.SomeId).Max() + 1;
 
+            var item = new TryInsert
+            {
+                RefId = newRefId,
+                SomeId = newSomeId
+            };
 
+            var anyTryOne = ctx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId);
+
+            ctx.SaveChanges(item);
+
+            var anyTryTwo = ctx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId);
+
+            Assert.IsTrue(!anyTryOne && anyTryTwo);
+        }
+
+        [TestMethod]
+        public void Test_50()
+        {
+            // try insert, nothing should be inserted
+            var newRefId = ctx.From<TryInsert>().Select(w => w.RefId).Max();
+            var newSomeId = ctx.From<TryInsert>().Select(w => w.SomeId).Max();
+
+            var item = new TryInsert
+            {
+                RefId = newRefId,
+                SomeId = newSomeId
+            };
+
+            ctx.SaveChanges(item);
+
+            Assert.IsTrue(ctx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId));
+        }
+
+        [TestMethod]
+        public void Test_51()
+        {
+            // try insert update
+            var newId = ctx.From<TryInsertUpdateWithGeneration>().Select(w => w.Id).Max() + 1;
+
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = newId,
+                Name = "Testing"
+            };
+
+            ctx.SaveChanges(item);
+
+            Assert.IsTrue(ctx.From<TryInsertUpdateWithGeneration>().Any(w => w.Id == newId) &&
+                item.SequenceNumber != 0 &&
+                item.OtherNumber != 0);
+        }
+
+        [TestMethod]
+        public void Test_52()
+        {
+            // try insert update, cannot update identity column
+            var newId = ctx.From<TryInsertUpdateWithGeneration>().Select(w => w.Id).Max();
+
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = newId,
+                Name = "Testing",
+                OtherNumber = 10
+            };
+
+            try
+            {
+                ctx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_53()
+        {
+            // try insert update should fail if the PK(s) are 0
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = 0,
+                Name = "Testing",
+                OtherNumber = 10
+            };
+
+            try
+            {
+                ctx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_54()
+        {
+            // Update should be performed even if the id doesnt exist
+            var item = new TestDefaultInsert
+            {
+                Name = "Test",
+                Id = 100000
+            };
+
+            try
+            {
+                ctx.SaveChanges(item);
+                Assert.IsTrue(true);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_55()
+        {
+            // should use the db default and load it back into the model
+            var item = new TestDefaultInsert
+            {
+                Name = "Test",
+            };
+
+            ctx.SaveChanges(item);
+            
+            Assert.IsTrue(item.Uid != Guid.Empty);
+        }
+
+        [TestMethod]
+        public void Test_56()
+        {
+            // test update
+            var contact = _addContact();
+
+            contact.FirstName = "Joe Blow";
+
+            ctx.SaveChanges(contact);
+
+            contact = ctx.Find<Contact>(contact.ContactID);
+
+            Assert.IsTrue(contact.FirstName == "Joe Blow");
+        }
+
+        [TestMethod]
+        public void Test_57()
+        {
+            var testOne = true;
+            var testTwo = true;
+            var testThree = true;
+
+            // test insert
+            var item = new TestUpdateWithKeyDbGenerationOptionNone
+            {
+                Name = "Name",
+                Id = 0
+            };
+
+            try
+            {
+                ctx.SaveChanges(item);
+                testOne = false;
+            }
+            catch (Exception)
+            {
+                
+            }
+
+            item.Id = ctx.From<TestUpdateWithKeyDbGenerationOptionNone>().Select(w => w.Id).Max() + 1;
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<TestUpdateWithKeyDbGenerationOptionNone>(item.Id);
+
+            testTwo = item != null;
+
+            item.Name = "NEW NAME!";
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<TestUpdateWithKeyDbGenerationOptionNone>(item.Id);
+
+            testThree = item.Name == "NEW NAME!";
+
+            Assert.IsTrue(testOne && testTwo && testThree);
+        }
+
+        [TestMethod]
+        public void Test_58()
+        {
+            var item = new TestKeyWithDbDefaultGeneration
+            {
+                Name = "Name"
+            };
+
+            try
+            {
+                ctx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_59()
+        {
+            // schema changes
+            var item = new SchemaChangeOne_dbo
+            {
+                Name = "Name"
+            };
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<SchemaChangeOne_dbo>(item.Id);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_60()
+        {
+            // schema changes for normal insert that generates a pk
+            var item = new SchemaChangeOne_ts
+            {
+                Name = "Name"
+            };
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<SchemaChangeOne_ts>(item.Id);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_61()
+        {
+            // schema changes for try insert update
+            var newId = ctx.From<TestUpdateWithKeyDbGenerationOptionNone_ts>().Select(w => w.Id).Max() + 1;
+
+            // test insert
+            var item = new TestUpdateWithKeyDbGenerationOptionNone_ts
+            {
+                Name = "Name",
+                Id = newId
+            };
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<TestUpdateWithKeyDbGenerationOptionNone_ts>(item.Id);
+            
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_62()
+        {
+            // test updates to tables in different schema
+            var item = new TestUpdateNewSchema
+            {
+                Name = "Name"
+            };
+
+            ctx.SaveChanges(item);
+
+            item.Name = "NEW NAME!";
+
+            ctx.SaveChanges(item);
+
+            item = ctx.Find<TestUpdateNewSchema>(item.Id);
+
+            Assert.IsTrue(item.Name == "NEW NAME!");
+        }
 
         #region helpers
         private Policy _addPolicy()

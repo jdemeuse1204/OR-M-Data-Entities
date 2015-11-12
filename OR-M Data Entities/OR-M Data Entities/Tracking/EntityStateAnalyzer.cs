@@ -16,6 +16,24 @@ namespace OR_M_Data_Entities.Tracking
 {
     public class EntityStateAnalyzer
     {
+        public static bool HasColumnChanged(EntityStateTrackable entity, string propertyName)
+        {
+            var pristineEntity = typeof (EntityStateTrackable).GetField("_pristineEntity",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (pristineEntity == null) return false;
+
+            var tableOnLoad = pristineEntity.GetValue(entity);
+            var original = tableOnLoad == null
+                ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
+                : tableOnLoad.GetType().GetProperty(propertyName).GetValue(tableOnLoad);
+            var current = entity.GetType().GetProperty(propertyName).GetValue(entity);
+
+            return ((current == null && original != null) || (current != null && original == null))
+                ? current != original
+                : current == null && original == null ? false : !current.Equals(original);
+        }
+
         public static EntityStateComparePackage Analyze(EntityStateTrackable entity)
         {
             // if _pristineEntity == null then that means a new instance was created and it is any insert

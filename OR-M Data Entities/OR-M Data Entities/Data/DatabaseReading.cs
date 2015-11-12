@@ -18,10 +18,6 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract class DatabaseReading : DatabaseExecution
     {
-        #region Fields
-        protected object Lock = new object();
-        #endregion
-
         #region Constructor
         protected DatabaseReading(string connectionStringOrName)
             : base(connectionStringOrName)
@@ -34,7 +30,7 @@ namespace OR_M_Data_Entities.Data
         /// Used for looping through results
         /// </summary>
         /// <returns></returns>
-		protected bool Read()
+        protected bool Read()
         {
             if (Reader.Read())
             {
@@ -51,37 +47,28 @@ namespace OR_M_Data_Entities.Data
         #region Data Execution
         public ExpressionQuery<T> From<T>()
         {
-            lock (Lock)
-            {
-                return new ExpressionQueryResolvable<T>(this);
-            }
+            return new ExpressionQueryResolvable<T>(this);
         }
 
         public ExpressionQuery<T> FromView<T>(string viewId)
         {
-            lock (Lock)
+            if (!typeof(T).IsPartOfView(viewId))
             {
-                if (!typeof (T).IsPartOfView(viewId))
-                {
-                    throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
-                        typeof (T).Name, viewId));
-                }
-
-                return new ExpressionQueryViewResolvable<T>(this, viewId);
+                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                    typeof(T).Name, viewId));
             }
+
+            return new ExpressionQueryViewResolvable<T>(this, viewId);
         }
 
         public T Find<T>(params object[] pks)
         {
-            lock (Lock)
-            {
-                var query = From<T>();
+            var query = From<T>();
 
-                ((ExpressionQueryResolvable<T>) query).ResolveFind(pks);
+            ((ExpressionQueryResolvable<T>)query).ResolveFind(pks);
 
-                return query.FirstOrDefault();
-            }
-        } 
+            return query.FirstOrDefault();
+        }
         #endregion
     }
 }

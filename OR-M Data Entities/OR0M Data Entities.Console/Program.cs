@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
 using OR_M_Data_Entities.Mapping;
@@ -13,24 +15,41 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new DbSqlContext("sqlExpress");
 
-            var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
-            var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
-            if (test != null)
-            {
+            var contacts = context.From<Contact>().ToList();
 
-            }
-
-            foreach (var health in tests)
+            if (contacts != null)
             {
                 
             }
 
+            //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
+            //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
+            //if (test != null)
+            //{
+
+            //}
+
+            //foreach (var health in tests)
+            //{
+
+            //}
+
             // after save, need to update the _tableOnLoad to match
+
+            var items = context.From<Contact>();
+
+            foreach (var item in items)
+            {
+                if (item != null)
+                {
+                    
+                }
+            }
 
 
             for (int i = 0; i < 100; i++)
             {
-                var v = context.ExecuteScript<Contact>(new CS1
+                var v = context.ExecuteScript<Contact>(new SS1
                 {
                     Id = 1
                 }).ToList();
@@ -40,7 +59,7 @@ namespace OR0M_Data_Entities.Console
 
             if (c != null)
             {
-                
+
             }
 
             var user = context.Find<User>(1);
@@ -65,11 +84,14 @@ namespace OR0M_Data_Entities.Console
 
             protected override string Sql
             {
-                get { return @"
+                get
+                {
+                    return @"
 
                     Select Top 1 * From Contacts Where Id = @Id
 
-                "; }
+                ";
+                }
             }
         }
 
@@ -119,7 +141,7 @@ namespace OR0M_Data_Entities.Console
         }
 
         [Script("UpdateFirstName")]
-        [ScriptSchema("dbo")]
+        [Schema("dbo")]
         public class SP2 : StoredProcedure
         {
             [Index(1)]

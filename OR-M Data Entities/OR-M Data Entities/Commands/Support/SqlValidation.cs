@@ -18,8 +18,6 @@ namespace OR_M_Data_Entities.Commands.Support
 	{
 		#region Properties
 		private string _where { get; set; }
-		//private const string COMPARECASE = "COLLATE SQL_Latin1_General_CP1_CS_AS";
-		//private const string IGNORECASE = "COLLATE SQL_Latin1_General_CP1_CI_AS";
 		#endregion
 
 		#region Constructor
@@ -89,7 +87,7 @@ namespace OR_M_Data_Entities.Commands.Support
 					break;
 			}
 
-			var data = GetNextParameter();
+            var data = AddParameter(field, equals);
 			_where += string.Format(startValidationString, 
 				_getValidationType(), 
 				string.IsNullOrWhiteSpace(table) ? "" : string.Format("[{0}].", table), 
@@ -99,7 +97,7 @@ namespace OR_M_Data_Entities.Commands.Support
 				data, 
 				endComparisonType);
 
-			AddParameter(equals);
+			;
 		}
 		#endregion
 	}
