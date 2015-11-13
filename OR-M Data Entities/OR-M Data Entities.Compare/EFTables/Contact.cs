@@ -36,5 +36,7 @@ namespace OR_M_Data_Entities.Compare.EFTables
        
         [Required]
         public virtual PhoneNumber PhoneNumbers { get; set; }
+
+        public virtual ICollection<Name> Names { get; set; }
     }
 }

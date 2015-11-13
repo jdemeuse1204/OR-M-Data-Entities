@@ -29,9 +29,17 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseModifiable : DatabaseFetching
     {
         #region Events And Delegates
-        public delegate void OnBeforeSaveHandler(DatabaseModifiable context, object entity);
+        public delegate void OnBeforeSaveHandler(object entity);
 
         public event OnBeforeSaveHandler OnBeforeSave;
+
+        public delegate void OnAfterSaveHandler(object entity);
+
+        public event OnAfterSaveHandler OnAfterSave;
+
+        public delegate void OnSavingHandler(object entity);
+
+        public event OnSavingHandler OnSaving;
         #endregion
 
         #region Constructor
@@ -72,10 +80,7 @@ namespace OR_M_Data_Entities.Data
                 // creates the save order based on the primary and foreign keys
                 _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
 
-                if (OnBeforeSave != null)
-                {
-                    OnBeforeSave(this, entity);
-                }
+                if (OnBeforeSave != null) OnBeforeSave(entity);
 
                 foreach (var savableObject in savableObjects)
                 {
@@ -89,6 +94,8 @@ namespace OR_M_Data_Entities.Data
 
                     state = _saveObjectToDatabase(savableObject.Value);
 
+                    if (OnAfterSave != null) OnAfterSave(entity);
+
                     if (savableObject.Parent == null) continue;
 
                     if (!isList)
@@ -101,12 +108,11 @@ namespace OR_M_Data_Entities.Data
                 return state;
             }
 
-            if (OnBeforeSave != null)
-            {
-                OnBeforeSave(this, entity);
-            }
+            if (OnBeforeSave != null) OnBeforeSave(entity);
 
             state = _saveObjectToDatabase(entity);
+
+            if (OnAfterSave != null) OnAfterSave(entity);
 
             return state;
         }
@@ -166,6 +172,8 @@ namespace OR_M_Data_Entities.Data
 
             // check to see whether we have an insert or update
             var state = DatabaseEntity.GetState(entity, primaryKeys);
+
+            if (OnSaving != null) OnSaving(entity);
 
             // Update Or Insert data
             switch (state)

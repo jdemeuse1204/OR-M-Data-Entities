@@ -114,8 +114,8 @@ namespace OR0M_Data_Entities.Console
             }
         }
 
-        [ScriptAttribute("GetLastName")]
-        [ScriptPathAttribute("../../Scripts2")]
+        [Script("GetLastName")]
+        [ScriptPath("../../Scripts2")]
         public class SS1 : StoredScript<Contact>
         {
             public int Id { get; set; }

@@ -196,12 +196,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
             return result;
         }
 
-        private void _addConnector(ref string result, SqlConnector connector, bool isChangingGroup)
-        {
-            // is a connector
-
-        }
-
         private string _getListEnumerationString(IEnumerable<SqlDbParameter> parameters)
         {
             return string.Format("({0})",

@@ -1148,6 +1148,34 @@ namespace OR_M_Data_Entities.Tests
             Assert.IsTrue(item.Name == "NEW NAME!");
         }
 
+        [TestMethod]
+        public void Test_63()
+        {
+            try
+            {
+                var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
+                Assert.IsTrue(true);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_64()
+        {
+            try
+            {
+                var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
+                Assert.IsTrue(true);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
         #region helpers
         private Policy _addPolicy()
         {

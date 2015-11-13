@@ -50,9 +50,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataLoadOptions.cs" />
     <Compile Include="EFTables\Address.cs" />
     <Compile Include="EFTables\Appointment.cs" />
     <Compile Include="EFTables\Contact.cs" />
+    <Compile Include="EFTables\Name.cs" />
     <Compile Include="EFTables\PhoneNumber.cs" />
     <Compile Include="EFTables\PhoneType.cs" />
     <Compile Include="EFTables\StateCode.cs" />

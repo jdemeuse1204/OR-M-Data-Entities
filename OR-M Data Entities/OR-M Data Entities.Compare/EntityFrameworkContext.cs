@@ -1,4 +1,5 @@
 ﻿using System.Data.Entity;
+using System.Linq;
 using OR_M_Data_Entities.Compare.EFTables;
 
 namespace OR_M_Data_Entities.Compare
