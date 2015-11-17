@@ -1153,6 +1153,7 @@ namespace OR_M_Data_Entities.Tests
         {
             try
             {
+                // previous issue
                 var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
                 Assert.IsTrue(true);
             }
@@ -1165,14 +1166,35 @@ namespace OR_M_Data_Entities.Tests
         [TestMethod]
         public void Test_64()
         {
+            // make sure count comes back
+            var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Te")).Count(w => w.ContactID == 10);
+
+            Assert.IsTrue(test != 0);
+        }
+
+        [TestMethod]
+        public void Test_65()
+        {
             try
             {
-                var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
-                Assert.IsTrue(true);
+                var contact = new Contact
+                {
+                    FirstName = "Test",
+                    LastName = "User"
+                };
+
+                ctx.SaveChanges(contact);
+
+                if (contact != null)
+                {
+                    contact.Appointments = null;
+                }
+
+                Assert.IsTrue(false);
             }
             catch (Exception)
             {
-                Assert.IsTrue(false);
+               Assert.IsTrue(true);
             }
         }
 

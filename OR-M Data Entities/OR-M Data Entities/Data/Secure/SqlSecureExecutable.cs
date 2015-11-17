@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Definition.Base;
 
-namespace OR_M_Data_Entities.Commands.Secure
+namespace OR_M_Data_Entities.Data.Secure
 {
 	/// <summary>
 	/// Uses parameters from SqlCommand to ensure safe sql commands are passed to the database
@@ -20,12 +22,14 @@ namespace OR_M_Data_Entities.Commands.Secure
 	{
 		#region Fields
 	    private readonly List<SqlSecureQueryParameter> _parameters;
+	    protected readonly ConfigurationOptions _configuration;
 		#endregion
 
 		#region Constructor
-	    protected SqlSecureExecutable()
+	    protected SqlSecureExecutable(ConfigurationOptions configuration)
 		{
 			_parameters = new List<SqlSecureQueryParameter>();
+	        _configuration = configuration;
 		}
 		#endregion
 

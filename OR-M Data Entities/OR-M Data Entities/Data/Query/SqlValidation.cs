@@ -1,27 +1,29 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
 
-using OR_M_Data_Entities.Commands.Secure.StatementParts;
+using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Query.StatementParts;
 using OR_M_Data_Entities.Enumeration;
 
-namespace OR_M_Data_Entities.Commands.Support
+namespace OR_M_Data_Entities.Data.Query
 {
 	/// <summary>
 	/// Builds the WHERE statement for queries
 	/// </summary>
 	public abstract class SqlValidation : SqlFromTable
-	{
+    {
 		#region Properties
 		private string _where { get; set; }
 		#endregion
 
 		#region Constructor
-	    protected SqlValidation()
+	    protected SqlValidation(ConfigurationOptions configuration) 
+            : base(configuration)
 		{
 			_where = string.Empty;
 		}
@@ -38,17 +40,7 @@ namespace OR_M_Data_Entities.Commands.Support
 			return _where.Contains("WHERE") ? "AND " : "WHERE ";
 		}
 
-		public void AddWhere(string parentTable, string parentField, string childTable, string childField)
-		{
-			_where += string.Format(" {0} [{1}].[{2}] = [{3}].[{4}] ",
-						_getValidationType(),
-						parentTable,
-						parentField,
-						childTable,
-						childField);
-		}
-
-		public void AddWhere(string table, string field, CompareType type, object equals)
+		public void AddWhere(string field, CompareType type, object equals)
 		{
 			var comparisonType = "=";
 			var startComparisonType = "";
@@ -90,7 +82,7 @@ namespace OR_M_Data_Entities.Commands.Support
             var data = AddParameter(field, equals);
 			_where += string.Format(startValidationString, 
 				_getValidationType(), 
-				string.IsNullOrWhiteSpace(table) ? "" : string.Format("[{0}].", table), 
+				string.IsNullOrWhiteSpace(TableName) ? "" : string.Format("[{0}].", FormattedTableName), 
 				field, 
 				comparisonType, 
 				startComparisonType, 

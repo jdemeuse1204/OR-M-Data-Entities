@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -9,7 +9,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace OR_M_Data_Entities.Commands.Support
+namespace OR_M_Data_Entities.Data.Query
 {
     public sealed class KeyContainer : IEnumerable<KeyValuePair<string, object>>
 	{

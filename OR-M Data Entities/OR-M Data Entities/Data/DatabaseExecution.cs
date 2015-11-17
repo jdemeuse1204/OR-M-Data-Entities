@@ -1,11 +1,10 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -13,10 +12,10 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Commands.Support;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
+using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Scripts;
@@ -31,6 +30,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseExecution(string connectionStringOrName)
             : base(connectionStringOrName)
         {
+            
         }
         #endregion
 

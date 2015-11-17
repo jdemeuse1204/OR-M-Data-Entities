@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -11,7 +11,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Commands.Secure.StatementParts
+namespace OR_M_Data_Entities.Data.Query.StatementParts
 {
     /// <summary>
     /// Used with ISqlBuilder for data insertion into the specified table

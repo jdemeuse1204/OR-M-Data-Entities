@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities;
@@ -12,7 +15,7 @@ namespace OR0M_Data_Entities.Console
     class Program
     {
         static void Main(string[] args)
-        {
+        {            
             var context = new DbSqlContext("sqlExpress");
 
             var contacts = context.From<Contact>().ToList();

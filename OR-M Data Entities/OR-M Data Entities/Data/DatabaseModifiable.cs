@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -11,7 +11,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
@@ -49,11 +48,104 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
 
+        #region Properties
+        private readonly string _transactionSqlBase = @"
+DECLARE @1 VARCHAR(50) = CONVERT(varchar,GETDATE(),126);
+
+BEGIN TRANSACTION @1;
+	BEGIN TRY
+			{0}
+	END TRY
+	BEGIN CATCH
+
+		IF @@TRANCOUNT > 0
+			BEGIN
+				ROLLBACK TRANSACTION;
+			END
+			
+			DECLARE @2 as varchar(max) = ERROR_MESSAGE() + '  Rollback performed, no data committed.',
+					@3 as int = ERROR_SEVERITY(),
+					@4 as int = ERROR_STATE();
+
+			RAISERROR(@2,@3,@4);
+			
+	END CATCH
+
+	IF @@TRANCOUNT > 0
+		COMMIT TRANSACTION @1;
+";
+        #endregion
+
         #region Methods
+        private string _createTransaction(string sql)
+        {
+            return string.Format(_transactionSqlBase, sql);
+        }
+
+        private void _setValue(object parent, object child, string propertyNameToSet)
+        {
+            if (parent == null) return;
+
+            var foreignKeyProperty =
+                parent.GetForeignKeys()
+                    .First(
+                        w =>
+                            (w.PropertyType.IsList()
+                                ? w.PropertyType.GetGenericArguments()[0]
+                                : w.PropertyType) == child.GetType() &&
+                            w.Name == propertyNameToSet);
+
+            var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
+
+            if (foreignKeyProperty.PropertyType.IsList())
+            {
+                var parentPrimaryKey = parent.GetPrimaryKeys().First();
+                var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
+
+                DatabaseEntity.SetPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
+            }
+            else
+            {
+                var childPrimaryKey = child.GetPrimaryKeys().First();
+                var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
+
+                DatabaseEntity.SetPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
+            }
+        }
+
+        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType, bool useTransaction)
+        {
+            SqlInsertBuilder insert;
+
+            if (updateType == UpdateType.Insert) insert = new SqlInsertBuilder(Configuration, useTransaction);
+            else if (updateType == UpdateType.TryInsert) insert = new SqlTryInsertBuilder(Configuration, useTransaction);
+            else insert = new SqlTryInsertUpdateBuilder(Configuration, useTransaction);
+
+            insert.Table(entity.GetType());
+
+            // Loop through all mapped properties
+            foreach (var property in tableColumns)
+            {
+                insert.AddInsert(property, entity);
+            }
+
+            return insert;
+        }
+        #endregion
+
+        #region Save Methods
         public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
+            // can only use transactions when MARS is on because the execution is different.
+            return Configuration.UseMultipleActiveResultSets
+                ? _saveChangesUsingTransactions(entity)
+                : _saveChanges(entity);
+        }
 
+        private UpdateType _saveChanges<T>(T entity)
+            where T : class
+        {
             var state = UpdateType.Insert;
             var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
 
@@ -77,8 +169,10 @@ namespace OR_M_Data_Entities.Data
             {
                 var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
+                // begin transaction
+
                 // creates the save order based on the primary and foreign keys
-                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, false);
 
                 if (OnBeforeSave != null) OnBeforeSave(entity);
 
@@ -92,7 +186,7 @@ namespace OR_M_Data_Entities.Data
                         _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
                     }
 
-                    state = _saveObjectToDatabase(savableObject.Value);
+                    state = _saveObjectToDatabase(savableObject.Value, false);
 
                     if (OnAfterSave != null) OnAfterSave(entity);
 
@@ -117,38 +211,86 @@ namespace OR_M_Data_Entities.Data
             return state;
         }
 
-        private void _setValue(object parent, object child, string propertyNameToSet)
+        private UpdateType _saveChangesUsingTransactions<T>(T entity)
+            where T : class
         {
-            if (parent == null) return;
+            var state = UpdateType.Insert;
 
-            var foreignKeyProperty =
-                parent.GetForeignKeys()
-                    .First(
-                        w =>
-                            (w.PropertyType.IsList()
-                                ? w.PropertyType.GetGenericArguments()[0]
-                                : w.PropertyType) == child.GetType() &&
-                                w.Name == propertyNameToSet);
+            // analyze the entity and get the save order.
 
-            var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
+            // check the save objects to make sure there are no readonly tables
 
-            if (foreignKeyProperty.PropertyType.IsList())
+            // create the transactions
+
+            // load the resulting data back into the objects, use 'TableName.ColumnName' to load back into objects,
+            // we can do this because the resulting data is not in one giant data set, its in separate ones so no 
+            // danger of column names matching
+
+            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
+
+            if (readOnlyAttribute != null)
             {
-                var parentPrimaryKey = parent.GetPrimaryKeys().First();
-                var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
+                switch (readOnlyAttribute.ReadOnlySaveOption)
+                {
+                    // skip children(foreign keys) if option is set
+                    case ReadOnlySaveOption.Skip:
+                        return UpdateType.Skip;
 
-                DatabaseEntity.SetPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
+                    // Check for readonly attribute and see if we should throw an error   
+                    case ReadOnlySaveOption.ThrowException:
+                        throw new SqlSaveException(string.Format(
+                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                            entity.GetTableName()));
+                }
             }
-            else
+
+            if (entity.HasForeignKeys())
             {
-                var childPrimaryKey = child.GetPrimaryKeys().First();
-                var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
+                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
-                DatabaseEntity.SetPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
+                // begin transaction
+
+                // creates the save order based on the primary and foreign keys
+                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, true);
+
+                if (OnBeforeSave != null) OnBeforeSave(entity);
+
+                foreach (var savableObject in savableObjects)
+                {
+                    var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
+
+                    if (isList)
+                    {
+                        // relationship is one-many.  Need to set the foreign key before saving
+                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                    }
+
+                    state = _saveObjectToDatabase(savableObject.Value, false);
+
+                    if (OnAfterSave != null) OnAfterSave(entity);
+
+                    if (savableObject.Parent == null) continue;
+
+                    if (!isList)
+                    {
+                        // relationship is one-one.  Need to set the foreign key after saving
+                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                    }
+                }
+
+                return state;
             }
+
+            if (OnBeforeSave != null) OnBeforeSave(entity);
+
+            state = _saveObjectToDatabase(entity);
+
+            if (OnAfterSave != null) OnAfterSave(entity);
+
+            return state;
         }
 
-        private UpdateType _saveObjectToDatabase<T>(T entity)
+        private UpdateType _saveObjectToDatabase<T>(T entity, bool useTransaction = true)
         {
             // Check to see if the user is using entity state tracking
             var entityTrackable = entity as EntityStateTrackable;
@@ -181,7 +323,7 @@ namespace OR_M_Data_Entities.Data
                 case UpdateType.Update:
                     {
                         // Update Data
-                        var update = new SqlUpdateBuilder();
+                        var update = new SqlUpdateBuilder(Configuration, useTransaction);
 
                         update.Table(entity.GetType());
 
@@ -210,7 +352,7 @@ namespace OR_M_Data_Entities.Data
                         // add validation to only update the row
                         foreach (var primaryKey in primaryKeys)
                         {
-                            update.AddWhere("", primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
+                            update.AddWhere(primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
                         }
 
                         // if its only an update, perform the update
@@ -233,7 +375,7 @@ namespace OR_M_Data_Entities.Data
                 case UpdateType.TryInsertUpdate:
                     {
                         // Get The Insert Data
-                        var insert = _getInsertBuilder(entity, tableColumns, state);
+                        var insert = _getInsertBuilder(entity, tableColumns, state, useTransaction);
 
                         // do not need to read back the values because they are already in the database, if not they will be inserted.
                         // db generation option is always none so there is no need to load any PK's in to the object
@@ -264,39 +406,19 @@ namespace OR_M_Data_Entities.Data
 
             return state;
         }
-
-        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType)
-        {
-            SqlInsertBuilder insert;
-
-            if (updateType == UpdateType.Insert) insert = new SqlInsertBuilder();
-            else if (updateType == UpdateType.TryInsert) insert = new SqlTryInsertBuilder();
-            else insert = new SqlTryInsertUpdateBuilder();
-
-            insert.Table(entity.GetType());
-
-            // Loop through all mapped properties
-            foreach (var property in tableColumns)
-            {
-                insert.AddInsert(property, entity);
-            }
-
-            return insert;
-        }
-
         #endregion
 
         #region Delete Methods
 
-        //public virtual bool DeleteAll<T>(Expression<Func<T, bool>> expression)
-        //{
-        //    return false;
-        //}
-
         public virtual bool Delete<T>(T entity)
             where T : class
         {
+            return Configuration.UseMultipleActiveResultSets ? _deleteUsingTransactions(entity) : _delete(entity);
+        }
 
+        private bool _delete<T>(T entity)
+            where T : class
+        {
             var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
 
             if (readOnlyAttribute != null)
@@ -319,7 +441,7 @@ namespace OR_M_Data_Entities.Data
             var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
 
             // creates the save order based on the primary and foreign keys
-            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects);
+            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, false);
 
             // need to reverse the save order for a delete
             savableObjects.Reverse();
@@ -332,24 +454,29 @@ namespace OR_M_Data_Entities.Data
             return result;
         }
 
-        private bool _deleteObjectFromDatabase<T>(T entity)
+        private bool _deleteUsingTransactions<T>(T entity)
+            where T : class
         {
-            // Check to see if the PK is defined
-            var tableName = entity.GetTableName();
+            
 
+            return true;
+        }
+
+        private bool _deleteObjectFromDatabase<T>(T entity, bool useTransaction = true)
+        {
             // ID is the default primary key name
             var primaryKeys = entity.GetPrimaryKeys();
 
             // delete Data
-            var builder = new SqlDeleteBuilder();
-            builder.Table(tableName);
+            var builder = new SqlDeleteBuilder(Configuration, useTransaction);
+            builder.Table(entity.GetType());
 
             // Loop through all mapped properties
             foreach (var property in primaryKeys)
             {
                 var value = property.GetValue(entity);
                 var columnName = property.GetColumnName();
-                builder.AddWhere(tableName, columnName, CompareType.Equals, value);
+                builder.AddWhere(columnName, CompareType.Equals, value);
             }
 
             try
@@ -396,7 +523,7 @@ namespace OR_M_Data_Entities.Data
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <param name="savableObjects"></param>
-        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity, List<ForeignKeySaveNode> savableObjects)
+        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity, List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled)
             where T : class
         {
             // make sure FKs have values before saving, if they dont you need to throw an error
@@ -425,9 +552,13 @@ namespace OR_M_Data_Entities.Data
                     // we can skip the foreign key if its nullable and one to one
                     if (isNullable) continue;
 
-                    // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
-                    // maintaining the relationship
-                    throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", foreignKey.Name));
+                    if (!isMARSEnabled)
+                    {
+                        // database will take care of this if MARS is enabled
+                        // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
+                        // maintaining the relationship
+                        throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", foreignKey.Name));  
+                    }
                 }
 
                 // Check for readonly attribute and see if we should throw an error
@@ -455,7 +586,7 @@ namespace OR_M_Data_Entities.Data
 
                         if (SchemaExtensions.HasForeignKeys(item))
                         {
-                            _analyzeObjectWithForeignKeysAndGetModificationOrder(item, savableObjects);
+                            _analyzeObjectWithForeignKeysAndGetModificationOrder(item, savableObjects, isMARSEnabled);
                         }
                     }
                 }
@@ -474,7 +605,7 @@ namespace OR_M_Data_Entities.Data
                     // has dependencies
                     if (foreignKeyValue.HasForeignKeys())
                     {
-                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects);
+                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects, isMARSEnabled);
                     }
                 }
             }

@@ -1,11 +1,10 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,8 +12,8 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Commands.Transform;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Transform;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
@@ -89,6 +88,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             if (!HasComparison(expression))
             {
                 var result = _evaluate(expression as dynamic, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
+
+                // resolutions might already be in the container, check to see if a connector exists at the end
+                if (container.Resolutions.Count != 0 && (!(container.Resolutions.Last() is SqlConnector)))
+                {
+                    container.AddConnector(ConnectorType.And);
+                }
 
                 container.AddResolution(result);
                 return;

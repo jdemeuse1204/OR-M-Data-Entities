@@ -1,16 +1,17 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Configuration;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -21,6 +22,7 @@ namespace OR_M_Data_Entities.Data
         protected SqlConnection Connection { get; set; }
         protected SqlCommand Command { get; set; }
         protected PeekDataReader Reader { get; set; }
+        public ConfigurationOptions Configuration { get; private set; }
         #endregion
 
         protected Database(string connectionStringOrName)
@@ -38,9 +40,23 @@ namespace OR_M_Data_Entities.Data
                 ConnectionString = conn.ConnectionString;
             }
 
+            // make sure MARS is enabled, it is needed for transactions
+            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString));
+
             Connection = new SqlConnection(ConnectionString);
         }
 
+        private bool _isMARSEnabled(string connectionString)
+        {
+            var items = connectionString.ToUpper().Split(';');
+            var MARSSetting = items.FirstOrDefault(w => w.Contains("MULTIPLEACTIVERESULTSETS"));
+
+            if (string.IsNullOrWhiteSpace(MARSSetting)) return false;
+
+            var settingsSplit = MARSSetting.Replace("\'", "").Split('=');
+
+            return settingsSplit.Count() == 2 && bool.Parse(settingsSplit[1]);
+        }
 
         /// <summary>
         /// Connect our SqlConnection

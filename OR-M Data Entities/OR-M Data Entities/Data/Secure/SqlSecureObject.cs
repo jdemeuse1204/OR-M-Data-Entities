@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -9,7 +9,7 @@
 using System;
 using System.Data;
 
-namespace OR_M_Data_Entities.Commands.Secure
+namespace OR_M_Data_Entities.Data.Secure
 {
     /// <summary>
     /// Ensures that an object is used with query builders in a secure manner (used as a query parameter).  

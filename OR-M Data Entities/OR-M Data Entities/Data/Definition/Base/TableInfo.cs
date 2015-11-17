@@ -1,17 +1,19 @@
 ﻿/*
- * OR-M Data Entities v2.3
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data.Definition.Base
 {
+    /// <summary>
+    /// Is the common class for getting all tables information
+    /// </summary>
     public class TableInfo
     {
         public TableInfo(Type type)
@@ -25,6 +27,8 @@ namespace OR_M_Data_Entities.Data.Definition.Base
             {
                 throw new Exception(string.Format("Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other", ClassName));
             }
+
+            TableNameOnly = _tableAttribute == null ? type.Name : _tableAttribute.Name;
         }
 
         private readonly LinkedServerAttribute _linkedServerAttribute;
@@ -54,6 +58,8 @@ namespace OR_M_Data_Entities.Data.Definition.Base
             }
         }
 
+        public string TableNameOnly { get; private set; }
+
         public override string ToString()
         {
             var tableName = string.Format("{0}",
@@ -61,7 +67,7 @@ namespace OR_M_Data_Entities.Data.Definition.Base
 
             tableName += string.Format(_linkedServerAttribute == null ? "[{0}].[{1}]" : "{0}.[{1}]",
                 _linkedServerAttribute == null ? SchemaName : string.Empty,
-                string.IsNullOrWhiteSpace(TableAttributeName) ? ClassName : TableAttributeName);
+                TableNameOnly);
 
             return tableName;
         }
