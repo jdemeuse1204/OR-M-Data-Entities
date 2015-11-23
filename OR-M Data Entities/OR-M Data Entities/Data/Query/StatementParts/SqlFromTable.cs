@@ -10,7 +10,6 @@ using System;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data.Query.StatementParts
 {

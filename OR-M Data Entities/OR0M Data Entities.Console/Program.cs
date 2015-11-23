@@ -18,12 +18,71 @@ namespace OR0M_Data_Entities.Console
         {            
             var context = new DbSqlContext("sqlExpress");
 
-            var contacts = context.From<Contact>().ToList();
-
-            if (contacts != null)
+            var x = new Contact
             {
-                
-            }
+                CreatedBy = new User
+                {
+                    Name = "James Demeuse"
+                },
+                EditedBy = new User
+                {
+                    Name = "Different User"
+                },
+                FirstName = "Test",
+                LastName = "User",
+                Names = new List<Name>
+                {
+                    new Name
+                    {
+                        Value = "Win!"
+                    },
+                    new Name
+                    {
+                        Value = "FTW!"
+                    }
+                },
+                Number = new PhoneNumber
+                {
+                    Phone = "555-555-5555",
+                    PhoneType = new PhoneType
+                    {
+                        Type = "Cell"
+                    }
+                },
+                Appointments = new List<Appointment>
+                {
+                    new Appointment
+                    {
+                        Description = "Appointment 1",
+                        IsScheduled = false,
+                        Address = new List<Address>
+                        {
+                            new Address
+                            {
+                                Addy = "1234 First Ave South",
+                                State = new StateCode
+                                {
+                                    Value = "MN"
+                                },
+                                ZipCode = new List<Zip>
+                                {
+                                    new Zip
+                                    {
+                                        Zip4 = "5412",
+                                        Zip5 = "55555"
+                                    },
+                                    new Zip
+                                    {
+                                        Zip5 = "12345"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            context.SaveChanges(x);
 
             //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
             //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");

@@ -28,6 +28,7 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseModifiable : DatabaseFetching
     {
         #region Events And Delegates
+
         public delegate void OnBeforeSaveHandler(object entity);
 
         public event OnBeforeSaveHandler OnBeforeSave;
@@ -39,16 +40,20 @@ namespace OR_M_Data_Entities.Data
         public delegate void OnSavingHandler(object entity);
 
         public event OnSavingHandler OnSaving;
+
         #endregion
 
         #region Constructor
+
         protected DatabaseModifiable(string connectionStringOrName)
             : base(connectionStringOrName)
         {
         }
+
         #endregion
 
         #region Properties
+
         private readonly string _transactionSqlBase = @"
 DECLARE @1 VARCHAR(50) = CONVERT(varchar,GETDATE(),126);
 
@@ -74,49 +79,24 @@ BEGIN TRANSACTION @1;
 	IF @@TRANCOUNT > 0
 		COMMIT TRANSACTION @1;
 ";
+
         #endregion
 
         #region Methods
+
         private string _createTransaction(string sql)
         {
             return string.Format(_transactionSqlBase, sql);
         }
 
-        private void _setValue(object parent, object child, string propertyNameToSet)
-        {
-            if (parent == null) return;
 
-            var foreignKeyProperty =
-                parent.GetForeignKeys()
-                    .First(
-                        w =>
-                            (w.PropertyType.IsList()
-                                ? w.PropertyType.GetGenericArguments()[0]
-                                : w.PropertyType) == child.GetType() &&
-                            w.Name == propertyNameToSet);
 
-            var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
-
-            if (foreignKeyProperty.PropertyType.IsList())
-            {
-                var parentPrimaryKey = parent.GetPrimaryKeys().First();
-                var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
-
-                DatabaseEntity.SetPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
-            }
-            else
-            {
-                var childPrimaryKey = child.GetPrimaryKeys().First();
-                var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
-
-                DatabaseEntity.SetPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
-            }
-        }
-
-        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType, bool useTransaction)
+        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType,
+            bool useTransaction)
         {
             SqlInsertBuilder insert;
 
+            // get the correct insert builder
             if (updateType == UpdateType.Insert) insert = new SqlInsertBuilder(Configuration, useTransaction);
             else if (updateType == UpdateType.TryInsert) insert = new SqlTryInsertBuilder(Configuration, useTransaction);
             else insert = new SqlTryInsertUpdateBuilder(Configuration, useTransaction);
@@ -131,9 +111,11 @@ BEGIN TRANSACTION @1;
 
             return insert;
         }
+
         #endregion
 
         #region Save Methods
+
         public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
@@ -167,12 +149,12 @@ BEGIN TRANSACTION @1;
 
             if (entity.HasForeignKeys())
             {
-                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+                var savableObjects = new List<ForeignKeySaveNode>();
 
                 // begin transaction
 
                 // creates the save order based on the primary and foreign keys
-                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, false);
+                DatabaseEntity.GetSaveOrder(entity, savableObjects, Configuration.UseMultipleActiveResultSets);
 
                 if (OnBeforeSave != null) OnBeforeSave(entity);
 
@@ -183,7 +165,7 @@ BEGIN TRANSACTION @1;
                     if (isList)
                     {
                         // relationship is one-many.  Need to set the foreign key before saving
-                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                        DatabaseEntity.SetPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
                     }
 
                     state = _saveObjectToDatabase(savableObject.Value, false);
@@ -195,7 +177,7 @@ BEGIN TRANSACTION @1;
                     if (!isList)
                     {
                         // relationship is one-one.  Need to set the foreign key after saving
-                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                        DatabaseEntity.SetPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
                     }
                 }
 
@@ -246,14 +228,17 @@ BEGIN TRANSACTION @1;
 
             if (entity.HasForeignKeys())
             {
-                var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
+                var savableObjects = new List<ForeignKeySaveNode>();
 
                 // begin transaction
 
                 // creates the save order based on the primary and foreign keys
-                _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, true);
+                DatabaseEntity.GetSaveOrder(entity, savableObjects, Configuration.UseMultipleActiveResultSets);
 
-                if (OnBeforeSave != null) OnBeforeSave(entity);
+                //savableObjects.Add(new ForeignKeySaveNode(null, entity, null));
+                //_analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, Configuration.UseMultipleActiveResultSets);
+
+                
 
                 foreach (var savableObject in savableObjects)
                 {
@@ -262,29 +247,36 @@ BEGIN TRANSACTION @1;
                     if (isList)
                     {
                         // relationship is one-many.  Need to set the foreign key before saving
-                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                        DatabaseEntity.SetPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
                     }
+
+                    // fire the before save action if there is one
+                    if (OnBeforeSave != null) OnBeforeSave(entity);
 
                     state = _saveObjectToDatabase(savableObject.Value, false);
 
+                    // fire the after save action if there is one
                     if (OnAfterSave != null) OnAfterSave(entity);
 
+                    // if the parent is null we are at the base entity which has no parent
                     if (savableObject.Parent == null) continue;
 
                     if (!isList)
                     {
                         // relationship is one-one.  Need to set the foreign key after saving
-                        _setValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
+                        DatabaseEntity.SetPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
                     }
                 }
 
                 return state;
             }
 
+            // fire the before save action if there is one
             if (OnBeforeSave != null) OnBeforeSave(entity);
 
             state = _saveObjectToDatabase(entity);
 
+            // fire the after save action if there is one
             if (OnAfterSave != null) OnAfterSave(entity);
 
             return state;
@@ -328,12 +320,13 @@ BEGIN TRANSACTION @1;
                         update.Table(entity.GetType());
 
                         var properties = from property in
-                                             (from property in tableColumns
-                                              let columnName = property.GetColumnName()
-                                              where
-                                                  !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                                                  property.GetCustomAttribute<NonSelectableAttribute>() == null // Skip unmapped fields
-                                              select property)
+                            (from property in tableColumns
+                             let columnName = property.GetColumnName()
+                             where
+                             !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
+                             property.GetCustomAttribute<NonSelectableAttribute>() == null
+                         // Skip unmapped fields
+                         select property)
                                          let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
                                          where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
                                          select property;
@@ -406,6 +399,7 @@ BEGIN TRANSACTION @1;
 
             return state;
         }
+
         #endregion
 
         #region Delete Methods
@@ -446,7 +440,9 @@ BEGIN TRANSACTION @1;
             // need to reverse the save order for a delete
             savableObjects.Reverse();
 
-            foreach (var savableObject in savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
+            foreach (
+                var savableObject in
+                    savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
             {
                 result = false;
             }
@@ -457,7 +453,7 @@ BEGIN TRANSACTION @1;
         private bool _deleteUsingTransactions<T>(T entity)
             where T : class
         {
-            
+
 
             return true;
         }
@@ -494,7 +490,8 @@ BEGIN TRANSACTION @1;
                         string.Format(
                             "Reference Constraint Violated, consider using a LookupTable to preserve FK Data.  Original Exception: {0}",
                             exception.Message));
-                };
+                }
+                ;
 
                 throw;
             }
@@ -513,9 +510,11 @@ BEGIN TRANSACTION @1;
             // return if anything was deleted
             return rowsAffected > 0;
         }
+
         #endregion
 
         #region Helpers
+
         /// <summary>
         /// Analyzes the object to be saved to make sure all foreign keys have a object to be saved.  
         /// Save is cancelled if there are errors.  Also creates the save order based on the foreign keys
@@ -523,7 +522,8 @@ BEGIN TRANSACTION @1;
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <param name="savableObjects"></param>
-        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity, List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled)
+        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity,
+            List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled)
             where T : class
         {
             // make sure FKs have values before saving, if they dont you need to throw an error
@@ -540,7 +540,8 @@ BEGIN TRANSACTION @1;
                 if (isLookupTable) continue;
 
                 // skip children(foreign keys) if option is set
-                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) continue;
+                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip)
+                    continue;
 
                 if (foreignKeyValue == null)
                 {
@@ -557,16 +558,20 @@ BEGIN TRANSACTION @1;
                         // database will take care of this if MARS is enabled
                         // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
                         // maintaining the relationship
-                        throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", foreignKey.Name));  
+                        throw new SqlSaveException(
+                            string.Format(
+                                "Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save",
+                                foreignKey.Name));
                     }
                 }
 
                 // Check for readonly attribute and see if we should throw an error
-                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
+                if (readOnlyAttribute != null &&
+                    readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
                 {
                     throw new SqlSaveException(string.Format(
-                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                            entity.GetTableName()));
+                        "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
+                        entity.GetTableName()));
                 }
 
                 // doesnt have dependencies
@@ -605,11 +610,13 @@ BEGIN TRANSACTION @1;
                     // has dependencies
                     if (foreignKeyValue.HasForeignKeys())
                     {
-                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects, isMARSEnabled);
+                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects,
+                            isMARSEnabled);
                     }
                 }
             }
         }
+
         #endregion
     }
 }

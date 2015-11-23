@@ -871,6 +871,12 @@ namespace OR_M_Data_Entities
                    o.GetType().GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
         }
 
+        public static bool IsList(this PropertyInfo property)
+        {
+            return property.PropertyType.IsGenericType &&
+                   property.PropertyType.GetGenericTypeDefinition().IsAssignableFrom(typeof(List<>));
+        }
+
         public static bool IsList(this Type type)
         {
             return type.IsGenericType &&
@@ -918,6 +924,13 @@ namespace OR_M_Data_Entities
                 entity,
                 propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
                 null);
+        }
+
+        public static Type GetTypeListCheck(this object o)
+        {
+            return o.IsList()
+                ? o.GetType().GetGenericArguments()[0]
+                : o.GetType();
         }
     }
 
