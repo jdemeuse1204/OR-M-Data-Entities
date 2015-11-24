@@ -8,16 +8,12 @@
 
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
-using System.Reflection;
-using OR_M_Data_Entities.Configuration;
-using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Query.StatementParts;
+using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -70,130 +66,127 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public partial class DatabaseFetching
     {
-        #region Query Builders
-        protected class SqlInsertBuilder : SqlFromTable, ISqlBuilder
+        #region Non Transaction Insert Builders
+        protected class SqlNonTransactionInsertBuilder : SqlInsertBuilder, ISqlBuilder
         {
-            #region Properties
-            private readonly List<InsertItem> _insertItems;
+            public SqlNonTransactionInsertBuilder(object entity)
+                : base(entity)
+            {
+            }
 
-            private bool _useTransaction { get; set; }
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionInsertPackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        protected class SqlNonTransactionTryInsertBuilder : SqlInsertBuilder, ISqlBuilder
+        {
+            public SqlNonTransactionTryInsertBuilder(object entity)
+                : base(entity)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionTryInsertPackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        protected class SqlNonTransactionTryInsertUpdateBuilder : SqlInsertBuilder, ISqlBuilder
+        {
+            public SqlNonTransactionTryInsertUpdateBuilder(object entity)
+                : base(entity)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionTryInsertUpdatePackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+        #endregion
+
+        #region Non Transaction Packages
+        protected class SqlNonTransactionInsertPackage : SqlSecureExecutable, ISqlPackage
+        {
+            #region Constructor
+            public SqlNonTransactionInsertPackage(SqlInsertBuilder builder)
+            {
+                Fields = string.Empty;
+                Values = string.Empty;
+                Declare = string.Empty;
+                Keys = string.Empty;
+                SelectColumns = string.Empty;
+                Where = string.Empty;
+                Set = string.Empty;
+                FormattedTableName = builder.SqlFormattedTableName();
+                InsertItems = builder.GetInsertItems();
+            }
             #endregion
 
-            #region Constructor
-            public SqlInsertBuilder(ConfigurationOptions configuration, bool useTransaction)
-                : base (configuration)
-            {
-                _insertItems = new List<InsertItem>();
-                _useTransaction = useTransaction;
-            }
+            #region Properties
+
+            protected readonly List<InsertItem> InsertItems;
+
+            protected string FormattedTableName { get; set; }
+
+            protected string Fields { get; set; }
+
+            protected string Values { get; set; }
+
+            protected string Declare { get; set; }
+
+            protected readonly string Select = "SELECT TOP 1 {0}{1}";
+
+            protected readonly string From = " FROM [{0}] WHERE {1}";
+
+            protected string Keys { get; set; }
+
+            protected string SelectColumns { get; set; }
+
+            protected string Where { get; set; }
+
+            protected string Set { get; set; }
+
+            protected string Update { get; set; }
+
+            protected bool DoSelectFromForKeyContainer { get; set; }
             #endregion
 
             #region Methods
-            public SqlTransactionStatement GetTransactionSql(IEnumerable<SqlSecureQueryParameter> parameters)
+            public virtual void CreatePackage()
             {
-                // concurrency check
+                if (InsertItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
 
-                if (string.IsNullOrWhiteSpace(TableName)) throw new QueryNotValidException("INSERT statement needs Table Name");
+                DoSelectFromForKeyContainer = InsertItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) ||
+                                               InsertItems.Any(w => w.Generation == DbGenerationOption.DbDefault);
 
-                if (_insertItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
-
-                var fields = string.Empty;
-                var values = string.Empty;
-                var declare = string.Empty;
-                var set = string.Empty;
-                var output = "OUTPUT ";
-
-                //  NOTE:  Alias any Identity specification and generate columns with their property
-                // name not db column name so we can set the property when we return the values back.
-
-                for (var i = 0; i < _insertItems.Count; i++)
+                for (var i = 0; i < InsertItems.Count; i++)
                 {
-                    var item = _insertItems[i];
+                    var item = InsertItems[i];
 
-                    switch (item.Generation)
-                    {
-                        case DbGenerationOption.None:
-                            {
-                                //Value is simply inserted
-                                var data = item.TranslateDataType
-                                    ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType)
-                                    : AddParameter(item.DatabaseColumnName, item.Value);
-
-                                fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                values += string.Format("{0},", data);
-                                output += string.Format("INSERTED.{0} as '{1}.{2}'", item.DatabaseColumnName,
-                                    TableNameOnly, item.PropertyName);
-                            }
-                            break;
-                        case DbGenerationOption.Generate:
-                            {
-                                // Value is generated from the database
-                                var key = string.Format("@{0}", item.PropertyName);
-
-                                // make our set statement
-                                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
-                                {
-                                    // GUID
-                                    set += string.Format("SET {0} = NEWID();", key);
-                                }
-                                else
-                                {
-                                    // INTEGER
-                                    set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key,
-                                        item.DatabaseColumnName, FormattedTableName);
-                                }
-
-                                fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                values += string.Format("{0},", key);
-                                declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
-                                output += string.Format("INSERTED.{0} as '{1}.{2}'", item.DatabaseColumnName,
-                                    TableNameOnly, item.PropertyName);
-
-                                // create output
-                            }
-                            break;
-                        case DbGenerationOption.IdentitySpecification:
-                            {
-                                // create output
-                            }
-                            break;
-                        case DbGenerationOption.DbDefault:
-                            {
-                                // create output
-                            }
-                            break;
-                    }
-                }
-
-                return new SqlTransactionStatement("","","");
-            }
-
-            public SqlCommand Build(SqlConnection connection)
-            {
-                if (string.IsNullOrWhiteSpace(TableName)) throw new QueryNotValidException("INSERT statement needs Table Name");
-
-                if (_insertItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
-
-                var package = new SqlInsertPackage
-                {
-                    DoSelectFromForKeyContainer = _insertItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) ||
-                                                  _insertItems.Any(w => w.Generation == DbGenerationOption.DbDefault)
-                };
-
-                //  NOTE:  Alias any Identity specification and generate columns with their property
-                // name not db column name so we can set the property when we return the values back.
-
-                for (var i = 0; i < _insertItems.Count; i++)
-                {
-                    var item = _insertItems[i];
-
+                    //  NOTE:  Alias any Identity specification and generate columns with their property
+                    // name not db column name so we can set the property when we return the values back.
                     switch (item.Generation)
                     {
                         case DbGenerationOption.None:
                             {
                                 if (item.DbTranslationType == SqlDbType.Timestamp)
                                 {
-                                    package.SelectColumns += item.PropertyName == item.DatabaseColumnName
+                                    SelectColumns += item.PropertyName == item.DatabaseColumnName
                                         ? string.Format("[{0}],", item.DatabaseColumnName)
                                         : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
                                     continue;
@@ -205,19 +198,19 @@ namespace OR_M_Data_Entities.Data
                                     ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType)
                                     : AddParameter(item.DatabaseColumnName, item.Value);
 
-                                package.Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                package.Values += string.Format("{0},", data);
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", data);
 
                                 if (!item.IsPrimaryKey)
                                 {
                                     // should never update the pk
-                                    package.Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
                                     continue;
                                 }
 
-                                package.Where +=
+                                Where +=
                                     string.Format(
-                                        string.IsNullOrEmpty(package.Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ",
+                                        string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ",
                                         item.DatabaseColumnName, data);
                             }
                             break;
@@ -230,20 +223,20 @@ namespace OR_M_Data_Entities.Data
                                 if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
                                 {
                                     // GUID
-                                    package.Set += string.Format("SET {0} = NEWID();", key);
+                                    Set += string.Format("SET {0} = NEWID();", key);
                                 }
                                 else
                                 {
                                     // INTEGER
-                                    package.Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key,
+                                    Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key,
                                         item.DatabaseColumnName, FormattedTableName);
                                 }
 
-                                package.Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                package.Values += string.Format("{0},", key);
-                                package.Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
-                                package.Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
-                                package.SelectColumns += item.PropertyName == item.DatabaseColumnName
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", key);
+                                Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
+                                Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName
                                     ? string.Format("[{0}],", item.DatabaseColumnName)
                                     : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
 
@@ -258,13 +251,13 @@ namespace OR_M_Data_Entities.Data
                                         : AddParameter(item.DatabaseColumnName, item.Value);
                                     }
 
-                                    package.Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
                                     continue;
                                 }
 
-                                package.Where +=
+                                Where +=
                                     string.Format(
-                                        string.IsNullOrEmpty(package.Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ",
+                                        string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ",
                                         item.DatabaseColumnName, key);
 
                                 // Do not add as a parameter because the parameter will be converted to a string to
@@ -273,114 +266,70 @@ namespace OR_M_Data_Entities.Data
                             break;
                         case DbGenerationOption.IdentitySpecification:
                             {
-                                package.SelectColumns += item.PropertyName == item.DatabaseColumnName
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName
                                     ? string.Format("[{0}],", item.DatabaseColumnName)
                                     : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                package.Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
+                                Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
 
                                 if (!item.IsPrimaryKey) continue;
 
-                                package.Where +=
+                                Where +=
                                     string.Format(
-                                        string.IsNullOrEmpty(package.Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ",
+                                        string.IsNullOrEmpty(Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ",
                                         item.DatabaseColumnName, item.DatabaseColumnName);
                             }
                             break;
                         case DbGenerationOption.DbDefault:
                             {
-                                package.SelectColumns += item.PropertyName == item.DatabaseColumnName
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName
                                     ? string.Format("[{0}],", item.DatabaseColumnName)
                                     : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                package.Keys += item.PropertyName == item.DatabaseColumnName
+                                Keys += item.PropertyName == item.DatabaseColumnName
                                     ? string.Format("[{0}],", item.DatabaseColumnName)
                                     : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
                             }
                             break;
                     }
                 }
-
-                var nonTransactionSql = BuildSql(package);
-                var cmd = new SqlCommand(nonTransactionSql, connection);
-
-                InsertParameters(cmd);
-
-                return cmd;
             }
 
-            protected virtual string BuildSql(SqlInsertPackage package)
+            public virtual string GetSql()
             {
                 return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
-                    string.IsNullOrWhiteSpace(package.Declare) ? string.Empty : string.Format("DECLARE {0}", package.Declare.TrimEnd(',')),
-                    package.Set,
+
+                    string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')),
+
+                    Set,
+
                     FormattedTableName,
-                    package.Fields.TrimEnd(','),
-                    package.Values.TrimEnd(','),
-                    package.SelectColumns.Any()
-                        ? package.DoSelectFromForKeyContainer
-                            ? string.Format(package.Select, package.SelectColumns.TrimEnd(','),
-                                string.Format(package.From, FormattedTableName, package.Where))
-                            : string.Format(package.Select, package.Keys.TrimEnd(','), string.Empty)
+
+                    Fields.TrimEnd(','),
+
+                    Values.TrimEnd(','),
+
+                    SelectColumns.Any()
+                        ? DoSelectFromForKeyContainer
+                            ? string.Format(Select, SelectColumns.TrimEnd(','),
+                                string.Format(From, FormattedTableName, Where))
+                            : string.Format(Select, Keys.TrimEnd(','), string.Empty)
                         : string.Empty
+
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
                     // where the column is not the PK
                     );
             }
-
-            public void AddInsert(PropertyInfo property, object entity)
-            {
-                _insertItems.Add(new InsertItem(property, entity));
-            }
-
-            #endregion
-
-            #region Helpers
-            protected class SqlInsertPackage
-            {
-                public SqlInsertPackage()
-                {
-                    Fields = string.Empty;
-                    Values = string.Empty;
-                    Declare = string.Empty;
-                    Keys = string.Empty;
-                    SelectColumns = string.Empty;
-                    Where = string.Empty;
-                    Set = string.Empty;
-                }
-
-                public string Fields { get; set; }
-
-                public string Values { get; set; }
-
-                public string Declare { get; set; }
-
-                public readonly string Select = "SELECT TOP 1 {0}{1}";
-
-                public readonly string From = " FROM [{0}] WHERE {1}";
-
-                public string Keys { get; set; }
-
-                public string SelectColumns { get; set; }
-
-                public string Where { get; set; }
-
-                public string Set { get; set; }
-
-                public string Update { get; set; }
-
-                public bool DoSelectFromForKeyContainer { get; set; }
-            }
             #endregion
         }
 
-        protected class SqlTryInsertBuilder : SqlInsertBuilder
+        protected class SqlNonTransactionTryInsertPackage : SqlNonTransactionInsertPackage
         {
-            public SqlTryInsertBuilder(ConfigurationOptions configuration, bool useTransaction)
-                : base(configuration, useTransaction)
+            public SqlNonTransactionTryInsertPackage(SqlInsertBuilder builder)
+                : base(builder)
             {
             }
 
-            protected override string BuildSql(SqlInsertPackage package)
+            public override string GetSql()
             {
                 return string.Format(@"
 {0}
@@ -391,37 +340,39 @@ IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6})))
     END
 
 ",
-                    string.IsNullOrWhiteSpace(package.Declare) ? string.Empty : string.Format("DECLARE {0}", package.Declare.TrimEnd(',')),
+                    string.IsNullOrWhiteSpace(Declare)
+                        ? string.Empty
+                        : string.Format("DECLARE {0}", Declare.TrimEnd(',')),
 
-                    package.Set,
+                    Set,
 
                     FormattedTableName,
 
-                    package.Fields.TrimEnd(','),
+                    Fields.TrimEnd(','),
 
-                    package.Values.TrimEnd(','),
+                    Values.TrimEnd(','),
 
-                    package.SelectColumns.Any()
-                        ? package.DoSelectFromForKeyContainer
-                            ? string.Format(package.Select, package.SelectColumns.TrimEnd(','),
-                                string.Format(package.From, FormattedTableName, package.Where))
-                            : string.Format(package.Select, package.Keys.TrimEnd(','), string.Empty)
+                    SelectColumns.Any()
+                        ? DoSelectFromForKeyContainer
+                            ? string.Format(Select, SelectColumns.TrimEnd(','),
+                                string.Format(From, FormattedTableName, Where))
+                            : string.Format(Select, Keys.TrimEnd(','), string.Empty)
                         : string.Empty,
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
                     // where the column is not the PK
-                    package.Where);
+                    Where);
             }
         }
 
-        protected class SqlTryInsertUpdateBuilder : SqlInsertBuilder
+        protected class SqlNonTransactionTryInsertUpdatePackage : SqlNonTransactionInsertPackage
         {
-            public SqlTryInsertUpdateBuilder(ConfigurationOptions configuration, bool useTransaction) 
-                : base(configuration, useTransaction)
+            public SqlNonTransactionTryInsertUpdatePackage(SqlInsertBuilder builder)
+                : base(builder)
             {
             }
 
-            protected override string BuildSql(SqlInsertPackage package)
+            public override string GetSql()
             {
                 return string.Format(@"
 {0}
@@ -435,153 +386,38 @@ ELSE
         UPDATE [{2}] SET {7} WHERE {6}
     END
 ",
-                    string.IsNullOrWhiteSpace(package.Declare) ? string.Empty : string.Format("DECLARE {0}", package.Declare.TrimEnd(',')),
+                    string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')),
 
-                    package.Set,
+                    Set,
 
                     FormattedTableName,
 
-                    package.Fields.TrimEnd(','),
+                    Fields.TrimEnd(','),
 
-                    package.Values.TrimEnd(','),
+                    Values.TrimEnd(','),
 
-                    package.SelectColumns.Any()
-                        ? package.DoSelectFromForKeyContainer
-                            ? string.Format(package.Select, package.SelectColumns.TrimEnd(','),
-                                string.Format(package.From, FormattedTableName, package.Where))
-                            : string.Format(package.Select, package.Keys.TrimEnd(','), string.Empty)
+                    SelectColumns.Any()
+                        ? DoSelectFromForKeyContainer
+                            ? string.Format(Select, SelectColumns.TrimEnd(','),
+                                string.Format(From, FormattedTableName, Where))
+                            : string.Format(Select, Keys.TrimEnd(','), string.Empty)
                         : string.Empty,
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
                     // where the column is not the PK
-                    package.Where,
+                    Where,
 
-                    package.Update.TrimEnd(','));
+                    Update.TrimEnd(','));
             }
         }
+        #endregion
 
-        protected class SqlDeleteBuilder : SqlValidation, ISqlBuilder
-        {
-            #region Properties
-            private string _delete { get; set; }
+        #region Transaction Insert Builders
 
-            private bool _useTransaction { get; set; }
-            #endregion
+        #endregion
 
-            #region Constructor
-            public SqlDeleteBuilder(ConfigurationOptions configuration, bool useTransaction)
-                : base(configuration)
-            {
-                _delete = string.Empty;
-                _useTransaction = useTransaction;
-            }
-            #endregion
+        #region Transaction Packages
 
-            #region Methods
-            public SqlTransactionStatement GetTransactionSql(IEnumerable<SqlSecureQueryParameter> parameters)
-            {
-                throw new System.NotImplementedException();
-            }
-
-            public SqlCommand Build(SqlConnection connection)
-            {
-                if (string.IsNullOrWhiteSpace(TableName))
-                {
-                    throw new QueryNotValidException("Table statement missing");
-                }
-
-                _delete = string.Format(" DELETE FROM [{0}] ", FormattedTableName);
-
-                var nonTransactionSql = _delete + GetValidation() + ";Select @@ROWCOUNT as 'int';";
-                var cmd = new SqlCommand(nonTransactionSql, connection);
-
-                InsertParameters(cmd);
-
-                return cmd;
-            }
-            #endregion
-        }
-
-        protected class SqlUpdateBuilder : SqlValidation, ISqlBuilder
-        {
-            #region Properties
-            private string _set { get; set; }
-            private bool _useTransaction { get; set; }
-            #endregion
-
-            #region Constructor
-            public SqlUpdateBuilder(ConfigurationOptions configuration, bool useTransaction)
-                : base (configuration)
-            {
-                _set = string.Empty;
-                _useTransaction = useTransaction;
-            }
-            #endregion
-
-            #region Methods
-            public SqlTransactionStatement GetTransactionSql(IEnumerable<SqlSecureQueryParameter> parameters)
-            {
-                throw new System.NotImplementedException();
-            }
-
-            public SqlCommand Build(SqlConnection connection)
-            {
-                if (string.IsNullOrWhiteSpace(TableName))
-                {
-                    throw new QueryNotValidException("UPDATE table missing");
-                }
-
-                if (string.IsNullOrWhiteSpace(_set))
-                {
-                    throw new QueryNotValidException("UPDATE SET values missing");
-                }
-
-                var nonTransactionSql = string.Format("UPDATE [{0}] SET {1} {2}", FormattedTableName, _set.TrimEnd(','), GetValidation());
-                var cmd = new SqlCommand(nonTransactionSql, connection);
-
-                InsertParameters(cmd);
-
-                return cmd;
-            }
-
-            public void AddUpdate(PropertyInfo property, object entity)
-            {
-                // check if its a timestamp, we need to skip the update
-
-                var datatype = property.GetCustomAttribute<DbTypeAttribute>();
-
-                // never update a timestamp
-                if (datatype != null && datatype.Type == SqlDbType.Timestamp) return;
-
-                //string fieldName, object value
-                var value = property.GetValue(entity);
-                var fieldName = property.GetColumnName();
-
-                // check for sql data translation, used mostly for datetime2 inserts and updates
-                var translation = property.GetCustomAttribute<DbTypeAttribute>();
-
-                if (translation != null)
-                {
-                    var key = AddParameter(property.GetColumnName(), value, translation.Type);
-
-                    _set += string.Format("[{0}] = {1},", fieldName, key);
-                }
-                else
-                {
-                    var key = AddParameter(property.GetColumnName(), value);
-
-                    _set += string.Format("[{0}] = {1},", fieldName, key);
-                }
-            }
-
-            public void AddUpdate(string column, object newValue)
-            {
-                //string fieldName, object value
-                var data = AddParameter(column, newValue);
-                _set += string.Format("[{0}] = {1},", column, data);
-            }
-            #endregion
-        }
         #endregion
     }
 }

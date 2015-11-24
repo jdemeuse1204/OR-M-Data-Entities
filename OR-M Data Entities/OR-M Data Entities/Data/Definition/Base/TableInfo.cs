@@ -5,6 +5,7 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
 using System;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
@@ -17,16 +18,20 @@ namespace OR_M_Data_Entities.Data.Definition.Base
     public class TableInfo
     {
         // lazy load and grab foreign key info here too
+        #region Properties and Fields
+        protected readonly Type EntityType;
+        #endregion
 
         #region Constructor
-
         public TableInfo(object entity)
             : this(entity.GetType())
         {
+
         }
 
         public TableInfo(Type type)
         {
+            EntityType = type;
             ClassName = type.Name;
             _linkedServerAttribute = type.GetCustomAttribute<LinkedServerAttribute>();
             _tableAttribute = type.GetCustomAttribute<TableAttribute>();
@@ -97,10 +102,16 @@ namespace OR_M_Data_Entities.Data.Definition.Base
         }
 
         public string TableNameOnly { get; private set; }
-
         #endregion
 
         #region Methods
+
+        public string SqlFormattedTableName()
+        {
+            var tableName = ToString();
+
+            return string.IsNullOrWhiteSpace(tableName) ? "" : tableName.TrimStart('[').TrimEnd(']');
+        }
 
         public override string ToString()
         {

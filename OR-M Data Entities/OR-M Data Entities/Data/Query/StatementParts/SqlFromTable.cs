@@ -9,14 +9,13 @@
 using System;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition.Base;
-using OR_M_Data_Entities.Data.Secure;
 
 namespace OR_M_Data_Entities.Data.Query.StatementParts
 {
     /// <summary>
     /// Base class for all query builders.  Each query builder must have a Table that is being referenced.
     /// </summary>
-    public abstract class SqlFromTable : SqlSecureExecutable
+    public abstract class SqlFromTable : SqlStatement
     {
         #region Properties
         public string TableNameOnly { get; private set; }
@@ -33,8 +32,8 @@ namespace OR_M_Data_Entities.Data.Query.StatementParts
         #endregion
 
         #region Constructor
-        protected SqlFromTable(ConfigurationOptions configuration) 
-            : base(configuration)
+        protected SqlFromTable(ConfigurationOptions configuration)
+            : base(configuration) 
         {
             TableName = string.Empty;
         }

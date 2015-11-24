@@ -45,16 +45,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common\TableConfigurationManager.cs" />
     <Compile Include="Configuration\ConfigurationOptions.cs" />
+    <Compile Include="Data\Definition\Base\EntityInfo.cs" />
     <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
-    <Compile Include="Data\Query\StatementParts\SqlTransactionStatement.cs" />
+    <Compile Include="Data\Query\ISqlPackage.cs" />
+    <Compile Include="Data\Query\SqlInsertBuilder.cs" />
+    <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
+    <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
     <Compile Include="Data\Transform\DbTransform.cs" />
     <Compile Include="Data\Transform\TransformContainer.cs" />
     <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
     <Compile Include="Data\Definition\Base\TableInfo.cs" />
-    <Compile Include="Data\Definition\ObjectSchematic.cs" />
     <Compile Include="Data\Definition\OSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
     <Compile Include="Data\Definition\SqlExistsString.cs" />
@@ -79,7 +81,6 @@
     <Compile Include="Enumeration\DataTransformType.cs" />
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />
-    <Compile Include="Data\Definition\DatabaseEntity.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
     <Compile Include="Data\DatabaseReading.cs" />
     <Compile Include="Data\DatabaseFetching.cs" />

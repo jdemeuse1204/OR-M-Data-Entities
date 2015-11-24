@@ -71,7 +71,7 @@ namespace OR_M_Data_Entities.Data
 
             Connect();
 
-            Command = builder.Build(Connection);
+            Command = builder.BuildSqlCommand(Connection);
 
             Reader = Command.ExecuteReaderWithPeeking(Connection);
         }

@@ -6,19 +6,14 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using System.Collections.Generic;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Data.Definition.Base;
-using OR_M_Data_Entities.Data.Query.StatementParts;
 
 namespace OR_M_Data_Entities.Data.Query
 {
 	public interface ISqlBuilder
 	{
-		SqlCommand Build(SqlConnection connection);
+        ISqlPackage Build();
 
-        SqlTransactionStatement GetTransactionSql(IEnumerable<SqlSecureQueryParameter> parameters);
-
-	    IEnumerable<SqlSecureQueryParameter> GetParameters();
+	    SqlCommand BuildSqlCommand(SqlConnection connection);
 	}
 }

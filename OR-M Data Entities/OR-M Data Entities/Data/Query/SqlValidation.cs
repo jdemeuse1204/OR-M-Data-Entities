@@ -22,9 +22,9 @@ namespace OR_M_Data_Entities.Data.Query
 		#endregion
 
 		#region Constructor
-	    protected SqlValidation(ConfigurationOptions configuration) 
+	    protected SqlValidation(ConfigurationOptions configuration)
             : base(configuration)
-		{
+        {
 			_where = string.Empty;
 		}
 		#endregion

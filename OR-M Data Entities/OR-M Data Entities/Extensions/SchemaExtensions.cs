@@ -153,7 +153,7 @@ namespace OR_M_Data_Entities.Extensions
             return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
         }
 
-        public static bool HasForeignKeys(this TypeInfo entityType)
+        public static bool HasForeignKeys(TypeInfo entityType)
         {
             return entityType.UnderlyingSystemType.HasForeignKeys();
         }
