@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
+using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Tests.Tables;
 
 

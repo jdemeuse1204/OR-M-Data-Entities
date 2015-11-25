@@ -49,7 +49,6 @@
     <Compile Include="Data\Definition\Base\EntityInfo.cs" />
     <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
-    <Compile Include="Data\Query\SqlInsertBuilder.cs" />
     <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
     <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
     <Compile Include="Data\Transform\DbTransform.cs" />
@@ -72,7 +71,6 @@
     <Compile Include="Enumeration\JoinType.cs" />
     <Compile Include="Data\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Data\Secure\SqlSecureObject.cs" />
-    <Compile Include="Data\Query\StatementParts\InsertItem.cs" />
     <Compile Include="Data\Query\ISqlBuilder.cs" />
     <Compile Include="Data\Query\KeyContainer.cs" />
     <Compile Include="Data\Query\SqlFunctionTextBuilder.cs" />

@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
+using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Tracking;
@@ -178,6 +180,7 @@ namespace OR_M_Data_Entities.Data.Definition.Base
         #endregion
 
         #region Entity Methods
+
         public UpdateType GetUpdateType()
         {
             var areAnyPkGenerationOptionsNone = false;
@@ -273,12 +276,17 @@ namespace OR_M_Data_Entities.Data.Definition.Base
 
         public EntityStateComparePackage GetEntityState()
         {
-            if (Entity == null) return null;
-
             // if entity state tracking is not on mark everything as changed so it will be inserted/updated
             return !IsEntityStateTrackingOn
                 ? new EntityStateComparePackage(EntityState.Modified, Properties.Select(GetColumnName))
                 : EntityStateAnalyzer.Analyze(EntityTrackable);
+        }
+
+        public ISqlPackage GetExecutionPackage()
+        {
+            return null;
+
+
         }
         #endregion
     }

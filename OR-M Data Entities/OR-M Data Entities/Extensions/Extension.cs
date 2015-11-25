@@ -5,6 +5,7 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Tracking;
 
-namespace OR_M_Data_Entities
+namespace OR_M_Data_Entities.Extensions
 {
     public static class ExpressionQueryExtensions
     {

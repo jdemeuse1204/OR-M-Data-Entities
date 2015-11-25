@@ -15,14 +15,13 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Data.Execution;
-using OR_M_Data_Entities.Data.Query.StatementParts;
+using OR_M_Data_Entities.Data.Query;
+using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Tracking;
-using SqlTransaction = OR_M_Data_Entities.Data.Query.StatementParts.SqlTransaction;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -94,610 +93,667 @@ BEGIN TRANSACTION @1;
         }
 
 
-
-        private SqlInsertBuilder _getInsertBuilder(object entity, List<PropertyInfo> tableColumns, UpdateType updateType)
-        {
-            SqlInsertBuilder insert;
-
-            // get the correct insert builder
-            switch (updateType)
-            {
-                case UpdateType.Insert:
-                    insert = new SqlInsertBuilder(Configuration);
-                    break;
-                case UpdateType.TryInsert:
-                    insert = new SqlTryInsertBuilder(Configuration);
-                    break;
-                case UpdateType.TryInsertUpdate:
-                    insert = new SqlTryInsertUpdateBuilder(Configuration);
-                    break;
-                default:
-                    throw new SqlSaveException(string.Format("Cannot use Update Type of {0} with insert builder", updateType));
-            }
-
-            insert.Table(entity.GetType());
-
-            // Loop through all mapped properties
-            foreach (var property in tableColumns)
-            {
-                insert.AddInsert(property, entity);
-            }
-
-            return insert;
-        }
-
         #endregion
 
         #region Save Methods
-
         public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
-            // can only use transactions when MARS is on because the execution is different.
-            return Configuration.UseMultipleActiveResultSets
-                ? _saveChangesUsingTransactions(entity)
-                : _saveChanges(entity);
-        }
+            var entityInfo = new EntityInfo(entity);
+            var executionPlan = new SqlExecutionPlan(entityInfo);
 
-        private UpdateType _saveChanges<T>(T entity)
-            where T : class
-        {
-            var state = UpdateType.Insert;
-            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
-
-            if (readOnlyAttribute != null)
+            // Get the correct execution plan
+            switch (executionPlan.UpdateType)
             {
-                switch (readOnlyAttribute.ReadOnlySaveOption)
-                {
-                    // skip children(foreign keys) if option is set
-                    case ReadOnlySaveOption.Skip:
-                        return UpdateType.Skip;
-
-                    // Check for readonly attribute and see if we should throw an error   
-                    case ReadOnlySaveOption.ThrowException:
-                        throw new SqlSaveException(string.Format(
-                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                            entity.GetTableName()));
-                }
-            }
-
-            if (entity.HasForeignKeys())
-            {
-                var savableObjects = new List<ForeignKeySaveNode>();
-
-                // begin transaction
-
-                // creates the save order based on the primary and foreign keys
-                _getSaveOrder(entity, savableObjects, Configuration.UseMultipleActiveResultSets);
-
-                if (OnBeforeSave != null) OnBeforeSave(entity);
-
-                foreach (var savableObject in savableObjects)
-                {
-                    var isList = savableObject.Property != null && savableObject.Property.PropertyType.IsList();
-
-                    if (isList)
-                    {
-                        // relationship is one-many.  Need to set the foreign key before saving
-                        _setPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
-                    }
-
-                    state = _saveObjectToDatabase(savableObject.Value);
-
-                    if (OnAfterSave != null) OnAfterSave(entity);
-
-                    if (savableObject.Parent == null) continue;
-
-                    if (!isList)
-                    {
-                        // relationship is one-one.  Need to set the foreign key after saving
-                        _setPropertyValue(savableObject.Parent, savableObject.Value, savableObject.Property.Name);
-                    }
-                }
-
-                return state;
-            }
-
-            if (OnBeforeSave != null) OnBeforeSave(entity);
-
-            state = _saveObjectToDatabase(entity);
-
-            if (OnAfterSave != null) OnAfterSave(entity);
-
-            return state;
-        }
-
-        private UpdateType _saveChangesUsingTransactions<T>(T entity)
-            where T : class
-        {
-            var state = UpdateType.Insert;
-
-            // analyze the entity and get the save order.
-
-            // check the save objects to make sure there are no readonly tables
-
-            // create the transactions
-
-            // load the resulting data back into the objects, use 'TableName.ColumnName' to load back into objects,
-            // we can do this because the resulting data is not in one giant data set, its in separate ones so no 
-            // danger of column names matching
-
-            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
-
-            if (readOnlyAttribute != null)
-            {
-                switch (readOnlyAttribute.ReadOnlySaveOption)
-                {
-                    // skip children(foreign keys) if option is set
-                    case ReadOnlySaveOption.Skip:
-                        return UpdateType.Skip;
-
-                    // Check for readonly attribute and see if we should throw an error   
-                    case ReadOnlySaveOption.ThrowException:
-                        throw new SqlSaveException(string.Format(
-                            "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                            entity.GetTableName()));
-                }
-            }
-
-            if (entity.HasForeignKeys())
-            {
-                var savableObjects = new List<ForeignKeySaveNode>();
-                var transaction = new SqlTransaction();
-
-                // creates the save order based on the primary and foreign keys
-                _getSaveOrder(entity, savableObjects, Configuration.UseMultipleActiveResultSets);
-                
-                foreach (var savableObject in savableObjects)
-                {
-                    var statement = _getSaveStatement(savableObject.Value);
-
-                    if (statement == null) continue;// skip because nothing changed
-
-                    transaction.Add(statement);
-                }
-
-                // execute the transaction
-
-                // if no errors on save make sure to set each entity as pristine
-
-                return state;
-            }
-
-            // fire the before save action if there is one
-            if (OnBeforeSave != null) OnBeforeSave(entity);
-
-            state = _saveObjectToDatabase(entity);
-
-            // fire the after save action if there is one
-            if (OnAfterSave != null) OnAfterSave(entity);
-
-            return state;
-        }
-
-        private SqlStatement _getSaveStatement<T>(T entity)
-        {
-            // Check to see if the user is using entity state tracking
-            var entityTrackable = entity as EntityStateTrackable;
-
-            EntityStateComparePackage entityStatePackage = null;
-
-            // check to see if EntityTrackable is being used, if so check
-            // to see if we have any changes
-            if (entityTrackable != null)
-            {
-                entityStatePackage = EntityStateAnalyzer.Analyze(entityTrackable);
-
-                if (entityStatePackage.State == EntityState.UnChanged) return null;
-            }
-
-            // ID is the default primary key name
-            var primaryKeys = entity.GetPrimaryKeys();
-
-            // all table properties
-            var tableColumns = entity.GetTableFields();
-
-            // check to see whether we have an insert or update
-            var state = _getState(entity, primaryKeys);
-
-            if (OnSaving != null) OnSaving(entity);
-
-            // Update Or Insert data
-            switch (state)
-            {
-                case UpdateType.Update:
-                    {
-                        // Update Data
-                        var update = new SqlUpdateBuilder(Configuration);
-
-                        update.Table(entity.GetType());
-
-                        var properties = from property in
-                            (from property in tableColumns
-                             let columnName = property.GetColumnName()
-                             where
-                             !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                             property.GetCustomAttribute<NonSelectableAttribute>() == null
-                             // Skip unmapped fields
-                             select property)
-                                         let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
-                                         where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
-                                         select property;
-
-                        // are we using a trackable entity? If so only grab the fields to update
-                        if (entityTrackable != null)
-                        {
-                            properties = properties.Where(w => entityStatePackage.ChangeList.Contains(w.Name));
-                        }
-
-                        foreach (var property in properties)
-                        {
-                            update.AddUpdate(property, entity);
-                        }
-
-                        // add validation to only update the row
-                        foreach (var primaryKey in primaryKeys)
-                        {
-                            update.AddWhere(primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
-                        }
-
-                        // get sql string
-                        return update;
-                    }
                 case UpdateType.Insert:
-                case UpdateType.TryInsert: // only for tables that have PK's only, no other columns
+                    executionPlan = (SqlNonTransactionInsertBuilder)executionPlan;
+                    break;
+                case UpdateType.TryInsert:
+                    executionPlan = (SqlNonTransactionTryInsertBuilder)executionPlan;
+                    break;
                 case UpdateType.TryInsertUpdate:
-                    {
-                        // Get The Insert Data
-                        return _getInsertBuilder(entity, tableColumns, state);
-                    }
-            }
-
-            return null;
-        }
-
-        private UpdateType _saveObjectToDatabase<T>(T entity)
-        {
-            // Check to see if the user is using entity state tracking
-            var entityTrackable = entity as EntityStateTrackable;
-
-            EntityStateComparePackage entityStatePackage = null;
-
-            // check to see if EntityTrackable is being used, if so check
-            // to see if we have any changes
-            if (entityTrackable != null)
-            {
-                entityStatePackage = EntityStateAnalyzer.Analyze(entityTrackable);
-
-                if (entityStatePackage.State == EntityState.UnChanged) return UpdateType.Skip;
-            }
-
-            // ID is the default primary key name
-            var primaryKeys = entity.GetPrimaryKeys();
-
-            // all table properties
-            var tableColumns = entity.GetTableFields();
-
-            // check to see whether we have an insert or update
-            var state = _getState(entity, primaryKeys);
-
-            if (OnSaving != null) OnSaving(entity);
-
-            // Update Or Insert data
-            switch (state)
-            {
+                    executionPlan = (SqlNonTransactionTryInsertUpdateBuilder)executionPlan;
+                    break;
                 case UpdateType.Update:
-                    {
-                        // Update Data
-                        var update = new SqlUpdateBuilder(Configuration);
-
-                        update.Table(entity.GetType());
-
-                        var properties = from property in
-                            (from property in tableColumns
-                             let columnName = property.GetColumnName()
-                             where
-                             !primaryKeys.Select(w => w.Name).Contains(property.Name) &&
-                             property.GetCustomAttribute<NonSelectableAttribute>() == null
-                         // Skip unmapped fields
-                         select property)
-                                         let typeAttribute = property.GetCustomAttribute<DbTypeAttribute>()
-                                         where typeAttribute == null || typeAttribute.Type != SqlDbType.Timestamp
-                                         select property;
-
-                        // are we using a trackable entity? If so only grab the fields to update
-                        if (entityTrackable != null)
-                        {
-                            properties = properties.Where(w => entityStatePackage.ChangeList.Contains(w.Name));
-                        }
-
-                        foreach (var property in properties)
-                        {
-                            update.AddUpdate(property, entity);
-                        }
-
-                        // add validation to only update the row
-                        foreach (var primaryKey in primaryKeys)
-                        {
-                            update.AddWhere(primaryKey.GetColumnName(), CompareType.Equals, primaryKey.GetValue(entity));
-                        }
-
-                        // if its only an update, perform the update
-                        ExecuteReader(update);
-
-                        // set the resulting pk(s) and db generated columns in the entity object
-                        foreach (var item in SelectIdentity())
-                        {
-                            // find the property first in case the column name change attribute is used
-                            // Key is property name, value is the db value
-                            _setPropertyValue(
-                                entity,
-                                item.Key,
-                                item.Value);
-                        }
-                    }
+                    executionPlan = (SqlNonTransactionUpdateBuilder)executionPlan;
                     break;
-                case UpdateType.Insert:
-                case UpdateType.TryInsert: // only for tables that have PK's only, no other columns
-                case UpdateType.TryInsertUpdate:
-                    {
-                        // Get The Insert Data
-                        var insert = _getInsertBuilder(entity, tableColumns, state);
-
-                        // do not need to read back the values because they are already in the database, if not they will be inserted.
-                        // db generation option is always none so there is no need to load any PK's in to the object
-                        // Execute the insert statement
-                        ExecuteReader(insert);
-
-                        // set the resulting pk(s) and db generated columns in the entity object
-                        foreach (var item in SelectIdentity())
-                        {
-                            // find the property first in case the column name change attribute is used
-                            // Key is property name, value is the db value
-                            _setPropertyValue(
-                                entity,
-                                item.Key,
-                                item.Value);
-                        }
-                    }
+                case UpdateType.Skip:
+                    executionPlan = (SqlSkipModificationPackage)executionPlan;
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
-            // Mark the table as unchanged again
-            if (entityTrackable != null) EntityStateAnalyzer.TrySetPristineEntity(entity);
+            ExecuteReader((ISqlBuilder)executionPlan);
 
-            // close our readers
-            Connection.Close();
-            Reader.Close();
-            Reader.Dispose();
-
-            return state;
+            return UpdateType.Insert;
         }
 
         #endregion
 
         #region Delete Methods
 
-        public virtual bool Delete<T>(T entity)
-            where T : class
+        public virtual bool Delete<T>(T entity) where T : class
         {
-            return Configuration.UseMultipleActiveResultSets ? _deleteUsingTransactions(entity) : _delete(entity);
-        }
-
-        private bool _delete<T>(T entity)
-            where T : class
-        {
-            var readOnlyAttribute = entity.GetType().GetCustomAttribute<ReadOnlyAttribute>();
-
-            if (readOnlyAttribute != null)
-            {
-                // skip children(foreign keys) if option is set
-                if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip) return false;
-
-                // Check for readonly attribute and see if we should throw an error
-                if (readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
-                {
-                    throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                        entity.GetTableName()));
-                }
-            }
-
-            if (!entity.HasForeignKeys()) return _deleteObjectFromDatabase(entity);
-
-            var result = true;
-            var savableObjects = new List<ForeignKeySaveNode> { new ForeignKeySaveNode(null, entity, null) };
-
-            // creates the save order based on the primary and foreign keys
-            _analyzeObjectWithForeignKeysAndGetModificationOrder(entity, savableObjects, false);
-
-            // need to reverse the save order for a delete
-            savableObjects.Reverse();
-
-            foreach (
-                var savableObject in
-                    savableObjects.Where(savableObject => !_deleteObjectFromDatabase(savableObject.Value)))
-            {
-                result = false;
-            }
-
-            return result;
-        }
-
-        private bool _deleteUsingTransactions<T>(T entity)
-            where T : class
-        {
-
-
-            return true;
-        }
-
-        private bool _deleteObjectFromDatabase<T>(T entity)
-        {
-            // ID is the default primary key name
-            var primaryKeys = entity.GetPrimaryKeys();
-
-            // delete Data
-            var builder = new SqlDeleteBuilder(Configuration);
-            builder.Table(entity.GetType());
-
-            // Loop through all mapped properties
-            foreach (var property in primaryKeys)
-            {
-                var value = property.GetValue(entity);
-                var columnName = property.GetColumnName();
-                builder.AddWhere(columnName, CompareType.Equals, value);
-            }
-
-            try
-            {
-                // Execute the insert statement
-                ExecuteReader(builder);
-            }
-            catch (SqlException exception)
-            {
-                // If there is a reference constraint error throw exception noting that the user should try and use a lookup table
-                // if they do not want the data to be deleted
-                if (!exception.Message.ToUpper().Contains("REFERENCE CONSTRAINT"))
-                {
-                    throw new SqlReferenceConstraintException(
-                        string.Format(
-                            "Reference Constraint Violated, consider using a LookupTable to preserve FK Data.  Original Exception: {0}",
-                            exception.Message));
-                }
-
-                throw;
-            }
-
-            if (!Reader.HasRows) return false;
-
-            if (!Reader.IsClosed) Read();
-
-            var rowsAffected = Reader.IsClosed ? 0 : Reader.GetInt32(0);
-
-            // close our readers
-            Connection.Close();
-            Reader.Close();
-            Reader.Dispose();
-
-            // return if anything was deleted
-            return rowsAffected > 0;
-        }
-
-        #endregion
-
-        #region Helpers
-
-        /// <summary>
-        /// Analyzes the object to be saved to make sure all foreign keys have a object to be saved.  
-        /// Save is cancelled if there are errors.  Also creates the save order based on the foreign keys
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="entity"></param>
-        /// <param name="savableObjects"></param>
-        private void _analyzeObjectWithForeignKeysAndGetModificationOrder<T>(T entity,
-            List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled)
-            where T : class
-        {
-            // make sure FKs have values before saving, if they dont you need to throw an error
-            // we want to look at one-one relationships before one-many
-            foreach (var foreignKey in entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()))
-            {
-                int index;
-                var foreignKeyValue = foreignKey.GetValue(entity);
-                var foreignKeyIsList = foreignKey.PropertyType.IsList();
-                var readOnlyAttribute = foreignKey.GetPropertyType().GetCustomAttribute<ReadOnlyAttribute>();
-                var isLookupTable = foreignKey.GetPropertyType().GetCustomAttribute<LookupTableAttribute>() != null;
-
-                // skip lookup tables
-                if (isLookupTable) continue;
-
-                // skip children(foreign keys) if option is set
-                if (readOnlyAttribute != null && readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.Skip)
-                    continue;
-
-                if (foreignKeyValue == null)
-                {
-                    if (foreignKeyIsList) continue;
-
-                    var columnName = foreignKey.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
-                    var isNullable = entity.GetType().GetProperty(columnName).PropertyType.IsNullable();
-
-                    // we can skip the foreign key if its nullable and one to one
-                    if (isNullable) continue;
-
-                    if (!isMARSEnabled)
-                    {
-                        // database will take care of this if MARS is enabled
-                        // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
-                        // maintaining the relationship
-                        throw new SqlSaveException(
-                            string.Format(
-                                "Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save",
-                                foreignKey.Name));
-                    }
-                }
-
-                // Check for readonly attribute and see if we should throw an error
-                if (readOnlyAttribute != null &&
-                    readOnlyAttribute.ReadOnlySaveOption == ReadOnlySaveOption.ThrowException)
-                {
-                    throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                        entity.GetTableName()));
-                }
-
-                // doesnt have dependencies
-                if (foreignKeyIsList)
-                {
-                    foreach (var item in (foreignKeyValue as dynamic))
-                    {
-
-                        // make sure there are no saving issues
-                        _getState(item);
-
-                        // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                        // the value property
-                        index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
-
-                        savableObjects.Insert(index + 1, new ForeignKeySaveNode(foreignKey, item, entity));
-
-                        if (SchemaExtensions.HasForeignKeys(item))
-                        {
-                            _analyzeObjectWithForeignKeysAndGetModificationOrder(item, savableObjects, isMARSEnabled);
-                        }
-                    }
-                }
-                else
-                {
-                    // make sure there are no saving issues
-                    _getState(foreignKeyValue);
-
-                    // must be saved before the parent
-                    // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                    // the value property
-                    index = savableObjects.IndexOf(new ForeignKeySaveNode(null, entity, null));
-
-                    savableObjects.Insert(index, new ForeignKeySaveNode(foreignKey, foreignKeyValue, entity));
-
-                    // has dependencies
-                    if (foreignKeyValue.HasForeignKeys())
-                    {
-                        _analyzeObjectWithForeignKeysAndGetModificationOrder(foreignKeyValue as dynamic, savableObjects,
-                            isMARSEnabled);
-                    }
-                }
-            }
+            return false;
         }
 
         #endregion
     }
 
     /// <summary>
-    /// separate the entity loading code from the modifiable code.  This is the only class that uses the entity loading code
+    /// Created partial class to split off query builders.  
+    /// We do not want the end user to know about any sql builders, we hide them all in the partial class
     /// </summary>
     public partial class DatabaseModifiable
     {
+        /// <summary>
+        /// Provides us a way to get the execution plan for an entity
+        /// </summary>
+        #region Base
+
+        private class ModifcationItem
+        {
+            #region Properties
+
+            public string SqlDataTypeString { get; private set; }
+
+            public string PropertyDataType { get; private set; }
+
+            public string PropertyName { get; private set; }
+
+            public string DatabaseColumnName { get; private set; }
+
+            public string KeyName { get; private set; }
+
+            public SqlDbType DbTranslationType { get; private set; }
+
+            public bool IsPrimaryKey { get; private set; }
+
+            public DbGenerationOption Generation { get; private set; }
+
+            public object Value { get; private set; }
+
+            public bool TranslateDataType { get; private set; }
+
+            #endregion
+
+            #region Constructor
+
+            public ModifcationItem(PropertyInfo property, object entity)
+            {
+                PropertyName = property.Name;
+                DatabaseColumnName = property.GetColumnName();
+                IsPrimaryKey = property.IsPrimaryKey();
+                Value = property.GetValue(entity);
+                PropertyDataType = property.PropertyType.Name.ToUpper();
+                Generation = IsPrimaryKey ? property.GetGenerationOption() : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option : DbGenerationOption.None;
+
+                // check for sql data translation, used mostly for datetime2 inserts and updates
+                var translation = property.GetCustomAttribute<DbTypeAttribute>();
+
+                if (translation != null)
+                {
+                    DbTranslationType = translation.Type;
+                    TranslateDataType = true;
+                }
+
+                switch (Generation)
+                {
+                    case DbGenerationOption.None:
+                        KeyName = "";
+                        break;
+                    case DbGenerationOption.IdentitySpecification:
+                        KeyName = "@@IDENTITY";
+                        break;
+                    case DbGenerationOption.Generate:
+                        KeyName = string.Format("@{0}", PropertyName);
+                        // set as the property name so we can pull the value back out
+                        break;
+                }
+
+                // for auto generation
+                switch (property.PropertyType.Name.ToUpper())
+                {
+                    case "INT16":
+                        SqlDataTypeString = "smallint";
+                        break;
+                    case "INT64":
+                        SqlDataTypeString = "bigint";
+                        break;
+                    case "INT32":
+                        SqlDataTypeString = "int";
+                        break;
+                    case "GUID":
+                        SqlDataTypeString = "uniqueidentifier";
+                        break;
+                }
+            }
+
+            #endregion
+        }
+
+        private abstract class SqlModificationBuilder : SqlExecutionPlan, ISqlBuilder
+        {
+            protected SqlModificationBuilder(EntityInfo info) 
+                : base(info)
+            {
+            }
+
+            public abstract ISqlPackage Build();
+
+            public SqlCommand BuildSqlCommand(SqlConnection connection)
+            {
+                // build the sql package
+                var package = Build();
+
+                // generate the sql command
+                var command = new SqlCommand(package.GetSql(), connection);
+
+                // insert the parameters
+                package.InsertParameters(command);
+
+                return command;
+            }
+        }
+
+        private class SqlExecutionPlan
+        {
+            public virtual List<ModifcationItem> GetModifcationItems()
+            {
+                return EntityInfo.GetAllColumns().Select(property => new ModifcationItem(property, Entity)).ToList();
+            }
+
+            public SqlExecutionPlan(EntityInfo info)
+            {
+                EntityInfo = info;
+                _updateType = null;
+            }
+
+            private UpdateType? _updateType;
+
+            // cache the update type
+            public UpdateType UpdateType
+            {
+                get
+                {
+                    if (_updateType.HasValue) return _updateType.Value;
+
+                    _updateType = EntityInfo.GetUpdateType();
+
+                    return _updateType.Value;
+                }
+            }
+
+            public readonly EntityInfo EntityInfo;
+        }
+
+        private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
+        {
+            #region Constructor
+            protected SqlModificationPackage(SqlExecutionPlan plan)
+            {
+                Fields = string.Empty;
+                Values = string.Empty;
+                Declare = string.Empty;
+                Keys = string.Empty;
+                SelectColumns = string.Empty;
+                Where = string.Empty;
+                Set = string.Empty;
+                Update = string.Empty;
+                FormattedTableName = plan.EntityInfo.SqlFormattedTableName();
+                ModificationItems = plan.GetModifcationItems();
+            }
+
+            #endregion
+
+            #region Properties
+
+            protected readonly List<ModifcationItem> ModificationItems;
+
+            protected readonly string FormattedTableName;
+
+            protected string Fields { get; set; }
+
+            protected string Values { get; set; }
+
+            protected string Declare { get; set; }
+
+            protected readonly string Select = "SELECT TOP 1 {0}{1}";
+
+            protected readonly string From = " FROM [{0}] WHERE {1}";
+
+            protected string Keys { get; set; }
+
+            protected string SelectColumns { get; set; }
+
+            protected string Where { get; set; }
+
+            protected string Set { get; set; }
+
+            protected string Update { get; set; }
+
+            protected bool DoSelectFromForKeyContainer { get; set; }
+
+            #endregion
+
+            #region Methods
+
+            public abstract void CreatePackage();
+
+            public abstract string GetSql();
+
+            #endregion
+        }
+
+        #endregion
+
+        #region Insert
+
+        #region Non Transaction Builders
+
+        private abstract class SqlNonTransactionInsertBuilder : SqlModificationBuilder
+        {
+            protected SqlNonTransactionInsertBuilder(EntityInfo info)
+                : base(info)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionInsertPackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        private abstract class SqlNonTransactionTryInsertBuilder : SqlNonTransactionInsertBuilder
+        {
+            protected SqlNonTransactionTryInsertBuilder(EntityInfo info) 
+                : base(info)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionTryInsertPackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        private abstract class SqlNonTransactionTryInsertUpdateBuilder : SqlNonTransactionTryInsertBuilder
+        {
+            protected SqlNonTransactionTryInsertUpdateBuilder(EntityInfo info) 
+                : base(info)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionTryInsertUpdatePackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        #endregion
+
+        #region Non Transaction Packages
+
+        private class SqlNonTransactionInsertPackage : SqlModificationPackage
+        {
+            #region Constructor
+
+            public SqlNonTransactionInsertPackage(SqlExecutionPlan builder) 
+                : base(builder)
+            {
+            }
+
+            #endregion
+
+            #region Methods
+
+            public override void CreatePackage()
+            {
+                if (ModificationItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
+
+                DoSelectFromForKeyContainer = ModificationItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) || ModificationItems.Any(w => w.Generation == DbGenerationOption.DbDefault);
+
+                for (var i = 0; i < ModificationItems.Count; i++)
+                {
+                    var item = ModificationItems[i];
+
+                    //  NOTE:  Alias any Identity specification and generate columns with their property
+                    // name not db column name so we can set the property when we return the values back.
+                    switch (item.Generation)
+                    {
+                        case DbGenerationOption.None:
+                            {
+                                if (item.DbTranslationType == SqlDbType.Timestamp)
+                                {
+                                    SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                    continue;
+                                }
+
+                                //Value is simply inserted
+
+                                var data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
+
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", data);
+
+                                if (!item.IsPrimaryKey)
+                                {
+                                    // should never update the pk
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    continue;
+                                }
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, data);
+                            }
+                            break;
+                        case DbGenerationOption.Generate:
+                            {
+                                // Value is generated from the database
+                                var key = string.Format("@{0}", item.PropertyName);
+
+                                // make our set statement
+                                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
+                                {
+                                    // GUID
+                                    Set += string.Format("SET {0} = NEWID();", key);
+                                }
+                                else
+                                {
+                                    // INTEGER
+                                    Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key, item.DatabaseColumnName, FormattedTableName);
+                                }
+
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", key);
+                                Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
+                                Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+
+                                if (!item.IsPrimaryKey)
+                                {
+                                    var data = FindParameterKey(item.DatabaseColumnName);
+
+                                    if (string.IsNullOrEmpty(data))
+                                    {
+                                        data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
+                                    }
+
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    continue;
+                                }
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, key);
+
+                                // Do not add as a parameter because the parameter will be converted to a string to
+                                // be inserted in to the database
+                            }
+                            break;
+                        case DbGenerationOption.IdentitySpecification:
+                            {
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
+
+                                if (!item.IsPrimaryKey) continue;
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ", item.DatabaseColumnName, item.DatabaseColumnName);
+                            }
+                            break;
+                        case DbGenerationOption.DbDefault:
+                            {
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                Keys += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                            }
+                            break;
+                    }
+                }
+            }
+
+            public override string GetSql()
+            {
+                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty
+
+                    // we want to select everything back from the database in case the model relies on db generation for some fields.
+                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
+                    // where the column is not the PK
+                    );
+            }
+
+            #endregion
+        }
+
+        private class SqlNonTransactionTryInsertPackage : SqlNonTransactionInsertPackage
+        {
+            public SqlNonTransactionTryInsertPackage(SqlExecutionPlan builder) : base(builder)
+            {
+            }
+
+            public override string GetSql()
+            {
+                return string.Format(@"
+{0}
+{1}
+IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6}))) 
+    BEGIN
+        INSERT INTO [{2}] ({3}) VALUES ({4});{5}
+    END
+
+", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty,
+                    // we want to select everything back from the database in case the model relies on db generation for some fields.
+                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
+                    // where the column is not the PK
+                    Where);
+            }
+        }
+
+        private class SqlNonTransactionTryInsertUpdatePackage : SqlNonTransactionInsertPackage
+        {
+            public SqlNonTransactionTryInsertUpdatePackage(SqlExecutionPlan builder) : base(builder)
+            {
+            }
+
+            public override string GetSql()
+            {
+                return string.Format(@"
+{0}
+{1}
+IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6}))) 
+    BEGIN
+        INSERT INTO [{2}] ({3}) VALUES ({4});{5}
+    END
+ELSE
+    BEGIN
+        UPDATE [{2}] SET {7} WHERE {6}
+    END
+", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty,
+                    // we want to select everything back from the database in case the model relies on db generation for some fields.
+                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
+                    // where the column is not the PK
+                    Where, Update.TrimEnd(','));
+            }
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Update
+
+        #region Non Transaction Builders
+
+        private abstract class SqlNonTransactionUpdateBuilder : SqlNonTransactionTryInsertUpdateBuilder
+        {
+            protected SqlNonTransactionUpdateBuilder(EntityInfo info)
+                : base(info)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                var package = new SqlNonTransactionInsertPackage(this);
+
+                package.CreatePackage();
+
+                return package;
+            }
+        }
+
+        #endregion
+
+        #region Non Transaction Packages
+
+        private class SqlNonTransactionUpdatePackage : SqlModificationPackage
+        {
+            #region Constructor
+
+            public SqlNonTransactionUpdatePackage(SqlExecutionPlan builder) : base(builder)
+            {
+            }
+
+            #endregion
+
+            #region Methods
+
+            public override void CreatePackage()
+            {
+                if (ModificationItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
+
+                DoSelectFromForKeyContainer = ModificationItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) || ModificationItems.Any(w => w.Generation == DbGenerationOption.DbDefault);
+
+                for (var i = 0; i < ModificationItems.Count; i++)
+                {
+                    var item = ModificationItems[i];
+
+                    //  NOTE:  Alias any Identity specification and generate columns with their property
+                    // name not db column name so we can set the property when we return the values back.
+                    switch (item.Generation)
+                    {
+                        case DbGenerationOption.None:
+                            {
+                                if (item.DbTranslationType == SqlDbType.Timestamp)
+                                {
+                                    SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                    continue;
+                                }
+
+                                //Value is simply inserted
+
+                                var data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
+
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", data);
+
+                                if (!item.IsPrimaryKey)
+                                {
+                                    // should never update the pk
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    continue;
+                                }
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, data);
+                            }
+                            break;
+                        case DbGenerationOption.Generate:
+                            {
+                                // Value is generated from the database
+                                var key = string.Format("@{0}", item.PropertyName);
+
+                                // make our set statement
+                                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
+                                {
+                                    // GUID
+                                    Set += string.Format("SET {0} = NEWID();", key);
+                                }
+                                else
+                                {
+                                    // INTEGER
+                                    Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key, item.DatabaseColumnName, FormattedTableName);
+                                }
+
+                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
+                                Values += string.Format("{0},", key);
+                                Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
+                                Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+
+                                if (!item.IsPrimaryKey)
+                                {
+                                    var data = FindParameterKey(item.DatabaseColumnName);
+
+                                    if (string.IsNullOrEmpty(data))
+                                    {
+                                        data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
+                                    }
+
+                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
+                                    continue;
+                                }
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, key);
+
+                                // Do not add as a parameter because the parameter will be converted to a string to
+                                // be inserted in to the database
+                            }
+                            break;
+                        case DbGenerationOption.IdentitySpecification:
+                            {
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
+
+                                if (!item.IsPrimaryKey) continue;
+
+                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ", item.DatabaseColumnName, item.DatabaseColumnName);
+                            }
+                            break;
+                        case DbGenerationOption.DbDefault:
+                            {
+                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                Keys += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                            }
+                            break;
+                    }
+                }
+            }
+
+            public override string GetSql()
+            {
+                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty
+
+                    // we want to select everything back from the database in case the model relies on db generation for some fields.
+                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
+                    // where the column is not the PK
+                    );
+            }
+
+            #endregion
+        }
+
+        #endregion
+
+        #endregion
+
+        private abstract class SqlSkipModificationPackage : SqlNonTransactionUpdateBuilder
+        {
+            protected SqlSkipModificationPackage(EntityInfo info) 
+                : base(info)
+            {
+            }
+        }
+
+        #region Unused
+
         private UpdateType _getState(object entity)
         {
             return _getState(entity, entity.GetPrimaryKeys());
@@ -707,26 +763,15 @@ BEGIN TRANSACTION @1;
         {
             var areAnyPkGenerationOptionsNone = false;
 
-            var columns =
-                entity.GetType().GetProperties().Where(w => !w.IsPrimaryKey()).ToList();
+            var columns = entity.GetType().GetProperties().Where(w => !w.IsPrimaryKey()).ToList();
 
             var entityTrackable = entity as EntityStateTrackable;
 
             // make sure the user is not trying to update an IDENTITY column, these cannot be updated
-            foreach (
-                var column in
-                    columns.Where(
-                        w =>
-                            w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
-                            w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
-                            DbGenerationOption.IdentitySpecification)
-                        .Where(
-                            column =>
-                                entityTrackable != null &&
-                                EntityStateAnalyzer.HasColumnChanged(entityTrackable, column.Name)))
+            foreach (var column in
+                columns.Where(w => w.GetCustomAttribute<DbGenerationOptionAttribute>() != null && w.GetCustomAttribute<DbGenerationOptionAttribute>().Option == DbGenerationOption.IdentitySpecification).Where(column => entityTrackable != null && EntityStateAnalyzer.HasColumnChanged(entityTrackable, column.Name)))
             {
-                throw new SqlSaveException(string.Format("Cannot update value if IDENTITY column.  Column: {0}",
-                    column.Name));
+                throw new SqlSaveException(string.Format("Cannot update value if IDENTITY column.  Column: {0}", column.Name));
             }
 
             for (var i = 0; i < primaryKeys.Count; i++)
@@ -780,9 +825,7 @@ BEGIN TRANSACTION @1;
                     if (generationOption == DbGenerationOption.None)
                     {
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
-                        throw new SqlSaveException(string.Format(
-                            "Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}", key.Name,
-                            pkValueTypeString, pkValueType));
+                        throw new SqlSaveException(string.Format("Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}", key.Name, pkValueTypeString, pkValueType));
                     }
                     continue;
                 }
@@ -790,9 +833,7 @@ BEGIN TRANSACTION @1;
                 // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
                 // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
                 // if so we need to perform an update, otherwise we perform an insert
-                return entity.HasPrimaryKeysOnly()
-                    ? UpdateType.TryInsert
-                    : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
+                return entity.HasPrimaryKeysOnly() ? UpdateType.TryInsert : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
             }
 
             return UpdateType.Insert;
@@ -811,8 +852,7 @@ BEGIN TRANSACTION @1;
 
             //Nullable properties have to be treated differently, since we 
             //  use their underlying property to set the value in the object
-            if (propertyType.IsGenericType
-                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 //if it's null, just set the value from the reserved word null, and return
                 if (value == null)
@@ -826,10 +866,7 @@ BEGIN TRANSACTION @1;
             }
 
             //use the converter to get the correct value
-            found.SetValue(
-                entity,
-                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
-                null);
+            found.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
         }
 
         private void _setPropertyValue(object entity, PropertyInfo property, object value)
@@ -838,8 +875,7 @@ BEGIN TRANSACTION @1;
 
             //Nullable properties have to be treated differently, since we 
             //  use their underlying property to set the value in the object
-            if (propertyType.IsGenericType
-                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 //if it's null, just set the value from the reserved word null, and return
                 if (value == null)
@@ -853,24 +889,14 @@ BEGIN TRANSACTION @1;
             }
 
             //use the converter to get the correct value
-            property.SetValue(
-                entity,
-                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
-                null);
+            property.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
         }
 
         private void _setPropertyValue(object parent, object child, string propertyNameToSet)
         {
             if (parent == null) return;
 
-            var foreignKeyProperty =
-                parent.GetForeignKeys()
-                    .First(
-                        w =>
-                            (w.PropertyType.IsList()
-                                ? w.PropertyType.GetGenericArguments()[0]
-                                : w.PropertyType) == child.GetType() &&
-                            w.Name == propertyNameToSet);
+            var foreignKeyProperty = parent.GetForeignKeys().First(w => (w.PropertyType.IsList() ? w.PropertyType.GetGenericArguments()[0] : w.PropertyType) == child.GetType() && w.Name == propertyNameToSet);
 
             var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
 
@@ -890,9 +916,7 @@ BEGIN TRANSACTION @1;
             }
         }
 
-        private void _getSaveOrder<T>(T entity,
-            List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled)
-            where T : class
+        private void _getSaveOrder<T>(T entity, List<ForeignKeySaveNode> savableObjects, bool isMARSEnabled) where T : class
         {
             var entities = _getForeignKeys(entity);
 
@@ -916,8 +940,7 @@ BEGIN TRANSACTION @1;
                 if (tableInfo.IsLookupTable) continue;
 
                 // skip children(foreign keys) if option is set
-                if (tableInfo.IsReadOnly &&
-                    tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
+                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
                     continue;
 
                 if (e.Value == null)
@@ -935,20 +958,14 @@ BEGIN TRANSACTION @1;
                         // database will take care of this if MARS is enabled
                         // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
                         // maintaining the relationship
-                        throw new SqlSaveException(
-                            string.Format(
-                                "Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save",
-                                e.GetType().Name));
+                        throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
                     }
                 }
 
                 // Check for readonly attribute and see if we should throw an error
-                if (tableInfo.IsReadOnly &&
-                    tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
+                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
                 {
-                    throw new SqlSaveException(string.Format(
-                        "Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys",
-                        entity.GetTableName()));
+                    throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", entity.GetTableName()));
                 }
 
                 // doesnt have dependencies
@@ -989,14 +1006,12 @@ BEGIN TRANSACTION @1;
 
         private List<ParentChildPair> _getForeignKeys(object entity)
         {
-            return entity.GetForeignKeys()
-                .OrderBy(w => w.PropertyType.IsList())
-                .Select(w => new ParentChildPair(entity, w.GetValue(entity), w))
-                .ToList();
+            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ParentChildPair(entity, w.GetValue(entity), w)).ToList();
         }
 
         #region helpers
-        class ParentChildPair
+
+        private class ParentChildPair
         {
             public ParentChildPair(object parent, object value, PropertyInfo property)
             {
@@ -1021,6 +1036,9 @@ BEGIN TRANSACTION @1;
                 get { return Value == null ? null : Value.GetTypeListCheck(); }
             }
         }
+
+        #endregion
+
         #endregion
     }
 }
