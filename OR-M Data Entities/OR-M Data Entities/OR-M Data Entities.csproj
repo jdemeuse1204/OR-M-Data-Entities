@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Data\Definition\Base\EntityInfo.cs" />
+    <Compile Include="Data\Definition\Base\EntityInfoAnalyticsPackage.cs" />
     <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
     <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />

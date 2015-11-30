@@ -20,7 +20,8 @@ namespace OR_M_Data_Entities.Tracking
             var pristineEntity = typeof (EntityStateTrackable).GetField("_pristineEntity",
                 BindingFlags.Instance | BindingFlags.NonPublic);
 
-            if (pristineEntity == null) return false;
+            // cannot be null here
+            if (pristineEntity == null) throw new ArgumentNullException("_pristineEntity");
 
             var tableOnLoad = pristineEntity.GetValue(entity);
             var original = tableOnLoad == null
@@ -35,7 +36,7 @@ namespace OR_M_Data_Entities.Tracking
 
         public static EntityStateComparePackage Analyze(EntityStateTrackable entity)
         {
-            // if _pristineEntity == null then that means a new instance was created and it is any insert
+            // if _pristineEntity == null then that means a new instance was created and it is an insert
 
             var changes = (from item in entity.GetType().GetProperties().Where(w => w.IsColumn())
                 let current = item.GetValue(entity)

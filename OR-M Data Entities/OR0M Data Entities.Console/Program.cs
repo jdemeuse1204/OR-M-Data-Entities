@@ -18,6 +18,13 @@ namespace OR0M_Data_Entities.Console
         {            
             var context = new DbSqlContext("sqlExpress");
 
+            var xy = new Contact
+            {
+                FirstName = "James"
+            };
+
+            context.SaveChanges(xy);
+
             var x = new Contact
             {
                 CreatedBy = new User

@@ -99,32 +99,40 @@ BEGIN TRANSACTION @1;
         public virtual UpdateType SaveChanges<T>(T entity)
             where T : class
         {
-            var entityInfo = new EntityInfo(entity);
-            var executionPlan = new SqlExecutionPlan(entityInfo);
+            // create our entity info analyzer
+            var modificationEntityInfo = new ModificationEntityInfo(entity);
+
+            // create the skeleton execution plan
+            ISqlBuilder builder;
 
             // Get the correct execution plan
-            switch (executionPlan.UpdateType)
+            switch (modificationEntityInfo.UpdateType)
             {
                 case UpdateType.Insert:
-                    executionPlan = (SqlNonTransactionInsertBuilder)executionPlan;
+                    builder = new SqlNonTransactionInsertBuilder(modificationEntityInfo);
                     break;
                 case UpdateType.TryInsert:
-                    executionPlan = (SqlNonTransactionTryInsertBuilder)executionPlan;
+                    builder = new SqlNonTransactionTryInsertBuilder(modificationEntityInfo);
                     break;
                 case UpdateType.TryInsertUpdate:
-                    executionPlan = (SqlNonTransactionTryInsertUpdateBuilder)executionPlan;
+                    builder = new SqlNonTransactionTryInsertUpdateBuilder(modificationEntityInfo);
                     break;
                 case UpdateType.Update:
-                    executionPlan = (SqlNonTransactionUpdateBuilder)executionPlan;
+                    builder = new SqlNonTransactionUpdateBuilder(modificationEntityInfo);
                     break;
                 case UpdateType.Skip:
-                    executionPlan = (SqlSkipModificationPackage)executionPlan;
-                    break;
+                    return UpdateType.Skip;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
 
-            ExecuteReader((ISqlBuilder)executionPlan);
+            // execute the sql
+            ExecuteReader(builder);
+
+            // TODO put updated values into entity
+
+            // set the pristine state only if entity tracking is on
+            if (modificationEntityInfo.IsEntityStateTrackingOn) EntityStateAnalyzer.TrySetPristineEntity(entity);
 
             return UpdateType.Insert;
         }
@@ -155,6 +163,7 @@ BEGIN TRANSACTION @1;
         private class ModifcationItem
         {
             #region Properties
+            public bool IsModified { get; private set; }
 
             public string SqlDataTypeString { get; private set; }
 
@@ -180,15 +189,29 @@ BEGIN TRANSACTION @1;
 
             #region Constructor
 
-            public ModifcationItem(PropertyInfo property, object entity)
+            public ModifcationItem(PropertyInfo property, ModificationEntityInfo entityInfo)
             {
                 PropertyName = property.Name;
                 DatabaseColumnName = property.GetColumnName();
                 IsPrimaryKey = property.IsPrimaryKey();
-                Value = property.GetValue(entity);
+                Value = property.GetValue(entityInfo.Entity);
                 PropertyDataType = property.PropertyType.Name.ToUpper();
-                Generation = IsPrimaryKey ? property.GetGenerationOption() : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option : DbGenerationOption.None;
+                Generation = IsPrimaryKey
+                    ? property.GetGenerationOption()
+                    : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
+                        ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
+                        : DbGenerationOption.None;
 
+                var entityTrackable = entityInfo.GetEntityStateTrackable();
+
+                // set in case entity tracking isnt on
+                IsModified = true;
+
+                if (entityTrackable != null)
+                {
+                    IsModified = EntityStateAnalyzer.HasColumnChanged(entityTrackable, property.Name);
+                }
+                
                 // check for sql data translation, used mostly for datetime2 inserts and updates
                 var translation = property.GetCustomAttribute<DbTypeAttribute>();
 
@@ -233,11 +256,35 @@ BEGIN TRANSACTION @1;
             #endregion
         }
 
-        private abstract class SqlModificationBuilder : SqlExecutionPlan, ISqlBuilder
+        private class SqlModificationBuilder : SqlNonTransactionUpdateBuilder
         {
-            protected SqlModificationBuilder(EntityInfo info) 
+            // Builders all should inherit from ISqlBuilder, should not be astract, base class should have the Build command in it
+            public SqlModificationBuilder(ModificationEntityInfo info) 
                 : base(info)
             {
+            }
+
+
+        }
+
+        private abstract class SqlExecutionPlan : ISqlBuilder
+        {
+            #region Constructor
+            protected SqlExecutionPlan(ModificationEntityInfo info)
+            {
+                ModificationEntityInfo = info;
+            }
+            #endregion
+
+            #region Properties and Fields
+
+            public readonly ModificationEntityInfo ModificationEntityInfo;
+            #endregion
+
+            #region Methods
+            public virtual List<ModifcationItem> GetModifcationItems()
+            {
+                return ModificationEntityInfo.GetAllColumns().Select(property => new ModifcationItem(property, ModificationEntityInfo)).ToList();
             }
 
             public abstract ISqlPackage Build();
@@ -255,37 +302,8 @@ BEGIN TRANSACTION @1;
 
                 return command;
             }
-        }
 
-        private class SqlExecutionPlan
-        {
-            public virtual List<ModifcationItem> GetModifcationItems()
-            {
-                return EntityInfo.GetAllColumns().Select(property => new ModifcationItem(property, Entity)).ToList();
-            }
-
-            public SqlExecutionPlan(EntityInfo info)
-            {
-                EntityInfo = info;
-                _updateType = null;
-            }
-
-            private UpdateType? _updateType;
-
-            // cache the update type
-            public UpdateType UpdateType
-            {
-                get
-                {
-                    if (_updateType.HasValue) return _updateType.Value;
-
-                    _updateType = EntityInfo.GetUpdateType();
-
-                    return _updateType.Value;
-                }
-            }
-
-            public readonly EntityInfo EntityInfo;
+            #endregion
         }
 
         private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
@@ -301,7 +319,7 @@ BEGIN TRANSACTION @1;
                 Where = string.Empty;
                 Set = string.Empty;
                 Update = string.Empty;
-                FormattedTableName = plan.EntityInfo.SqlFormattedTableName();
+                FormattedTableName = plan.ModificationEntityInfo.SqlFormattedTableName();
                 ModificationItems = plan.GetModifcationItems();
             }
 
@@ -350,11 +368,143 @@ BEGIN TRANSACTION @1;
 
         #region Insert
 
+        #region Entity
+        private class  ModificationEntityInfo : EntityInfo
+        {
+            #region Properties and Fields
+            public UpdateType UpdateType { get; private set; }
+
+            public IReadOnlyList<PropertyInfo> PrimaryKeys { get; private set; }
+
+            public IReadOnlyList<string> ChangedList { get; private set; }
+
+            public EntityStateComparePackage ComparisonPackage { get; private set; }
+
+            public IReadOnlyList<PropertyInfo> Columns { get; private set; }
+            #endregion
+
+            #region Constructor
+            public ModificationEntityInfo(object entity) 
+                : base(entity)
+            {
+                _initialize();
+            }
+            #endregion
+
+            #region Methods
+            private void _initialize()
+            {
+                var areAnyPkGenerationOptionsNone = false;
+
+                Columns = Properties.Where(w => !IsPrimaryKey(w)).ToList();
+                PrimaryKeys = GetPrimaryKeys();
+
+                // make sure the user is not trying to update an IDENTITY column, these cannot be updated
+                foreach (
+                    var column in
+                        Columns.Where(
+                            w =>
+                                w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
+                                w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
+                                DbGenerationOption.IdentitySpecification)
+                            .Where(
+                                column =>
+                                    EntityTrackable != null &&
+                                    EntityStateAnalyzer.HasColumnChanged(EntityTrackable, column.Name)))
+                {
+                    throw new SqlSaveException(string.Format("Cannot update value if IDENTITY column.  Column: {0}",
+                        column.Name));
+                }
+
+                ComparisonPackage = IsEntityStateTrackingOn
+                    ? EntityStateAnalyzer.Analyze(EntityTrackable)
+                    : new EntityStateComparePackage(EntityState.Modified,
+                        Columns.Select(GetColumnName));
+
+                for (var i = 0; i < PrimaryKeys.Count; i++)
+                {
+                    var key = PrimaryKeys[i];
+                    var pkValue = key.GetValue(Entity);
+                    var generationOption = GetGenerationOption(key);
+                    var isUpdating = false;
+                    var pkValueTypeString = "";
+                    var pkValueType = "";
+
+                    if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
+
+                    if (generationOption == DbGenerationOption.DbDefault)
+                    {
+                        throw new SqlSaveException("Cannot use DbGenerationOption of DbDefault on a primary key");
+                    }
+
+                    // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
+                    switch (pkValue.GetType().Name.ToUpper())
+                    {
+                        case "INT16":
+                            isUpdating = Convert.ToInt16(pkValue) != 0;
+                            pkValueTypeString = "zero";
+                            pkValueType = "INT16";
+                            break;
+                        case "INT32":
+                            isUpdating = Convert.ToInt32(pkValue) != 0;
+                            pkValueTypeString = "zero";
+                            pkValueType = "INT32";
+                            break;
+                        case "INT64":
+                            isUpdating = Convert.ToInt64(pkValue) != 0;
+                            pkValueTypeString = "zero";
+                            pkValueType = "INT64";
+                            break;
+                        case "GUID":
+                            isUpdating = (Guid)pkValue != Guid.Empty;
+                            pkValueTypeString = "zero";
+                            pkValueType = "INT16";
+                            break;
+                        case "STRING":
+                            isUpdating = !string.IsNullOrWhiteSpace(pkValue.ToString());
+                            pkValueTypeString = "null/blank";
+                            pkValueType = "STRING";
+                            break;
+                    }
+
+                    // break because we are already updating, do not want to set to false
+                    if (!isUpdating)
+                    {
+                        if (generationOption == DbGenerationOption.None)
+                        {
+                            // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
+                            throw new SqlSaveException(string.Format(
+                                "Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}", key.Name,
+                                pkValueTypeString, pkValueType));
+                        }
+                        continue;
+                    }
+
+                    // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
+                    // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
+                    // if so we need to perform an update, otherwise we perform an insert
+                    UpdateType = HasPrimaryKeysOnly()
+                        ? UpdateType.TryInsert
+                        : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
+                    break;
+                }
+
+                UpdateType = UpdateType.Insert;
+            }
+
+            public EntityStateTrackable GetEntityStateTrackable()
+            {
+                return Entity as EntityStateTrackable;
+            }
+            #endregion
+        }
+        #endregion
+
         #region Non Transaction Builders
 
-        private abstract class SqlNonTransactionInsertBuilder : SqlModificationBuilder
+        private class SqlNonTransactionInsertBuilder : SqlExecutionPlan
         {
-            protected SqlNonTransactionInsertBuilder(EntityInfo info)
+            public SqlNonTransactionInsertBuilder(ModificationEntityInfo info)
                 : base(info)
             {
             }
@@ -369,9 +519,9 @@ BEGIN TRANSACTION @1;
             }
         }
 
-        private abstract class SqlNonTransactionTryInsertBuilder : SqlNonTransactionInsertBuilder
+        private class SqlNonTransactionTryInsertBuilder : SqlExecutionPlan
         {
-            protected SqlNonTransactionTryInsertBuilder(EntityInfo info) 
+            public SqlNonTransactionTryInsertBuilder(ModificationEntityInfo info) 
                 : base(info)
             {
             }
@@ -386,9 +536,9 @@ BEGIN TRANSACTION @1;
             }
         }
 
-        private abstract class SqlNonTransactionTryInsertUpdateBuilder : SqlNonTransactionTryInsertBuilder
+        private class SqlNonTransactionTryInsertUpdateBuilder : SqlExecutionPlan
         {
-            protected SqlNonTransactionTryInsertUpdateBuilder(EntityInfo info) 
+            public SqlNonTransactionTryInsertUpdateBuilder(ModificationEntityInfo info) 
                 : base(info)
             {
             }
@@ -593,16 +743,16 @@ ELSE
 
         #region Non Transaction Builders
 
-        private abstract class SqlNonTransactionUpdateBuilder : SqlNonTransactionTryInsertUpdateBuilder
+        private class SqlNonTransactionUpdateBuilder : SqlExecutionPlan
         {
-            protected SqlNonTransactionUpdateBuilder(EntityInfo info)
+            public SqlNonTransactionUpdateBuilder(ModificationEntityInfo info)
                 : base(info)
             {
             }
 
             public override ISqlPackage Build()
             {
-                var package = new SqlNonTransactionInsertPackage(this);
+                var package = new SqlNonTransactionUpdatePackage(this);
 
                 package.CreatePackage();
 
@@ -628,108 +778,56 @@ ELSE
 
             public override void CreatePackage()
             {
-                if (ModificationItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
+                // there must be columns in the entity
+                if (ModificationItems.Count == 0) throw new QueryNotValidException("UPDATE statement needs items to SET");
 
-                DoSelectFromForKeyContainer = ModificationItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) || ModificationItems.Any(w => w.Generation == DbGenerationOption.DbDefault);
+                Update = string.Format("UPDATE [{0}] SET ", FormattedTableName);
 
-                for (var i = 0; i < ModificationItems.Count; i++)
+                // skip anything not modified
+                var updateItems = ModificationItems.Where(w => w.IsModified).ToList();
+
+                // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
+                if (updateItems.Count == 0) throw new QueryNotValidException("No items to update, query analyzer failed");
+
+                for (var i = 0; i < updateItems.Count; i++)
                 {
                     var item = ModificationItems[i];
+                    var parameter = AddParameter(item.DatabaseColumnName, item.Value);
 
-                    //  NOTE:  Alias any Identity specification and generate columns with their property
-                    // name not db column name so we can set the property when we return the values back.
-                    switch (item.Generation)
-                    {
-                        case DbGenerationOption.None:
-                            {
-                                if (item.DbTranslationType == SqlDbType.Timestamp)
-                                {
-                                    SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                    continue;
-                                }
+                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, parameter);
 
-                                //Value is simply inserted
-
-                                var data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
-
-                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                Values += string.Format("{0},", data);
-
-                                if (!item.IsPrimaryKey)
-                                {
-                                    // should never update the pk
-                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
-                                    continue;
-                                }
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, data);
-                            }
-                            break;
-                        case DbGenerationOption.Generate:
-                            {
-                                // Value is generated from the database
-                                var key = string.Format("@{0}", item.PropertyName);
-
-                                // make our set statement
-                                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
-                                {
-                                    // GUID
-                                    Set += string.Format("SET {0} = NEWID();", key);
-                                }
-                                else
-                                {
-                                    // INTEGER
-                                    Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key, item.DatabaseColumnName, FormattedTableName);
-                                }
-
-                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                Values += string.Format("{0},", key);
-                                Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
-                                Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-
-                                if (!item.IsPrimaryKey)
-                                {
-                                    var data = FindParameterKey(item.DatabaseColumnName);
-
-                                    if (string.IsNullOrEmpty(data))
-                                    {
-                                        data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
-                                    }
-
-                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
-                                    continue;
-                                }
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, key);
-
-                                // Do not add as a parameter because the parameter will be converted to a string to
-                                // be inserted in to the database
-                            }
-                            break;
-                        case DbGenerationOption.IdentitySpecification:
-                            {
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
-
-                                if (!item.IsPrimaryKey) continue;
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ", item.DatabaseColumnName, item.DatabaseColumnName);
-                            }
-                            break;
-                        case DbGenerationOption.DbDefault:
-                            {
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                Keys += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                            }
-                            break;
-                    }
                 }
+
+                Update = Update.TrimEnd(',');
+
+                var primaryKeys = ModificationItems.Where(w => w.IsPrimaryKey).ToList();
+                var where = " WHERE ";
+
+                // add where statement
+                for (var i = 0; i < primaryKeys.Count; i++)
+                {
+                    var key = primaryKeys[i];
+                    var parameter = AddParameter(key.DatabaseColumnName, key.Value);
+
+                    where += string.Format("[{0}] = {1}", key.DatabaseColumnName, parameter);
+                }
+
+                Update += where;
             }
 
             public override string GetSql()
             {
-                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty
+                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
+                    string.IsNullOrWhiteSpace(Declare)
+                        ? string.Empty
+                        : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName,
+                    Fields.TrimEnd(','), Values.TrimEnd(','),
+                    SelectColumns.Any()
+                        ? DoSelectFromForKeyContainer
+                            ? string.Format(Select, SelectColumns.TrimEnd(','),
+                                string.Format(From, FormattedTableName, Where))
+                            : string.Format(Select, Keys.TrimEnd(','), string.Empty)
+                        : string.Empty
 
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
@@ -743,14 +841,6 @@ ELSE
         #endregion
 
         #endregion
-
-        private abstract class SqlSkipModificationPackage : SqlNonTransactionUpdateBuilder
-        {
-            protected SqlSkipModificationPackage(EntityInfo info) 
-                : base(info)
-            {
-            }
-        }
 
         #region Unused
 

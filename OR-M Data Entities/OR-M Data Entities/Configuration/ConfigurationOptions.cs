@@ -13,5 +13,16 @@
         public bool ThrowConcurrencyExceptions { get; set; }
 
         public bool UseMultipleActiveResultSets { get; private set; }
+
+        private class SqlIntegerOptions
+        {
+            
+        }
+
+        private enum SqlIntegerInsertType
+        {
+            Zero,
+            ZeroMin
+        }
     }
 }
