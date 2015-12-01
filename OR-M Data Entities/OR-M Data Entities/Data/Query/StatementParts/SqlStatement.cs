@@ -11,7 +11,7 @@ namespace OR_M_Data_Entities.Data.Query.StatementParts
             Delcare = string.Empty;
             Set = string.Empty;
             Sql = string.Empty;
-            IsTransaction = configuration.UseMultipleActiveResultSets;
+            IsTransaction = configuration.UseTransactions;
         }
 
         public bool IsTransaction { get; private set; }

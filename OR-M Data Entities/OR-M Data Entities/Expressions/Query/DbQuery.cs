@@ -8,6 +8,7 @@
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution;
@@ -85,7 +86,7 @@ namespace OR_M_Data_Entities.Expressions.Query
 
             var join = JoinResolution.HasItems ? JoinResolution.Resolve() : string.Empty;
             var fromType = Tables.GetTableType(Type, this.Id);
-            var tableInfo = new TableInfo(fromType);
+            var tableInfo = new Table(fromType);
             var from = string.Format("{0} As [{1}]", tableInfo,
                 Tables.FindAlias(Type, this.Id));
 

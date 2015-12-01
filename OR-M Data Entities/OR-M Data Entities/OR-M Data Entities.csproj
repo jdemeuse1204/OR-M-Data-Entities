@@ -46,7 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigurationOptions.cs" />
-    <Compile Include="Data\Definition\Base\EntityInfo.cs" />
+    <Compile Include="Data\Definition\Entity.cs" />
     <Compile Include="Data\Definition\Base\EntityInfoAnalyticsPackage.cs" />
     <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
@@ -56,7 +56,7 @@
     <Compile Include="Data\Transform\TransformContainer.cs" />
     <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
-    <Compile Include="Data\Definition\Base\TableInfo.cs" />
+    <Compile Include="Data\Definition\Table.cs" />
     <Compile Include="Data\Definition\OSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
     <Compile Include="Data\Definition\SqlExistsString.cs" />

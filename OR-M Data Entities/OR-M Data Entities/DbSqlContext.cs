@@ -13,8 +13,12 @@ namespace OR_M_Data_Entities
     public class DbSqlContext : DatabaseModifiable
     {
         #region Constructor
+
         public DbSqlContext(string connectionStringOrName)
-            : base(connectionStringOrName) { }
+            : base(connectionStringOrName)
+        {
+            Configuration.UseTransactions = false;
+        }
 
         public DbSqlContext(SqlConnectionStringBuilder connection)
             : this(connection.ConnectionString) { }

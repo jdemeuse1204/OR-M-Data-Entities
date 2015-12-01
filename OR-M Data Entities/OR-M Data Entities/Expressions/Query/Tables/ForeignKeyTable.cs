@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Mapping;
 
@@ -18,13 +19,13 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
         public ForeignKeyTable(Guid expressionQueryId, Type type, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
             : base(expressionQueryId, type, alias)
         {
-            TableInfo = new TableInfo(type);
+            TableInfo = new Table(type);
             ForeignKeyPropertyName = foreignKeyTableName;
             _typeChanges = new List<Type>();
             ParentTableAlias = parentTableAlias;
         }
 
-        public readonly TableInfo TableInfo;
+        public readonly Table TableInfo;
 
         public readonly string ParentTableAlias;
 

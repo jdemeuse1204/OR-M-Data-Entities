@@ -10,26 +10,21 @@ using System;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Data.Definition.Base
+namespace OR_M_Data_Entities.Data.Definition
 {
     /// <summary>
     /// Is the common class for getting a tables information
     /// </summary>
-    public class TableInfo
+    public class Table
     {
-        // lazy load and grab foreign key info here too
-        #region Properties and Fields
-        protected readonly Type EntityType;
-        #endregion
-
         #region Constructor
-        public TableInfo(object entity)
+        public Table(object entity)
             : this(entity.GetType())
         {
 
         }
 
-        public TableInfo(Type type)
+        public Table(Type type)
         {
             EntityType = type;
             ClassName = type.Name;
@@ -53,6 +48,7 @@ namespace OR_M_Data_Entities.Data.Definition.Base
 
         #region Properties And Fields
 
+        protected readonly Type EntityType;
         private readonly LinkedServerAttribute _linkedServerAttribute;
         private readonly TableAttribute _tableAttribute;
         private readonly SchemaAttribute _schemaAttribute;

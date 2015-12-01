@@ -2,17 +2,17 @@
 {
     public class ConfigurationOptions
     {
-        public ConfigurationOptions(bool useMultipleActiveResultSets)
+        public ConfigurationOptions(bool useTransactions)
         {
             ThrowConcurrencyExceptions = true;
-            UseMultipleActiveResultSets = useMultipleActiveResultSets;
+            UseTransactions = useTransactions;
         }
 
         public bool IsLazyLoading { get; set; }
 
         public bool ThrowConcurrencyExceptions { get; set; }
 
-        public bool UseMultipleActiveResultSets { get; private set; }
+        public bool UseTransactions { get; set; }
 
         private class SqlIntegerOptions
         {

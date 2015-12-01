@@ -8,6 +8,7 @@
 
 using System;
 using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Definition.Base;
 
 namespace OR_M_Data_Entities.Data.Query.StatementParts
@@ -40,14 +41,14 @@ namespace OR_M_Data_Entities.Data.Query.StatementParts
         #endregion
 
         #region Methods
-        public void Table(TableInfo info)
+        public void Table(Table info)
         {
             TableName = info.ToString();
         }
 
         public void Table(Type tableType)
         {
-            var tableInfo = new TableInfo(tableType);
+            var tableInfo = new Table(tableType);
 
             Table(tableInfo);
 
