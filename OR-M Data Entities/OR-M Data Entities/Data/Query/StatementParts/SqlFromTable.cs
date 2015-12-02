@@ -9,7 +9,6 @@
 using System;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Base;
 
 namespace OR_M_Data_Entities.Data.Query.StatementParts
 {

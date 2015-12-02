@@ -9,7 +9,6 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;

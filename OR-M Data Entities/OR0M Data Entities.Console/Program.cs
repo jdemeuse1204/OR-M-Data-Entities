@@ -15,8 +15,14 @@ namespace OR0M_Data_Entities.Console
     class Program
     {
         static void Main(string[] args)
-        {            
+        {
             var context = new DbSqlContext("sqlExpress");
+
+            var c1 = context.Find<Contact>(1);
+
+            c1.FirstName = "WIN!";
+
+            context.SaveChanges(c1);
 
             //var xy = new Contact
             //{
@@ -90,7 +96,18 @@ namespace OR0M_Data_Entities.Console
                 }
             };
 
-            context.SaveChanges(x);
+            var result = context.SaveChanges(x);
+
+            if (result != null)
+            {
+
+            }
+
+            x.FirstName = "New Name";
+
+            result = context.SaveChanges(x);
+
+            var test = result.GetUpdateType("Contacts");
 
             //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
             //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
@@ -112,7 +129,7 @@ namespace OR0M_Data_Entities.Console
             {
                 if (item != null)
                 {
-                    
+
                 }
             }
 

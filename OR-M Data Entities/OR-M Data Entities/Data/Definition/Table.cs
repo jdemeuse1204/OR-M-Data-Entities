@@ -26,7 +26,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public Table(Type type)
         {
-            EntityType = type;
+            TableType = type;
             ClassName = type.Name;
             _linkedServerAttribute = type.GetCustomAttribute<LinkedServerAttribute>();
             _tableAttribute = type.GetCustomAttribute<TableAttribute>();
@@ -48,7 +48,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         #region Properties And Fields
 
-        protected readonly Type EntityType;
+        public readonly Type TableType;
         private readonly LinkedServerAttribute _linkedServerAttribute;
         private readonly TableAttribute _tableAttribute;
         private readonly SchemaAttribute _schemaAttribute;

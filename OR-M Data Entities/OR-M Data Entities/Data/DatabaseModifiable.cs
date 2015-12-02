@@ -7,14 +7,12 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -93,33 +91,31 @@ BEGIN TRANSACTION @1;
             return string.Format(_transactionSqlBase, sql);
         }
 
-
         #endregion
 
         #region Save Methods
-        public virtual UpdateType SaveChanges<T>(T entity)
+        public virtual SaveResult SaveChanges<T>(T entity)
             where T : class
         {
+            var saves = new List<KeyValuePair<string, UpdateType>>();
             var parent = new Entity(entity);
 
             // create our entity info analyzer
-            var entityItems = new List<ForeignKeySaveNode> {new ForeignKeySaveNode(null, entity, null)};
-
-            if (parent.HasForeignKeys())
-            {
-                entityItems = parent.GetSaveOrder(Configuration.UseTransactions);
-            }
+            var entityItems = parent.HasForeignKeys()
+                ? parent.GetSaveOrder(Configuration.UseTransactions)
+                : new List<ForeignKeySaveNode> {new ForeignKeySaveNode(null, entity, null)};
 
             for (var i = 0; i < entityItems.Count; i++)
             {
                 var entityItem = entityItems[i];
                 var e = new Entity(entityItem.Value);
-
-                // create the skeleton execution plan
+                var updateType = e.GetUpdateType();
                 ISqlBuilder builder;
 
+                saves.Add(new KeyValuePair<string, UpdateType>(e.TableNameOnly, updateType));
+
                 // Get the correct execution plan
-                switch (e.GetUpdateType())
+                switch (updateType)
                 {
                     case UpdateType.Insert:
                         builder = new SqlNonTransactionInsertBuilder(e);
@@ -134,9 +130,15 @@ BEGIN TRANSACTION @1;
                         builder = new SqlNonTransactionUpdateBuilder(e);
                         break;
                     case UpdateType.Skip:
-                        return UpdateType.Skip;
+                        continue;
                     default:
                         throw new ArgumentOutOfRangeException();
+                }
+
+                // If relationship is one-many.  Need to set the foreign key before saving
+                if (entityItem.Parent != null && entityItem.Property.IsList())
+                {
+                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Value, entityItem.Property.Name);
                 }
 
                 // execute the sql
@@ -152,11 +154,17 @@ BEGIN TRANSACTION @1;
                         item.Value);
                 }
 
+                // If relationship is one-one.  Need to set the foreign key after saving
+                if (entityItem.Parent != null && !entityItem.Property.IsList())
+                { 
+                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Value, entityItem.Property.Name);
+                }          
+
                 // set the pristine state only if entity tracking is on
                 if (e.IsEntityStateTrackingOn) EntityStateAnalyzer.TrySetPristineEntity(entity);
             }
 
-            return UpdateType.Insert;
+            return new SaveResult(saves);
         }
 
         #endregion
@@ -656,7 +664,8 @@ ELSE
         {
             #region Constructor
 
-            public SqlNonTransactionUpdatePackage(SqlExecutionPlan builder) : base(builder)
+            public SqlNonTransactionUpdatePackage(SqlExecutionPlan builder) 
+                : base(builder)
             {
             }
 
@@ -705,22 +714,7 @@ ELSE
 
             public override string GetSql()
             {
-                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}",
-                    string.IsNullOrWhiteSpace(Declare)
-                        ? string.Empty
-                        : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName,
-                    Fields.TrimEnd(','), Values.TrimEnd(','),
-                    SelectColumns.Any()
-                        ? DoSelectFromForKeyContainer
-                            ? string.Format(Select, SelectColumns.TrimEnd(','),
-                                string.Format(From, FormattedTableName, Where))
-                            : string.Format(Select, Keys.TrimEnd(','), string.Empty)
-                        : string.Empty
-
-                    // we want to select everything back from the database in case the model relies on db generation for some fields.
-                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
-                    // where the column is not the PK
-                    );
+                return Update;
             }
 
             #endregion

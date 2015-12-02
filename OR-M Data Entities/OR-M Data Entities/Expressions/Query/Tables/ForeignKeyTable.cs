@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Query.Tables

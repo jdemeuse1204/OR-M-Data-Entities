@@ -40,7 +40,7 @@ namespace OR_M_Data_Entities.Data.Definition
             get
             {
                 return _properties ??
-                       (_properties = (_entity == null ? new List<PropertyInfo>() : EntityType.GetProperties().ToList()));
+                       (_properties = (_entity == null ? new List<PropertyInfo>() : TableType.GetProperties().ToList()));
             }
         }
         #endregion
@@ -58,7 +58,7 @@ namespace OR_M_Data_Entities.Data.Definition
         #region Primary Key Methods
         public List<PropertyInfo> GetPrimaryKeys()
         {
-            return _getPrimaryKeys(EntityType);
+            return _getPrimaryKeys(TableType);
         }
 
         public static List<PropertyInfo> GetPrimaryKeys(object entity)
@@ -88,7 +88,7 @@ namespace OR_M_Data_Entities.Data.Definition
         public bool IsPrimaryKey(string columnName)
         {
             return columnName.ToUpper() == "ID" ||
-                   EntityType.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
+                   TableType.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
         }
 
         public static bool HasPrimaryKeysOnly(object entity)
@@ -181,8 +181,8 @@ namespace OR_M_Data_Entities.Data.Definition
         public List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId)
         {
             var autoLoadProperties = string.IsNullOrWhiteSpace(viewId)
-                ? EntityType.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
-                : EntityType.GetProperties()
+                ? TableType.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
+                : TableType.GetProperties()
                     .Where(
                         w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
                             w.GetPropertyType().GetCustomAttribute<ViewAttribute>() != null &&
@@ -201,16 +201,16 @@ namespace OR_M_Data_Entities.Data.Definition
                                         : _getPrimaryKeys(property.PropertyType).First().Name
                                     : pskAttribute.ChildTableColumnName),
                         ParentColumn =
-                            new PartialColumn(expressionQueryId, EntityType,
+                            new PartialColumn(expressionQueryId, TableType,
                                 fkAttribute != null
                                     ? property.PropertyType.IsList()
-                                        ? _getPrimaryKeys(EntityType).First().Name
+                                        ? _getPrimaryKeys(TableType).First().Name
                                         : fkAttribute.ForeignKeyColumnName
                                     : pskAttribute.ParentTableColumnName),
                         JoinType =
                             property.PropertyType.IsList()
                                 ? JoinType.Left
-                                : EntityType.GetProperty(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ParentTableColumnName).PropertyType.IsNullable()
+                                : TableType.GetProperty(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ParentTableColumnName).PropertyType.IsNullable()
                                     ? JoinType.Left
                                     : JoinType.Inner,
                         JoinPropertyName = property.Name,
@@ -448,7 +448,12 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public void SetPropertyValue(string propertyName, object value)
         {
-            var found = _entity.GetType().GetProperty(propertyName);
+            _setPropertyValue(_entity, propertyName, value);
+        }
+
+        private static void _setPropertyValue(object entity, string propertyName, object value)
+        {
+            var found = entity.GetType().GetProperty(propertyName);
 
             if (found == null)
             {
@@ -464,7 +469,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 //if it's null, just set the value from the reserved word null, and return
                 if (value == null)
                 {
-                    found.SetValue(_entity, null, null);
+                    found.SetValue(entity, null, null);
                     return;
                 }
 
@@ -473,10 +478,15 @@ namespace OR_M_Data_Entities.Data.Definition
             }
 
             //use the converter to get the correct value
-            found.SetValue(_entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
+            found.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
         }
 
         public void SetPropertyValue(PropertyInfo property, object value)
+        {
+            _setPropertyValue(_entity, property, value);
+        }
+
+        private static void _setPropertyValue(object entity, PropertyInfo property, object value)
         {
             var propertyType = property.PropertyType;
 
@@ -487,7 +497,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 //if it's null, just set the value from the reserved word null, and return
                 if (value == null)
                 {
-                    property.SetValue(_entity, null, null);
+                    property.SetValue(entity, null, null);
                     return;
                 }
 
@@ -496,7 +506,38 @@ namespace OR_M_Data_Entities.Data.Definition
             }
 
             //use the converter to get the correct value
-            property.SetValue(_entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
+            property.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
+        }
+
+        public static void SetPropertyValue(object parent, object child, string propertyNameToSet)
+        {
+            if (parent == null) return;
+
+            var foreignKeyProperty =
+                parent.GetForeignKeys()
+                    .First(
+                        w =>
+                            (w.PropertyType.IsList()
+                                ? w.PropertyType.GetGenericArguments()[0]
+                                : w.PropertyType) == child.GetType() &&
+                                w.Name == propertyNameToSet);
+
+            var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
+
+            if (foreignKeyProperty.PropertyType.IsList())
+            {
+                var parentPrimaryKey = parent.GetPrimaryKeys().First();
+                var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
+
+                _setPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
+            }
+            else
+            {
+                var childPrimaryKey = child.GetPrimaryKeys().First();
+                var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
+
+                _setPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
+            }
         }
         #endregion
 

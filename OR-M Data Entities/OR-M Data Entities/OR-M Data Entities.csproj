@@ -52,6 +52,7 @@
     <Compile Include="Data\Query\ISqlPackage.cs" />
     <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
     <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
+    <Compile Include="Data\SaveResult.cs" />
     <Compile Include="Data\Transform\DbTransform.cs" />
     <Compile Include="Data\Transform\TransformContainer.cs" />
     <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
