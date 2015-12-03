@@ -7,34 +7,49 @@
  */
 using System;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data.Execution
 {
     public sealed class ForeignKeySaveNode : IEquatable<ForeignKeySaveNode>
     {
+        // compare tablename
+
         public ForeignKeySaveNode(PropertyInfo property, object value, object parent)
         {
             Property = property;
-            Value = value;
             Parent = parent;
+            Entity = new Entity(value);
+        }
+
+        public ForeignKeySaveNode(PropertyInfo property, Entity entity, object parent)
+        {
+            Property = property;
+            Parent = parent;
+            Entity = entity;
         }
 
         public PropertyInfo Property { get; set; }
 
-        public object Value { get; set; }
-
         public object Parent { get; set; }
+
+        public readonly Entity Entity;
 
         public bool Equals(ForeignKeySaveNode other)
         {
             //Check whether the compared object is null.
-            if (Object.ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, null)) return false;
 
             //Check whether the compared object references the same data.
-            if (Object.ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(this, other)) return true;
 
             //Check whether the products' properties are equal.
-            return Value == other.Value;
+            return Entity == other.Entity;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Entity.Equals(obj);
         }
 
         // If Equals() returns true for a pair of objects 
@@ -42,7 +57,7 @@ namespace OR_M_Data_Entities.Data.Execution
         public override int GetHashCode()
         {
             //Calculate the hash code for the product.
-            return Value.GetHashCode();
+            return Entity.Value.GetHashCode();
         }
     }
 }

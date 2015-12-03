@@ -103,31 +103,29 @@ BEGIN TRANSACTION @1;
             // create our entity info analyzer
             var entityItems = parent.HasForeignKeys()
                 ? parent.GetSaveOrder(Configuration.UseTransactions)
-                : new List<ForeignKeySaveNode> {new ForeignKeySaveNode(null, entity, null)};
+                : new EntitySaveNodeList(new ForeignKeySaveNode(null, parent, null));
 
             for (var i = 0; i < entityItems.Count; i++)
             {
                 var entityItem = entityItems[i];
-                var e = new Entity(entityItem.Value);
-                var updateType = e.GetUpdateType();
                 ISqlBuilder builder;
 
-                saves.Add(new KeyValuePair<string, UpdateType>(e.TableNameOnly, updateType));
+                saves.Add(new KeyValuePair<string, UpdateType>(entityItem.Entity.TableNameOnly, entityItem.Entity.UpdateType));
 
                 // Get the correct execution plan
-                switch (updateType)
+                switch (entityItem.Entity.UpdateType)
                 {
                     case UpdateType.Insert:
-                        builder = new SqlNonTransactionInsertBuilder(e);
+                        builder = new SqlNonTransactionInsertBuilder(entityItem.Entity);
                         break;
                     case UpdateType.TryInsert:
-                        builder = new SqlNonTransactionTryInsertBuilder(e);
+                        builder = new SqlNonTransactionTryInsertBuilder(entityItem.Entity);
                         break;
                     case UpdateType.TryInsertUpdate:
-                        builder = new SqlNonTransactionTryInsertUpdateBuilder(e);
+                        builder = new SqlNonTransactionTryInsertUpdateBuilder(entityItem.Entity);
                         break;
                     case UpdateType.Update:
-                        builder = new SqlNonTransactionUpdateBuilder(e);
+                        builder = new SqlNonTransactionUpdateBuilder(entityItem.Entity);
                         break;
                     case UpdateType.Skip:
                         continue;
@@ -138,7 +136,7 @@ BEGIN TRANSACTION @1;
                 // If relationship is one-many.  Need to set the foreign key before saving
                 if (entityItem.Parent != null && entityItem.Property.IsList())
                 {
-                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Value, entityItem.Property.Name);
+                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
                 }
 
                 // execute the sql
@@ -149,7 +147,7 @@ BEGIN TRANSACTION @1;
                 {
                     // find the property first in case the column name change attribute is used
                     // Key is property name, value is the db value
-                    e.SetPropertyValue(
+                    entityItem.Entity.SetPropertyValue(
                         item.Key,
                         item.Value);
                 }
@@ -157,11 +155,11 @@ BEGIN TRANSACTION @1;
                 // If relationship is one-one.  Need to set the foreign key after saving
                 if (entityItem.Parent != null && !entityItem.Property.IsList())
                 { 
-                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Value, entityItem.Property.Name);
+                    Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
                 }          
 
                 // set the pristine state only if entity tracking is on
-                if (e.IsEntityStateTrackingOn) EntityStateAnalyzer.TrySetPristineEntity(entity);
+                if (entityItem.Entity.IsEntityStateTrackingOn) EntityStateAnalyzer.TrySetPristineEntity(entity);
             }
 
             return new SaveResult(saves);
@@ -189,102 +187,6 @@ BEGIN TRANSACTION @1;
         /// Provides us a way to get the execution plan for an entity
         /// </summary>
         #region Base
-
-        private class ModifcationItem
-        {
-            #region Properties
-            public bool IsModified { get; private set; }
-
-            public string SqlDataTypeString { get; private set; }
-
-            public string PropertyDataType { get; private set; }
-
-            public string PropertyName { get; private set; }
-
-            public string DatabaseColumnName { get; private set; }
-
-            public string KeyName { get; private set; }
-
-            public SqlDbType DbTranslationType { get; private set; }
-
-            public bool IsPrimaryKey { get; private set; }
-
-            public DbGenerationOption Generation { get; private set; }
-
-            public object Value { get; private set; }
-
-            public bool TranslateDataType { get; private set; }
-
-            #endregion
-
-            #region Constructor
-
-            public ModifcationItem(PropertyInfo property, Entity entity)
-            {
-                PropertyName = property.Name;
-                DatabaseColumnName = property.GetColumnName();
-                IsPrimaryKey = property.IsPrimaryKey();
-                Value = entity.GetPropertyValue(property);
-                PropertyDataType = property.PropertyType.Name.ToUpper();
-                Generation = IsPrimaryKey
-                    ? property.GetGenerationOption()
-                    : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
-                        ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
-                        : DbGenerationOption.None;
-
-                var entityTrackable = entity.GetEntityStateTrackable();
-
-                // set in case entity tracking isnt on
-                IsModified = true;
-
-                if (entityTrackable != null)
-                {
-                    IsModified = EntityStateAnalyzer.HasColumnChanged(entityTrackable, property.Name);
-                }
-                
-                // check for sql data translation, used mostly for datetime2 inserts and updates
-                var translation = property.GetCustomAttribute<DbTypeAttribute>();
-
-                if (translation != null)
-                {
-                    DbTranslationType = translation.Type;
-                    TranslateDataType = true;
-                }
-
-                switch (Generation)
-                {
-                    case DbGenerationOption.None:
-                        KeyName = "";
-                        break;
-                    case DbGenerationOption.IdentitySpecification:
-                        KeyName = "@@IDENTITY";
-                        break;
-                    case DbGenerationOption.Generate:
-                        KeyName = string.Format("@{0}", PropertyName);
-                        // set as the property name so we can pull the value back out
-                        break;
-                }
-
-                // for auto generation
-                switch (property.PropertyType.Name.ToUpper())
-                {
-                    case "INT16":
-                        SqlDataTypeString = "smallint";
-                        break;
-                    case "INT64":
-                        SqlDataTypeString = "bigint";
-                        break;
-                    case "INT32":
-                        SqlDataTypeString = "int";
-                        break;
-                    case "GUID":
-                        SqlDataTypeString = "uniqueidentifier";
-                        break;
-                }
-            }
-
-            #endregion
-        }
 
         private class SqlModificationBuilder : SqlNonTransactionUpdateBuilder
         {
@@ -692,7 +594,6 @@ ELSE
                     var parameter = AddParameter(item.DatabaseColumnName, item.Value);
 
                     Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, parameter);
-
                 }
 
                 Update = Update.TrimEnd(',');

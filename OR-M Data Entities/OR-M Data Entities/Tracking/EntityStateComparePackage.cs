@@ -6,13 +6,14 @@
  * Copyright (c) 2014 James Demeuse
  */
 using System.Collections.Generic;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Tracking
 {
     public class EntityStateComparePackage
     {
-        public EntityStateComparePackage(EntityState state, IEnumerable<string> changeList)
+        public EntityStateComparePackage(EntityState state, List<ModifcationItem> changeList)
         {
             State = state;
             ChangeList = changeList;
@@ -20,6 +21,6 @@ namespace OR_M_Data_Entities.Tracking
 
         public readonly EntityState State;
 
-        public readonly IEnumerable<string> ChangeList;
+        public readonly IEnumerable<ModifcationItem> ChangeList;
     }
 }

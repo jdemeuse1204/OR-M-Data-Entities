@@ -49,6 +49,9 @@
     <Compile Include="Data\Definition\Entity.cs" />
     <Compile Include="Data\Definition\Base\EntityInfoAnalyticsPackage.cs" />
     <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
+    <Compile Include="Data\Definition\EntityModifiable.cs" />
+    <Compile Include="Data\EntitySaveNodeList.cs" />
+    <Compile Include="Data\ModificationItem.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
     <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
     <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
