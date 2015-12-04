@@ -5,6 +5,8 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Tracking
@@ -15,9 +17,7 @@ namespace OR_M_Data_Entities.Tracking
 
         public EntityState GetState()
         {
-            var package = EntityStateAnalyzer.Analyze(this);
-
-            return package.State;
+            return ModificationEntity.GetState(this);
         }
     }
 }

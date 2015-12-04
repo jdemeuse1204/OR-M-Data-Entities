@@ -6,7 +6,7 @@ namespace OR_M_Data_Entities.Data.Query
     {
         string GetSql();
 
-        void CreatePackage();
+        ISqlContainer CreatePackage();
 
         void InsertParameters(SqlCommand cmd);
     }

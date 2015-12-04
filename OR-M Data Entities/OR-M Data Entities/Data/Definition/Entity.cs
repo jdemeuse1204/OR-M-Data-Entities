@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Extensions;
@@ -23,12 +20,6 @@ namespace OR_M_Data_Entities.Data.Definition
         #region Properties and Fields
 
         public readonly object Value;
-
-        public UpdateType UpdateType { get; protected set; }
-
-        public EntityState State { get; protected set; }
-
-        public IReadOnlyList<ModifcationItem> Changes { get; protected set; }
 
         public bool IsEntityStateTrackingOn
         {
@@ -225,20 +216,24 @@ namespace OR_M_Data_Entities.Data.Definition
                     }).ToList();
         }
 
-
-        #endregion
-
-        #region Methods
-        
-
         protected static List<ParentChildPair> GetForeignKeys(object entity)
         {
             return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ParentChildPair(entity, w.GetValue(entity), w)).ToList();
         }
+        #endregion
+
+        #region Property Methods
 
         public object GetPropertyValue(PropertyInfo property)
         {
             return property.GetValue(Value);
+        }
+
+        public object GetPropertyValue(string propertyName)
+        {
+            var property = Value.GetType().GetProperty(propertyName);
+
+            return GetPropertyValue(property);
         }
 
         public void SetPropertyValue(string propertyName, object value)
@@ -250,30 +245,9 @@ namespace OR_M_Data_Entities.Data.Definition
         {
             var found = entity.GetType().GetProperty(propertyName);
 
-            if (found == null)
-            {
-                return;
-            }
+            if (found == null) return;
 
-            var propertyType = found.PropertyType;
-
-            //Nullable properties have to be treated differently, since we 
-            //  use their underlying property to set the value in the object
-            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                //if it's null, just set the value from the reserved word null, and return
-                if (value == null)
-                {
-                    found.SetValue(entity, null, null);
-                    return;
-                }
-
-                //Get the underlying type property instead of the nullable generic
-                propertyType = new System.ComponentModel.NullableConverter(found.PropertyType).UnderlyingType;
-            }
-
-            //use the converter to get the correct value
-            found.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
+            _setPropertyValue(entity, found, value);
         }
 
         public void SetPropertyValue(PropertyInfo property, object value)
@@ -284,6 +258,8 @@ namespace OR_M_Data_Entities.Data.Definition
         private static void _setPropertyValue(object entity, PropertyInfo property, object value)
         {
             var propertyType = property.PropertyType;
+
+            if (value is DBNull) value = null;
 
             //Nullable properties have to be treated differently, since we 
             //  use their underlying property to set the value in the object
@@ -364,6 +340,7 @@ namespace OR_M_Data_Entities.Data.Definition
         }
         #endregion
 
+        #region IEquatable
         public bool Equals(Entity other)
         {
             //Check whether the compared object is null.
@@ -388,5 +365,6 @@ namespace OR_M_Data_Entities.Data.Definition
             //Calculate the hash code for the product.
             return Value.GetHashCode();
         }
+        #endregion
     }
 }

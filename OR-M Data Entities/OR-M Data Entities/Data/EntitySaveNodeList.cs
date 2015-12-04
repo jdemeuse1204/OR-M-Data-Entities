@@ -6,6 +6,7 @@ namespace OR_M_Data_Entities.Data
 {
     public class EntitySaveNodeList : IEnumerable<ForeignKeySaveNode>
     {
+        #region Properties and Fields
         public int Count
         {
             get { return _internal.Count; }
@@ -17,7 +18,9 @@ namespace OR_M_Data_Entities.Data
         }
 
         private readonly List<object> _internal;
+        #endregion
 
+        #region Constructor
         public EntitySaveNodeList() 
         {
             _internal = new List<object>();
@@ -28,7 +31,9 @@ namespace OR_M_Data_Entities.Data
         {
             _internal.Add(node);
         }
-        
+        #endregion
+
+        #region Methods
         public int IndexOf(object entity)
         {
             return _internal.IndexOf(entity);
@@ -58,5 +63,6 @@ namespace OR_M_Data_Entities.Data
         {
             return GetEnumerator();
         }
+        #endregion
     }
 }

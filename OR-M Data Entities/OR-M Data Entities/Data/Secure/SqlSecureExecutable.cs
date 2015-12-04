@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using OR_M_Data_Entities.Data.Definition.Base;
 
 namespace OR_M_Data_Entities.Data.Secure
 {

@@ -6,9 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using OR_M_Data_Entities.Data.Secure;
-
-namespace OR_M_Data_Entities.Data.Definition.Base
+namespace OR_M_Data_Entities.Data.Secure
 {
     public class SqlSecureQueryParameter
     {

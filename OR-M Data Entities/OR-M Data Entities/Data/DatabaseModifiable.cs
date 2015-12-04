@@ -10,8 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Data.Query;
@@ -20,7 +18,6 @@ using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -98,7 +95,7 @@ BEGIN TRANSACTION @1;
             where T : class
         {
             var saves = new List<KeyValuePair<string, UpdateType>>();
-            var parent = new Entity(entity);
+            var parent = new ModificationEntity(entity);
 
             // create our entity info analyzer
             var entityItems = parent.HasForeignKeys()
@@ -110,6 +107,7 @@ BEGIN TRANSACTION @1;
                 var entityItem = entityItems[i];
                 ISqlBuilder builder;
 
+                // add the save to the list so we can tell the user what the save action did
                 saves.Add(new KeyValuePair<string, UpdateType>(entityItem.Entity.TableNameOnly, entityItem.Entity.UpdateType));
 
                 // Get the correct execution plan
@@ -154,12 +152,12 @@ BEGIN TRANSACTION @1;
 
                 // If relationship is one-one.  Need to set the foreign key after saving
                 if (entityItem.Parent != null && !entityItem.Property.IsList())
-                { 
+                {
                     Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
-                }          
+                }
 
                 // set the pristine state only if entity tracking is on
-                if (entityItem.Entity.IsEntityStateTrackingOn) EntityStateAnalyzer.TrySetPristineEntity(entity);
+                if (entityItem.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entity);
             }
 
             return new SaveResult(saves);
@@ -186,38 +184,174 @@ BEGIN TRANSACTION @1;
         /// <summary>
         /// Provides us a way to get the execution plan for an entity
         /// </summary>
+
         #region Base
+        private class CustomContainer : SqlModificationContainer, ISqlContainer
+        {
+            private readonly string _sql;
+
+            public CustomContainer(Table entity, string sql) 
+                : base(entity)
+            {
+                _sql = sql;
+            }
+
+            public string Resolve()
+            {
+                return _sql;
+            }
+        }
+
+        private class InsertContainer : SqlModificationContainer, ISqlContainer
+        {
+            #region Properties
+            private string _fields { get; set; }
+
+            private string _values { get; set; }
+
+            private string _declare { get; set; }
+
+            private string _output { get; set; }
+
+            private string _set { get; set; }
+
+            #endregion
+
+            #region Constructor
+            public InsertContainer(Table entity)
+                : base(entity)
+            {
+                _fields = string.Empty;
+                _values = string.Empty;
+                _declare = string.Empty;
+                _output = string.Empty;
+                _set = string.Empty;
+            }
+            #endregion
+
+            #region Methods
+            public void AddField(ModificationItem item)
+            {
+                _fields += item.AsField(",");
+            }
+
+            public void AddValue(string parameterKey)
+            {
+                _values += string.Format("{0},", parameterKey);
+            }
+
+            public void AddDeclare(string parameterKey, string sqlDataType)
+            {
+                _declare += string.Format("{0} as {1},", parameterKey, sqlDataType);
+            }
+
+            public void AddOutput(ModificationItem item)
+            {
+                _output += item.AsOutput(",");
+            }
+
+            public void AddSet(ModificationItem item, out string key)
+            {
+                key = string.Format("@{0}", item.PropertyName);
+
+                // make our set statement
+                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
+                {
+                    // GUID
+                    _set += string.Format("SET {0} = NEWID();", key);
+                }
+                else
+                {
+                    // INTEGER
+                    _set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key, item.DatabaseColumnName, SqlFormattedTableName);
+                }
+            }
+
+            public string Resolve()
+            {
+                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) OUTPUT {5} VALUES ({4})",
+                    string.IsNullOrWhiteSpace(_declare)
+                        ? string.Empty
+                        : string.Format("DECLARE {0}", _declare.TrimEnd(',')),
+                    _set,
+                    SqlFormattedTableName,
+                    _fields.TrimEnd(','),
+                    _values.TrimEnd(','),
+                    _output.TrimEnd(',')
+
+                    // we want to select everything back from the database in case the model relies on db generation for some fields.
+                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
+                    // where the column is not the PK
+                    );
+            }
+            #endregion
+        }
+
+        private class UpdateContainer : SqlModificationContainer, ISqlContainer
+        {
+            private string _setItems { get; set; }
+
+            private string _where { get; set; }
+
+            private readonly string _statement;
+
+            public UpdateContainer(ModificationEntity entity)
+                : base(entity)
+            {
+                _setItems = string.Empty;
+                _where = string.Empty;
+                _statement = string.Format("UPDATE [{0}]", SqlFormattedTableName);
+            }
+
+            public void AddUpdate(ModificationItem item, string parameterKey)
+            {
+                _setItems += string.Format("[{0}] = {1},", item.DatabaseColumnName, parameterKey);
+            }
+
+            public void AddWhere(ModificationItem item, string parameterKey)
+            {
+                _where += string.Format("[{0}] = {1}", item.DatabaseColumnName, parameterKey);
+            }
+
+            public string Resolve()
+            {
+                return string.Format("{0} SET {1} WHERE {2}", _statement, _setItems.TrimEnd(','), _where.TrimEnd(','));
+            }
+        }
+
+        protected abstract class SqlModificationContainer
+        {
+            protected SqlModificationContainer(Table entity)
+            {
+                SqlFormattedTableName = entity.SqlFormattedTableName();
+            }
+
+            protected readonly string SqlFormattedTableName;
+        }
 
         private class SqlModificationBuilder : SqlNonTransactionUpdateBuilder
         {
             // Builders all should inherit from ISqlBuilder, should not be astract, base class should have the Build command in it
-            public SqlModificationBuilder(Entity entity) 
+            public SqlModificationBuilder(ModificationEntity entity)
                 : base(entity)
             {
             }
-
-
         }
 
         private abstract class SqlExecutionPlan : ISqlBuilder
         {
             #region Constructor
-            protected SqlExecutionPlan(Entity entity)
+            protected SqlExecutionPlan(ModificationEntity entity)
             {
                 Entity = entity;
             }
             #endregion
 
             #region Properties and Fields
-            public readonly Entity Entity;
+            public readonly ModificationEntity Entity;
             #endregion
 
             #region Methods
-            public virtual List<ModifcationItem> GetModifcationItems()
-            {
-                return Entity.GetColumns().Select(property => new ModifcationItem(property, Entity)).ToList();
-            }
-
             public abstract ISqlPackage Build();
 
             public SqlCommand BuildSqlCommand(SqlConnection connection)
@@ -242,55 +376,25 @@ BEGIN TRANSACTION @1;
             #region Constructor
             protected SqlModificationPackage(SqlExecutionPlan plan)
             {
-                Fields = string.Empty;
-                Values = string.Empty;
-                Declare = string.Empty;
-                Keys = string.Empty;
-                SelectColumns = string.Empty;
-                Where = string.Empty;
-                Set = string.Empty;
-                Update = string.Empty;
-                FormattedTableName = plan.Entity.SqlFormattedTableName();
-                ModificationItems = plan.GetModifcationItems();
+                Entity = plan.Entity;
             }
 
             #endregion
 
             #region Properties
-
-            protected readonly List<ModifcationItem> ModificationItems;
-
-            protected readonly string FormattedTableName;
-
-            protected string Fields { get; set; }
-
-            protected string Values { get; set; }
-
-            protected string Declare { get; set; }
-
-            protected readonly string Select = "SELECT TOP 1 {0}{1}";
-
-            protected readonly string From = " FROM [{0}] WHERE {1}";
-
-            protected string Keys { get; set; }
-
-            protected string SelectColumns { get; set; }
-
-            protected string Where { get; set; }
-
-            protected string Set { get; set; }
-
-            protected string Update { get; set; }
-
-            protected bool DoSelectFromForKeyContainer { get; set; }
-
+            protected readonly ModificationEntity Entity;
             #endregion
 
             #region Methods
 
-            public abstract void CreatePackage();
+            public abstract ISqlContainer CreatePackage();
 
-            public abstract string GetSql();
+            public string GetSql()
+            {
+                var container = CreatePackage();
+
+                return container.Resolve();
+            }
 
             #endregion
         }
@@ -302,7 +406,7 @@ BEGIN TRANSACTION @1;
 
         private class SqlNonTransactionInsertBuilder : SqlExecutionPlan
         {
-            public SqlNonTransactionInsertBuilder(Entity entity)
+            public SqlNonTransactionInsertBuilder(ModificationEntity entity)
                 : base(entity)
             {
             }
@@ -319,14 +423,15 @@ BEGIN TRANSACTION @1;
 
         private class SqlNonTransactionTryInsertBuilder : SqlExecutionPlan
         {
-            public SqlNonTransactionTryInsertBuilder(Entity entity) 
+            public SqlNonTransactionTryInsertBuilder(ModificationEntity entity)
                 : base(entity)
             {
             }
 
             public override ISqlPackage Build()
             {
-                var package = new SqlNonTransactionTryInsertPackage(this);
+                var insert = new SqlNonTransactionInsertPackage(this);
+                var package = new SqlNonTransactionExistsPackage(this, insert);
 
                 package.CreatePackage();
 
@@ -336,14 +441,17 @@ BEGIN TRANSACTION @1;
 
         private class SqlNonTransactionTryInsertUpdateBuilder : SqlExecutionPlan
         {
-            public SqlNonTransactionTryInsertUpdateBuilder(Entity entity) 
+            public SqlNonTransactionTryInsertUpdateBuilder(ModificationEntity entity)
                 : base(entity)
             {
             }
 
             public override ISqlPackage Build()
             {
-                var package = new SqlNonTransactionTryInsertUpdatePackage(this);
+                var insert = new SqlNonTransactionInsertPackage(this);
+                var update = new SqlNonTransactionUpdatePackage(this);
+
+                var package = new SqlNonTransactionExistsPackage(this, insert, update);
 
                 package.CreatePackage();
 
@@ -355,11 +463,68 @@ BEGIN TRANSACTION @1;
 
         #region Non Transaction Packages
 
+        private class SqlNonTransactionExistsPackage : SqlModificationPackage
+        {
+            private readonly SqlModificationPackage _exists;
+
+            private readonly SqlModificationPackage _notExists;
+
+            private readonly string _existsStatement;
+
+            private string _where { get; set; }
+
+            public SqlNonTransactionExistsPackage(SqlExecutionPlan plan, SqlModificationPackage exists, SqlModificationPackage notExists = null)
+                : base(plan)
+            {
+                _exists = exists;
+                _notExists = notExists;
+
+                // keys are not part of changes so we need to grab them
+                var primaryKeys = Entity.Keys();
+
+                // add where statement
+                for (var i = 0; i < primaryKeys.Count; i++)
+                {
+                    var key = primaryKeys[i];
+                    var value = Entity.GetPropertyValue(key.PropertyName);
+                    var parameter = AddParameter(key.DatabaseColumnName, value);
+
+                    _addWhere(key, parameter);
+                }
+
+                _existsStatement = string.Format(@"IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{0}] WHERE {1}))) 
+                                        BEGIN
+                                            {{2}}
+                                        {3}", plan.Entity.SqlFormattedTableName(), 
+                                        
+                                        _where, 
+                                        0,
+                                        notExists == null ? 
+"END" : 
+@"ELSE 
+    {1} 
+END");
+            }
+
+            private void _addWhere(ModificationItem item, string parameterKey)
+            {
+                _where += string.Format("[{0}] = {1}", item.DatabaseColumnName, parameterKey);
+            }
+
+            public override ISqlContainer CreatePackage()
+            {
+                return _notExists != null
+                    ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql()))
+                    : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
+            }
+        }
+
+
         private class SqlNonTransactionInsertPackage : SqlModificationPackage
         {
             #region Constructor
 
-            public SqlNonTransactionInsertPackage(SqlExecutionPlan builder) 
+            public SqlNonTransactionInsertPackage(SqlExecutionPlan builder)
                 : base(builder)
             {
             }
@@ -368,15 +533,16 @@ BEGIN TRANSACTION @1;
 
             #region Methods
 
-            public override void CreatePackage()
+            public override ISqlContainer CreatePackage()
             {
-                if (ModificationItems.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
+                var items = Entity.All();
+                var container = new InsertContainer(Entity);
 
-                DoSelectFromForKeyContainer = ModificationItems.Any(w => w.DbTranslationType == SqlDbType.Timestamp) || ModificationItems.Any(w => w.Generation == DbGenerationOption.DbDefault);
+                if (items.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
 
-                for (var i = 0; i < ModificationItems.Count; i++)
+                for (var i = 0; i < items.Count; i++)
                 {
-                    var item = ModificationItems[i];
+                    var item = items[i];
 
                     //  NOTE:  Alias any Identity specification and generate columns with their property
                     // name not db column name so we can set the property when we return the values back.
@@ -386,124 +552,55 @@ BEGIN TRANSACTION @1;
                             {
                                 if (item.DbTranslationType == SqlDbType.Timestamp)
                                 {
-                                    SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                    container.AddOutput(item);
                                     continue;
                                 }
 
+                                var value = Entity.GetPropertyValue(item.PropertyName);
                                 //Value is simply inserted
+                                var data = item.TranslateDataType
+                                    ? AddParameter(item.DatabaseColumnName, value, item.DbTranslationType)
+                                    : AddParameter(item.DatabaseColumnName, value);
 
-                                var data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
-
-                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                Values += string.Format("{0},", data);
-
-                                if (!item.IsPrimaryKey)
-                                {
-                                    // should never update the pk
-                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
-                                    continue;
-                                }
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, data);
+                                container.AddField(item);
+                                container.AddValue(data);
+                                container.AddOutput(item);
                             }
                             break;
                         case DbGenerationOption.Generate:
                             {
-                                // Value is generated from the database
-                                var key = string.Format("@{0}", item.PropertyName);
+                                // key from the set method
+                                string key;
 
-                                // make our set statement
-                                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
-                                {
-                                    // GUID
-                                    Set += string.Format("SET {0} = NEWID();", key);
-                                }
-                                else
-                                {
-                                    // INTEGER
-                                    Set += string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key, item.DatabaseColumnName, FormattedTableName);
-                                }
-
-                                Fields += string.Format("[{0}],", item.DatabaseColumnName);
-                                Values += string.Format("{0},", key);
-                                Declare += string.Format("{0} as {1},", key, item.SqlDataTypeString);
-                                Keys += string.Format("{0} as [{1}],", key, item.PropertyName);
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-
-                                if (!item.IsPrimaryKey)
-                                {
-                                    var data = FindParameterKey(item.DatabaseColumnName);
-
-                                    if (string.IsNullOrEmpty(data))
-                                    {
-                                        data = item.TranslateDataType ? AddParameter(item.DatabaseColumnName, item.Value, item.DbTranslationType) : AddParameter(item.DatabaseColumnName, item.Value);
-                                    }
-
-                                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, data);
-                                    continue;
-                                }
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = {1} " : "AND [{0}] = {1} ", item.DatabaseColumnName, key);
-
-                                // Do not add as a parameter because the parameter will be converted to a string to
-                                // be inserted in to the database
-                            }
-                            break;
-                        case DbGenerationOption.IdentitySpecification:
-                            {
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                Keys += string.Format("@@IDENTITY as [{0}],", item.PropertyName);
-
-                                if (!item.IsPrimaryKey) continue;
-
-                                Where += string.Format(string.IsNullOrEmpty(Where) ? "[{0}] = @@IDENTITY " : "AND [{0}] = @@IDENTITY ", item.DatabaseColumnName, item.DatabaseColumnName);
+                                container.AddSet(item, out key);
+                                container.AddField(item);
+                                container.AddValue(key);
+                                container.AddDeclare(key, item.SqlDataTypeString);
+                                container.AddOutput(item);
                             }
                             break;
                         case DbGenerationOption.DbDefault:
+                        case DbGenerationOption.IdentitySpecification:
                             {
-                                SelectColumns += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
-                                Keys += item.PropertyName == item.DatabaseColumnName ? string.Format("[{0}],", item.DatabaseColumnName) : string.Format("[{0}] as [{1}],", item.DatabaseColumnName, item.PropertyName);
+                                container.AddOutput(item);
                             }
                             break;
                     }
                 }
+
+                return container;
             }
-
-            public override string GetSql()
-            {
-                return string.Format("{0} {1} INSERT INTO [{2}] ({3}) VALUES ({4});{5}", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty
-
-                    // we want to select everything back from the database in case the model relies on db generation for some fields.
-                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
-                    // where the column is not the PK
-                    );
-            }
-
             #endregion
         }
 
         private class SqlNonTransactionTryInsertPackage : SqlNonTransactionInsertPackage
         {
-            public SqlNonTransactionTryInsertPackage(SqlExecutionPlan builder) : base(builder)
+            public SqlNonTransactionTryInsertPackage(SqlExecutionPlan builder)
+                : base(builder)
             {
             }
 
-            public override string GetSql()
-            {
-                return string.Format(@"
-{0}
-{1}
-IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6}))) 
-    BEGIN
-        INSERT INTO [{2}] ({3}) VALUES ({4});{5}
-    END
 
-", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty,
-                    // we want to select everything back from the database in case the model relies on db generation for some fields.
-                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
-                    // where the column is not the PK
-                    Where);
-            }
         }
 
         private class SqlNonTransactionTryInsertUpdatePackage : SqlNonTransactionInsertPackage
@@ -512,25 +609,7 @@ IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6})))
             {
             }
 
-            public override string GetSql()
-            {
-                return string.Format(@"
-{0}
-{1}
-IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{2}] WHERE {6}))) 
-    BEGIN
-        INSERT INTO [{2}] ({3}) VALUES ({4});{5}
-    END
-ELSE
-    BEGIN
-        UPDATE [{2}] SET {7} WHERE {6}
-    END
-", string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0}", Declare.TrimEnd(',')), Set, FormattedTableName, Fields.TrimEnd(','), Values.TrimEnd(','), SelectColumns.Any() ? DoSelectFromForKeyContainer ? string.Format(Select, SelectColumns.TrimEnd(','), string.Format(From, FormattedTableName, Where)) : string.Format(Select, Keys.TrimEnd(','), string.Empty) : string.Empty,
-                    // we want to select everything back from the database in case the model relies on db generation for some fields.
-                    // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
-                    // where the column is not the PK
-                    Where, Update.TrimEnd(','));
-            }
+
         }
 
         #endregion
@@ -543,7 +622,7 @@ ELSE
 
         private class SqlNonTransactionUpdateBuilder : SqlExecutionPlan
         {
-            public SqlNonTransactionUpdateBuilder(Entity entity)
+            public SqlNonTransactionUpdateBuilder(ModificationEntity entity)
                 : base(entity)
             {
             }
@@ -566,7 +645,7 @@ ELSE
         {
             #region Constructor
 
-            public SqlNonTransactionUpdatePackage(SqlExecutionPlan builder) 
+            public SqlNonTransactionUpdatePackage(SqlExecutionPlan builder)
                 : base(builder)
             {
             }
@@ -574,50 +653,39 @@ ELSE
             #endregion
 
             #region Methods
-
-            public override void CreatePackage()
+            public override ISqlContainer CreatePackage()
             {
-                // there must be columns in the entity
-                if (ModificationItems.Count == 0) throw new QueryNotValidException("UPDATE statement needs items to SET");
-
-                Update = string.Format("UPDATE [{0}] SET ", FormattedTableName);
-
-                // skip anything not modified
-                var updateItems = ModificationItems.Where(w => w.IsModified).ToList();
+                var items = Entity.Changes();
+                var container = new UpdateContainer(Entity);
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
-                if (updateItems.Count == 0) throw new QueryNotValidException("No items to update, query analyzer failed");
+                if (items.Count == 0) throw new SqlSaveException("No items to update, query analyzer failed");
 
-                for (var i = 0; i < updateItems.Count; i++)
+                for (var i = 0; i < items.Count; i++)
                 {
-                    var item = ModificationItems[i];
-                    var parameter = AddParameter(item.DatabaseColumnName, item.Value);
+                    var item = items[i];
+                    var value = Entity.GetPropertyValue(item.PropertyName);
 
-                    Update += string.Format("[{0}] = {1},", item.DatabaseColumnName, parameter);
+                    var parameter = AddParameter(item.DatabaseColumnName, value);
+
+                    container.AddUpdate(item, parameter);
                 }
 
-                Update = Update.TrimEnd(',');
-
-                var primaryKeys = ModificationItems.Where(w => w.IsPrimaryKey).ToList();
-                var where = " WHERE ";
+                // keys are not part of changes so we need to grab them
+                var primaryKeys = Entity.Keys();
 
                 // add where statement
                 for (var i = 0; i < primaryKeys.Count; i++)
                 {
                     var key = primaryKeys[i];
-                    var parameter = AddParameter(key.DatabaseColumnName, key.Value);
+                    var value = Entity.GetPropertyValue(key.PropertyName);
+                    var parameter = AddParameter(key.DatabaseColumnName, value);
 
-                    where += string.Format("[{0}] = {1}", key.DatabaseColumnName, parameter);
+                    container.AddWhere(key, parameter);
                 }
 
-                Update += where;
+                return container;
             }
-
-            public override string GetSql()
-            {
-                return Update;
-            }
-
             #endregion
         }
 

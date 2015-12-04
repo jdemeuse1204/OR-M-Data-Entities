@@ -1,17 +1,13 @@
 ﻿using System.Data;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
-using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data
 {
-    public sealed class ModifcationItem
+    public sealed class ModificationItem
     {
         #region Properties
-        public bool IsModified { get; private set; }
-
         public string SqlDataTypeString { get; private set; }
 
         public string PropertyDataType { get; private set; }
@@ -28,20 +24,21 @@ namespace OR_M_Data_Entities.Data
 
         public DbGenerationOption Generation { get; private set; }
 
-        public object Value { get; private set; }
-
         public bool TranslateDataType { get; private set; }
 
+        public bool NeedsAlias
+        {
+            get { return DatabaseColumnName != PropertyName; }
+        }
         #endregion
 
         #region Constructor
 
-        public ModifcationItem(PropertyInfo property, Entity entity, bool isModified = true)
+        public ModificationItem(PropertyInfo property, bool isModified = true)
         {
             PropertyName = property.Name;
             DatabaseColumnName = property.GetColumnName();
             IsPrimaryKey = property.IsPrimaryKey();
-            Value = entity.GetPropertyValue(property);
             PropertyDataType = property.PropertyType.Name.ToUpper();
             Generation = IsPrimaryKey
                 ? property.GetGenerationOption()
@@ -93,6 +90,20 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
+        #endregion
+
+        #region Methods
+
+        public string AsOutput(string appendToEnd)
+        {
+            return string.Format("[INSERTED].[{0}]{1}{2}", DatabaseColumnName,
+                NeedsAlias ? string.Format(" as [{0}]", PropertyName) : string.Empty, appendToEnd);
+        }
+
+        public string AsField(string appendToEnd)
+        {
+            return string.Format("[{0}]{1}", DatabaseColumnName, appendToEnd);
+        }
         #endregion
     }
 }

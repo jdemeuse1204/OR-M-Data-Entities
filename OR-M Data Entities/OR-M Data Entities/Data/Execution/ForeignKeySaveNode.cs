@@ -19,10 +19,10 @@ namespace OR_M_Data_Entities.Data.Execution
         {
             Property = property;
             Parent = parent;
-            Entity = new Entity(value);
+            Entity = new ModificationEntity(value);
         }
 
-        public ForeignKeySaveNode(PropertyInfo property, Entity entity, object parent)
+        public ForeignKeySaveNode(PropertyInfo property, ModificationEntity entity, object parent)
         {
             Property = property;
             Parent = parent;
@@ -33,7 +33,7 @@ namespace OR_M_Data_Entities.Data.Execution
 
         public object Parent { get; set; }
 
-        public readonly Entity Entity;
+        public readonly ModificationEntity Entity;
 
         public bool Equals(ForeignKeySaveNode other)
         {

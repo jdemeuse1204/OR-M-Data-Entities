@@ -12,12 +12,51 @@ using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
-    public class EntityModifiable : Entity
+    public class ModificationEntity : Entity
     {
-        public EntityModifiable(object entity) 
+        #region Properties
+        public UpdateType UpdateType { get; private set; }
+
+        public EntityState State { get; private set; }
+
+        private IReadOnlyList<ModificationItem> _modificationItems { get; set; }
+        #endregion
+
+        #region Constructor
+        public ModificationEntity(object entity) 
             : base(entity)
         {
             _initialize();
+        }
+        #endregion
+
+        #region Methods
+
+        public static EntityState GetState(object value)
+        {
+            var entityStateTrackable = value as EntityStateTrackable;
+            var entity = new Entity(value);
+
+            if (entityStateTrackable == null) throw new Exception("Entity tracking not turned on");
+
+            var changes = _getChanges(entityStateTrackable, entity);
+
+            return _getState(changes);
+        }
+
+        public IReadOnlyList<ModificationItem> Changes()
+        {
+            return _modificationItems.Where(w => w.IsModified).ToList();
+        }
+
+        public IReadOnlyList<ModificationItem> Keys()
+        {
+            return _modificationItems.Where(w => w.IsPrimaryKey).ToList();
+        }
+
+        public IReadOnlyList<ModificationItem> All()
+        {
+            return _modificationItems;
         }
 
         private void _setChanges()
@@ -27,21 +66,30 @@ namespace OR_M_Data_Entities.Data.Definition
             if (!IsEntityStateTrackingOn)
             {
                 // mark everything has changed so it will be updated
-                Changes = columns.Select(w => new ModifcationItem(w, this)).ToList();
+                _modificationItems = columns.Select(w => new ModificationItem(w)).ToList();
                 State = EntityState.Modified;
                 return;
             }
             // if _pristineEntity == null then that means a new instance was created and it is an insert
 
-            Changes = (from item in Value.GetType().GetProperties().Where(w => w.IsColumn())
-                       let current = _getCurrentObject(EntityTrackable, item.Name)
-                       let pristineEntity = _getPristineProperty(EntityTrackable, item.Name)
-                       let hasChanged = _hasChanged(pristineEntity, current)
-                       select new ModifcationItem(item, this, hasChanged)).ToList();
+            _modificationItems = _getChanges(EntityTrackable, this);
 
-            State = Changes.Count == 0 ? EntityState.UnChanged : EntityState.Modified;
+            State = _getState(_modificationItems);
         }
 
+        private static EntityState _getState(IReadOnlyList<ModificationItem> changes)
+        {
+            return changes.Any(w => w.IsModified) ? EntityState.Modified : EntityState.UnChanged;
+        }
+
+        private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, Entity entity)
+        {
+            return (from item in entityStateTrackable.GetType().GetProperties().Where(w => w.IsColumn())
+                let current = _getCurrentObject(entityStateTrackable, item.Name)
+                let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
+                let hasChanged = _hasChanged(pristineEntity, current)
+                select new ModificationItem(item, hasChanged)).ToList();
+        }
         private static bool _hasChanged(object pristineEntity, object entity)
         {
             return ((entity == null && pristineEntity != null) || (entity != null && pristineEntity == null))
@@ -227,7 +275,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
                 if (e.Value == null && !useTransactions)
                 {
-                    throw new SqlSaveException(string.Format("Foreign Key {0} cannot be null", tableInfo.TableNameOnly));
+                    throw new SqlSaveException(string.Format("Foreign Key [{0}] cannot be null", tableInfo.TableNameOnly));
                 }
 
                 // skip lookup tables
@@ -293,5 +341,6 @@ namespace OR_M_Data_Entities.Data.Definition
 
             return result;
         }
+        #endregion
     }
 }

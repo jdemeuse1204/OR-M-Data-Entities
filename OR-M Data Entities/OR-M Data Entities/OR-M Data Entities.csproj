@@ -47,9 +47,9 @@
   <ItemGroup>
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
-    <Compile Include="Data\Definition\Base\EntityInfoAnalyticsPackage.cs" />
-    <Compile Include="Data\Definition\Base\SqlSecureQueryParameter.cs" />
-    <Compile Include="Data\Definition\EntityModifiable.cs" />
+    <Compile Include="Data\ISqlContainer.cs" />
+    <Compile Include="Data\Secure\SqlSecureQueryParameter.cs" />
+    <Compile Include="Data\Definition\ModificationEntity.cs" />
     <Compile Include="Data\EntitySaveNodeList.cs" />
     <Compile Include="Data\ModificationItem.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
@@ -172,7 +172,6 @@
     <Compile Include="Scripts\StoredScript.cs" />
     <Compile Include="Tracking\EntityCloner.cs" />
     <Compile Include="Tracking\EntityStateAnalyzer.cs" />
-    <Compile Include="Tracking\EntityStateComparePackage.cs" />
     <Compile Include="Tracking\EntityStateTrackable.cs" />
   </ItemGroup>
   <ItemGroup>

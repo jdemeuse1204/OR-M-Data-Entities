@@ -67,7 +67,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public ReadOnlySaveOption? GetReadOnlySaveOption()
         {
-            return _readOnlyAttribute == null ? null : (ReadOnlySaveOption?) _readOnlyAttribute.ReadOnlySaveOption;
+            return _readOnlyAttribute == null ? null : (ReadOnlySaveOption?)_readOnlyAttribute.ReadOnlySaveOption;
         }
 
         public string ClassName { get; private set; }
@@ -102,11 +102,17 @@ namespace OR_M_Data_Entities.Data.Definition
 
         #region Methods
 
+        private string _sqlFormattedTableName;
         public string SqlFormattedTableName()
         {
+            // cache table name
+            if (!string.IsNullOrEmpty(_sqlFormattedTableName)) return _sqlFormattedTableName;
+
             var tableName = ToString();
 
-            return string.IsNullOrWhiteSpace(tableName) ? "" : tableName.TrimStart('[').TrimEnd(']');
+            _sqlFormattedTableName = string.IsNullOrWhiteSpace(tableName) ? "" : tableName.TrimStart('[').TrimEnd(']');
+
+            return _sqlFormattedTableName;
         }
 
         public override string ToString()
