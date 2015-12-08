@@ -11,10 +11,10 @@ using System.Collections.Generic;
 
 namespace OR_M_Data_Entities.Data.Query
 {
-    public sealed class KeyContainer : IEnumerable<KeyValuePair<string, object>>
+    public sealed class OutputContainer : IEnumerable<KeyValuePair<string, object>>
 	{
         #region Constructor
-        public KeyContainer()
+        public OutputContainer()
 		{
 			_container = new Dictionary<string, object>();
 		}
@@ -22,6 +22,8 @@ namespace OR_M_Data_Entities.Data.Query
 
         #region Properties
         private Dictionary<string, object> _container { get; set; }
+
+        public int Count {get { return _container == null ? 0 : _container.Count; } }
         #endregion
 
         #region Methods

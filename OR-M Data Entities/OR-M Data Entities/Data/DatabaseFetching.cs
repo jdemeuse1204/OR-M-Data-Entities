@@ -28,12 +28,12 @@ namespace OR_M_Data_Entities.Data
         /// Used with insert statements only, gets the value if the id's that were inserted
         /// </summary>
         /// <returns></returns>
-        protected KeyContainer SelectIdentity()
+        protected OutputContainer GetOutput()
         {
             if (Reader.HasRows)
             {
                 Reader.Read();
-                var keyContainer = new KeyContainer();
+                var keyContainer = new OutputContainer();
                 var rec = (IDataRecord)Reader;
 
                 for (var i = 0; i < rec.FieldCount; i++)
@@ -50,7 +50,7 @@ namespace OR_M_Data_Entities.Data
             Reader.Close();
             Reader.Dispose();
 
-            return new KeyContainer();
+            return new OutputContainer();
         }
         #endregion
     }

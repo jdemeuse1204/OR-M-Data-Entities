@@ -3,11 +3,13 @@ using System.Reflection;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Data
+namespace OR_M_Data_Entities.Data.Modification
 {
     public sealed class ModificationItem
     {
         #region Properties
+        public bool IsModified { get; private set; }
+
         public string SqlDataTypeString { get; private set; }
 
         public string PropertyDataType { get; private set; }

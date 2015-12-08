@@ -475,7 +475,7 @@ namespace OR_M_Data_Entities.Tests
 
                 Assert.IsTrue(that != null);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 Assert.IsTrue(false);
             }
@@ -500,7 +500,7 @@ namespace OR_M_Data_Entities.Tests
 
                 Assert.IsTrue(that != null);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 Assert.IsTrue(false);
             }
@@ -1196,6 +1196,43 @@ namespace OR_M_Data_Entities.Tests
             catch (Exception)
             {
                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_66()
+        {
+            try
+            {
+                // performs a try insert update
+                var max1 = ctx.From<Linking>().Select(w => w.PolicyId).Max() + 1;
+                var max2 = ctx.From<Linking>().Select(w => w.PolicyInfoId).Max() + 1;
+                
+                // make sure inserting and updating is working for the try insert update
+                var linking = new Linking
+                {
+                    Description = "Test",
+                    PolicyId = max1,
+                    PolicyInfoId = max2
+                };
+
+                ctx.SaveChanges(linking);
+
+                var that = ctx.Find<Linking>(max1, max2);
+
+                that.Description = "Changed!";
+
+                ctx.SaveChanges(that);
+
+                that = ctx.Find<Linking>(max1, max2);
+
+                var changed = that.Description;
+
+                Assert.IsTrue(that != null && changed == "Changed!");
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
             }
         }
 

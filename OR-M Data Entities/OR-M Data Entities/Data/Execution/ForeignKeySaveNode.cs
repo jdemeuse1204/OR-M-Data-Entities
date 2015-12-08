@@ -8,6 +8,8 @@
 using System;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Modification;
+using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data.Execution
 {
@@ -19,7 +21,7 @@ namespace OR_M_Data_Entities.Data.Execution
         {
             Property = property;
             Parent = parent;
-            Entity = new ModificationEntity(value);
+            Entity = new ModificationEntity(value, new MapsTo(parent.GetType(), property.Name, property.GetCustomAttribute<ForeignKeyAttribute>()));
         }
 
         public ForeignKeySaveNode(PropertyInfo property, ModificationEntity entity, object parent)

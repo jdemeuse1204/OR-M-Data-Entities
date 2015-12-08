@@ -47,15 +47,18 @@
   <ItemGroup>
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
-    <Compile Include="Data\ISqlContainer.cs" />
+    <Compile Include="Data\Modification\DatabaseModifiableTransactional.cs" />
+    <Compile Include="Data\Modification\ISqlContainer.cs" />
+    <Compile Include="Data\Modification\DatabaseModifiableNonTransactional.cs" />
+    <Compile Include="Data\Modification\MapsTo.cs" />
     <Compile Include="Data\Secure\SqlSecureQueryParameter.cs" />
     <Compile Include="Data\Definition\ModificationEntity.cs" />
-    <Compile Include="Data\EntitySaveNodeList.cs" />
-    <Compile Include="Data\ModificationItem.cs" />
+    <Compile Include="Data\Modification\EntitySaveNodeList.cs" />
+    <Compile Include="Data\Modification\ModificationItem.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
     <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
     <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
-    <Compile Include="Data\SaveResult.cs" />
+    <Compile Include="Data\Modification\SqlPartStatement.cs" />
     <Compile Include="Data\Transform\DbTransform.cs" />
     <Compile Include="Data\Transform\TransformContainer.cs" />
     <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
@@ -67,7 +70,9 @@
     <Compile Include="Data\Execution\ForeignKeySaveNode.cs" />
     <Compile Include="Data\Execution\ISqlPayload.cs" />
     <Compile Include="Data\Execution\SqlPayload.cs" />
+    <Compile Include="Enumeration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
+    <Compile Include="Enumeration\PackageBuildType.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
@@ -77,10 +82,9 @@
     <Compile Include="Data\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Data\Secure\SqlSecureObject.cs" />
     <Compile Include="Data\Query\ISqlBuilder.cs" />
-    <Compile Include="Data\Query\KeyContainer.cs" />
+    <Compile Include="Data\Query\OutputContainer.cs" />
     <Compile Include="Data\Query\SqlFunctionTextBuilder.cs" />
     <Compile Include="Data\Query\StatementParts\SqlFromTable.cs" />
-    <Compile Include="Data\Query\SqlValidation.cs" />
     <Compile Include="Enumeration\DataTransformType.cs" />
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />

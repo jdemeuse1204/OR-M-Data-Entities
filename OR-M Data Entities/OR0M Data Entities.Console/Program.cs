@@ -12,11 +12,20 @@ using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console
 {
+    public class SqlContext : DbSqlContext
+    {
+        public SqlContext() 
+            : base("sqlExpress")
+        {
+            //Configuration.UseTransactions = true;
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-            var context = new DbSqlContext("sqlExpress");
+            var context = new SqlContext();
 
             //var c1 = context.Find<Contact>(1);
 
@@ -105,8 +114,6 @@ namespace OR0M_Data_Entities.Console
             x.FirstName = "New Name";
 
             result = context.SaveChanges(x);
-
-            var test = result.GetUpdateType("Contacts");
 
             //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
             //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");

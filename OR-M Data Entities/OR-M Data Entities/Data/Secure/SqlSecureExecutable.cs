@@ -7,9 +7,10 @@
  */
 
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using OR_M_Data_Entities.Data.Modification;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data.Secure
 {
@@ -27,6 +28,11 @@ namespace OR_M_Data_Entities.Data.Secure
         {
             _parameters = new List<SqlSecureQueryParameter>();
 		}
+
+        protected SqlSecureExecutable(List<SqlSecureQueryParameter> parameters)
+        {
+            _parameters = parameters;
+		}
         #endregion
 
         #region Methods
@@ -36,31 +42,33 @@ namespace OR_M_Data_Entities.Data.Secure
 			return string.Format("@DATA{0}", _parameters.Count);
 		}
 
-        private string _getKey(int index)
-        {
-            return string.Format("@DATA{0}", index);
-        }
-
-        protected string AddParameter(string dbColumnName, object value)
-        {
-            return AddParameter(dbColumnName, value, null);
-        }
-
-        protected string AddParameter(string dbColumnName, object value, SqlDbType? type)
+        protected string AddParameter(ModificationItem item, object value)
 		{
+            return _addParameter(item, value, false);
+        }
+
+        protected string AddPristineParameter(ModificationItem item, object value)
+        {
+            return _addParameter(item, value, true);
+        }
+
+        private string _addParameter(ModificationItem item, object value, bool addPristineParameter)
+        {
             var parameterKey = _getNextKey();
 
             _parameters.Add(new SqlSecureQueryParameter
             {
                 Key = parameterKey,
-                DbColumnName = dbColumnName,
-                Value = type.HasValue ? new SqlSecureObject(value, type.Value) : new SqlSecureObject(value)
+                DbColumnName = addPristineParameter ? string.Format("Pristine{0}", item.DatabaseColumnName) : item.DatabaseColumnName,
+                TableName = item.GetTableName(),
+                ForeignKeyPropertyName = item.GetTableName(),
+                Value = item.TranslateDataType ? new SqlSecureObject(value, item.DbTranslationType) : new SqlSecureObject(value)
             });
 
             return parameterKey;
-		}
+        }
 
-		public void InsertParameters(SqlCommand cmd)
+        public void InsertParameters(SqlCommand cmd)
 		{
 			foreach (var item in _parameters)
 			{
@@ -74,7 +82,7 @@ namespace OR_M_Data_Entities.Data.Secure
 			}
 		}
 
-        protected IEnumerable<SqlSecureQueryParameter> GetParameters()
+        public IEnumerable<SqlSecureQueryParameter> GetParameters()
 	    {
 	        return _parameters;
 	    }

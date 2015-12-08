@@ -223,6 +223,11 @@ namespace OR_M_Data_Entities.Data.Definition
         #endregion
 
         #region Property Methods
+        protected static FieldInfo GetPristineEntityFieldInfo()
+        {
+            return typeof(EntityStateTrackable).GetField("_pristineEntity",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+        }
 
         public object GetPropertyValue(PropertyInfo property)
         {
@@ -234,6 +239,21 @@ namespace OR_M_Data_Entities.Data.Definition
             var property = Value.GetType().GetProperty(propertyName);
 
             return GetPropertyValue(property);
+        }
+
+        public object GetPristineEntityPropertyValue(string propertyName)
+        {
+            if (!IsEntityStateTrackingOn) throw new Exception("Entity State Tracking is not on, error in GetPristineEntityPropertyValue");
+
+            var field = GetPristineEntityFieldInfo();
+
+            var pristineEntity = field.GetValue(Value);
+
+            var property = pristineEntity.GetType().GetProperty(propertyName);
+
+            if (property == null) throw new Exception(string.Format("Cannot find property name: {0}.  Search failed in pristine entity", propertyName));
+
+            return property.GetValue(pristineEntity);
         }
 
         public void SetPropertyValue(string propertyName, object value)

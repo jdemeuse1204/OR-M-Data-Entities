@@ -7,6 +7,7 @@
  */
 
 using System.Data.SqlClient;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data.Query
 {
@@ -15,5 +16,7 @@ namespace OR_M_Data_Entities.Data.Query
         ISqlPackage Build();
 
 	    SqlCommand BuildSqlCommand(SqlConnection connection);
-	}
+
+        ModificationEntity Entity { get; }
+    }
 }

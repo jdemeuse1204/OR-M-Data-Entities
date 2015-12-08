@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using OR_M_Data_Entities.Data.Execution;
 
-namespace OR_M_Data_Entities.Data
+namespace OR_M_Data_Entities.Data.Modification
 {
     public class EntitySaveNodeList : IEnumerable<ForeignKeySaveNode>
     {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Execution;
+using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Extensions;
@@ -20,26 +21,30 @@ namespace OR_M_Data_Entities.Data.Definition
         public EntityState State { get; private set; }
 
         private IReadOnlyList<ModificationItem> _modificationItems { get; set; }
+
+        private readonly MapsTo _mapsTo;
+
+        public readonly string TableVariable;
         #endregion
 
         #region Constructor
-        public ModificationEntity(object entity) 
+        public ModificationEntity(object entity, MapsTo mapsTo = null) 
             : base(entity)
         {
+            _mapsTo = mapsTo;
+            TableVariable = _mapsTo == null ? "ParentTable" : _mapsTo.AsVariable();
             _initialize();
         }
         #endregion
 
         #region Methods
-
         public static EntityState GetState(object value)
         {
             var entityStateTrackable = value as EntityStateTrackable;
-            var entity = new Entity(value);
 
             if (entityStateTrackable == null) throw new Exception("Entity tracking not turned on");
 
-            var changes = _getChanges(entityStateTrackable, entity);
+            var changes = _getChanges(entityStateTrackable);
 
             return _getState(changes);
         }
@@ -72,7 +77,7 @@ namespace OR_M_Data_Entities.Data.Definition
             }
             // if _pristineEntity == null then that means a new instance was created and it is an insert
 
-            _modificationItems = _getChanges(EntityTrackable, this);
+            _modificationItems = _getChanges(EntityTrackable);
 
             State = _getState(_modificationItems);
         }
@@ -82,7 +87,7 @@ namespace OR_M_Data_Entities.Data.Definition
             return changes.Any(w => w.IsModified) ? EntityState.Modified : EntityState.UnChanged;
         }
 
-        private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, Entity entity)
+        private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable)
         {
             return (from item in entityStateTrackable.GetType().GetProperties().Where(w => w.IsColumn())
                 let current = _getCurrentObject(entityStateTrackable, item.Name)
@@ -107,7 +112,6 @@ namespace OR_M_Data_Entities.Data.Definition
             UpdateType = UpdateType.Skip;
 
             // check to see if anything has updated, if not we can skip everything
-
             _setChanges();
 
             // if there are no changes then exit
@@ -128,11 +132,6 @@ namespace OR_M_Data_Entities.Data.Definition
                 var pkValueType = "";
 
                 if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
-
-                if (generationOption == DbGenerationOption.DbDefault)
-                {
-                    throw new SqlSaveException("Cannot use DbGenerationOption of DbDefault on a primary key");
-                }
 
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (pkValue.GetType().Name.ToUpper())
@@ -226,8 +225,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         private static object _getPristineProperty(EntityStateTrackable entity, string propertyName)
         {
-            var field = typeof(EntityStateTrackable).GetField("_pristineEntity",
-                BindingFlags.Instance | BindingFlags.NonPublic);
+            var field = GetPristineEntityFieldInfo();
 
             // cannot be null here, should never happen
             if (field == null) throw new ArgumentNullException("_pristineEntity");
@@ -244,9 +242,9 @@ namespace OR_M_Data_Entities.Data.Definition
 
             if (entityTrackable == null) return;
 
-            var field = typeof(EntityStateTrackable).GetField("_pristineEntity", BindingFlags.Instance | BindingFlags.NonPublic);
+            var field = GetPristineEntityFieldInfo();
 
-            if (field == null) throw new Exception("Try Set Table On Load Error");
+            if (field == null) throw new SqlSaveException("Cannot find Pristine Entity");
 
             field.SetValue(instance, EntityCloner.Clone(instance));
         }
