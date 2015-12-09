@@ -17,7 +17,7 @@ namespace OR0M_Data_Entities.Console
         public SqlContext() 
             : base("sqlExpress")
         {
-            //Configuration.UseTransactions = true;
+            Configuration.UseTransactions = true;
         }
     }
 

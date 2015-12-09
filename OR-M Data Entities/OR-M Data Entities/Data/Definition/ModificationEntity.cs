@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
@@ -22,17 +20,13 @@ namespace OR_M_Data_Entities.Data.Definition
 
         private IReadOnlyList<ModificationItem> _modificationItems { get; set; }
 
-        private readonly MapsTo _mapsTo;
-
-        public readonly string TableVariable;
+        // table can have two foreign keys of the same time, this will tell them apart
         #endregion
 
         #region Constructor
-        public ModificationEntity(object entity, MapsTo mapsTo = null) 
+        public ModificationEntity(object entity) 
             : base(entity)
         {
-            _mapsTo = mapsTo;
-            TableVariable = _mapsTo == null ? "ParentTable" : _mapsTo.AsVariable();
             _initialize();
         }
         #endregion
@@ -247,97 +241,6 @@ namespace OR_M_Data_Entities.Data.Definition
             if (field == null) throw new SqlSaveException("Cannot find Pristine Entity");
 
             field.SetValue(instance, EntityCloner.Clone(instance));
-        }
-
-        public EntitySaveNodeList GetSaveOrder(bool useTransactions)
-        {
-            var result = new EntitySaveNodeList();
-
-            var entities = GetForeignKeys(Value);
-
-            entities.Insert(0, new ParentChildPair(null, Value, null));
-
-            for (var i = 0; i < entities.Count; i++)
-            {
-                if (i == 0)
-                {
-                    // is the base entity, will never have a parent, set it and continue to the next entity
-                    result.Add(new ForeignKeySaveNode(null, this, null));
-                    continue;
-                }
-
-                var e = entities[i];
-                int index;
-                var foreignKeyIsList = e.Property.IsList();
-                var tableInfo = new Table(e.Property.GetPropertyType());
-
-                if (e.Value == null && !useTransactions)
-                {
-                    throw new SqlSaveException(string.Format("Foreign Key [{0}] cannot be null", tableInfo.TableNameOnly));
-                }
-
-                // skip lookup tables
-                if (tableInfo.IsLookupTable) continue;
-
-                // skip children(foreign keys) if option is set
-                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
-                    continue;
-
-                if (e.Value == null)
-                {
-                    if (foreignKeyIsList) continue;
-
-                    var columnName = e.ChildType.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
-                    var isNullable = Value.GetType().GetProperty(columnName).PropertyType.IsNullable();
-
-                    // we can skip the foreign key if its nullable and one to one
-                    if (isNullable) continue;
-
-                    if (!useTransactions)
-                    {
-                        // database will take care of this if MARS is enabled
-                        // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
-                        // maintaining the relationship
-                        throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
-                    }
-                }
-
-                // Check for readonly attribute and see if we should throw an error
-                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
-                {
-                    throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
-                }
-
-                // doesnt have dependencies
-                if (foreignKeyIsList)
-                {
-                    // e.Value can not be null, above code will catch it
-                    foreach (var item in (e.Value as ICollection))
-                    {
-                        // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                        // the value property
-                        index = result.IndexOf(e.Parent);
-
-                        result.Insert(index + 1, new ForeignKeySaveNode(e.Property, item, e.Parent));
-
-                        if (item.HasForeignKeys()) entities.AddRange(GetForeignKeys(item));
-                    }
-                }
-                else
-                {
-                    // must be saved before the parent
-                    // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                    // the value property
-                    index = result.IndexOf(e.Parent);
-
-                    result.Insert(index, new ForeignKeySaveNode(e.Property, e.Value, e.Parent));
-
-                    // has dependencies
-                    if (e.Value.HasForeignKeys()) entities.AddRange(GetForeignKeys(e.Value));
-                }
-            }
-
-            return result;
         }
         #endregion
     }

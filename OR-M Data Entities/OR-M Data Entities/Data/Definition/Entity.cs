@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
@@ -216,7 +217,7 @@ namespace OR_M_Data_Entities.Data.Definition
                     }).ToList();
         }
 
-        protected static List<ParentChildPair> GetForeignKeys(object entity)
+        public static List<ParentChildPair> GetForeignKeys(object entity)
         {
             return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ParentChildPair(entity, w.GetValue(entity), w)).ToList();
         }
@@ -328,34 +329,6 @@ namespace OR_M_Data_Entities.Data.Definition
                 var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
 
                 _setPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
-            }
-        }
-        #endregion
-
-        #region helpers
-        protected class ParentChildPair
-        {
-            public ParentChildPair(object parent, object value, PropertyInfo property)
-            {
-                Parent = parent;
-                Value = value;
-                Property = property;
-            }
-
-            public object Parent { get; private set; }
-
-            public PropertyInfo Property { get; private set; }
-
-            public Type ParentType
-            {
-                get { return Parent == null ? null : Parent.GetTypeListCheck(); }
-            }
-
-            public object Value { get; private set; }
-
-            public Type ChildType
-            {
-                get { return Value == null ? null : Value.GetTypeListCheck(); }
             }
         }
         #endregion

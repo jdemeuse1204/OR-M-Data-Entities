@@ -18,9 +18,9 @@ namespace OR_M_Data_Entities.Data.Modification
 
         public readonly ForeignKeyAttribute ForeignKey;
 
-        public string AsVariable()
+        public string AsTableName()
         {
-            return string.Format("{0}{1}", ParentPropertyName, ForeignKey.ForeignKeyColumnName);
+            return ParentPropertyName;
         }
     }
 }

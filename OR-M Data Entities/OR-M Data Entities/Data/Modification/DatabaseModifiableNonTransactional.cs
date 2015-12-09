@@ -5,7 +5,6 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
@@ -22,7 +21,7 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly string _sql;
 
-            public CustomContainer(Table entity, string sql)
+            public CustomContainer(ModificationEntity entity, string sql)
                 : base(entity)
             {
                 _sql = sql;
@@ -52,6 +51,9 @@ namespace OR_M_Data_Entities.Data
 
             private string _set { get; set; }
 
+            private string _tableVariable { get; set; }
+
+            private string _tableVariableParameter { get; set; }
             #endregion
 
             #region Constructor
@@ -63,7 +65,9 @@ namespace OR_M_Data_Entities.Data
                 _declare = string.Empty;
                 _output = string.Empty;
                 _set = string.Empty;
+                _tableVariable = string.Empty;
             }
+
             #endregion
 
             #region Methods
@@ -72,9 +76,13 @@ namespace OR_M_Data_Entities.Data
                 _fields = string.Concat(_fields, item.AsField(","));
             }
 
-            public void AddValue(string parameterKey)
+            public void AddValue(string parameterKey, bool isFromOtherTable)
             {
                 _values = string.Concat(_values, string.Format("{0},", parameterKey));
+
+                if (!isFromOtherTable) return;
+
+
             }
 
             public void AddDeclare(string parameterKey, string sqlDataType)
@@ -82,9 +90,17 @@ namespace OR_M_Data_Entities.Data
                 _declare = string.Concat(_declare, string.Format("{0} as {1},", parameterKey, sqlDataType));
             }
 
-            public void AddOutput(ModificationItem item)
+            public void AddOutput(ModificationItem item, bool selectIntoTableVariable)
             {
                 _output = string.Concat(_output, item.AsOutput(","));
+
+                if (!selectIntoTableVariable) return;
+
+                _tableVariable = string.Concat(_tableVariable, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
+
+                if (!string.IsNullOrEmpty(_tableVariableParameter)) return;
+
+                _tableVariableParameter = string.Format("@{0}", MapsTo.AsTableName());
             }
 
             public void AddSet(ModificationItem item, out string key)
@@ -99,7 +115,7 @@ namespace OR_M_Data_Entities.Data
                 }
                 else
                 {
-                    // INTEGER
+                    // NUMERIC
                     _set = string.Concat(_set,
                         string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key,
                             item.DatabaseColumnName, SqlFormattedTableName));
@@ -113,11 +129,19 @@ namespace OR_M_Data_Entities.Data
 
             public SqlPartStatement Split()
             {
+                if (!string.IsNullOrWhiteSpace(_tableVariable))
+                {
+                    _declare = string.Concat(_declare,
+                        string.Format("{0} TABLE({1})", _tableVariableParameter, _tableVariable.TrimEnd(',')));
+
+                    _output = string.Concat(_output.TrimEnd(','), string.Format(" INTO {0}", _tableVariableParameter));
+                }
+
                 var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})",
                     SqlFormattedTableName,
                     _fields.TrimEnd(','),
                     _output.TrimEnd(','),
-                     _values.TrimEnd(',')
+                    _values.TrimEnd(',')
 
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
@@ -126,6 +150,7 @@ namespace OR_M_Data_Entities.Data
 
                 return new SqlPartStatement(sql, _declare, _set);
             }
+
             #endregion
         }
 
@@ -180,12 +205,14 @@ namespace OR_M_Data_Entities.Data
 
         protected abstract class SqlModificationContainer
         {
-            protected SqlModificationContainer(Table entity)
+            protected SqlModificationContainer(ModificationEntity entity)
             {
                 SqlFormattedTableName = entity.SqlFormattedTableName();
             }
 
             protected readonly string SqlFormattedTableName;
+
+            protected readonly MapsTo MapsTo;
         }
         #endregion
 
@@ -403,15 +430,28 @@ ELSE
 
         private class SqlInsertPackage : SqlModificationPackage
         {
+            protected bool IsUsingTransactions { get; set; }
+
+            private readonly EntitySaveNodeList _nodes;
+
             #region Constructor
             public SqlInsertPackage(ISqlBuilder builder)
                 : base(builder)
             {
+                IsUsingTransactions = false;
             }
 
             public SqlInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters)
                 : base(builder, parameters)
             {
+                IsUsingTransactions = false;
+            }
+
+            protected SqlInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, EntitySaveNodeList nodes)
+                : base(builder, parameters)
+            {
+                IsUsingTransactions = false;
+                _nodes = nodes;
             }
             #endregion
 
@@ -420,7 +460,7 @@ ELSE
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
-                    container.AddOutput(item);
+                    container.AddOutput(item, IsUsingTransactions);
                     return;
                 }
 
@@ -429,8 +469,8 @@ ELSE
                 var data = TryAddParameter(item, value);
 
                 container.AddField(item);
-                container.AddValue(data);
-                container.AddOutput(item);
+                container.AddValue(data, IsUsingTransactions);
+                container.AddOutput(item, IsUsingTransactions);
             }
 
             private void _addDbGenerationOptionGenerate(InsertContainer container, ModificationItem item)
@@ -440,14 +480,14 @@ ELSE
 
                 container.AddSet(item, out key);
                 container.AddField(item);
-                container.AddValue(key);
+                container.AddValue(key, IsUsingTransactions);
                 container.AddDeclare(key, item.SqlDataTypeString);
-                container.AddOutput(item);
+                container.AddOutput(item, IsUsingTransactions);
             }
 
             private void _addDbGenerationOptionIdentityAndDefault(InsertContainer container, ModificationItem item)
             {
-                container.AddOutput(item);
+                container.AddOutput(item, IsUsingTransactions);
             }
 
             public override ISqlContainer CreatePackage()

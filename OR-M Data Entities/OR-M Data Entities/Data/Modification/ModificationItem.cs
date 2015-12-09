@@ -18,8 +18,6 @@ namespace OR_M_Data_Entities.Data.Modification
 
         public string DatabaseColumnName { get; private set; }
 
-        public string KeyName { get; private set; }
-
         public SqlDbType DbTranslationType { get; private set; }
 
         public bool IsPrimaryKey { get; private set; }
@@ -60,20 +58,6 @@ namespace OR_M_Data_Entities.Data.Modification
                 TranslateDataType = true;
             }
 
-            switch (Generation)
-            {
-                case DbGenerationOption.None:
-                    KeyName = "";
-                    break;
-                case DbGenerationOption.IdentitySpecification:
-                    KeyName = "@@IDENTITY";
-                    break;
-                case DbGenerationOption.Generate:
-                    KeyName = string.Format("@{0}", PropertyName);
-                    // set as the property name so we can pull the value back out
-                    break;
-            }
-
             // for auto generation
             switch (property.PropertyType.Name.ToUpper())
             {
@@ -88,6 +72,12 @@ namespace OR_M_Data_Entities.Data.Modification
                     break;
                 case "GUID":
                     SqlDataTypeString = "uniqueidentifier";
+                    break;
+                case "STRING":
+                    SqlDataTypeString = "varchar(max)";
+                    break;
+                case "DATETIME":
+                    SqlDataTypeString = "datetime";
                     break;
             }
         }
