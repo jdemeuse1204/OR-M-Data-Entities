@@ -18,3 +18,15 @@ C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Da
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.csprojResolveAssemblyReference.cache
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.dll
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\Test.mdf
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\Test_log.ldf
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.Tests.dll.config
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.Tests.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.Tests.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.csprojResolveAssemblyReference.cache
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Release\OR-M Data Entities.Tests.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml

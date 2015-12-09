@@ -1,0 +1,313 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="OR_M_Data_Entities.Commands.Secure.SqlSecureExecutable" Collapsed="true">
+    <Position X="4" Y="6.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAEAAIAgAAAAAACAAAAAAAIAAAAgAAAAAA=</HashCode>
+      <FileName>Commands\Secure\SqlSecureExecutable.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.Secure.StatementParts.SqlFromTable" Collapsed="true">
+    <Position X="4" Y="7.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAQAAAAA=</HashCode>
+      <FileName>Commands\Secure\StatementParts\SqlFromTable.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.SqlDeleteBuilder" Collapsed="true">
+    <Position X="0.75" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAIAAAAAAgAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Commands\SqlDeleteBuilder.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.SqlInsertBuilder" Collapsed="true">
+    <Position X="7.5" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAgAABAAAAAAAAAAAAAAAAAAAgAAAAAAAAgAAAAA=</HashCode>
+      <FileName>Commands\SqlInsertBuilder.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.SqlQueryBuilder" Collapsed="true">
+    <Position X="3" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAAAAQAAAAAEAAAAAAAABQAAAAAAgACgAABAQAAAAAA=</HashCode>
+      <FileName>Commands\SqlQueryBuilder.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.SqlUpdateBuilder" Collapsed="true">
+    <Position X="5.25" Y="10.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAQAAAAAAAAAAAAAAAAgAAAAAAAAAACAAA=</HashCode>
+      <FileName>Commands\SqlUpdateBuilder.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Commands.Support.SqlValidation" Collapsed="true">
+    <Position X="3" Y="9.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAIAAAAABCAAAAAAAAAAIAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Commands\Support\SqlValidation.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Data.Database" Collapsed="true">
+    <Position X="0.75" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQBAAAAACAAAAEAAAAABIQAAAAAAAAAADAAAAAAAAA=</HashCode>
+      <FileName>Data\Database.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Data.DatabaseExecution" Collapsed="true">
+    <Position X="0.75" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAABABAAACAAQAEEgECAABAAAAAAEAAgAAAAAAA=</HashCode>
+      <FileName>Data\DatabaseExecution.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Data.DatabaseFetching" Collapsed="true">
+    <Position X="0.75" Y="17" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Data\DatabaseFetching.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Data.DatabaseModifiable" Collapsed="true">
+    <Position X="0.75" Y="18.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAAAAAIAIAAAAAgAAAAAAAAAAAEAAAAAABAEAAQAAAA=</HashCode>
+      <FileName>Data\DatabaseModifiable.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Data.DatabaseReading" Collapsed="true">
+    <Position X="0.75" Y="15.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAgAAAIAAAAAAAAAIAAAAA=</HashCode>
+      <FileName>Data\DatabaseReading.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.DbSqlContext" Collapsed="true">
+    <Position X="0.75" Y="19.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DbSqlContext.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.ExpressionQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="19.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\ExpressionQuery.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.OrderedExpressionQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="21.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\OrderedExpressionQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Query.DbQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="18.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAIAAAAgAAAAAAQAAAAAIAQAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Query\DbQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Base.ExpressionResolver" Collapsed="true">
+    <Position X="5.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAoAAAAAAAAAAAAABAQAAAQAAAAAEAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Base\ExpressionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.ExpressionQueryResolvable&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="22.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAgEBQAAAIgAABHIAACAAAAAIIABAABACkE=</HashCode>
+      <FileName>Expressions\Resolution\ExpressionQueryResolvable.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.ExpressionQueryViewResolvable&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="24.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAA=</HashCode>
+      <FileName>Expressions\Resolution\ExpressionQueryViewResolvable.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Functions.FunctionResolver" Collapsed="true">
+    <Position X="7.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Functions\FunctionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Join.DbJoinQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="14" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgAAAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Join\DbJoinQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Join.JoinExpressionResolver" Collapsed="true">
+    <Position X="9.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAACAACAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Join\JoinExpressionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Order.OrderExpressionResolver" Collapsed="true">
+    <Position X="0.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAACAAIEAAABAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Order\OrderExpressionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Select.DbSelectQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="12.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACEAAAAAAgAIAAEAACQAAAIAAAAAAAiQCBAAgAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Select\DbSelectQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Select.SelectExpressionResolver" Collapsed="true">
+    <Position X="3" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAIAAAAAACEAIAAAAAAAAAAAAAAAAAAAAAAAAABAAA=</HashCode>
+      <FileName>Expressions\Resolution\Select\SelectExpressionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.SubQuery.DbSubQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="17" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\SubQuery\DbSubQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Where.DbWhereQuery&lt;T&gt;" Collapsed="true">
+    <Position X="5.5" Y="15.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Expressions\Resolution\Where\DbWhereQuery.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Expressions.Resolution.Where.WhereExpressionResolver" Collapsed="true">
+    <Position X="5.25" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAQAAAAEAACAAEAEAABQEAAABACAAAAAAAYAAAAAAAg=</HashCode>
+      <FileName>Expressions\Resolution\Where\WhereExpressionResolver.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Annotations.PathReferenceAttribute" Collapsed="true">
+    <Position X="5.25" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Properties\Annotations.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Annotations.AspMvcAreaAttribute" Collapsed="true">
+    <Position X="3" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Properties\Annotations.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Annotations.AspMvcPartialViewAttribute" Collapsed="true">
+    <Position X="5.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Properties\Annotations.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Annotations.AspMvcViewAttribute" Collapsed="true">
+    <Position X="7.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Properties\Annotations.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.CustomScript&lt;T&gt;" Collapsed="true">
+    <Position X="15.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\CustomScript.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.CustomScript" Collapsed="true">
+    <Position X="15.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAEAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\CustomScript.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.ScalarFunction&lt;T&gt;" Collapsed="true">
+    <Position X="15.25" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\ScalarFunction.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.StoredProcedure&lt;T&gt;" Collapsed="true">
+    <Position X="17.5" Y="7" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\StoredProcedure.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.StoredProcedure" Collapsed="true">
+    <Position X="16.5" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\StoredProcedure.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.StoredScript&lt;T&gt;" Collapsed="true">
+    <Position X="17.5" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\StoredScript.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="OR_M_Data_Entities.Scripts.StoredScript" Collapsed="true">
+    <Position X="17.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\StoredScript.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Interface Name="OR_M_Data_Entities.Scripts.Base.IReadScript&lt;T&gt;" Collapsed="true">
+    <Position X="15.25" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\Base\IReadScript.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="OR_M_Data_Entities.Scripts.Base.IScript" Collapsed="true">
+    <Position X="16.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\Base\IScript.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="OR_M_Data_Entities.Scripts.Base.IWriteScript" Collapsed="true">
+    <Position X="17.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Scripts\Base\IWriteScript.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

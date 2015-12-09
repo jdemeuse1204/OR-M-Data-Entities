@@ -1,10 +1,10 @@
 ﻿using System;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
-    [Table("Policy")]
-    public class Policy
+    public class Policy : EntityStateTrackable
     {
         [Column("PolicyID")]
         public int Id { get; set; }
@@ -35,5 +35,8 @@ namespace OR_M_Data_Entities.Tests.Tables
         public string CreatedBy { get; set; }
 
         public string UpdatedBy { get; set; }
+
+        [Unmapped]
+        public string Test { get; set; }
     }
 }

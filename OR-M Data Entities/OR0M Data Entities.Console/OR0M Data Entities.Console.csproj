@@ -52,6 +52,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\OR-M Data Entities.Diagnostics\OR-M Data Entities.Diagnostics.csproj">
+      <Project>{39041fa9-2a16-4541-a5dc-a55b422bb3f4}</Project>
+      <Name>OR-M Data Entities.Diagnostics</Name>
+    </ProjectReference>
     <ProjectReference Include="..\OR-M Data Entities.Tests\OR-M Data Entities.Tests.csproj">
       <Project>{5878e940-4c5b-462e-b67b-017acc82120b}</Project>
       <Name>OR-M Data Entities.Tests</Name>
@@ -60,6 +64,14 @@
       <Project>{a7e402c6-3b5c-4477-950d-20772598fe4c}</Project>
       <Name>OR-M Data Entities</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\ResetAllOrdersToNewOrders.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Scripts\UpdateFirstName.sql" />
+    <Content Include="Scripts\GetFirstName.sql" />
+    <Content Include="Scripts2\GetLastName.sql" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

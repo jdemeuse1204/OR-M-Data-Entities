@@ -12,3 +12,7 @@ C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data
 C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.csprojResolveAssemblyReference.cache
 C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.dll
 C:\Users\Jimmer\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Debug\OR-M Data Entities.pdb

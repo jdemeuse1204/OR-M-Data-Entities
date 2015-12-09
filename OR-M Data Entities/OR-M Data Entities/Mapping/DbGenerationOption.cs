@@ -1,15 +1,19 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 
 namespace OR_M_Data_Entities.Mapping
 {
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    /// <summary>
+    /// This attribute should be used to specify how a primary key is generated.  When set to Identity Specification, the ORM relies on the 
+    /// database to create the key.  When set to Generate, the ORM will create the key for you.  If set to None, then no key will be generated.
+    /// </summary>
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class DbGenerationOptionAttribute : Attribute
 	{
         public DbGenerationOptionAttribute(DbGenerationOption option)
@@ -28,6 +32,7 @@ namespace OR_M_Data_Entities.Mapping
     {
         None,
         IdentitySpecification,
-        Generate
+        Generate,
+        DbDefault
     }
 }

@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{DF72715A-47DD-4D57-A934-9D2A24B5221F}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>LambdaResolver</RootNamespace>
+    <AssemblyName>LambdaResolver</AssemblyName>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="OR-M Data Entities.Tests">
+      <HintPath>..\OR-M Data Entities.Tests\bin\Release\OR-M Data Entities.Tests.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tables\Address.cs" />
+    <Compile Include="Tables\AncillaryProduct.cs" />
+    <Compile Include="Tables\AncillaryProduct_Vendor.cs" />
+    <Compile Include="Tables\Ancillary_Note.cs" />
+    <Compile Include="Tables\aspnet_Role.cs" />
+    <Compile Include="Tables\Contact.cs" />
+    <Compile Include="Tables\County.cs" />
+    <Compile Include="Tables\MobileClosing.cs" />
+    <Compile Include="Tables\MobileClosingAddress.cs" />
+    <Compile Include="Tables\MobileClosingAssignment.cs" />
+    <Compile Include="Tables\MobileClosingCorrection.cs" />
+    <Compile Include="Tables\MobileClosingMembershipUserLogin.cs" />
+    <Compile Include="Tables\MobileClosingRoleMap.cs" />
+    <Compile Include="Tables\MobileClosingUserOrder.cs" />
+    <Compile Include="Tables\MobileClosingUserRole.cs" />
+    <Compile Include="Tables\Order.cs" />
+    <Compile Include="Tables\OrderAddress.cs" />
+    <Compile Include="Tables\OrderContact.cs" />
+    <Compile Include="Tables\Order_Note.cs" />
+    <Compile Include="Tables\Product.cs" />
+    <Compile Include="Tables\ProductType.cs" />
+    <Compile Include="Tables\State.cs" />
+    <Compile Include="Tables\Vendor.cs" />
+    <Compile Include="Tables\VendorAddress.cs" />
+    <Compile Include="Tables\VendorFeeByProduct.cs" />
+    <Compile Include="Tables\VendorOrderStatus.cs" />
+    <Compile Include="Tables\VendorPortalAccount.cs" />
+    <Compile Include="Tables\VendorProduct.cs" />
+    <Compile Include="Tables\VendorRanking.cs" />
+    <Compile Include="Tables\VendorStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OR-M Data Entities\OR-M Data Entities.csproj">
+      <Project>{a7e402c6-3b5c-4477-950d-20772598fe4c}</Project>
+      <Name>OR-M Data Entities</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

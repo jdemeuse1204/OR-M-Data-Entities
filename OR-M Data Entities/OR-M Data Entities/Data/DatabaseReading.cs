@@ -1,22 +1,22 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
 
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using OR_M_Data_Entities.Commands.Support;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
+using OR_M_Data_Entities.Exceptions;
+using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Resolution;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data
 {
     /// <summary>
     /// All data reading methods in this class require a READ before data can be retreived
     /// </summary>
-    public abstract class DatabaseReading : Database
+    public abstract class DatabaseReading : DatabaseExecution
     {
         #region Constructor
         protected DatabaseReading(string connectionStringOrName)
@@ -30,7 +30,7 @@ namespace OR_M_Data_Entities.Data
         /// Used for looping through results
         /// </summary>
         /// <returns></returns>
-		protected bool Read()
+        protected bool Read()
         {
             if (Reader.Read())
             {
@@ -42,119 +42,33 @@ namespace OR_M_Data_Entities.Data
             Reader.Dispose();
             return false;
         }
-
-        /// <summary>
-        /// Converts an object to a dynamic
-        /// </summary>
-        /// <returns></returns>
-		protected dynamic Select()
-        {
-            return Reader.ToObject();
-        }
-
-        /// <summary>
-        /// Converts a datareader to an object of type T
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-		protected T Select<T>()
-        {
-            return Reader.ToObject<T>();
-        }
         #endregion
 
         #region Data Execution
-        /// <summary>
-        /// Execute the SqlBuilder on the database
-        /// </summary>
-        /// <param name="builder"></param>
-		protected void Execute(ISqlBuilder builder)
+        public ExpressionQuery<T> From<T>()
         {
-            _tryCloseReader();
-            DataQueryType queryType;
-
-            Command = builder.Build(Connection, out queryType);
-            Connect();
-            Reader = Command.ExecuteReaderWithPeeking(null);
+            return new ExpressionQueryResolvable<T>(this);
         }
 
-        /// <summary>
-        /// Execute sql statement without sql builder on the database, this should be used for any stored
-        /// procedures.  NOTE:  This does not use SqlSecureExecutable to ensure only safe sql strings
-        /// are executed
-        /// </summary>
-        /// <param name="sql"></param>
-		protected void Execute(string sql)
+        public ExpressionQuery<T> FromView<T>(string viewId)
         {
-            _tryCloseReader();
-
-            Command = new SqlCommand(sql, Connection);
-
-            Connect();
-            Reader = Command.ExecuteReaderWithPeeking();
-        }
-
-        protected void Execute(string sql, Dictionary<string, object> parameters, ObjectMap map)
-        {
-            _tryCloseReader();
-
-            Command = new SqlCommand(sql, Connection);
-
-            foreach (var item in parameters)
+            if (!typeof(T).IsPartOfView(viewId))
             {
-                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Key;
-                Command.Parameters[item.Key].Value = item.Value;
+                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
+                    typeof(T).Name, viewId));
             }
 
-            Connect();
-			Reader = Command.ExecuteReaderWithPeeking(map);
+            return new ExpressionQueryViewResolvable<T>(this, viewId);
         }
 
-		protected void Execute(string sql, Dictionary<string, object> parameters)
-		{
-			Execute(sql, parameters, null);
-		}
-        #endregion
-
-        #region Query Execution
-        public DataReader<T> ExecuteQuery<T>(string sql)
-		{
-			Execute(sql);
-
-            return new DataReader<T>(Reader);
-		}
-
-		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters, ObjectMap map)
-		{
-			Execute(sql, parameters, map);
-
-			return new DataReader<T>(Reader);
-		}
-
-		public DataReader<T> ExecuteQuery<T>(string sql, Dictionary<string, object> parameters)
-		{
-			return ExecuteQuery<T>(sql, parameters, null);
-		}
-
-        public DataReader<T> ExecuteQuery<T>(string sql, params KeyValuePair<string,object>[] parameters)
+        public T Find<T>(params object[] pks)
         {
-            return ExecuteQuery<T>(sql, parameters.ToDictionary(keyValuePair => keyValuePair.Key, keyValuePair => keyValuePair.Value), null);
+            var query = From<T>();
+
+            ((ExpressionQueryResolvable<T>)query).ResolveFind(pks);
+
+            return query.FirstOrDefault();
         }
-
-        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
-        {
-            Execute(builder);
-
-            return new DataReader<T>(Reader);
-        }
-
-        private void _tryCloseReader()
-        {
-            if (Reader == null) return;
-            Reader.Close();
-            Reader.Dispose();
-        }
-
         #endregion
     }
 }

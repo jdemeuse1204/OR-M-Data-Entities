@@ -1,23 +1,22 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
-
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("OR-M Data Entities")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Object Relation Mapper")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("OrgName")]
+[assembly: AssemblyCompany("James Demeuse")]
 [assembly: AssemblyProduct("OR-M Data Entities")]
-[assembly: AssemblyCopyright("Copyright © OrgName 2015")]
+[assembly: AssemblyCopyright("Copyright © James Demeuse 2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -39,5 +38,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("3.0.0.0")]
+[assembly: AssemblyFileVersion("3.0.0.0")]

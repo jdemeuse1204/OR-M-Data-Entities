@@ -1,24 +1,29 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Expressions;
+using System.Linq;
+using System.Reflection;
+using OR_M_Data_Entities.Configuration;
 
 namespace OR_M_Data_Entities.Data
 {
     public abstract class Database : IDisposable
     {
+        #region Properties
         protected string ConnectionString { get; private set; }
         protected SqlConnection Connection { get; set; }
         protected SqlCommand Command { get; set; }
         protected PeekDataReader Reader { get; set; }
+        public ConfigurationOptions Configuration { get; private set; }
+        #endregion
 
         protected Database(string connectionStringOrName)
         {
@@ -34,8 +39,23 @@ namespace OR_M_Data_Entities.Data
 
                 ConnectionString = conn.ConnectionString;
             }
-            
+
+            // make sure MARS is enabled, it is needed for transactions
+            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString));
+
             Connection = new SqlConnection(ConnectionString);
+        }
+
+        private bool _isMARSEnabled(string connectionString)
+        {
+            var items = connectionString.ToUpper().Split(';');
+            var MARSSetting = items.FirstOrDefault(w => w.Contains("MULTIPLEACTIVERESULTSETS"));
+
+            if (string.IsNullOrWhiteSpace(MARSSetting)) return false;
+
+            var settingsSplit = MARSSetting.Replace("\'", "").Split('=');
+
+            return settingsSplit.Count() == 2 && bool.Parse(settingsSplit[1]);
         }
 
         /// <summary>
@@ -43,10 +63,31 @@ namespace OR_M_Data_Entities.Data
         /// </summary>
         protected void Connect()
         {
-            // Open the connection if its closed
-            if (Connection.State == ConnectionState.Closed)
+            const string errorMessage = "Data Context in the middle of an operation, consider locking your threads to avoid this.  Operation: {0}";
+
+            switch (Connection.State)
             {
-                Connection.Open();
+                case ConnectionState.Closed:
+                case ConnectionState.Broken:
+
+                    // if the connection was opened before we need to renew it
+                    if (_wasConnectionPreviouslyOpened())
+                    {
+                        Connection.Dispose();
+                        Connection = null;
+                        Connection = new SqlConnection(ConnectionString);
+                    }
+
+                    Connection.Open();
+                    return;
+                case ConnectionState.Connecting:
+                    throw new Exception(string.Format(errorMessage,"Connecting to database"));
+                case ConnectionState.Executing:
+                    throw new Exception(string.Format(errorMessage, "Executing Query"));
+                case ConnectionState.Fetching:
+                    throw new Exception(string.Format(errorMessage, "Fetching Data"));
+                case ConnectionState.Open:
+                    return;
             }
         }
 
@@ -57,6 +98,26 @@ namespace OR_M_Data_Entities.Data
         {
             // Disconnect our connection
             Connection.Close();
+        }
+
+        protected void TryDisposeCloseReader()
+        {
+            if (Reader == null) return;
+
+            Reader.Close();
+            Reader.Dispose();
+        }
+
+        private bool _wasConnectionPreviouslyOpened()
+        {
+            var innerConnection = Connection.GetType()
+                .GetField("_innerConnection", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            if (innerConnection == null) throw new Exception("Cannot connect to database, inner connection not found");
+
+            var connection = innerConnection.GetValue(Connection).GetType().Name;
+
+            return connection.EndsWith("PreviouslyOpened");
         }
 
         public void Dispose()

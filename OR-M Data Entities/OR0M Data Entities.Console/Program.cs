@@ -1,174 +1,262 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities;
+using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
+using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR0M_Data_Entities.Console
 {
+    public class SqlContext : DbSqlContext
+    {
+        public SqlContext() 
+            : base("sqlExpress")
+        {
+            //Configuration.UseTransactions = true;
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-            var context = new DbSqlContext("sqlExpress");
+            var context = new SqlContext();
 
-            var lst = new List<string> {"James", "Megan"};
+            //var c1 = context.Find<Contact>(1);
 
-            var reader =
-                context.SelectAll<Person>()
-                    .InnerJoin<Person, Car>((person, car) => person.CarID == car.ID)
-                    .Where<Person>(w => w.FirstName.Equals("James"))
-                    .All<dynamic>();
+            //c1.FirstName = "WINing!";
 
-			if (reader != null)
-			{
+            //context.SaveChanges(c1);
 
-			}
+            //var xy = new Contact
+            //{
+            //    FirstName = "James"
+            //};
 
-            var val = context.ExecuteQuery<int>("Select 1 From Car").Select();
+            //context.SaveChanges(xy);
 
-            if (val == 1)
+            var x = new Contact
             {
-                
-            }
-
-           // var parent = context.Find<Parent>(1);
-            var c = context.Find<Contact>(1);
-
-            if (c != null)
-            {
-                
-            }
-
-            var name = context.Find<Name>(2);
-
-			var names = context.SelectAll<Name>().Where<Name>(w => w.ID == 7).All<Name>().Select(w => new Car{ Name = w.Value});
-
-            if (name != null)
-            {
-                
-            }
-
-			//if (parent != null)
-			//{
-                
-			//}
-
-            var s = DateTime.Now;
-            var testItem = new Contact();
-            //context.From<Contact>()
-            //    .Select<Contact>()
-            //    .Where<Contact>(w => w.ID == 16)
-            //    .First<Contact>();
-
-            //context.Find<Contact>(16); 
-
-            var e = DateTime.Now;
-
-            var testSave = new Contact
-            {
-                FirstName = "James",
-                LastName = "Demeuse Just Added",
-            };
-
-            var testAppointment = new Appointment
-            {
-                Description = "JUST ADDED APT!"
-            };
-
-            var testAddress = new Address
-            {
-                Addy = "JUST ADDED!",
-                State = new StateCode
+                CreatedBy = new User
                 {
-                    Value = "MI"
+                    Name = "James Demeuse"
+                },
+                EditedBy = new User
+                {
+                    Name = "Different User"
+                },
+                FirstName = "Test",
+                LastName = "User",
+                Names = new List<Name>
+                {
+                    new Name
+                    {
+                        Value = "Win!"
+                    },
+                    new Name
+                    {
+                        Value = "FTW!"
+                    }
+                },
+                Number = new PhoneNumber
+                {
+                    Phone = "555-555-5555",
+                    PhoneType = new PhoneType
+                    {
+                        Type = "Cell"
+                    }
+                },
+                Appointments = new List<Appointment>
+                {
+                    new Appointment
+                    {
+                        Description = "Appointment 1",
+                        IsScheduled = false,
+                        Address = new List<Address>
+                        {
+                            new Address
+                            {
+                                Addy = "1234 First Ave South",
+                                State = new StateCode
+                                {
+                                    Value = "MN"
+                                },
+                                ZipCode = new List<Zip>
+                                {
+                                    new Zip
+                                    {
+                                        Zip4 = "5412",
+                                        Zip5 = "55555"
+                                    },
+                                    new Zip
+                                    {
+                                        Zip5 = "12345"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             };
 
-            var testZip = new Zip
-            {
-                Zip5 = "55416",
-                Zip4 = "WIN!"
-            };
+            var result = context.SaveChanges(x);
 
-            testAddress.ZipCode = new List<Zip>();
-            testAddress.ZipCode.Add(testZip);
-            testAppointment.Address = new List<Address> { testAddress };
-            testSave.Appointments = new List<Appointment>();
-            testSave.Name = new List<Name>
-            { 
-                new Name
-                {
-                    Value = "sldfljklsdf"
-                }
-            };
-            testSave.Appointments.Add(testAppointment);
-
-            testSave.Number = new PhoneNumber
-            {
-                Phone = "(414) 530-3086"
-            };
-
-            context.SaveChanges(testSave);
-
-            testItem =
-                context.SelectAll<Contact>()
-                    .Where<Contact>(w => w.ID == testSave.ID)
-                    .First<Contact>();
-
-            context.Delete(testSave);
-
-            testItem =
-			   context.SelectAll<Contact>()
-                   .Where<Contact>(w => w.ID == testSave.ID)
-                   .First<Contact>();
-
-            var tt = e - s;
-
-            if (tt.Minutes != 0)
+            if (result != null)
             {
 
             }
 
-            if (testItem != null)
+            x.FirstName = "New Name";
+
+            result = context.SaveChanges(x);
+
+            //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
+            //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
+            //if (test != null)
+            //{
+
+            //}
+
+            //foreach (var health in tests)
+            //{
+
+            //}
+
+            // after save, need to update the _tableOnLoad to match
+
+            var items = context.From<Contact>();
+
+            foreach (var item in items)
             {
-
-            }
-
-            var currentDateTime = DateTime.Now;
-
-            var totalMilliseconds = 0d;
-            var max = 1000;
-            var ct = 0;
-
-            for (var i = 0; i < max; i++)
-            {
-                var start = DateTime.Now;
-				var item = context.SelectAll<Contact>()
-                    .Where<Contact>(w => w.ID == 1)
-                    .First<Contact>();
-                //    context.From<Policy>()
-                //.Where<Policy>(w => DbFunctions.Cast(w.CreatedDate, SqlDbType.Date) == DbFunctions.Cast(currentDateTime, SqlDbType.Date))
-                //.Select<Policy>()
-                //.First<Policy>();
-
                 if (item != null)
                 {
 
                 }
-
-                var end = DateTime.Now;
-
-                totalMilliseconds += (end - start).TotalMilliseconds;
-                ct++;
             }
 
-            var final = totalMilliseconds / ct;
 
-            if (final != 0)
+            for (int i = 0; i < 100; i++)
+            {
+                var v = context.ExecuteScript<Contact>(new SS1
+                {
+                    Id = 1
+                }).ToList();
+            }
+
+            var c = context.Find<Contact>(1);
+
+            if (c != null)
             {
 
             }
+
+            var user = context.Find<User>(1);
+            var user2 = context.Find<User>(2);
+
+            var contact = new Contact
+            {
+                CreatedBy = user,
+                CreatedByUserID = user.ID,
+                EditedBy = user2,
+                EditedByUserID = user2.ID,
+                FirstName = "James",
+                LastName = "Demeuse"
+            };
+
+            context.SaveChanges(contact);
+        }
+
+        public class CS1 : CustomScript<Contact>
+        {
+            public int Id { get; set; }
+
+            protected override string Sql
+            {
+                get
+                {
+                    return @"
+
+                    Select Top 1 * From Contacts Where Id = @Id
+
+                ";
+                }
+            }
+        }
+
+        public class CS2 : CustomScript
+        {
+            public int Id { get; set; }
+
+            public string Changed { get; set; }
+
+            protected override string Sql
+            {
+                get
+                {
+                    return @"
+
+                    Update Contacts Set LastName = @Changed Where Id = @Id
+
+                ";
+                }
+            }
+        }
+
+        [Script("GetLastName")]
+        [ScriptPath("../../Scripts2")]
+        public class SS1 : StoredScript<Contact>
+        {
+            public int Id { get; set; }
+        }
+
+        [ScriptAttribute("GetFirstName")]
+        public class SS2 : StoredScript<Contact>
+        {
+        }
+
+        [ScriptAttribute("UpdateFirstName")]
+        public class SS3 : StoredScript
+        {
+            public string FirstName { get; set; }
+
+            public int Id { get; set; }
+        }
+
+        [ScriptAttribute("GetFirstName")]
+        public class SP1 : StoredProcedure<Contact>
+        {
+            public int Id { get; set; }
+        }
+
+        [Script("UpdateFirstName")]
+        [Schema("dbo")]
+        public class SP2 : StoredProcedure
+        {
+            [Index(1)]
+            public int Id { get; set; }
+
+            [Index(2)]
+            public string FirstName { get; set; }
+        }
+
+        [ScriptAttribute("GetLastName")]
+        public class SF1 : ScalarFunction<string>
+        {
+            [Index(1)]
+            public int Id { get; set; }
+
+            [Index(2)]
+            public string FirstName { get; set; }
+        }
+
+        public class GetLastName2 : ScalarFunction<string>
+        {
+            public int Id { get; set; }
         }
     }
 }

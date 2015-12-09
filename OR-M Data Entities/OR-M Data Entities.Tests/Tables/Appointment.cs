@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
     [Table("Appointments")]
-    public class Appointment
+    public class Appointment : EntityStateTrackable
     {   
         [DbGenerationOption(DbGenerationOption.Generate)]
         public Guid ID { get; set; }
@@ -13,6 +14,8 @@ namespace OR_M_Data_Entities.Tests.Tables
         public int ContactID { get; set; }
 
         public string Description { get; set; }
+
+        public bool IsScheduled { get; set; }
 
         [ForeignKey("AppointmentID")]
         public List<Address> Address { get; set; }

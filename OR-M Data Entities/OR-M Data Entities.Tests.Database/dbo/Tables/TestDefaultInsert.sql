@@ -1,0 +1,6 @@
+﻿CREATE TABLE [dbo].[TestDefaultInsert]
+(
+	[Id] INT NOT NULL PRIMARY KEY IDENTITY, 
+    [Uid] UNIQUEIDENTIFIER NOT NULL DEFAULT newid(), 
+    [Name] VARCHAR(50) NULL
+)

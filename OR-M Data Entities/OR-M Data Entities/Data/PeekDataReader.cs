@@ -1,13 +1,14 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
 using System;
 using System.Data;
 using System.Data.SqlClient;
-using OR_M_Data_Entities.Expressions.Operations.ObjectMapping.Base;
+using OR_M_Data_Entities.Data.Execution;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -19,7 +20,7 @@ namespace OR_M_Data_Entities.Data
         #region Fields
         private readonly IDataReader _wrappedReader;
         private bool _lastResult;
-        public ObjectMap Map { get; private set; } // for foreign keys so we know how to read the data back
+        private readonly SqlConnection _connection;
         #endregion
 
         #region Properties
@@ -29,6 +30,7 @@ namespace OR_M_Data_Entities.Data
         public bool HasRows { get; private set; }
         public int FieldCount { get; private set; }
         public bool WasPeeked { get; private set; }
+        public ISqlPayload Payload { get; private set; }
 
         public object this[int i]
         {
@@ -52,19 +54,24 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public PeekDataReader(SqlCommand cmd, ObjectMap map)
-            : this(cmd)
+
+        public PeekDataReader(SqlCommand cmd, SqlConnection connection)
+            : this(cmd, connection, null)
         {
-            Map = map;
+            _connection = connection;
         }
 
-        public PeekDataReader(SqlCommand cmd)
+        public PeekDataReader(SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
         {
             var wrappedReader = cmd.ExecuteReader();
 
             _wrappedReader = wrappedReader;
             HasRows = wrappedReader.HasRows;
             FieldCount = wrappedReader.FieldCount;
+
+            Payload = payload;
+
+            _connection = connection;
         }
         #endregion
 
@@ -100,6 +107,7 @@ namespace OR_M_Data_Entities.Data
         public void Close()
         {
             _wrappedReader.Close();
+            _connection.Close();
         }
 
         public DataTable GetSchemaTable()
@@ -116,6 +124,8 @@ namespace OR_M_Data_Entities.Data
         public void Dispose()
         {
             _wrappedReader.Dispose();
+            _connection.Close();
+            _connection.Dispose();
         }
 
         public string GetName(int i)

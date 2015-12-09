@@ -52,21 +52,46 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="Context\EntityContext.cs" />
-    <Compile Include="Context\SqlContext.cs" />
+    <Compile Include="CoreType.cs" />
     <Compile Include="SqlContextTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tables\Address.cs" />
+    <Compile Include="Tables\Agent.cs" />
+    <Compile Include="Tables\Album.cs" />
     <Compile Include="Tables\Appointment.cs" />
+    <Compile Include="Tables\Artist.cs" />
+    <Compile Include="Tables\aspnet_Membership.cs" />
+    <Compile Include="Tables\aspnet_User.cs" />
     <Compile Include="Tables\Car.cs" />
+    <Compile Include="Tables\Computer.cs" />
     <Compile Include="Tables\Contact.cs" />
+    <Compile Include="Tables\Crust.cs" />
+    <Compile Include="Tables\DeliveryMan.cs" />
+    <Compile Include="Tables\History.cs" />
     <Compile Include="Tables\Linking.cs" />
     <Compile Include="Tables\Name.cs" />
     <Compile Include="Tables\Person.cs" />
     <Compile Include="Tables\PhoneNumber.cs" />
+    <Compile Include="Tables\PhoneType.cs" />
+    <Compile Include="Tables\Pizza.cs" />
     <Compile Include="Tables\Policy.cs" />
     <Compile Include="Tables\PolicyInfo.cs" />
+    <Compile Include="Tables\PolicyType.cs" />
+    <Compile Include="Tables\Processor.cs" />
+    <Compile Include="Tables\RecordLabel.cs" />
+    <Compile Include="Tables\SchemaChangeOne_dbo.cs" />
+    <Compile Include="Tables\SchemaChangeOne_ts.cs" />
     <Compile Include="Tables\StateCode.cs" />
+    <Compile Include="Tables\TestDbGenerationOptionNone.cs" />
+    <Compile Include="Tables\TestDefaultInsert.cs" />
+    <Compile Include="Tables\TestKeyWithDbDefaultGeneration.cs" />
+    <Compile Include="Tables\TestUpdateNewSchema.cs" />
+    <Compile Include="Tables\TestUpdateWithKeyDbGenerationOptionNone.cs" />
+    <Compile Include="Tables\TestUpdateWithKeyDbGenerationOptionNone_ts.cs" />
+    <Compile Include="Tables\Topping.cs" />
+    <Compile Include="Tables\TryInsert.cs" />
+    <Compile Include="Tables\TryInsertUpdateWithGeneration.cs" />
+    <Compile Include="Tables\User.cs" />
     <Compile Include="Tables\Zip.cs" />
   </ItemGroup>
   <ItemGroup>

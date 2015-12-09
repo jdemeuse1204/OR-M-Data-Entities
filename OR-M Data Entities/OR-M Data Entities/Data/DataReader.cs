@@ -1,28 +1,23 @@
 ﻿/*
- * OR-M Data Entities v1.2.0
+ * OR-M Data Entities v3.0
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
- * Copyright (c) 2015 James Demeuse
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
  */
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data
 {
-	public sealed class DataReader<T> : IEnumerable, IDisposable
+	public class DataReader<T> : IEnumerable, IDisposable
     {
         #region Properties and Fields
         private readonly PeekDataReader _reader;
 
         public bool HasRows 
-        {
-            get { return _reader.HasRows; }
-        }
-
-        [Obsolete("Use HasRows instead.  NOTE: Do not use with while loop, use foreach iteration.")]
-        public bool IsEOF
         {
             get { return _reader.HasRows; }
         }
@@ -36,14 +31,29 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        public T Select()
+        public T FirstOrDefault()
 	    {
 	        _reader.Read();
 
-            return _reader.ToObject<T>();
+            var result = _reader.ToObjectDefault<T>();
+
+            Dispose();
+
+            return result;
 	    }
 
-	    public List<T> All()
+        public T First()
+        {
+            _reader.Read();
+
+            var result = _reader.ToObject<T>();
+
+            Dispose();
+
+            return result;
+        }
+
+	    public List<T> ToList()
 	    {
 	        var result = new List<T>();
 

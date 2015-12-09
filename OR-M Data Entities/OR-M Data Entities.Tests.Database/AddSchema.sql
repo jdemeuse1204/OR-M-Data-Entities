@@ -1,0 +1,1 @@
+﻿EXEC sp_executesql N'CREATE SCHEMA ts;';
