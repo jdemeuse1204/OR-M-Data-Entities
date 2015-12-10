@@ -13,6 +13,8 @@ namespace OR_M_Data_Entities.Enumeration
         TryInsert,
         TryInsertUpdate,
         Update,
+        Delete,
+        RowNotFound,
         Skip
     }
 }

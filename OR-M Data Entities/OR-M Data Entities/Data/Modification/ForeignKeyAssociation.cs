@@ -4,9 +4,9 @@ using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Data.Modification
 {
-    public class ParentChildPair
+    public class ForeignKeyAssociation
     {
-        public ParentChildPair(object parent, object value, PropertyInfo property)
+        public ForeignKeyAssociation(object parent, object value, PropertyInfo property)
         {
             Parent = parent;
             Value = value;

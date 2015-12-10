@@ -899,6 +899,18 @@ namespace OR_M_Data_Entities.Extensions
             entity.SetPropertyInfoValue(property, value);
         }
 
+        public static void SetPristinePropertyInfoValue(this object mainEntity, PropertyInfo property, object value)
+        {
+            var pristineEntityField = mainEntity.GetType()
+                .GetField("_pristineEntity", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (pristineEntityField == null) throw new ArgumentException("Main entity does not have entity tracking turned on");
+
+            var pristineEntity = pristineEntityField.GetValue(mainEntity);
+
+            SetPropertyInfoValue(pristineEntity, property, value);
+        }
+
         public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)
         {
             var propertyType = property.PropertyType;

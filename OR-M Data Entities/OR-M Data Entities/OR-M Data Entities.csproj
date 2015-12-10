@@ -46,20 +46,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConfigurationOptions.cs" />
+    <Compile Include="Data\Definition\DeleteEntity.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
-    <Compile Include="Data\Modification\Link.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableTransactional.cs" />
     <Compile Include="Data\Modification\ISqlContainer.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableNonTransactional.cs" />
-    <Compile Include="Data\Modification\MapsTo.cs" />
-    <Compile Include="Data\Modification\ParentChildPair.cs" />
-    <Compile Include="Data\Modification\TableLink.cs" />
+    <Compile Include="Data\Modification\ForeignKeyAssociation.cs" />
     <Compile Include="Data\Secure\SqlSecureQueryParameter.cs" />
     <Compile Include="Data\Definition\ModificationEntity.cs" />
     <Compile Include="Data\Modification\ModificationItem.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
-    <Compile Include="Data\Query\StatementParts\SqlTransaction.cs" />
-    <Compile Include="Data\Query\StatementParts\SqlStatement.cs" />
     <Compile Include="Data\Modification\SqlPartStatement.cs" />
     <Compile Include="Data\Transform\DbTransform.cs" />
     <Compile Include="Data\Transform\TransformContainer.cs" />
@@ -69,11 +65,11 @@
     <Compile Include="Data\Definition\OSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
     <Compile Include="Data\Definition\SqlExistsString.cs" />
-    <Compile Include="Data\Execution\ForeignKeySaveNode.cs" />
     <Compile Include="Data\Execution\ISqlPayload.cs" />
     <Compile Include="Data\Execution\SqlPayload.cs" />
     <Compile Include="Enumeration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
+    <Compile Include="Enumeration\MaxLengthViolationType.cs" />
     <Compile Include="Enumeration\PackageBuildType.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />
@@ -81,12 +77,9 @@
     <Compile Include="Enumeration\ExpressionQueryConstructionType.cs" />
     <Compile Include="Enumeration\FunctionType.cs" />
     <Compile Include="Enumeration\JoinType.cs" />
-    <Compile Include="Data\Secure\SqlSecureExecutable.cs" />
     <Compile Include="Data\Secure\SqlSecureObject.cs" />
     <Compile Include="Data\Query\ISqlBuilder.cs" />
-    <Compile Include="Data\Query\OutputContainer.cs" />
     <Compile Include="Data\Query\SqlFunctionTextBuilder.cs" />
-    <Compile Include="Data\Query\StatementParts\SqlFromTable.cs" />
     <Compile Include="Enumeration\DataTransformType.cs" />
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />
@@ -98,6 +91,7 @@
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Enumeration\OrderType.cs" />
     <Compile Include="Exceptions\DataLoadException.cs" />
+    <Compile Include="Exceptions\MaxLengthException.cs" />
     <Compile Include="Exceptions\OrderByException.cs" />
     <Compile Include="Exceptions\SqlReferenceConstraintException.cs" />
     <Compile Include="Exceptions\SqlSaveException.cs" />
@@ -157,6 +151,7 @@
     <Compile Include="Mapping\Base\SearchablePrimaryKeyType.cs" />
     <Compile Include="Mapping\LinkedServer.cs" />
     <Compile Include="Mapping\LookupTable.cs" />
+    <Compile Include="Mapping\MaxLength.cs" />
     <Compile Include="Mapping\PseudoKey.cs" />
     <Compile Include="Mapping\ReadOnly.cs" />
     <Compile Include="Mapping\Schema.cs" />

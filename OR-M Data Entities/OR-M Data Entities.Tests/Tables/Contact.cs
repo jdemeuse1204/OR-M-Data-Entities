@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Tracking;
 
@@ -20,6 +21,7 @@ namespace OR_M_Data_Entities.Tests.Tables
         [DbGenerationOption(DbGenerationOption.Generate)]
         public Guid TestUnique { get; set; }
 
+        [MaxLength(2)]
         public string FirstName { get; set; }
 
         public string LastName { get; set; }

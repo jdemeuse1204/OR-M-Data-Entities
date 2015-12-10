@@ -217,9 +217,9 @@ namespace OR_M_Data_Entities.Data.Definition
                     }).ToList();
         }
 
-        public static List<ParentChildPair> GetForeignKeys(object entity)
+        public static List<ForeignKeyAssociation> GetForeignKeys(object entity)
         {
-            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ParentChildPair(entity, w.GetValue(entity), w)).ToList();
+            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w)).ToList();
         }
         #endregion
 

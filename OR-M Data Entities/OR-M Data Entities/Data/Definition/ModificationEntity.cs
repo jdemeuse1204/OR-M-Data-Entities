@@ -18,15 +18,22 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public EntityState State { get; private set; }
 
-        private IReadOnlyList<ModificationItem> _modificationItems { get; set; }
+        protected IReadOnlyList<ModificationItem> ModificationItems { get; set; }
 
         // table can have two foreign keys of the same time, this will tell them apart
         #endregion
 
         #region Constructor
         public ModificationEntity(object entity) 
+            : this(entity, false)
+        {
+        }
+
+        protected ModificationEntity(object entity, bool isDeleting)
             : base(entity)
         {
+            if (isDeleting) return;
+
             _initialize();
         }
         #endregion
@@ -45,17 +52,17 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public IReadOnlyList<ModificationItem> Changes()
         {
-            return _modificationItems.Where(w => w.IsModified).ToList();
+            return ModificationItems.Where(w => w.IsModified).ToList();
         }
 
         public IReadOnlyList<ModificationItem> Keys()
         {
-            return _modificationItems.Where(w => w.IsPrimaryKey).ToList();
+            return ModificationItems.Where(w => w.IsPrimaryKey).ToList();
         }
 
         public IReadOnlyList<ModificationItem> All()
         {
-            return _modificationItems;
+            return ModificationItems;
         }
 
         private void _setChanges()
@@ -65,15 +72,15 @@ namespace OR_M_Data_Entities.Data.Definition
             if (!IsEntityStateTrackingOn)
             {
                 // mark everything has changed so it will be updated
-                _modificationItems = columns.Select(w => new ModificationItem(w)).ToList();
+                ModificationItems = columns.Select(w => new ModificationItem(w)).ToList();
                 State = EntityState.Modified;
                 return;
             }
             // if _pristineEntity == null then that means a new instance was created and it is an insert
 
-            _modificationItems = _getChanges(EntityTrackable);
+            ModificationItems = _getChanges(EntityTrackable);
 
-            State = _getState(_modificationItems);
+            State = _getState(ModificationItems);
         }
 
         private static EntityState _getState(IReadOnlyList<ModificationItem> changes)
@@ -96,6 +103,30 @@ namespace OR_M_Data_Entities.Data.Definition
                 : entity == null && pristineEntity == null ? false : !entity.Equals(pristineEntity);
         }
 
+        private void _validateMaxLengthAttributes()
+        {
+            var properties =
+                TableType.GetProperties()
+                    .Where(w => w.GetCustomAttribute<MaxLengthAttribute>() != null && w.PropertyType == typeof (string))
+                    .ToList();
+
+            foreach (var property in properties)
+            {
+                var value = (string)property.GetValue(Value);
+                var maxLengthAttribute = property.GetCustomAttribute<MaxLengthAttribute>();
+
+                if (value == null || value.Length <= maxLengthAttribute.Length) continue;
+
+                if (maxLengthAttribute.ViolationType == MaxLengthViolationType.Truncate)
+                {
+                    Value.SetPropertyInfoValue(property, value.Substring(0, maxLengthAttribute.Length));
+                    continue;
+                }
+
+                throw new MaxLengthException(string.Format("Max Length violated on column: {0}", property.Name));
+            }
+        }
+
         private void _initialize()
         {
             var primaryKeys = GetPrimaryKeys();
@@ -110,6 +141,9 @@ namespace OR_M_Data_Entities.Data.Definition
 
             // if there are no changes then exit
             if (State == EntityState.UnChanged) return;
+
+            // validate all max length attributes
+            _validateMaxLengthAttributes();
 
             UpdateType = UpdateType.Insert;
 

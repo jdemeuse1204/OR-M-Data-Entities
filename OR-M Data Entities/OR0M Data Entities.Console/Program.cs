@@ -17,7 +17,7 @@ namespace OR0M_Data_Entities.Console
         public SqlContext() 
             : base("sqlExpress")
         {
-            Configuration.UseTransactions = true;
+            //Configuration.UseTransactions = true;
         }
     }
 
@@ -104,6 +104,7 @@ namespace OR0M_Data_Entities.Console
                 }
             };
 
+            context.Delete(new Linking());
             var result = context.SaveChanges(x);
 
             if (result != null)

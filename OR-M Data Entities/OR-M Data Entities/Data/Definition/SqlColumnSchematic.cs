@@ -54,7 +54,6 @@ namespace OR_M_Data_Entities.Data.Definition
         // then GetHashCode() must return the same value for these objects.
         public override int GetHashCode()
         {
-
             //Get hash code for the Name field if it is not null.
             var hashProductName = Type.GetHashCode();
 

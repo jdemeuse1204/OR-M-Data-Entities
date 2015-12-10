@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Exceptions;
+using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
@@ -50,10 +52,6 @@ namespace OR_M_Data_Entities.Data
             private string _output { get; set; }
 
             private string _set { get; set; }
-
-            private string _tableVariable { get; set; }
-
-            private string _tableVariableParameter { get; set; }
             #endregion
 
             #region Constructor
@@ -65,7 +63,6 @@ namespace OR_M_Data_Entities.Data
                 _declare = string.Empty;
                 _output = string.Empty;
                 _set = string.Empty;
-                _tableVariable = string.Empty;
             }
 
             #endregion
@@ -76,13 +73,9 @@ namespace OR_M_Data_Entities.Data
                 _fields = string.Concat(_fields, item.AsField(","));
             }
 
-            public void AddValue(string parameterKey, bool isFromOtherTable)
+            public void AddValue(string parameterKey)
             {
                 _values = string.Concat(_values, string.Format("{0},", parameterKey));
-
-                if (!isFromOtherTable) return;
-
-
             }
 
             public void AddDeclare(string parameterKey, string sqlDataType)
@@ -90,17 +83,9 @@ namespace OR_M_Data_Entities.Data
                 _declare = string.Concat(_declare, string.Format("{0} as {1},", parameterKey, sqlDataType));
             }
 
-            public void AddOutput(ModificationItem item, bool selectIntoTableVariable)
+            public void AddOutput(ModificationItem item)
             {
                 _output = string.Concat(_output, item.AsOutput(","));
-
-                if (!selectIntoTableVariable) return;
-
-                _tableVariable = string.Concat(_tableVariable, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
-
-                if (!string.IsNullOrEmpty(_tableVariableParameter)) return;
-
-                _tableVariableParameter = string.Format("@{0}", MapsTo.AsTableName());
             }
 
             public void AddSet(ModificationItem item, out string key)
@@ -129,14 +114,6 @@ namespace OR_M_Data_Entities.Data
 
             public SqlPartStatement Split()
             {
-                if (!string.IsNullOrWhiteSpace(_tableVariable))
-                {
-                    _declare = string.Concat(_declare,
-                        string.Format("{0} TABLE({1})", _tableVariableParameter, _tableVariable.TrimEnd(',')));
-
-                    _output = string.Concat(_output.TrimEnd(','), string.Format(" INTO {0}", _tableVariableParameter));
-                }
-
                 var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})",
                     SqlFormattedTableName,
                     _fields.TrimEnd(','),
@@ -203,6 +180,54 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
+        private class DeleteContainer : SqlModificationContainer, ISqlContainer
+        {
+            private string _where { get; set; }
+
+            private readonly string _output;
+
+            private readonly string _statement;
+
+            public DeleteContainer(ModificationEntity entity)
+                : base(entity)
+            {
+                _output = entity.GetPrimaryKeys()
+                    .Select(w => w.GetColumnName())
+                    .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
+                    .TrimEnd(',');
+                
+                _where = string.Empty;
+                _statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
+            }
+
+            public void AddWhere(ModificationItem item, string parameterKey)
+            {
+                _where = string.Concat(_where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
+            }
+
+            public void AddNullWhere(ModificationItem item)
+            {
+                _where = string.Concat(_where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
+            }
+
+            private string _getWherePrefix()
+            {
+                return string.IsNullOrEmpty(_where) ? string.Empty : " AND ";
+            }
+
+            public string Resolve()
+            {
+                return Split().ToString();
+            }
+
+            public SqlPartStatement Split()
+            {
+                var sql = string.Format("{0} {1} WHERE {2}", _statement, _output, _where.TrimEnd(','));
+
+                return new SqlPartStatement(sql);
+            }
+        }
+
         protected abstract class SqlModificationContainer
         {
             protected SqlModificationContainer(ModificationEntity entity)
@@ -211,8 +236,6 @@ namespace OR_M_Data_Entities.Data
             }
 
             protected readonly string SqlFormattedTableName;
-
-            protected readonly MapsTo MapsTo;
         }
         #endregion
 
@@ -357,6 +380,19 @@ namespace OR_M_Data_Entities.Data
                 return new SqlUpdatePackage(this);
             }
         }
+
+        private class SqlDeleteBuilder : SqlExecutionPlan
+        {
+            public SqlDeleteBuilder(ModificationEntity entity)
+                : base(entity)
+            {
+            }
+
+            public override ISqlPackage Build()
+            {
+                return new SqlDeletePackage(this);
+            }
+        }
         #endregion
 
         #region Packages
@@ -430,28 +466,17 @@ ELSE
 
         private class SqlInsertPackage : SqlModificationPackage
         {
-            protected bool IsUsingTransactions { get; set; }
-
-            private readonly EntitySaveNodeList _nodes;
-
             #region Constructor
             public SqlInsertPackage(ISqlBuilder builder)
                 : base(builder)
             {
-                IsUsingTransactions = false;
+
             }
 
             public SqlInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters)
                 : base(builder, parameters)
             {
-                IsUsingTransactions = false;
-            }
 
-            protected SqlInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, EntitySaveNodeList nodes)
-                : base(builder, parameters)
-            {
-                IsUsingTransactions = false;
-                _nodes = nodes;
             }
             #endregion
 
@@ -460,7 +485,7 @@ ELSE
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
-                    container.AddOutput(item, IsUsingTransactions);
+                    container.AddOutput(item);
                     return;
                 }
 
@@ -469,8 +494,8 @@ ELSE
                 var data = TryAddParameter(item, value);
 
                 container.AddField(item);
-                container.AddValue(data, IsUsingTransactions);
-                container.AddOutput(item, IsUsingTransactions);
+                container.AddValue(data);
+                container.AddOutput(item);
             }
 
             private void _addDbGenerationOptionGenerate(InsertContainer container, ModificationItem item)
@@ -480,14 +505,14 @@ ELSE
 
                 container.AddSet(item, out key);
                 container.AddField(item);
-                container.AddValue(key, IsUsingTransactions);
+                container.AddValue(key);
                 container.AddDeclare(key, item.SqlDataTypeString);
-                container.AddOutput(item, IsUsingTransactions);
+                container.AddOutput(item);
             }
 
             private void _addDbGenerationOptionIdentityAndDefault(InsertContainer container, ModificationItem item)
             {
-                container.AddOutput(item, IsUsingTransactions);
+                container.AddOutput(item);
             }
 
             public override ISqlContainer CreatePackage()
@@ -587,6 +612,51 @@ ELSE
                     var parameter = TryAddParameter(key, value);
 
                     // PK cannot be null here
+                    container.AddWhere(key, parameter);
+                }
+
+                return container;
+            }
+            #endregion
+        }
+
+        private class SqlDeletePackage : SqlModificationPackage
+        {
+            #region Constructor
+
+            public SqlDeletePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters)
+                : base(builder, parameters)
+            {
+            }
+
+            public SqlDeletePackage(ISqlBuilder builder)
+                : base(builder)
+            {
+            }
+            #endregion
+
+            #region Methods
+            public override ISqlContainer CreatePackage()
+            {
+                var container = new DeleteContainer(Entity);
+
+                // keys are not part of changes so we need to grab them
+                var primaryKeys = Entity.Keys();
+
+                // add where statement
+                for (var i = 0; i < primaryKeys.Count; i++)
+                {
+                    var key = primaryKeys[i];
+                    var value = Entity.GetPropertyValue(key.PropertyName);
+                    var parameter = TryAddParameter(key, value);
+
+                    // PK can be null here
+                    if (value == null)
+                    {
+                        container.AddNullWhere(key);
+                        continue;
+                    }
+
                     container.AddWhere(key, parameter);
                 }
 
