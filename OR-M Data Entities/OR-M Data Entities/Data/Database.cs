@@ -18,10 +18,15 @@ namespace OR_M_Data_Entities.Data
     public abstract class Database : IDisposable
     {
         #region Properties
-        protected string ConnectionString { get; private set; }
+
+        protected readonly string ConnectionString;
+
         protected SqlConnection Connection { get; set; }
+
         protected SqlCommand Command { get; set; }
+
         protected PeekDataReader Reader { get; set; }
+
         public ConfigurationOptions Configuration { get; private set; }
         #endregion
 
@@ -48,14 +53,7 @@ namespace OR_M_Data_Entities.Data
 
         private bool _isMARSEnabled(string connectionString)
         {
-            var items = connectionString.ToUpper().Split(';');
-            var MARSSetting = items.FirstOrDefault(w => w.Contains("MULTIPLEACTIVERESULTSETS"));
-
-            if (string.IsNullOrWhiteSpace(MARSSetting)) return false;
-
-            var settingsSplit = MARSSetting.Replace("\'", "").Split('=');
-
-            return settingsSplit.Count() == 2 && bool.Parse(settingsSplit[1]);
+            return connectionString.ToUpper().Contains("MULTIPLEACTIVERESULTSETS=TRUE");
         }
 
         /// <summary>
@@ -108,6 +106,10 @@ namespace OR_M_Data_Entities.Data
             Reader.Dispose();
         }
 
+        /// <summary>
+        /// Checks to see if the connection was previously closed.  
+        /// </summary>
+        /// <returns></returns>
         private bool _wasConnectionPreviouslyOpened()
         {
             var innerConnection = Connection.GetType()

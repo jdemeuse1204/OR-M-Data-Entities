@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -6,6 +7,7 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
@@ -663,6 +665,107 @@ ELSE
                 return container;
             }
             #endregion
+        }
+        #endregion
+
+        #region Methods
+        /// <summary>
+        /// returns true if anything was modified and false if no changes were made
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public virtual bool _saveChanges<T>(T entity)
+            where T : class
+        {
+            try
+            {
+                var saves = new List<UpdateType>();
+                var parent = new ModificationEntity(entity);
+
+                // get all items to save and get them in order
+                var entityItems = _getSaveItems(parent);
+
+                for (var i = 0; i < entityItems.Count; i++)
+                {
+                    var entityItem = entityItems[i];
+                    ISqlBuilder builder;
+
+                    // add the save to the list so we can tell the user what the save action did
+                    saves.Add(entityItem.Entity.UpdateType);
+
+                    if (OnBeforeSave != null) OnBeforeSave(entityItem.Entity.Value, entityItem.Entity.UpdateType);
+
+                    // Get the correct execution plan
+                    switch (entityItem.Entity.UpdateType)
+                    {
+                        case UpdateType.Insert:
+                            builder = new SqlInsertBuilder(entityItem.Entity);
+                            break;
+                        case UpdateType.TryInsert:
+                            builder = new SqlTryInsertBuilder(entityItem.Entity);
+                            break;
+                        case UpdateType.TryInsertUpdate:
+                            builder = new SqlTryInsertUpdateBuilder(entityItem.Entity);
+                            break;
+                        case UpdateType.Update:
+                            builder = new SqlUpdateBuilder(entityItem.Entity);
+                            break;
+                        case UpdateType.Skip:
+                            continue;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    // If relationship is one-many.  Need to set the foreign key before saving
+                    if (entityItem.Parent != null && entityItem.Property.IsList())
+                    {
+                        Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
+                    }
+
+                    if (OnSaving != null) OnSaving(entityItem.Entity.Value);
+
+                    // execute the sql
+                    ExecuteReader(builder);
+
+                    var keyContainer = GetOutput();
+
+                    // check if a concurrency violation has occurred
+                    if (entityItem.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 &&
+                        Configuration.ConcurrencyViolationRule == ConcurrencyViolationRule.ThrowException)
+                    {
+                        throw new DBConcurrencyException("Concurrency Violation.  {0} was changed prior to this update");
+                    }
+
+                    // put updated values into entity
+                    foreach (var item in keyContainer)
+                    {
+                        // find the property first in case the column name change attribute is used
+                        // Key is property name, value is the db value
+                        entityItem.Entity.SetPropertyValue(
+                            item.Key,
+                            item.Value);
+                    }
+
+                    // If relationship is one-one.  Need to set the foreign key after saving
+                    if (entityItem.Parent != null && !entityItem.Property.IsList())
+                    {
+                        Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
+                    }
+
+                    // set the pristine state only if entity tracking is on
+                    if (entityItem.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entityItem.Entity.Value);
+
+                    if (OnAfterSave != null) OnAfterSave(entityItem.Entity.Value, entityItem.Entity.UpdateType);
+                }
+
+                return saves.Any(w => w != UpdateType.Skip);
+            }
+            catch (MaxLengthException ex)
+            {
+                // only catch the max length exception so we can tell the user that the save was cancelled
+                throw new SqlSaveException("Max length violated, see inner exception", ex);
+            }
         }
         #endregion
     }

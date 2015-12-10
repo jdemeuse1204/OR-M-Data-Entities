@@ -77,6 +77,21 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
 
+        /// <summary>
+        /// Execute the SqlBuilder on the database
+        /// </summary>
+        /// <param name="builder"></param>
+        protected void ExecuteReaderAsTransaction(ISqlBuilder builder)
+        {
+            TryDisposeCloseReader();
+
+            Connect();
+
+            Command = builder.BuildSqlCommand(Connection);
+
+            Reader = Command.ExecuteReaderWithPeeking(Connection);
+        }
+
         protected void ExecuteReader(IExpressionQueryResolvable query)
         {
             TryDisposeCloseReader();
