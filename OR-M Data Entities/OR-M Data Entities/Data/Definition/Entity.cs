@@ -6,7 +6,6 @@ using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
-using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Tracking;

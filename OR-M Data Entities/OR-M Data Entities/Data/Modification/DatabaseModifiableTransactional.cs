@@ -9,6 +9,16 @@ namespace OR_M_Data_Entities.Data
 {
     public partial class DatabaseModifiable
     {
+        private class Reference
+        {
+             
+        }
+
+        private void _buildReferenceMap(object entity)
+        {
+            
+        }
+
         public virtual bool _saveChangesUsingTransactions<T>(T entity)
             where T : class
         {

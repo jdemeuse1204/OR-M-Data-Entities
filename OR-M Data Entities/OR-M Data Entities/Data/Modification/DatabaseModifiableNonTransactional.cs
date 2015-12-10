@@ -9,7 +9,6 @@ using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data

@@ -9,17 +9,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
-using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data

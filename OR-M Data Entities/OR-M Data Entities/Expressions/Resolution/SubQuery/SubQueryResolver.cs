@@ -9,7 +9,6 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 {

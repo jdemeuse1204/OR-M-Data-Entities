@@ -10,7 +10,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
-using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Base
 {

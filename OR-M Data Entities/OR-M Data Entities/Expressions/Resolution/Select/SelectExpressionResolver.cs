@@ -14,7 +14,6 @@ using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Containers;
-using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Select
 {

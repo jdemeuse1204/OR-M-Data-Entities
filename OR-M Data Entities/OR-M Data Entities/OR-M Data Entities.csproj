@@ -138,7 +138,6 @@
     <Compile Include="Expressions\Resolution\SubQuery\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereExpressionResolver.cs" />
     <Compile Include="Extensions\Extension.cs" />
-    <Compile Include="Extensions\ExtensionHelpers.cs" />
     <Compile Include="Mapping\Base\AutoLoadKey.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />

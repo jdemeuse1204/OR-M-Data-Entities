@@ -28,7 +28,7 @@ using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
-namespace OR_M_Data_Entities.Extensions
+namespace OR_M_Data_Entities
 {
     public static class ExpressionQueryExtensions
     {
