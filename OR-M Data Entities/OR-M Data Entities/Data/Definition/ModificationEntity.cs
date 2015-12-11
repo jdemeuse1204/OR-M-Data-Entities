@@ -31,6 +31,7 @@ namespace OR_M_Data_Entities.Data.Definition
         protected ModificationEntity(object entity, bool isDeleting)
             : base(entity)
         {
+            // do not initialize when deleting because we will get unnecessary errors
             if (isDeleting) return;
 
             _initialize();

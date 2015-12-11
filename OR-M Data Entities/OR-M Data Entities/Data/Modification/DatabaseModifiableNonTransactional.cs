@@ -44,15 +44,15 @@ namespace OR_M_Data_Entities.Data
         private class InsertContainer : SqlModificationContainer, ISqlContainer
         {
             #region Properties
-            private string _fields { get; set; }
+            protected string _fields { get; private set; }
 
-            private string _values { get; set; }
+            protected string _values { get; private set; }
 
-            private string _declare { get; set; }
+            protected string _declare { get; private set; }
 
-            private string _output { get; set; }
+            protected string _output { get; private set; }
 
-            private string _set { get; set; }
+            protected string _set { get; private set; }
             #endregion
 
             #region Constructor
@@ -113,7 +113,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public SqlPartStatement Split()
+            public virtual SqlPartStatement Split()
             {
                 var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})",
                     SqlFormattedTableName,
@@ -247,14 +247,17 @@ namespace OR_M_Data_Entities.Data
         private abstract class SqlExecutionPlan : ISqlBuilder
         {
             #region Constructor
-            protected SqlExecutionPlan(ModificationEntity entity)
+            protected SqlExecutionPlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters)
             {
                 Entity = entity;
+                Parameters = parameters;
             }
             #endregion
 
             #region Properties and Fields
             public ModificationEntity Entity { get; private set; }
+
+            protected readonly List<SqlSecureQueryParameter> Parameters;
             #endregion
 
             #region Methods
@@ -280,11 +283,6 @@ namespace OR_M_Data_Entities.Data
         private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
         {
             #region Constructor
-            protected SqlModificationPackage(ISqlBuilder plan)
-            {
-                Entity = plan.Entity;
-            }
-
             protected SqlModificationPackage(ISqlBuilder plan, List<SqlSecureQueryParameter> parameters)
                 : base(parameters)
             {
@@ -325,36 +323,50 @@ namespace OR_M_Data_Entities.Data
         private class SqlInsertBuilder : SqlExecutionPlan
         {
             public SqlInsertBuilder(ModificationEntity entity)
-                : base(entity)
+                : base(entity, new List<SqlSecureQueryParameter>())
+            {
+            }
+
+            protected SqlInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters)
+                : base(entity, sharedParameters)
             {
             }
 
             public override ISqlPackage Build()
             {
-                return new SqlInsertPackage(this);
+                return new SqlInsertPackage(this, Parameters);
             }
         }
 
         private class SqlTryInsertBuilder : SqlExecutionPlan
         {
             public SqlTryInsertBuilder(ModificationEntity entity)
-                : base(entity)
+                : base(entity, new List<SqlSecureQueryParameter>())
+            {
+            }
+
+            protected SqlTryInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters)
+                : base(entity, sharedParameters)
             {
             }
 
             public override ISqlPackage Build()
             {
-                var parameters = new List<SqlSecureQueryParameter>();
-                var insert = new SqlInsertPackage(this, parameters);
+                var insert = new SqlInsertPackage(this, Parameters);
 
-                return new SqlExistsPackage(this, parameters, insert);
+                return new SqlExistsPackage(this, Parameters, insert);
             }
         }
 
         private class SqlTryInsertUpdateBuilder : SqlExecutionPlan
         {
             public SqlTryInsertUpdateBuilder(ModificationEntity entity)
-                : base(entity)
+                : base(entity, new List<SqlSecureQueryParameter>())
+            {
+            }
+
+            protected SqlTryInsertUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters)
+                : base(entity, sharedParameters)
             {
             }
 
@@ -372,26 +384,36 @@ namespace OR_M_Data_Entities.Data
         private class SqlUpdateBuilder : SqlExecutionPlan
         {
             public SqlUpdateBuilder(ModificationEntity entity)
-                : base(entity)
+                : base(entity, new List<SqlSecureQueryParameter>())
+            {
+            }
+
+            protected SqlUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters)
+                : base(entity, sharedParameters)
             {
             }
 
             public override ISqlPackage Build()
             {
-                return new SqlUpdatePackage(this);
+                return new SqlUpdatePackage(this, Parameters);
             }
         }
 
         private class SqlDeleteBuilder : SqlExecutionPlan
         {
             public SqlDeleteBuilder(ModificationEntity entity)
-                : base(entity)
+                : base(entity, new List<SqlSecureQueryParameter>())
+            {
+            }
+
+            protected SqlDeleteBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters)
+                : base(entity, sharedParameters)
             {
             }
 
             public override ISqlPackage Build()
             {
-                return new SqlDeletePackage(this);
+                return new SqlDeletePackage(this, Parameters);
             }
         }
         #endregion
@@ -468,12 +490,6 @@ ELSE
         private class SqlInsertPackage : SqlModificationPackage
         {
             #region Constructor
-            public SqlInsertPackage(ISqlBuilder builder)
-                : base(builder)
-            {
-
-            }
-
             public SqlInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters)
                 : base(builder, parameters)
             {
@@ -482,11 +498,17 @@ ELSE
             #endregion
 
             #region Methods
-            private void _addDbGenerationOptionNone(InsertContainer container, ModificationItem item)
+
+            protected virtual ISqlContainer NewContainer()
+            {
+                return new InsertContainer(Entity);
+            }
+
+            protected virtual void AddDbGenerationOptionNone(ISqlContainer container, ModificationItem item)
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
-                    container.AddOutput(item);
+                    ((InsertContainer)container).AddOutput(item);
                     return;
                 }
 
@@ -494,32 +516,32 @@ ELSE
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var data = TryAddParameter(item, value);
 
-                container.AddField(item);
-                container.AddValue(data);
-                container.AddOutput(item);
+                ((InsertContainer)container).AddField(item);
+                ((InsertContainer)container).AddValue(data);
+                ((InsertContainer)container).AddOutput(item);
             }
 
-            private void _addDbGenerationOptionGenerate(InsertContainer container, ModificationItem item)
+            private void _addDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
             {
                 // key from the set method
                 string key;
 
-                container.AddSet(item, out key);
-                container.AddField(item);
-                container.AddValue(key);
-                container.AddDeclare(key, item.SqlDataTypeString);
-                container.AddOutput(item);
+                ((InsertContainer)container).AddSet(item, out key);
+                ((InsertContainer)container).AddField(item);
+                ((InsertContainer)container).AddValue(key);
+                ((InsertContainer)container).AddDeclare(key, item.SqlDataTypeString);
+                ((InsertContainer)container).AddOutput(item);
             }
 
-            private void _addDbGenerationOptionIdentityAndDefault(InsertContainer container, ModificationItem item)
+            private void _addDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
             {
-                container.AddOutput(item);
+                ((InsertContainer)container).AddOutput(item);
             }
 
             public override ISqlContainer CreatePackage()
             {
                 var items = Entity.All();
-                var container = new InsertContainer(Entity);
+                var container = NewContainer();
 
                 if (items.Count == 0) throw new QueryNotValidException("INSERT statement needs VALUES");
 
@@ -532,7 +554,7 @@ ELSE
                     switch (item.Generation)
                     {
                         case DbGenerationOption.None:
-                            _addDbGenerationOptionNone(container, item);
+                            AddDbGenerationOptionNone(container, item);
                             break;
                         case DbGenerationOption.Generate:
                             _addDbGenerationOptionGenerate(container, item);
@@ -555,11 +577,6 @@ ELSE
 
             public SqlUpdatePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters)
                 : base(builder, parameters)
-            {
-            }
-
-            public SqlUpdatePackage(ISqlBuilder builder)
-                : base(builder)
             {
             }
             #endregion
@@ -629,11 +646,6 @@ ELSE
                 : base(builder, parameters)
             {
             }
-
-            public SqlDeletePackage(ISqlBuilder builder)
-                : base(builder)
-            {
-            }
             #endregion
 
             #region Methods
@@ -683,32 +695,32 @@ ELSE
                 var parent = new ModificationEntity(entity);
 
                 // get all items to save and get them in order
-                var entityItems = _getSaveItems(parent);
+                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
 
-                for (var i = 0; i < entityItems.Count; i++)
+                for (var i = 0; i < referenceMap.Count; i++)
                 {
-                    var entityItem = entityItems[i];
+                    var reference = referenceMap[i];
                     ISqlBuilder builder;
 
                     // add the save to the list so we can tell the user what the save action did
-                    saves.Add(entityItem.Entity.UpdateType);
+                    saves.Add(reference.Entity.UpdateType);
 
-                    if (OnBeforeSave != null) OnBeforeSave(entityItem.Entity.Value, entityItem.Entity.UpdateType);
+                    if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
 
                     // Get the correct execution plan
-                    switch (entityItem.Entity.UpdateType)
+                    switch (reference.Entity.UpdateType)
                     {
                         case UpdateType.Insert:
-                            builder = new SqlInsertBuilder(entityItem.Entity);
+                            builder = new SqlInsertBuilder(reference.Entity);
                             break;
                         case UpdateType.TryInsert:
-                            builder = new SqlTryInsertBuilder(entityItem.Entity);
+                            builder = new SqlTryInsertBuilder(reference.Entity);
                             break;
                         case UpdateType.TryInsertUpdate:
-                            builder = new SqlTryInsertUpdateBuilder(entityItem.Entity);
+                            builder = new SqlTryInsertUpdateBuilder(reference.Entity);
                             break;
                         case UpdateType.Update:
-                            builder = new SqlUpdateBuilder(entityItem.Entity);
+                            builder = new SqlUpdateBuilder(reference.Entity);
                             break;
                         case UpdateType.Skip:
                             continue;
@@ -717,12 +729,12 @@ ELSE
                     }
 
                     // If relationship is one-many.  Need to set the foreign key before saving
-                    if (entityItem.Parent != null && entityItem.Property.IsList())
+                    if (reference.Parent != null && reference.Property.IsList())
                     {
-                        Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
+                        Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
                     }
 
-                    if (OnSaving != null) OnSaving(entityItem.Entity.Value);
+                    if (OnSaving != null) OnSaving(reference.Entity.Value);
 
                     // execute the sql
                     ExecuteReader(builder);
@@ -730,7 +742,7 @@ ELSE
                     var keyContainer = GetOutput();
 
                     // check if a concurrency violation has occurred
-                    if (entityItem.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 &&
+                    if (reference.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 &&
                         Configuration.ConcurrencyViolationRule == ConcurrencyViolationRule.ThrowException)
                     {
                         throw new DBConcurrencyException("Concurrency Violation.  {0} was changed prior to this update");
@@ -741,21 +753,21 @@ ELSE
                     {
                         // find the property first in case the column name change attribute is used
                         // Key is property name, value is the db value
-                        entityItem.Entity.SetPropertyValue(
+                        reference.Entity.SetPropertyValue(
                             item.Key,
                             item.Value);
                     }
 
                     // If relationship is one-one.  Need to set the foreign key after saving
-                    if (entityItem.Parent != null && !entityItem.Property.IsList())
+                    if (reference.Parent != null && !reference.Property.IsList())
                     {
-                        Entity.SetPropertyValue(entityItem.Parent, entityItem.Entity.Value, entityItem.Property.Name);
+                        Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
                     }
 
                     // set the pristine state only if entity tracking is on
-                    if (entityItem.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entityItem.Entity.Value);
+                    if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
 
-                    if (OnAfterSave != null) OnAfterSave(entityItem.Entity.Value, entityItem.Entity.UpdateType);
+                    if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, reference.Entity.UpdateType);
                 }
 
                 return saves.Any(w => w != UpdateType.Skip);

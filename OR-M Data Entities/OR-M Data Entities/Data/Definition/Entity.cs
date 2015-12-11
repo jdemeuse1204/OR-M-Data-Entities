@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
@@ -214,11 +213,6 @@ namespace OR_M_Data_Entities.Data.Definition
                         JoinPropertyName = property.Name,
                         FromType = property.PropertyType
                     }).ToList();
-        }
-
-        public static List<ForeignKeyAssociation> GetForeignKeys(object entity)
-        {
-            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w)).ToList();
         }
         #endregion
 

@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Secure;
@@ -107,20 +108,20 @@ BEGIN TRANSACTION @1;
             var parent = new DeleteEntity(entity);
 
             // get all items to save and get them in order
-            var entityItems = _getSaveItems(parent);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
 
             // reverse the order to back them out of the database
-            entityItems.Reverse();
+            referenceMap.Reverse();
 
-            for (var i = 0; i < entityItems.Count; i++)
+            for (var i = 0; i < referenceMap.Count; i++)
             {
-                var entityItem = entityItems[i];
+                var reference = referenceMap[i];
 
-                if (OnBeforeSave != null) OnBeforeSave(entityItem.Entity.Value, UpdateType.Delete);
+                if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, UpdateType.Delete);
 
-                var builder = new SqlDeleteBuilder(entityItem.Entity);
+                var builder = new SqlDeleteBuilder(reference.Entity);
 
-                if (OnSaving != null) OnSaving(entityItem.Entity.Value);
+                if (OnSaving != null) OnSaving(reference.Entity.Value);
 
                 // execute the sql
                 ExecuteReader(builder);
@@ -133,9 +134,9 @@ BEGIN TRANSACTION @1;
                 saves.Add(actionTaken);
 
                 // set the pristine state only if entity tracking is on
-                if (entityItem.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entityItem.Entity.Value);
+                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
 
-                if (OnAfterSave != null) OnAfterSave(entityItem.Entity.Value, actionTaken);
+                if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, actionTaken);
             }
 
             return saves.Any(w => w == UpdateType.Delete);
@@ -143,151 +144,76 @@ BEGIN TRANSACTION @1;
 
         #endregion
 
-        #region Methods
-
-        private EntitySaveNodeList _getSaveItems(ModificationEntity entity)
+        #region Reference Mapping
+        private class ReferenceMap : IEnumerable<Reference>
         {
-            return entity.HasForeignKeys()
-                ? _getSaveOrder(entity, Configuration.UseTransactions)
-                : new EntitySaveNodeList(new Node(entity));
-        }
-
-        private EntitySaveNodeList _getSaveOrder(ModificationEntity entity, bool useTransactions)
-        {
-            var result = new EntitySaveNodeList();
-
-            var entities = Entity.GetForeignKeys(entity.Value);
-
-            entities.Insert(0, new ForeignKeyAssociation(null, entity.Value, null));
-
-            for (var i = 0; i < entities.Count; i++)
+            public Reference this[int i]
             {
-                if (i == 0)
-                {
-                    // is the base entity, will never have a parent, set it and continue to the next entity
-                    result.Add(new Node(entity));
-                    continue;
-                }
-
-                var e = entities[i];
-                int index;
-                var foreignKeyIsList = e.Property.IsList();
-                var tableInfo = new Table(e.Property.GetPropertyType());
-
-                if (e.Value == null && !useTransactions)
-                {
-                    throw new SqlSaveException(string.Format("Foreign Key [{0}] cannot be null", tableInfo.TableNameOnly));
-                }
-
-                // skip lookup tables
-                if (tableInfo.IsLookupTable) continue;
-
-                // skip children(foreign keys) if option is set
-                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
-                    continue;
-
-                if (e.Value == null)
-                {
-                    if (foreignKeyIsList) continue;
-
-                    var columnName = e.ChildType.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
-                    var isNullable = e.Parent.GetType().GetProperty(columnName).PropertyType.IsNullable();
-
-                    // we can skip the foreign key if its nullable and one to one
-                    if (isNullable) continue;
-
-                    if (!useTransactions)
-                    {
-                        // database will take care of this if MARS is enabled
-                        // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
-                        // maintaining the relationship
-                        throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
-                    }
-                }
-
-                // Check for readonly attribute and see if we should throw an error
-                if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
-                {
-                    throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
-                }
-
-                // doesnt have dependencies
-                if (foreignKeyIsList)
-                {
-                    // e.Value can not be null, above code will catch it
-                    foreach (var item in (e.Value as ICollection))
-                    {
-                        // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                        // the value property
-                        index = result.IndexOf(e.Parent);
-
-                        result.Insert(index + 1, new Node(item, e.Property, e.Parent));
-
-                        if (item.HasForeignKeys()) entities.AddRange(Entity.GetForeignKeys(item));
-                    }
-                }
-                else
-                {
-                    // must be saved before the parent
-                    // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
-                    // the value property
-                    index = result.IndexOf(e.Parent);
-
-                    result.Insert(index, new Node(e.Value, e.Property, e.Parent));
-
-                    // has dependencies
-                    if (e.Value.HasForeignKeys()) entities.AddRange(Entity.GetForeignKeys(e.Value));
-                }
+                get { return _internal[i] as Reference; }
             }
 
-            return result;
-        }
-        #endregion
-
-        #region shared
-        private class EntitySaveNodeList : IEnumerable<Node>
-        {
-            #region Properties and Fields
-            public int Count
-            {
-                get { return _internal.Count; }
-            }
-
-            public Node this[int i]
-            {
-                get { return _internal[i] as Node; }
-            }
+            public int Count { get { return _internal.Count; } }
 
             private readonly List<object> _internal;
-            #endregion
 
-            #region Constructor
-            public EntitySaveNodeList()
+            public ReferenceMap()
             {
                 _internal = new List<object>();
             }
 
-            public EntitySaveNodeList(Node node)
-                : this()
+            public void Add(ModificationEntity entity)
             {
-                _internal.Add(node);
+                _internal.Add(new Reference(entity, _nextAlias()));
             }
-            #endregion
 
-            #region Methods
-            public int IndexOf(object entity)
+            public void AddOneToManySaveReference(ForeignKeyAssociation association, object value)
+            {
+                var parentIndex = _indexOf(association.Parent);
+
+                _insert(parentIndex + 1, value, association);
+
+                // add the references
+                var index = _indexOf(value);
+                var oneToManychildIndex = _indexOf(association.Parent);
+                var oneToManyChild = this[oneToManychildIndex];
+                var oneToManyParent = this[index];
+                var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
+                var oneToOneParentProperty = association.ChildType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
+                var oneToOneChildProperty = association.ChildType.GetPrimaryKeys()[0];
+
+                oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
+            }
+
+            public void AddOneToOneSaveReference(ForeignKeyAssociation association)
+            {
+                var oneToOneParentIndex = _indexOf(association.Parent);
+
+                _insert(oneToOneParentIndex, association.Value, association);
+
+                var oneToOneIndex = _indexOf(association.Parent);
+                var childIndex = _indexOf(association.Value);
+                var child = this[childIndex];
+                var parent = this[oneToOneIndex];
+                var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
+                var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
+                var oneToOneChildProperty = association.ChildType.GetPrimaryKeys()[0];
+
+                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne, new Link(oneToOneParentProperty, oneToOneChildProperty)));
+            }
+
+            private int _indexOf(object entity)
             {
                 return _internal.IndexOf(entity);
             }
 
-            public void Insert(int index, Node node)
+            private void _insert(int index, object entity, ForeignKeyAssociation association)
             {
-                _internal.Insert(index, node);
+                _internal.Insert(index, new Reference(entity, _nextAlias(), association));
             }
 
-            public void Add(Node node)
+            private string _nextAlias()
             {
-                _internal.Add(node);
+                return string.Format("Tbl{0}", _internal.Count);
             }
 
             public void Reverse()
@@ -295,48 +221,108 @@ BEGIN TRANSACTION @1;
                 _internal.Reverse();
             }
 
-            public IEnumerator<Node> GetEnumerator()
+            public IEnumerator<Reference> GetEnumerator()
             {
-                return ((dynamic)_internal).GetEnumerator();
+                return (dynamic)_internal.GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return GetEnumerator();
             }
-            #endregion
         }
 
-        private sealed class Node : IEquatable<Node>
+        private class Link
         {
-            public Node(object value, PropertyInfo property = null, object parent = null)
-                : this(new ModificationEntity(value), property, parent)
+            public Link(PropertyInfo parentProperty, PropertyInfo childProperty)
             {
+                ParentPropertyName = parentProperty.Name;
+                ParentColumnName = parentProperty.GetColumnName();
+                ChildPropertyName = childProperty.Name;
+                ChildColumnName = childProperty.GetColumnName();
             }
 
-            public Node(ModificationEntity entity, PropertyInfo property = null, object parent = null)
+            public readonly string ParentPropertyName;
+
+            public readonly string ParentColumnName;
+
+            public bool IsParentColumnRenamed
             {
-                Property = property;
-                Parent = parent;
+                get { return ParentPropertyName != ParentColumnName; }
+            }
+
+            public readonly string ChildPropertyName;
+
+            public readonly string ChildColumnName;
+
+            public bool IsChildColumnRenamed
+            {
+                get { return ChildPropertyName != ChildColumnName; }
+            }
+        }
+
+        private class ReferenceNode
+        {
+            public ReferenceNode(object value, string alias, RelationshipType relationshipType, Link link)
+            {
+                Value = value;
+                Alias = alias;
+                Relationship = relationshipType;
+                Link = link;
+            }
+
+            public readonly object Value;
+
+            public readonly string Alias;
+
+            public readonly RelationshipType Relationship;
+
+            public readonly Link Link;
+        }
+
+        public enum RelationshipType
+        {
+            OneToOne,
+            OneToMany,
+            Parent
+        }
+
+        private class Reference : IEquatable<Reference>
+        {
+            public Reference(ModificationEntity entity, string alias, ForeignKeyAssociation association = null)
+            {
                 Entity = entity;
+                Alias = alias;
+                Parent = association == null ? null : association.Parent;
+                Property = association == null ? null : association.Property;
+                References = new List<ReferenceNode>();
             }
 
-            public PropertyInfo Property { get; private set; }
+            public Reference(object entity, string alias, ForeignKeyAssociation association = null) :
+                this(new ModificationEntity(entity), alias, association)
+            {
+            }
 
-            public object Parent { get; private set; }
+            /// <summary>
+            /// References needed for saving the object.  Refences are needed because they have values that are needed for insertion
+            /// </summary>
+            public readonly List<ReferenceNode> References;
 
             public readonly ModificationEntity Entity;
 
-            public bool Equals(Node other)
+            public readonly string Alias;
+
+            public readonly object Parent;
+
+            public readonly PropertyInfo Property;
+
+            public bool Equals(Reference other)
             {
                 //Check whether the compared object is null.
                 if (ReferenceEquals(other, null)) return false;
 
                 //Check whether the compared object references the same data.
-                if (ReferenceEquals(this, other)) return true;
-
-                //Check whether the products' properties are equal.
-                return Entity == other.Entity;
+                return ReferenceEquals(this, other) || Equals(Entity, other.Entity);
             }
 
             public override bool Equals(object obj)
@@ -349,10 +335,137 @@ BEGIN TRANSACTION @1;
             public override int GetHashCode()
             {
                 //Calculate the hash code for the product.
-                return Entity.Value.GetHashCode();
+                return Entity.GetHashCode();
             }
         }
 
+        private static class EntityMapper
+        {
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, ConfigurationOptions options)
+            {
+                var result = new ReferenceMap();
+                var useTransactions = options.UseTransactions;
+                var entities = _getForeignKeys(entity.Value);
+
+                entities.Insert(0, new ForeignKeyAssociation(null, entity.Value, null));
+
+                for (var i = 0; i < entities.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        // is the base entity, will never have a parent, set it and continue to the next entity
+                        result.Add(entity);
+                        continue;
+                    }
+
+                    var e = entities[i];
+                    var foreignKeyIsList = e.Property.IsList();
+                    var tableInfo = new Table(e.Property.GetPropertyType());
+
+                    if (e.Value == null && !useTransactions)
+                    {
+                        throw new SqlSaveException(string.Format("Foreign Key [{0}] cannot be null", tableInfo.TableNameOnly));
+                    }
+
+                    // skip lookup tables
+                    if (tableInfo.IsLookupTable) continue;
+
+                    // skip children(foreign keys) if option is set
+                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
+                        continue;
+
+                    if (e.Value == null)
+                    {
+                        if (foreignKeyIsList) continue;
+
+                        var columnName = e.ChildType.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
+                        var isNullable = e.Parent.GetType().GetProperty(columnName).PropertyType.IsNullable();
+
+                        // we can skip the foreign key if its nullable and one to one
+                        if (isNullable) continue;
+
+                        if (!useTransactions)
+                        {
+                            // database will take care of this if MARS is enabled
+                            // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
+                            // maintaining the relationship
+                            throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
+                        }
+                    }
+
+                    // Check for readonly attribute and see if we should throw an error
+                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
+                    {
+                        throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
+                    }
+
+                    // doesnt have dependencies
+                    if (foreignKeyIsList)
+                    {
+                        // e.Value can not be null, above code will catch it
+                        foreach (var item in (e.Value as ICollection))
+                        {
+                            // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
+                            // the value property
+                            result.AddOneToManySaveReference(e, item);
+
+                            // add any dependencies
+                            if (item.HasForeignKeys()) entities.AddRange(_getForeignKeys(item));
+                        }
+                    }
+                    else
+                    {
+                        // must be saved before the parent
+                        // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
+                        // the value property
+                        result.AddOneToOneSaveReference(e);
+
+                        // add any dependencies
+                        if (e.Value.HasForeignKeys()) entities.AddRange(_getForeignKeys(e.Value));
+                    }
+                }
+
+                return result;
+            }
+        }
+        #endregion
+
+        #region Methods
+
+        private static List<ForeignKeyAssociation> _getForeignKeys(object entity)
+        {
+            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w)).ToList();
+        }
+
+        private class ForeignKeyAssociation
+        {
+            public ForeignKeyAssociation(object parent, object value, PropertyInfo property)
+            {
+                Parent = parent;
+                Value = value;
+                Property = property;
+            }
+
+            public object Parent { get; private set; }
+
+            public PropertyInfo Property { get; private set; }
+
+            public Type ParentType
+            {
+                get { return Parent == null ? null : Parent.GetTypeListCheck(); }
+            }
+
+            public object Value { get; private set; }
+
+            public Type ChildType
+            {
+                get { return Value == null ? null : Value.GetTypeListCheck(); }
+            }
+        }
+
+        #endregion
+
+        #region shared
         private abstract class SqlSecureExecutable
         {
             #region Fields
@@ -416,11 +529,6 @@ BEGIN TRANSACTION @1;
                         cmd.Parameters[item.Key].SqlDbType = item.Value.DbTranslationType;
                     }
                 }
-            }
-
-            public IEnumerable<SqlSecureQueryParameter> GetParameters()
-            {
-                return _parameters;
             }
 
             protected string FindParameterKey(string dbColumnName)
