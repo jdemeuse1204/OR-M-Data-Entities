@@ -15,6 +15,8 @@ namespace OR_M_Data_Entities.Enumeration
         Update,
         Delete,
         RowNotFound,
+        TransactionalSave,
+        TransactionalDelete,
         Skip
     }
 }

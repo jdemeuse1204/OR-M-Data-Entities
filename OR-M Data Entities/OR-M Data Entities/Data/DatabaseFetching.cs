@@ -42,18 +42,19 @@ namespace OR_M_Data_Entities.Data
                     keyContainer.Add(rec.GetName(i), rec.GetValue(i));
                 }
 
+                Connection.Close();
                 Reader.Close();
                 Reader.Dispose();
 
                 return keyContainer;
             }
 
+            Connection.Close();
             Reader.Close();
             Reader.Dispose();
 
             return new OutputContainer();
         }
-
         #endregion
 
         #region helpers

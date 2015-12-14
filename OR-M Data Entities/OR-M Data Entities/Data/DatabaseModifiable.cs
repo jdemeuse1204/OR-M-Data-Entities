@@ -52,45 +52,6 @@ namespace OR_M_Data_Entities.Data
 
         #endregion
 
-        #region Properties
-
-        private readonly string _transactionSqlBase = @"
-DECLARE @1 VARCHAR(50) = CONVERT(varchar,GETDATE(),126);
-
-BEGIN TRANSACTION @1;
-	BEGIN TRY
-			{0}
-	END TRY
-	BEGIN CATCH
-
-		IF @@TRANCOUNT > 0
-			BEGIN
-				ROLLBACK TRANSACTION;
-			END
-			
-			DECLARE @2 as varchar(max) = ERROR_MESSAGE() + '  Rollback performed, no data committed.',
-					@3 as int = ERROR_SEVERITY(),
-					@4 as int = ERROR_STATE();
-
-			RAISERROR(@2,@3,@4);
-			
-	END CATCH
-
-	IF @@TRANCOUNT > 0
-		COMMIT TRANSACTION @1;
-";
-
-        #endregion
-
-        #region Methods
-
-        private string _createTransaction(string sql)
-        {
-            return string.Format(_transactionSqlBase, sql);
-        }
-
-        #endregion
-
         #region Save Methods
 
         public virtual bool SaveChanges<T>(T entity)
@@ -179,7 +140,7 @@ BEGIN TRANSACTION @1;
                 var oneToManyParent = this[index];
                 var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
                 var oneToOneParentProperty = association.ChildType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
-                var oneToOneChildProperty = association.ChildType.GetPrimaryKeys()[0];
+                var oneToOneChildProperty = association.ParentType.GetPrimaryKeys()[0];
 
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
@@ -278,6 +239,11 @@ BEGIN TRANSACTION @1;
             public readonly RelationshipType Relationship;
 
             public readonly Link Link;
+
+            public string GetOutputFieldValue()
+            {
+                return string.Format("(SELECT TOP 1 {0} FROM @{1})", Link.ChildPropertyName, Alias);
+            }
         }
 
         public enum RelationshipType
@@ -437,6 +403,9 @@ BEGIN TRANSACTION @1;
             return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w)).ToList();
         }
 
+        #endregion
+
+        #region shared
         private class ForeignKeyAssociation
         {
             public ForeignKeyAssociation(object parent, object value, PropertyInfo property)
@@ -463,9 +432,6 @@ BEGIN TRANSACTION @1;
             }
         }
 
-        #endregion
-
-        #region shared
         private abstract class SqlSecureExecutable
         {
             #region Fields

@@ -48,11 +48,13 @@ namespace OR_M_Data_Entities.Data
 
             protected string _values { get; private set; }
 
-            protected string _declare { get; private set; }
+            protected string _declare { get; set; }
 
             protected string _output { get; private set; }
 
-            protected string _set { get; private set; }
+            protected string _outputColumnsOnly { get; private set; }
+
+            protected string _set { get; set; }
             #endregion
 
             #region Constructor
@@ -81,12 +83,13 @@ namespace OR_M_Data_Entities.Data
 
             public void AddDeclare(string parameterKey, string sqlDataType)
             {
-                _declare = string.Concat(_declare, string.Format("{0} as {1},", parameterKey, sqlDataType));
+                _declare = string.Concat(_declare, string.Format("DECLARE {0} as {1};\r", parameterKey, sqlDataType));
             }
 
             public void AddOutput(ModificationItem item)
             {
                 _output = string.Concat(_output, item.AsOutput(","));
+                _outputColumnsOnly = string.Concat(_outputColumnsOnly, item.AsFieldPropertyName(","));
             }
 
             public void AddSet(ModificationItem item, out string key)
@@ -97,13 +100,13 @@ namespace OR_M_Data_Entities.Data
                 if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
                 {
                     // GUID
-                    _set = string.Concat(_set, string.Format("SET {0} = NEWID();", key));
+                    _set = string.Concat(_set, string.Format("SET {0} = NEWID();\r", key));
                 }
                 else
                 {
                     // NUMERIC
                     _set = string.Concat(_set,
-                        string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);", key,
+                        string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);\r", key,
                             item.DatabaseColumnName, SqlFormattedTableName));
                 }
             }
@@ -521,7 +524,7 @@ ELSE
                 ((InsertContainer)container).AddOutput(item);
             }
 
-            private void _addDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
+            protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
             {
                 // key from the set method
                 string key;
@@ -533,7 +536,7 @@ ELSE
                 ((InsertContainer)container).AddOutput(item);
             }
 
-            private void _addDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
+            protected virtual void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
             {
                 ((InsertContainer)container).AddOutput(item);
             }
@@ -557,11 +560,11 @@ ELSE
                             AddDbGenerationOptionNone(container, item);
                             break;
                         case DbGenerationOption.Generate:
-                            _addDbGenerationOptionGenerate(container, item);
+                            AddDbGenerationOptionGenerate(container, item);
                             break;
                         case DbGenerationOption.DbDefault:
                         case DbGenerationOption.IdentitySpecification:
-                            _addDbGenerationOptionIdentityAndDefault(container, item);
+                            AddDbGenerationOptionIdentityAndDefault(container, item);
                             break;
                     }
                 }
@@ -739,6 +742,7 @@ ELSE
                     // execute the sql
                     ExecuteReader(builder);
 
+                    // get output and clean up connections
                     var keyContainer = GetOutput();
 
                     // check if a concurrency violation has occurred

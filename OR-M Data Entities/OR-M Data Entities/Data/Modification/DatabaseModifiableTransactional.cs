@@ -18,18 +18,27 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlTransactionContainer : ISqlContainer
         {
-            public SqlTransactionContainer() 
+            private readonly string _sql;
+
+            private readonly string _declare;
+
+            private readonly string _set;
+
+            public SqlTransactionContainer(string sql, string declare = null, string set = null)
             {
+                _sql = sql;
+                _declare = declare;
+                _set = set;
             }
 
             public string Resolve()
             {
-                throw new NotImplementedException();
+                return Split().ToString();
             }
 
             public SqlPartStatement Split()
             {
-                throw new NotImplementedException();
+                return new SqlPartStatement(_sql, _declare, _set);
             }
         }
         #endregion
@@ -39,29 +48,35 @@ namespace OR_M_Data_Entities.Data
         {
             private string _tableVariable { get; set; }
 
-            public TransactionInsertContainer(ModificationEntity entity)
+            private readonly string _tableAlias;
+
+            public TransactionInsertContainer(ModificationEntity entity, string tableAlias)
                 : base(entity)
             {
+                _tableAlias = tableAlias;
             }
 
             public void AddTableVariable(ModificationItem item)
             {
-                _tableVariable = string.Concat(_tableVariable, string.Format("{0} {1},", item.DatabaseColumnName, item.SqlDataTypeString));
+                _tableVariable = string.Concat(_tableVariable, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
 
             public override SqlPartStatement Split()
             {
-                var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} INTO TABLE({3}) VALUES ({4})",
+                var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} INTO @{3} VALUES ({4});\rSELECT {5} FROM @{3}",
                     SqlFormattedTableName,
                     _fields.TrimEnd(','),
                     _output.TrimEnd(','),
-                    _tableVariable.TrimEnd(','),
-                    _values.TrimEnd(',')
+                    _tableAlias,
+                    _values.TrimEnd(','),
+                    _outputColumnsOnly.TrimEnd(',')
 
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
                     // where the column is not the PK
                     );
+
+                _declare = string.Concat(_declare, string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariable.TrimEnd(',')));
 
                 return new SqlPartStatement(sql, _declare, _set);
             }
@@ -75,7 +90,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly List<ISqlBuilder> _builders;
 
-            private readonly List<SqlSecureQueryParameter> _parameters; 
+            private readonly List<SqlSecureQueryParameter> _parameters;
 
             public SqlTransactionBuilder(ReferenceMap map, List<SqlSecureQueryParameter> parameters)
             {
@@ -84,7 +99,7 @@ namespace OR_M_Data_Entities.Data
                 _parameters = parameters;
             }
 
-            public void Add<T>(T builder) 
+            public void Add<T>(T builder)
                 where T : ISqlBuilder, ISqlTransactionBuilder
             {
                 _builders.Add(builder);
@@ -180,7 +195,7 @@ namespace OR_M_Data_Entities.Data
         // for constraint only
         private interface ISqlTransactionBuilder
         {
-             
+
         }
         #endregion
 
@@ -192,9 +207,37 @@ namespace OR_M_Data_Entities.Data
 
             private readonly ReferenceMap _referenceMap;
 
-            private readonly List<SqlSecureQueryParameter> _parameters; 
+            private readonly string _transactionSqlBase = @"
+DECLARE @1 VARCHAR(50) = CONVERT(varchar,GETDATE(),126);
 
-            public SqlTransactionPackage(ReferenceMap referenceMap, List<ISqlBuilder> builders, List<SqlSecureQueryParameter> parameters) 
+BEGIN TRANSACTION @1;
+	BEGIN TRY
+
+{0}
+
+	END TRY
+	BEGIN CATCH
+
+		IF @@TRANCOUNT > 0
+			BEGIN
+				ROLLBACK TRANSACTION;
+			END
+			
+			DECLARE @2 as varchar(max) = ERROR_MESSAGE() + '  Rollback performed, no data committed.',
+					@3 as int = ERROR_SEVERITY(),
+					@4 as int = ERROR_STATE();
+
+			RAISERROR(@2,@3,@4);
+			
+	END CATCH
+
+	IF @@TRANCOUNT > 0
+		COMMIT TRANSACTION @1;
+";
+
+            private readonly List<SqlSecureQueryParameter> _parameters;
+
+            public SqlTransactionPackage(ReferenceMap referenceMap, List<ISqlBuilder> builders, List<SqlSecureQueryParameter> parameters)
             {
                 _builders = builders;
                 _referenceMap = referenceMap;
@@ -210,16 +253,40 @@ namespace OR_M_Data_Entities.Data
 
             public ISqlContainer CreatePackage()
             {
+                var sql = string.Empty;
+                var declare = string.Empty;
+                var set = string.Empty;
+
                 // create our transaction package here
                 for (var i = 0; i < _builders.Count; i++)
                 {
                     var builder = _builders[i];
+
+                    // build the package
                     var package = builder.Build();
 
-                    package.CreatePackage();
+                    // create the container
+                    var container = package.CreatePackage();
+
+                    // split the sql into the set, sql, and declare statements
+                    var split = container.Split();
+
+                    sql = string.Concat(sql, string.Format("{0};\r", split.Sql));
+
+                    if (!string.IsNullOrEmpty(split.Declare))
+                    {
+                        declare = string.Concat(declare, split.Declare);
+                    }
+
+                    if (!string.IsNullOrEmpty(split.Set))
+                    {
+                        set = string.Concat(set, split.Set);
+                    }
                 }
 
-                return new SqlTransactionContainer();
+                sql = string.Format(_transactionSqlBase, sql);
+
+                return new SqlTransactionContainer(sql, declare, set);
             }
 
             public void InsertParameters(SqlCommand cmd)
@@ -241,23 +308,20 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly Reference _reference;
 
-            public SqlTransactionInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference) 
+            public SqlTransactionInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference)
                 : base(builder, parameters)
             {
                 _reference = reference;
             }
 
-            private bool _hasReference(ModificationItem item)
+            private ReferenceNode _getReferenceNode(ModificationItem item)
             {
-
-
-
-                return false;
+                return _reference.References.FirstOrDefault(w => w.Link.ParentColumnName == item.DatabaseColumnName);
             }
 
             protected override ISqlContainer NewContainer()
             {
-                return new TransactionInsertContainer(Entity);
+                return new TransactionInsertContainer(Entity, _reference.Alias);
             }
 
             protected override void AddDbGenerationOptionNone(ISqlContainer container, ModificationItem item)
@@ -269,11 +333,14 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 ((TransactionInsertContainer)container).AddField(item);
-                ((TransactionInsertContainer)container).AddOutput(item);
 
-                if (_hasReference(item))
+                // reference comes from a different table, should never have any generation options
+                var node = _getReferenceNode(item);
+
+                if (node != null)
                 {
                     // grab the reference from the other table
+                    ((TransactionInsertContainer)container).AddValue(node.GetOutputFieldValue());
                     return;
                 }
 
@@ -283,10 +350,70 @@ namespace OR_M_Data_Entities.Data
 
                 ((TransactionInsertContainer)container).AddValue(data);
             }
+
+            protected override void AddDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
+            {
+                ((TransactionInsertContainer)container).AddTableVariable(item);
+
+                base.AddDbGenerationOptionGenerate(container, item);
+            }
+
+            protected override void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
+            {
+                ((TransactionInsertContainer)container).AddTableVariable(item);
+
+                base.AddDbGenerationOptionIdentityAndDefault(container, item);
+            }
         }
         #endregion
 
         #region Methods
+        private void _loadObjectFromMultipleActiveResults(ReferenceMap referenceMap)
+        {
+            if (!Reader.HasRows)
+            {
+                // close reader and connection
+                Connection.Close();
+                Reader.Close();
+                Reader.Dispose();
+                return;
+            }
+
+            var i = 0;
+
+            do
+            {
+                // reference map and result sets are in the same order
+                var reference = referenceMap[i];
+
+                // Process all elements in the current result set
+                while (Reader.Read())
+                {
+                    var keyContainer = new OutputContainer();
+                    var rec = (IDataRecord)Reader;
+
+                    for (var j = 0; j < rec.FieldCount; j++)
+                    {
+                        keyContainer.Add(rec.GetName(j), rec.GetValue(j));
+
+                        reference.Entity.SetPropertyValue(rec.GetName(j), rec.GetValue(j));
+
+                        // set any fk's
+                        if (reference.Parent == null) continue;
+
+                         // set property will check the relationship and set appropiately
+                        Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
+                    }
+                }
+
+                i++;
+
+            } while (Reader.NextResult());
+
+            Connection.Close();
+            Reader.Close();
+            Reader.Dispose();
+        }
 
         public virtual bool _saveChangesUsingTransactions<T>(T entity) where T : class
         {
@@ -327,52 +454,22 @@ namespace OR_M_Data_Entities.Data
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-
-                // If relationship is one-many.  Need to set the foreign key before saving
-                //if (reference.Parent != null && reference.Property.IsList())
-                //{
-                //    Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
-                //}
-
-                if (OnSaving != null) OnSaving(reference.Entity.Value);
-
-                // execute the sql
-                ExecuteReader(builder);
-
-                var keyContainer = GetOutput();
-
-                // check if a concurrency violation has occurred
-                if (reference.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 &&
-                    Configuration.ConcurrencyViolationRule == ConcurrencyViolationRule.ThrowException)
-                {
-                    throw new DBConcurrencyException("Concurrency Violation.  {0} was changed prior to this update");
-                }
-
-                // put updated values into entity
-                foreach (var item in keyContainer)
-                {
-                    // find the property first in case the column name change attribute is used
-                    // Key is property name, value is the db value
-                    reference.Entity.SetPropertyValue(
-                        item.Key,
-                        item.Value);
-                }
-
-                // If relationship is one-one.  Need to set the foreign key after saving
-                if (reference.Parent != null && !reference.Property.IsList())
-                {
-                    Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
-                }
-
-                // set the pristine state only if entity tracking is on
-                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
-
-                if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, reference.Entity.UpdateType);
             }
+
+            if (OnSaving != null) OnSaving(entity);
+
+            // execute the sql
+            ExecuteReader(builder);
+
+            _loadObjectFromMultipleActiveResults(referenceMap);
+
+            // set the pristine state only if entity tracking is on
+            if (parent.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entity);
+
+            if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 
             return saves.Any(w => w != UpdateType.Skip);
         }
-
         #endregion
     }
 }

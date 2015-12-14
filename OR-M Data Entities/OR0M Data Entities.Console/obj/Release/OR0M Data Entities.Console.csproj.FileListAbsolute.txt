@@ -36,5 +36,3 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.exe
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.pdb
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml

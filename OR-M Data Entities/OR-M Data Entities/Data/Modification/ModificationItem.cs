@@ -95,6 +95,11 @@ namespace OR_M_Data_Entities.Data.Modification
         {
             return string.Format("[{0}]{1}", DatabaseColumnName, appendToEnd);
         }
+
+        public string AsFieldPropertyName(string appendToEnd)
+        {
+            return string.Format("[{0}]{1}", PropertyName, appendToEnd);
+        }
         #endregion
     }
 }

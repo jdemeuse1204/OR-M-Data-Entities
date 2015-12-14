@@ -19,7 +19,7 @@
         {
             return string.Format("{0}{1}{2}",
 
-                string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("DECLARE {0} \r\r", string.Concat(Declare.TrimEnd(','), ";")),
+                string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("{0} \r\r", Declare),
 
                 string.IsNullOrWhiteSpace(Set) ? string.Empty : string.Format("{0} \r\r", Set),
                 
