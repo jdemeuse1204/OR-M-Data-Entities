@@ -63,15 +63,25 @@ namespace OR_M_Data_Entities.Data
 
         public PeekDataReader(SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
         {
-            var wrappedReader = cmd.ExecuteReader();
+            try
+            {
+                var wrappedReader = cmd.ExecuteReader();
 
-            _wrappedReader = wrappedReader;
-            HasRows = wrappedReader.HasRows;
-            FieldCount = wrappedReader.FieldCount;
+                _wrappedReader = wrappedReader;
+                HasRows = wrappedReader.HasRows;
+                FieldCount = wrappedReader.FieldCount;
 
-            Payload = payload;
+                Payload = payload;
 
-            _connection = connection;
+                _connection = connection;
+            }
+            catch (Exception)
+            {
+                cmd.Dispose();
+                connection.Close();
+                connection.Dispose();
+                throw; // rethrow error after connection is cleaned up
+            }
         }
         #endregion
 

@@ -6,19 +6,21 @@ namespace OR_M_Data_Entities.Configuration
     {
         public ConfigurationOptions(bool useTransactions)
         {
-            CheckConcurrencyViolations = true;
             IsLazyLoading = false;
             UseTransactions = useTransactions;
-            ConcurrencyViolationRule = ConcurrencyViolationRule.Continue;
+
+            Concurrency = new ConcurrencyConfiguration
+            {
+                ViolationRule = ConcurrencyViolationRule.Continue,
+                IsOn = true
+            };
         }
 
         public bool IsLazyLoading { get; set; }
 
-        public bool CheckConcurrencyViolations { get; set; }
-
         public bool UseTransactions { get; set; }
 
-        public ConcurrencyViolationRule ConcurrencyViolationRule { get; set; }
+        public ConcurrencyConfiguration Concurrency { get; private set; }
 
         private class SqlIntegerOptions
         {

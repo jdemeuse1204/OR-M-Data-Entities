@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
+using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
@@ -18,6 +19,8 @@ namespace OR0M_Data_Entities.Console
             : base("sqlExpress")
         {
             Configuration.UseTransactions = true;
+            Configuration.Concurrency.IsOn = true;
+            Configuration.Concurrency.ViolationRule = ConcurrencyViolationRule.ThrowException;
         }
     }
 
@@ -106,7 +109,7 @@ namespace OR0M_Data_Entities.Console
 
             var x = context.Find<Contact>(2079);
 
-            x.FirstName = "Different name";
+            x.FirstName = "WINss";
 
             context.SaveChanges(x);
 

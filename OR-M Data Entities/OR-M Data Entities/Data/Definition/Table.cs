@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Dynamic;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
 
@@ -63,6 +64,16 @@ namespace OR_M_Data_Entities.Data.Definition
         public bool IsReadOnly
         {
             get { return _readOnlyAttribute != null; }
+        }
+
+        public string PlainTableName
+        {
+            get
+            {
+                var tableAttribute = TableType.GetCustomAttribute<TableAttribute>();
+
+                return tableAttribute == null ? TableType.Name : tableAttribute.Name;
+            }
         }
 
         public bool IsLookupTable

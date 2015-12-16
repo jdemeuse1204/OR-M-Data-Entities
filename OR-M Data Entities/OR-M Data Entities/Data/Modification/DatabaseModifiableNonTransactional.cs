@@ -137,38 +137,46 @@ namespace OR_M_Data_Entities.Data
 
         private class UpdateContainer : SqlModificationContainer, ISqlContainer
         {
-            private string _setItems { get; set; }
+            protected string SetItems { get; set; }
 
-            private string _where { get; set; }
+            protected string Where { get; set; }
 
-            private readonly string _statement;
+            protected readonly string Statement;
+
+            protected string Output { get; set; }
 
             public UpdateContainer(ModificationEntity entity)
                 : base(entity)
             {
-                _setItems = string.Empty;
-                _where = string.Empty;
-                _statement = string.Format("UPDATE [{0}]", SqlFormattedTableName);
+                SetItems = string.Empty;
+                Where = string.Empty;
+                Statement = string.Format("UPDATE [{0}]", SqlFormattedTableName);
+
+                var keys = entity.GetPrimaryKeys();
+
+                if (keys.Count == 0) throw new KeyNotFoundException(string.Format("Primary Key not found for table: {0}", entity.GetTableName()));
+
+                Output = string.Format("[INSERTED].[{0}]", keys.First().GetColumnName());
             }
 
             public void AddUpdate(ModificationItem item, string parameterKey)
             {
-                _setItems = string.Concat(_setItems, string.Format("[{0}] = {1},", item.DatabaseColumnName, parameterKey));
+                SetItems = string.Concat(SetItems, string.Format("[{0}] = {1},", item.DatabaseColumnName, parameterKey));
             }
 
             public void AddWhere(ModificationItem item, string parameterKey)
             {
-                _where = string.Concat(_where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
+                Where = string.Concat(Where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
             }
 
             public void AddNullWhere(ModificationItem item)
             {
-                _where = string.Concat(_where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
+                Where = string.Concat(Where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
             }
 
             private string _getWherePrefix()
             {
-                return string.IsNullOrEmpty(_where) ? string.Empty : " AND ";
+                return string.IsNullOrEmpty(Where) ? string.Empty : " AND ";
             }
 
             public string Resolve()
@@ -176,9 +184,10 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public SqlPartStatement Split()
+            public virtual SqlPartStatement Split()
             {
-                var sql = string.Format("{0} SET {1} WHERE {2}", _statement, _setItems.TrimEnd(','), _where.TrimEnd(','));
+                // need output so we can see how many rows were updated.  Needed for concurrency checking
+                var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3}", Statement, SetItems.TrimEnd(','), Output, Where.TrimEnd(','));
                 
                 return new SqlPartStatement(sql);
             }
@@ -299,6 +308,8 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
+
+            protected abstract ISqlContainer NewContainer();
 
             public abstract ISqlContainer CreatePackage();
 
@@ -473,6 +484,12 @@ ELSE
     END");
             }
 
+            // not used
+            protected override ISqlContainer NewContainer()
+            {
+                throw new NotImplementedException();
+            }
+
             public override ISqlContainer CreatePackage()
             {
                 return _notExists != null
@@ -493,7 +510,7 @@ ELSE
 
             #region Methods
 
-            protected virtual ISqlContainer NewContainer()
+            protected override ISqlContainer NewContainer()
             {
                 return new InsertContainer(Entity);
             }
@@ -576,10 +593,33 @@ ELSE
             #endregion
 
             #region Methods
+
+            protected override ISqlContainer NewContainer()
+            {
+                return new UpdateContainer(Entity);
+            }
+
+            protected virtual void AddUpdate(ISqlContainer container, ModificationItem item)
+            {
+                var value = Entity.GetPropertyValue(item.PropertyName);
+                var parameter = AddParameter(item, value);
+
+                ((UpdateContainer)container).AddUpdate(item, parameter);
+            }
+
+            protected virtual void AddWhere(ISqlContainer container, ModificationItem item)
+            {
+                var value = Entity.GetPropertyValue(item.PropertyName);
+                var parameter = AddParameter(item, value);
+
+                // PK cannot be null here
+                ((UpdateContainer)container).AddWhere(item, parameter);
+            }
+
             public override ISqlContainer CreatePackage()
             {
                 var items = Entity.Changes();
-                var container = new UpdateContainer(Entity);
+                var container = (UpdateContainer)NewContainer();
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
                 if (items.Count == 0) throw new SqlSaveException("No items to update, query analyzer failed");
@@ -587,11 +627,8 @@ ELSE
                 for (var i = 0; i < items.Count; i++)
                 {
                     var item = items[i];
-                    var value = Entity.GetPropertyValue(item.PropertyName);
 
-                    var parameter = AddParameter(item, value);
-
-                    container.AddUpdate(item, parameter);
+                    AddUpdate(container, item);
 
                     // cannot concurrency check if entity state tracking is not on 
                     // because we do not know what the user has and has not changed
@@ -620,11 +657,8 @@ ELSE
                 for (var i = 0; i < primaryKeys.Count; i++)
                 {
                     var key = primaryKeys[i];
-                    var value = Entity.GetPropertyValue(key.PropertyName);
-                    var parameter = AddParameter(key, value);
 
-                    // PK cannot be null here
-                    container.AddWhere(key, parameter);
+                    AddWhere(container, key);
                 }
 
                 return container;
@@ -643,6 +677,12 @@ ELSE
             #endregion
 
             #region Methods
+
+            protected override ISqlContainer NewContainer()
+            {
+                throw new NotImplementedException();
+            }
+
             public override ISqlContainer CreatePackage()
             {
                 var container = new DeleteContainer(Entity);
@@ -736,11 +776,24 @@ ELSE
                     // get output and clean up connections
                     var keyContainer = GetOutput();
 
-                    // check if a concurrency violation has occurred
-                    if (reference.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 &&
-                        Configuration.ConcurrencyViolationRule == ConcurrencyViolationRule.ThrowException)
+                    // check for concurrency violation
+                    var hasConcurrencyViolation = reference.Entity.UpdateType == UpdateType.Update &&
+                                                  keyContainer.Count == 0;
+
+                    // processing for concurrency violation
+                    if (hasConcurrencyViolation)
                     {
-                        throw new DBConcurrencyException("Concurrency Violation.  {0} was changed prior to this update");
+                        // violation occurred, choose what to do
+                        switch (Configuration.Concurrency.ViolationRule)
+                        {
+                            case ConcurrencyViolationRule.ThrowException:
+                                throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.PlainTableName));
+                            case ConcurrencyViolationRule.Continue:
+                                break;
+                            case ConcurrencyViolationRule.UseHandler:
+                                if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity);
+                                break;
+                        }   
                     }
 
                     // put updated values into entity
@@ -748,9 +801,7 @@ ELSE
                     {
                         // find the property first in case the column name change attribute is used
                         // Key is property name, value is the db value
-                        reference.Entity.SetPropertyValue(
-                            item.Key,
-                            item.Value);
+                        reference.Entity.SetPropertyValue(item.Key, item.Value);
                     }
 
                     // If relationship is one-one.  Need to set the foreign key after saving
@@ -759,8 +810,8 @@ ELSE
                         Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
                     }
 
-                    // set the pristine state only if entity tracking is on
-                    if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+                    // set the pristine state only if entity tracking is on and there is no concurrency violation
+                    if (reference.Entity.IsEntityStateTrackingOn && !hasConcurrencyViolation) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
 
                     if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, reference.Entity.UpdateType);
                 }
@@ -773,6 +824,7 @@ ELSE
                 throw new SqlSaveException("Max length violated, see inner exception", ex);
             }
         }
+
         #endregion
     }
 }

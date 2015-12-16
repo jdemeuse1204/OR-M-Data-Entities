@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration\ConcurrencyConfiguration.cs" />
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Data\Definition\DeleteEntity.cs" />
     <Compile Include="Data\Definition\Entity.cs" />

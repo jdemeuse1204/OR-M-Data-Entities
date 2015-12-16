@@ -41,6 +41,10 @@ namespace OR_M_Data_Entities.Data
 
         public event OnSavingHandler OnSaving;
 
+        public delegate void OnConcurrencyViolated(object entity);
+
+        public event OnConcurrencyViolated OnConcurrencyViolation;
+
         #endregion
 
         #region Constructor

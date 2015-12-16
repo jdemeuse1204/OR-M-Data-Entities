@@ -3,6 +3,7 @@
     public enum ConcurrencyViolationRule
     {
         ThrowException,
-        Continue
+        Continue,
+        UseHandler
     }
 }
