@@ -46,7 +46,7 @@ namespace OR_M_Data_Entities.Data
         #region Containers
         private class TransactionInsertContainer : InsertContainer
         {
-            private string _tableVariable { get; set; }
+            private string _tableVariables { get; set; }
 
             private readonly string _tableAlias;
 
@@ -58,7 +58,7 @@ namespace OR_M_Data_Entities.Data
 
             public void AddTableVariable(ModificationItem item)
             {
-                _tableVariable = string.Concat(_tableVariable, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
+                _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
 
             public override SqlPartStatement Split()
@@ -76,7 +76,7 @@ namespace OR_M_Data_Entities.Data
                     // where the column is not the PK
                     );
 
-                _declare = string.Concat(_declare, string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariable.TrimEnd(',')));
+                _declare = string.Concat(_declare, string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariables.TrimEnd(',')));
 
                 return new SqlPartStatement(sql, _declare, _set);
             }
@@ -211,28 +211,29 @@ namespace OR_M_Data_Entities.Data
 DECLARE @1 VARCHAR(50) = CONVERT(varchar,GETDATE(),126);
 
 BEGIN TRANSACTION @1;
-	BEGIN TRY
+
+BEGIN TRY
 
 {0}
 
-	END TRY
-	BEGIN CATCH
-
-		IF @@TRANCOUNT > 0
-			BEGIN
-				ROLLBACK TRANSACTION;
-			END
-			
-			DECLARE @2 as varchar(max) = ERROR_MESSAGE() + '  Rollback performed, no data committed.',
-					@3 as int = ERROR_SEVERITY(),
-					@4 as int = ERROR_STATE();
-
-			RAISERROR(@2,@3,@4);
-			
-	END CATCH
+END TRY
+BEGIN CATCH
 
 	IF @@TRANCOUNT > 0
-		COMMIT TRANSACTION @1;
+		BEGIN
+			ROLLBACK TRANSACTION;
+		END
+			
+		DECLARE @2 as varchar(max) = ERROR_MESSAGE() + '  Rollback performed, no data committed.',
+				@3 as int = ERROR_SEVERITY(),
+				@4 as int = ERROR_STATE();
+
+		RAISERROR(@2,@3,@4);
+			
+END CATCH
+
+IF @@TRANCOUNT > 0
+    COMMIT TRANSACTION @1;
 ";
 
             private readonly List<SqlSecureQueryParameter> _parameters;
@@ -346,7 +347,7 @@ BEGIN TRANSACTION @1;
 
                 // parameter key
                 var value = Entity.GetPropertyValue(item.PropertyName);
-                var data = TryAddParameter(item, value);
+                var data = AddParameter(item, value);
 
                 ((TransactionInsertContainer)container).AddValue(data);
             }
@@ -381,6 +382,7 @@ BEGIN TRANSACTION @1;
 
             var i = 0;
 
+            // loads the data back into the object from the MARS data set
             do
             {
                 // reference map and result sets are in the same order
@@ -390,7 +392,7 @@ BEGIN TRANSACTION @1;
                 while (Reader.Read())
                 {
                     var keyContainer = new OutputContainer();
-                    var rec = (IDataRecord)Reader;
+                    var rec = (IDataRecord) Reader;
 
                     for (var j = 0; j < rec.FieldCount; j++)
                     {
@@ -401,15 +403,17 @@ BEGIN TRANSACTION @1;
                         // set any fk's
                         if (reference.Parent == null) continue;
 
-                         // set property will check the relationship and set appropiately
+                        // set property will check the relationship and set appropiately
                         Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
                     }
                 }
 
+                // increment index
                 i++;
 
-            } while (Reader.NextResult());
+            } while (Reader.NextResult()); // go to next result
 
+            // close reader and connection
             Connection.Close();
             Reader.Close();
             Reader.Dispose();
@@ -458,13 +462,25 @@ BEGIN TRANSACTION @1;
 
             if (OnSaving != null) OnSaving(entity);
 
-            // execute the sql
-            ExecuteReader(builder);
+            // TODO check concurrency violations!!!!!!!!!!!!!!!!!!
 
-            _loadObjectFromMultipleActiveResults(referenceMap);
+            // execute the sql.  make sure all the saves are not skips
+            if (!(saves.All(w => w == UpdateType.Skip)))
+            {
+                ExecuteReader(builder);
 
-            // set the pristine state only if entity tracking is on
-            if (parent.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(entity);
+                _loadObjectFromMultipleActiveResults(referenceMap);
+
+                // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
+                // Object needs to be loaded with the data from the database first
+                for (var i = 0; i < referenceMap.Count; i++)
+                {
+                    var reference = referenceMap[i];
+
+                    // set the pristine state only if entity tracking is on
+                    if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+                }
+            }
 
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 

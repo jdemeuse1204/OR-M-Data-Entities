@@ -32,6 +32,7 @@ namespace OR_M_Data_Entities.Data.Definition
             _tableAttribute = type.GetCustomAttribute<TableAttribute>();
             _schemaAttribute = type.GetCustomAttribute<SchemaAttribute>();
             _readOnlyAttribute = type.GetCustomAttribute<ReadOnlyAttribute>();
+            _lookupTableAttribute = type.GetCustomAttribute<LookupTableAttribute>();
 
             if (_linkedServerAttribute != null && _schemaAttribute != null)
             {
@@ -41,7 +42,11 @@ namespace OR_M_Data_Entities.Data.Definition
                         ClassName));
             }
 
-            TableNameOnly = _tableAttribute == null ? type.Name : _tableAttribute.Name;
+            TableNameOnly = _tableAttribute == null
+                ? _lookupTableAttribute != null && !string.IsNullOrEmpty(_lookupTableAttribute.Name)
+                    ? _lookupTableAttribute.Name
+                    : type.Name
+                : _tableAttribute.Name;
         }
 
         #endregion
@@ -74,7 +79,14 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public string TableAttributeName
         {
-            get { return _tableAttribute == null ? string.Empty : _tableAttribute.Name; }
+            get
+            {
+                return _tableAttribute == null
+                    ? _lookupTableAttribute != null && !string.IsNullOrEmpty(_lookupTableAttribute.Name)
+                  ? _lookupTableAttribute.Name
+                  : string.Empty
+                    : _tableAttribute.Name;
+            }
         }
 
         public string ServerName

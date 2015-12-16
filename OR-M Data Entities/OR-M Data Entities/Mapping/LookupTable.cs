@@ -16,7 +16,7 @@ namespace OR_M_Data_Entities.Mapping
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
     public sealed class LookupTableAttribute : TableAttribute
     {
-        public LookupTableAttribute(string name) : 
+        public LookupTableAttribute(string name = null) : 
             base(name)
         {
         }

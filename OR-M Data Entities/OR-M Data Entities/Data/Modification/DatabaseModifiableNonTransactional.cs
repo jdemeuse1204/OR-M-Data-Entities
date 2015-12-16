@@ -291,15 +291,6 @@ namespace OR_M_Data_Entities.Data
             {
                 Entity = plan.Entity;
             }
-
-            protected string TryAddParameter(ModificationItem item, object value)
-            {
-                var foundKey = FindParameterKey(item.DatabaseColumnName);
-
-                return !string.IsNullOrWhiteSpace(foundKey)
-                    ? foundKey
-                    : AddParameter(item, value);
-            }
             #endregion
 
             #region Properties
@@ -460,7 +451,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     var key = primaryKeys[i];
                     var value = Entity.GetPropertyValue(key.PropertyName);
-                    var parameter = TryAddParameter(key, value);
+                    var parameter = AddParameter(key, value);
 
                     _addWhere(key, parameter);
                 }
@@ -517,7 +508,7 @@ ELSE
 
                 // parameter key
                 var value = Entity.GetPropertyValue(item.PropertyName);
-                var data = TryAddParameter(item, value);
+                var data = AddParameter(item, value);
 
                 ((InsertContainer)container).AddField(item);
                 ((InsertContainer)container).AddValue(data);
@@ -598,7 +589,7 @@ ELSE
                     var item = items[i];
                     var value = Entity.GetPropertyValue(item.PropertyName);
 
-                    var parameter = TryAddParameter(item, value);
+                    var parameter = AddParameter(item, value);
 
                     container.AddUpdate(item, parameter);
 
@@ -630,7 +621,7 @@ ELSE
                 {
                     var key = primaryKeys[i];
                     var value = Entity.GetPropertyValue(key.PropertyName);
-                    var parameter = TryAddParameter(key, value);
+                    var parameter = AddParameter(key, value);
 
                     // PK cannot be null here
                     container.AddWhere(key, parameter);
@@ -664,7 +655,7 @@ ELSE
                 {
                     var key = primaryKeys[i];
                     var value = Entity.GetPropertyValue(key.PropertyName);
-                    var parameter = TryAddParameter(key, value);
+                    var parameter = AddParameter(key, value);
 
                     // PK can be null here
                     if (value == null)

@@ -21,7 +21,7 @@ namespace OR_M_Data_Entities.Tests.Tables
         [DbGenerationOption(DbGenerationOption.Generate)]
         public Guid TestUnique { get; set; }
 
-        [MaxLength(2)]
+        [MaxLength(25)]
         public string FirstName { get; set; }
 
         public string LastName { get; set; }
