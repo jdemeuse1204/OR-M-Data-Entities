@@ -10,9 +10,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Commands;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
 using OR_M_Data_Entities.Expressions.Resolution.Join;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
@@ -58,10 +61,31 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             return _joins.Aggregate("",
                 (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
+
                     @join.HeirarchyContainsList ? "LEFT" : "INNER",
-                    string.Format("{0} As [{1}]", @join.ChildTable.TableInfo, @join.ChildTable.Alias),
-                    @join.ParentTable.Alias, @join.ParentTable.GetForeignKeyDatabaseColumnName(), @join.ChildTable.Alias,
+
+                    string.Format("{0} As [{1}]",
+                        @join.ChildTable.TableInfo.IsUsingLinkedServer
+                            ? _getLinkedServerJoinSubQuery(@join)
+                            : @join.ChildTable.TableInfo.ToString(),
+                        @join.ChildTable.Alias),
+
+                    @join.ParentTable.Alias,
+
+                    @join.ParentTable.GetForeignKeyDatabaseColumnName(),
+
+                    @join.ChildTable.Alias,
+
                     @join.ChildTable.GetForeignKeyDatabaseColumnName()));
+        }
+
+        private string _getLinkedServerJoinSubQuery(JoinTablePair pair)
+        {
+            var query = new SqlLinkedServerSelectBuilder();
+            query.Table(pair.ChildTable.Type);
+            query.SetValidation(pair);
+            query.SelectAll(pair);
+            return query.GetSql();
         }
 
         private string _getJoinName(JoinType joinType)
@@ -80,5 +104,43 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                     return "";
             }
         }
+
+        #region helpers 
+
+        private class SqlLinkedServerSelectBuilder : SqlQueryBuilder
+        {
+            private string _validation { get; set; }
+
+            public override string GetSql()
+            {
+                if (string.IsNullOrWhiteSpace(TableName) && string.IsNullOrWhiteSpace(StraightSelect))
+                {
+                    throw new QueryNotValidException("Table statement missing");
+                }
+
+                return string.Format("(SELECT {0} FROM [{1}] WHERE {2})", 
+                    Columns.TrimEnd(','),
+                    TableName.TrimStart('[').TrimEnd(']'),
+                    _validation);
+            }
+
+            public void SelectAll(JoinTablePair pair)
+            {
+                foreach (var column in pair.ChildTable.Type.GetProperties().Where(w => w.IsColumn()))
+                {
+                    Columns = string.Concat(Columns,
+                        string.Format("[{0}],", column.GetColumnName()));
+                }
+            }
+
+            public void SetValidation(JoinTablePair pair)
+            {
+                _validation = string.Format("[{0}] IN (SELECT DISTINCT [{1}] FROM {2})",
+                    pair.ChildTable.GetForeignKeyDatabaseColumnName(),
+                    pair.ParentTable.GetForeignKeyDatabaseColumnName(), 
+                    pair.ParentTable.TableInfo);
+            }
+        }
+        #endregion
     }
 }

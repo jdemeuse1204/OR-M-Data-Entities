@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using ORSigningPro.Common.Data;
+using ORSigningPro.Common.Data.Tables.SigningPro;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
 using OR_M_Data_Entities.Mapping;
@@ -13,7 +15,18 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
-            var context = new DbSqlContext("sqlExpress");
+            var context = new ORSigningProContext();
+
+            var closing = context.From<MobileClosing>().ToList();
+
+            closing[0].CustomerName = "";
+
+            context.SaveChanges(closing);
+
+            if (closing != null)
+            {
+                
+            }
 
             var contacts = context.From<Contact>().ToList();
 

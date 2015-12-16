@@ -20,6 +20,8 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
 
         public ForeignKeyTable ParentTable { get; private set; }
 
+        public bool IsLinkedServerJoin { get; private set; }
+
         // FK or PK property name from the parent
         public string ParentJoinPropertyName { get; private set; }
         #endregion
@@ -30,6 +32,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Join
             ChildTable = childTable;
             ParentTable = parentTable;
             HeirarchyContainsList = heirarchyContainsList;
+            IsLinkedServerJoin = childTable.TableInfo.IsUsingLinkedServer;
         }
 
         public JoinTablePair(Guid expressionQueryId, Type parentType, Type childType, bool heirarchyContainsList, string computedParentAlias,

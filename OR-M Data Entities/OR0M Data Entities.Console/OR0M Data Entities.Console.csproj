@@ -42,6 +42,51 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Child.cs" />
+    <Compile Include="ORSP\ORSigningProContext.cs" />
+    <Compile Include="ORSP\Support\MobileClosingAddressType.cs" />
+    <Compile Include="ORSP\Support\MobileClosingCorrectionStatus.cs" />
+    <Compile Include="ORSP\Support\MobileClosingOrderType.cs" />
+    <Compile Include="ORSP\Support\MobileClosingPaymentType.cs" />
+    <Compile Include="ORSP\Support\MobileClosingStatus.cs" />
+    <Compile Include="ORSP\Support\MobileClosingStepType.cs" />
+    <Compile Include="ORSP\Support\MobileClosingVendorStatus.cs" />
+    <Compile Include="ORSP\Support\OrderDetails.cs" />
+    <Compile Include="ORSP\Support\UserStatus.cs" />
+    <Compile Include="ORSP\Support\UserType.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\ApplicationLog.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\aspnet_JSONWebToken.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\aspnet_Membership.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\aspnet_Role.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\aspnet_Users.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\aspnet_UserVerification.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\MobileClosing.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\MobileClosingAddress.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\MobileClosingAssignment.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\MobileClosingCorrection.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\MobileClosingLock.cs" />
+    <Compile Include="ORSP\Tables\SigningPro\VendorLicense.cs" />
+    <Compile Include="ORSP\Tables\Temp\SigningProSelectMobileClosing.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Address.cs" />
+    <Compile Include="ORSP\Tables\Vinca\AncillaryProduct.cs" />
+    <Compile Include="ORSP\Tables\Vinca\AncillaryProduct_Vendor.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Ancillary_Note.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Contact.cs" />
+    <Compile Include="ORSP\Tables\Vinca\County.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Order.cs" />
+    <Compile Include="ORSP\Tables\Vinca\OrderAddress.cs" />
+    <Compile Include="ORSP\Tables\Vinca\OrderContact.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Order_Note.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Product.cs" />
+    <Compile Include="ORSP\Tables\Vinca\ProductType.cs" />
+    <Compile Include="ORSP\Tables\Vinca\State.cs" />
+    <Compile Include="ORSP\Tables\Vinca\Vendor.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorAddress.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorFeeByProduct.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorOrderStatus.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorPortalAccount.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorProduct.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorRanking.cs" />
+    <Compile Include="ORSP\Tables\Vinca\VendorStatus.cs" />
     <Compile Include="Parent.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -73,6 +118,7 @@
     <Content Include="Scripts\GetFirstName.sql" />
     <Content Include="Scripts2\GetLastName.sql" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

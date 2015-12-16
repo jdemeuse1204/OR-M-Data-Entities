@@ -90,6 +90,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Where
             {
                 var result = _evaluate(expression as dynamic, container, baseQuery, viewId, container.NextGroupNumber(), expressionType);
 
+                // resolutions might already be in the container, check to see if a connector exists at the end
+                if (container.Resolutions.Count != 0 && (!(container.Resolutions.Last() is SqlConnector)))
+                {
+                    container.AddConnector(ConnectorType.And);
+                }
+
                 container.AddResolution(result);
                 return;
             }
