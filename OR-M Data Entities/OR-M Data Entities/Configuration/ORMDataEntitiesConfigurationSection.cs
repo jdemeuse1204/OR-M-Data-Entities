@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace OR_M_Data_Entities.Configuration
 {
-    public class ORMDataEntitiesConfigurationSection
+    public sealed class ORMDataEntitiesConfigurationSection
             : ConfigurationSection
     {
         public const string SectionName = "ORMDataEntitiesConfigurationSection";
@@ -29,7 +29,7 @@ namespace OR_M_Data_Entities.Configuration
         }
     }
 
-    public class StoredSqlConfigurationElement : ConfigurationElement
+    public sealed class StoredSqlConfigurationElement : ConfigurationElement
     {
 
         [ConfigurationProperty("name", IsRequired = true)]
@@ -51,7 +51,7 @@ namespace OR_M_Data_Entities.Configuration
         }
     }
 
-    public class StoredSqlConfigurationCollection : ConfigurationElementCollection
+    public sealed class StoredSqlConfigurationCollection : ConfigurationElementCollection
     {
         public StoredSqlConfigurationElement First(string name)
         {

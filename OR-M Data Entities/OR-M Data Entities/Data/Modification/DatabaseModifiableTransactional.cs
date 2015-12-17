@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -57,7 +64,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly ConfigurationOptions _configuration;
 
-            public TransactionUpdateContainer(ModificationEntity entity, ConfigurationOptions configuration, string tableAlias) 
+            public TransactionUpdateContainer(ModificationEntity entity, ConfigurationOptions configuration, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;
@@ -69,31 +76,39 @@ namespace OR_M_Data_Entities.Data
                 Output = string.Concat(Output, string.Format(" INTO @{0}", _tableAlias));
                 //
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
-                var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3};", 
-                    
-                    Statement, 
-                    
-                    SetItems.TrimEnd(','), 
-                    
-                    Output, 
-                    
+                var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3};",
+
+                    Statement,
+
+                    SetItems.TrimEnd(','),
+
+                    Output,
+
                     Where.TrimEnd(','));
 
-                if (_configuration.Concurrency.IsOn && _configuration.Concurrency.ViolationRule == ConcurrencyViolationRule.ThrowException)
+                if (_configuration.ConcurrencyChecking.IsOn)
                 {
-                    var errorMessage = string.Format(SQL_CONCURRENCY_VIOLATION_MESSAGE, SqlFormattedTableName);
+                    if (_configuration.ConcurrencyChecking.ViolationRule == ConcurrencyViolationRule.ThrowException)
+                    {
+                        var errorMessage = string.Format(SQL_CONCURRENCY_VIOLATION_MESSAGE, SqlFormattedTableName);
 
-                    sql = string.Concat(sql,
-                        string.Format(
-                            "\rIF (NOT(EXISTS(SELECT TOP 1 1 FROM @{0})))\r\tBEGIN\r\t\tRAISERROR('{1}', {2}, {3})\r\tEND",
+                        sql = string.Concat(sql,
+                            string.Format(
+                                "\rIF (NOT(EXISTS(SELECT TOP 1 1 FROM @{0})))\r\tBEGIN\r\t\tRAISERROR('{1}', {2}, {3})\r\tEND",
 
-                            _tableAlias,
+                                _tableAlias,
 
-                            errorMessage,
+                                errorMessage,
 
-                            SQL_CONCURRENCY_VIOLATION_ERROR_SEVERITY,
+                                SQL_CONCURRENCY_VIOLATION_ERROR_SEVERITY,
 
-                            SQL_CONCURRENCY_VIOLATION_ERROR_STATE));
+                                SQL_CONCURRENCY_VIOLATION_ERROR_STATE));
+                    }
+                    else
+                    {
+                        // just need to make sure rows exists for concurrency checking
+                        sql = string.Concat(sql, string.Format("\rSELECT TOP 1 1 FROM @{0}", _tableAlias));
+                    }
                 }
 
                 var declare = string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariables.TrimEnd(','));
@@ -107,13 +122,14 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private class TransactionInsertContainer : InsertContainer
+        private class TransactionDeleteContainer : DeleteContainer
         {
             private string _tableVariables { get; set; }
 
             private readonly string _tableAlias;
 
-            public TransactionInsertContainer(ModificationEntity entity, string tableAlias) : base(entity)
+            public TransactionDeleteContainer(ModificationEntity entity, string tableAlias)
+                : base(entity)
             {
                 _tableAlias = tableAlias;
             }
@@ -125,14 +141,61 @@ namespace OR_M_Data_Entities.Data
 
             public override SqlPartStatement Split()
             {
-                var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} INTO @{3} VALUES ({4});\rSELECT {5} FROM @{3}", SqlFormattedTableName, _fields.TrimEnd(','), _output.TrimEnd(','), _tableAlias, _values.TrimEnd(','), _outputColumnsOnly.TrimEnd(',')
+                var sql = string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
+
+                return new SqlPartStatement(sql);
+            }
+        }
+
+        private class TransactionInsertContainer : InsertContainer
+        {
+            private string _tableVariables { get; set; }
+
+            private readonly string _tableAlias;
+
+            public TransactionInsertContainer(ModificationEntity entity, string tableAlias)
+                : base(entity)
+            {
+                _tableAlias = tableAlias;
+            }
+
+            public void AddTableVariable(ModificationItem item)
+            {
+                _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
+            }
+
+            public override SqlPartStatement Split()
+            {
+                // try insert does not need to select anything back, either it succeeded or didnt.
+                var selectBackStatement = !string.IsNullOrEmpty(_outputColumnsOnly)
+                    ? string.Format("\rSELECT {0} FROM @{1}", _outputColumnsOnly.TrimEnd(','), _tableAlias)
+                    : string.Empty;
+
+                var outputStatement = !string.IsNullOrEmpty(_output)
+                    ? string.Format(" OUTPUT {0} INTO @{1}", _output.TrimEnd(','), _tableAlias)
+                    : string.Empty;
+
+                var sql = string.Format("INSERT INTO [{0}] ({1}){2} VALUES ({3});{4}",
+
+                    SqlFormattedTableName,
+
+                    _fields.TrimEnd(','),
+
+                    outputStatement,
+
+                    _values.TrimEnd(','),
+
+                    selectBackStatement
 
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
                     // where the column is not the PK
                     );
 
-                _declare = string.Concat(_declare, string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariables.TrimEnd(',')));
+                if (!string.IsNullOrEmpty(_tableVariables))
+                {
+                    _declare = string.Concat(_declare, string.Format("DECLARE @{0} TABLE({1});\r", _tableAlias, _tableVariables.TrimEnd(',')));
+                }
 
                 return new SqlPartStatement(sql, _declare, _set);
             }
@@ -193,7 +256,8 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly Reference _reference;
 
-            public SqlTransactionInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference) : base(entity, sharedParameters)
+            public SqlTransactionInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference)
+                : base(entity, sharedParameters)
             {
                 _reference = reference;
             }
@@ -208,9 +272,17 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly Reference _reference;
 
-            public SqlTransactionTryInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference) : base(entity, sharedParameters)
+            public SqlTransactionTryInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference)
+                : base(entity, sharedParameters)
             {
                 _reference = reference;
+            }
+
+            public override ISqlPackage Build()
+            {
+                var insert = new SqlTransactionInsertPackage(this, Parameters, _reference);
+
+                return new SqlExistsPackage(this, Parameters, insert);
             }
         }
 
@@ -218,9 +290,24 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly Reference _reference;
 
-            public SqlTransactionTryInsertUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference) : base(entity, parameters)
+            private readonly ConfigurationOptions _configuration;
+
+            public SqlTransactionTryInsertUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, parameters)
             {
                 _reference = reference;
+                _configuration = configuration;
+            }
+
+            public override ISqlPackage Build()
+            {
+                // insert and update need to share (by reference) their parameters list so they are in sync and do not overlap keys
+                var insert = new SqlTransactionInsertPackage(this, Parameters, _reference);
+
+                // change table alias otherwise they will be the same and we will get errors
+                var update = new SqlTransactionUpdatePackage(this, Parameters, _reference, _configuration, string.Format("{0}_1", _reference.Alias));
+
+                return new SqlExistsPackage(this, Parameters, insert, update);
             }
         }
 
@@ -230,7 +317,8 @@ namespace OR_M_Data_Entities.Data
 
             private readonly ConfigurationOptions _configuration;
 
-            public SqlTransactionUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration) : base(entity, parameters)
+            public SqlTransactionUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, parameters)
             {
                 _reference = reference;
                 _configuration = configuration;
@@ -249,6 +337,11 @@ namespace OR_M_Data_Entities.Data
             public SqlTransactionDeleteBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference) : base(entity, parameters)
             {
                 _reference = reference;
+            }
+
+            public override ISqlPackage Build()
+            {
+                return new SqlDeletePackage(this, Parameters);
             }
         }
 
@@ -364,13 +457,40 @@ IF @@TRANCOUNT > 0
             }
         }
 
+        private class SqlTransactionDeletePackage : SqlDeletePackage
+        {
+            private readonly Reference _reference;
+
+            public SqlTransactionDeletePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference)
+                : base(builder, parameters)
+            {
+                _reference = reference;
+            }
+
+            protected override void AddWhere(ISqlContainer container, ModificationItem item)
+            {
+                ((TransactionDeleteContainer)container).AddTableVariable(item);
+
+                base.AddWhere(container, item);
+            }
+
+            protected override ISqlContainer NewContainer()
+            {
+                return new DeleteContainer(Entity);
+            }
+        }
+
         private class SqlTransactionInsertPackage : SqlInsertPackage
         {
             private readonly Reference _reference;
 
-            public SqlTransactionInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference) : base(builder, parameters)
+            private readonly string _tableAliasOverride;
+
+            public SqlTransactionInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference, string tableAliasOverride = null)
+                : base(builder, parameters)
             {
                 _reference = reference;
+                _tableAliasOverride = tableAliasOverride;
             }
 
             private ReferenceNode _getReferenceNode(ModificationItem item)
@@ -380,18 +500,19 @@ IF @@TRANCOUNT > 0
 
             protected override ISqlContainer NewContainer()
             {
-                return new TransactionInsertContainer(Entity, _reference.Alias);
+                return new TransactionInsertContainer(Entity,
+                    string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
             protected override void AddDbGenerationOptionNone(ISqlContainer container, ModificationItem item)
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
-                    ((TransactionInsertContainer) container).AddOutput(item);
+                    ((TransactionInsertContainer)container).AddOutput(item);
                     return;
                 }
 
-                ((TransactionInsertContainer) container).AddField(item);
+                ((TransactionInsertContainer)container).AddField(item);
 
                 // reference comes from a different table, should never have any generation options
                 var node = _getReferenceNode(item);
@@ -399,7 +520,7 @@ IF @@TRANCOUNT > 0
                 if (node != null)
                 {
                     // grab the reference from the other table
-                    ((TransactionInsertContainer) container).AddValue(node.GetOutputFieldValue());
+                    ((TransactionInsertContainer)container).AddValue(node.GetOutputFieldValue());
                     return;
                 }
 
@@ -407,19 +528,19 @@ IF @@TRANCOUNT > 0
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var data = AddParameter(item, value);
 
-                ((TransactionInsertContainer) container).AddValue(data);
+                ((TransactionInsertContainer)container).AddValue(data);
             }
 
             protected override void AddDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
             {
-                ((TransactionInsertContainer) container).AddTableVariable(item);
+                ((TransactionInsertContainer)container).AddTableVariable(item);
 
                 base.AddDbGenerationOptionGenerate(container, item);
             }
 
             protected override void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
             {
-                ((TransactionInsertContainer) container).AddTableVariable(item);
+                ((TransactionInsertContainer)container).AddTableVariable(item);
 
                 base.AddDbGenerationOptionIdentityAndDefault(container, item);
             }
@@ -431,21 +552,26 @@ IF @@TRANCOUNT > 0
 
             private readonly ConfigurationOptions _configuration;
 
-            public SqlTransactionUpdatePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration) : base(builder, parameters)
+            private readonly string _tableAliasOverride;
+
+            public SqlTransactionUpdatePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
+                : base(builder, parameters)
             {
                 _reference = reference;
                 _configuration = configuration;
+                _tableAliasOverride = tableAliasOverride;
             }
 
             protected override ISqlContainer NewContainer()
             {
-                return new TransactionUpdateContainer(Entity, _configuration, _reference.Alias);
+                return new TransactionUpdateContainer(Entity, _configuration,
+                    string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
             protected override void AddWhere(ISqlContainer container, ModificationItem item)
             {
                 // add the table variable, needed for concurrency checking
-                if (item.IsPrimaryKey) ((TransactionUpdateContainer) container).AddTableVariable(item);
+                if (item.IsPrimaryKey) ((TransactionUpdateContainer)container).AddTableVariable(item);
 
                 base.AddWhere(container, item);
             }
@@ -455,49 +581,96 @@ IF @@TRANCOUNT > 0
 
         #region Methods
 
-        private void _loadObjectFromMultipleActiveResults(ReferenceMap referenceMap)
+        private int _getNextReferenceIndex(int currentIndex, IReadOnlyList<UpdateType> saves)
         {
-            if (!Reader.HasRows)
+            for (var i = 0; i < saves.Count; i++)
             {
-                // close reader and connection
-                Connection.Close();
-                Reader.Close();
-                Reader.Dispose();
-                return;
+                var save = saves[i];
+
+                if (i > currentIndex && save != UpdateType.Skip) return i;
             }
 
-            var i = 0;
+            return -1;
+        }
 
-            // loads the data back into the object from the MARS data set
+        private List<UpdateType> _getActionsTaken(ReferenceMap referenceMap)
+        {
+            var currentSaveIndex = -1;// nothing
+            var concurrencyViolations = new List<object>();
+            var index = 0;
+            var result = new List<UpdateType>();
+
+            // loads the data that was deleted
             do
             {
                 // reference map and result sets are in the same order
-                var reference = referenceMap[i];
+                var reference = referenceMap[index];
 
                 if (!Reader.HasRows)
                 {
                     // check to see if there was a concurrency violation.  Other enum cases will be handled in different area
                     if (reference.Entity.UpdateType == UpdateType.Update &&
-                        Configuration.Concurrency.IsOn &&
-                        Configuration.Concurrency.ViolationRule == ConcurrencyViolationRule.UseHandler)
+                        Configuration.ConcurrencyChecking.IsOn &&
+                        Configuration.ConcurrencyChecking.ViolationRule == ConcurrencyViolationRule.UseHandler)
                     {
-                        // TODO, enter here?  Connections are still open....
-                        if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity);
-
-                        // make sure to increment the index for the reference map
-                        i++;
-                        continue;
+                        // connection is still open here, handle the concurrency violation later
+                        // if there is a concurrency violation do not load anytihng
+                        concurrencyViolations.Add(reference.Entity.Value);
                     }
-                    
 
-                    // TODO, do we need to continue if there are no records in the set? Im thinking yes
+                    // no rows?  Continue
+                    index++;
+                    result.Add(UpdateType.RowNotFound);
+                    continue;
+                }
+
+                index++;
+                result.Add(UpdateType.TransactionalDelete);
+            } while (Reader.NextResult()); // go to next result
+
+            // close reader and connection
+            Connection.Close();
+            Reader.Close();
+            Reader.Dispose();
+
+            return result;
+        } 
+
+        private void _loadObjectFromMultipleActiveResults(ReferenceMap referenceMap, IReadOnlyList<UpdateType> saves)
+        {
+            var currentSaveIndex = -1;// nothing
+            var concurrencyViolations = new List<object>();
+
+            // loads the data back into the object from the MARS data set
+            do
+            {
+                // get the save index 
+                currentSaveIndex = _getNextReferenceIndex(currentSaveIndex, saves);
+
+                // reference map and result sets are in the same order
+                var reference = referenceMap[currentSaveIndex];
+
+                if (!Reader.HasRows)
+                {
+                    // check to see if there was a concurrency violation.  Other enum cases will be handled in different area
+                    if (reference.Entity.UpdateType == UpdateType.Update &&
+                        Configuration.ConcurrencyChecking.IsOn &&
+                        Configuration.ConcurrencyChecking.ViolationRule == ConcurrencyViolationRule.UseHandler)
+                    {
+                        // connection is still open here, handle the concurrency violation later
+                        // if there is a concurrency violation do not load anytihng
+                        concurrencyViolations.Add(reference.Entity.Value);
+                    }
+
+                    // no rows?  Continue
+                    continue;
                 }
 
                 // Process all elements in the current result set
                 while (Reader.Read())
                 {
                     var keyContainer = new OutputContainer();
-                    var rec = (IDataRecord) Reader;
+                    var rec = (IDataRecord)Reader;
 
                     for (var j = 0; j < rec.FieldCount; j++)
                     {
@@ -513,20 +686,27 @@ IF @@TRANCOUNT > 0
                     }
                 }
 
-                // increment index
-                i++;
             } while (Reader.NextResult()); // go to next result
 
             // close reader and connection
             Connection.Close();
             Reader.Close();
             Reader.Dispose();
+
+            // handle concurrency violations
+            if (OnConcurrencyViolation == null) return;
+
+            // handle here so the connection is not left open
+            foreach (var violation in concurrencyViolations)
+            {
+                OnConcurrencyViolation(violation);
+            }
         }
 
-        public virtual bool _saveChangesUsingTransactions<T>(T entity) where T : class
+        private bool _saveChangesUsingTransactions<T>(T entity) where T : class
         {
             var saves = new List<UpdateType>();
-            var parent = new ModificationEntity(entity);
+            var parent = new ModificationEntity(entity, Configuration);
 
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
@@ -552,7 +732,7 @@ IF @@TRANCOUNT > 0
                         builder.Add(new SqlTransactionTryInsertBuilder(reference.Entity, parameters, reference));
                         break;
                     case UpdateType.TryInsertUpdate:
-                        builder.Add(new SqlTransactionTryInsertUpdateBuilder(reference.Entity, parameters, reference));
+                        builder.Add(new SqlTransactionTryInsertUpdateBuilder(reference.Entity, parameters, reference, Configuration));
                         break;
                     case UpdateType.Update:
                         builder.Add(new SqlTransactionUpdateBuilder(reference.Entity, parameters, reference, Configuration));
@@ -572,7 +752,7 @@ IF @@TRANCOUNT > 0
                 ExecuteReader(builder);
 
                 // load back the data from the save into the model
-                _loadObjectFromMultipleActiveResults(referenceMap);
+                _loadObjectFromMultipleActiveResults(referenceMap, saves);
 
                 // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
                 // Object needs to be loaded with the data from the database first
@@ -588,6 +768,51 @@ IF @@TRANCOUNT > 0
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 
             return saves.Any(w => w != UpdateType.Skip);
+        }
+
+        private bool _deleteUsingTransactions<T>(T entity)
+            where T : class
+        {
+            var parent = new DeleteEntity(entity, Configuration);
+
+            // get all items to save and get them in order
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+            var parameters = new List<SqlSecureQueryParameter>();
+            var builder = new SqlTransactionBuilder(referenceMap, parameters);
+
+            // reverse the order to back them out of the database
+            referenceMap.Reverse();
+
+            for (var i = 0; i < referenceMap.Count; i++)
+            {
+                var reference = referenceMap[i];
+
+                if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
+
+                builder.Add(new SqlTransactionDeleteBuilder(reference.Entity, parameters, reference));
+            }
+
+            if (OnSaving != null) OnSaving(entity);
+
+            // execute the sql
+            ExecuteReader(builder);
+
+            // check to see if the rows were deleted or not
+            var saves = _getActionsTaken(referenceMap);
+
+            // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
+            // Object needs to be loaded with the data from the database first
+            for (var i = 0; i < referenceMap.Count; i++)
+            {
+                var reference = referenceMap[i];
+
+                // set the pristine state only if entity tracking is on
+                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+            }
+
+            if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
+
+            return saves.Any(w => w == UpdateType.TransactionalDelete);
         }
 
         #endregion

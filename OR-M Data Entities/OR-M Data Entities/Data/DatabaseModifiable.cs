@@ -61,6 +61,9 @@ namespace OR_M_Data_Entities.Data
         public virtual bool SaveChanges<T>(T entity)
             where T : class
         {
+            // check the configuration first
+            _checkConfiguration();
+
             return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
         }
         #endregion
@@ -69,42 +72,10 @@ namespace OR_M_Data_Entities.Data
 
         public virtual bool Delete<T>(T entity) where T : class
         {
-            var saves = new List<UpdateType>();
-            var parent = new DeleteEntity(entity);
+            // check the configuration first
+            _checkConfiguration();
 
-            // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
-
-            // reverse the order to back them out of the database
-            referenceMap.Reverse();
-
-            for (var i = 0; i < referenceMap.Count; i++)
-            {
-                var reference = referenceMap[i];
-
-                if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, UpdateType.Delete);
-
-                var builder = new SqlDeleteBuilder(reference.Entity);
-
-                if (OnSaving != null) OnSaving(reference.Entity.Value);
-
-                // execute the sql
-                ExecuteReader(builder);
-
-                // we return the deleted id's to check and see if anything was deleted
-                var keyContainer = GetOutput();
-                var actionTaken = keyContainer.Count > 0 ? UpdateType.Delete : UpdateType.RowNotFound;
-
-                // add the save to the list so we can tell the user what the save action did
-                saves.Add(actionTaken);
-
-                // set the pristine state only if entity tracking is on
-                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
-
-                if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, actionTaken);
-            }
-
-            return saves.Any(w => w == UpdateType.Delete);
+            return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
         }
 
         #endregion
@@ -121,9 +92,12 @@ namespace OR_M_Data_Entities.Data
 
             private readonly List<object> _internal;
 
-            public ReferenceMap()
+            private readonly ConfigurationOptions _configuration;
+
+            public ReferenceMap(ConfigurationOptions configuration)
             {
                 _internal = new List<object>();
+                _configuration = configuration;
             }
 
             public void Add(ModificationEntity entity)
@@ -135,7 +109,7 @@ namespace OR_M_Data_Entities.Data
             {
                 var parentIndex = _indexOf(association.Parent);
 
-                _insert(parentIndex + 1, value, association);
+                _insert(parentIndex + 1, value, association, _configuration);
 
                 // add the references
                 var index = _indexOf(value);
@@ -153,7 +127,7 @@ namespace OR_M_Data_Entities.Data
             {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
-                _insert(oneToOneParentIndex, association.Value, association);
+                _insert(oneToOneParentIndex, association.Value, association, _configuration);
 
                 var oneToOneIndex = _indexOf(association.Parent);
                 var childIndex = _indexOf(association.Value);
@@ -171,9 +145,9 @@ namespace OR_M_Data_Entities.Data
                 return _internal.IndexOf(entity);
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, ConfigurationOptions configuration)
             {
-                _internal.Insert(index, new Reference(entity, _nextAlias(), association));
+                _internal.Insert(index, new Reference(entity, _nextAlias(), configuration, association));
             }
 
             private string _nextAlias()
@@ -268,8 +242,8 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, ForeignKeyAssociation association = null) :
-                this(new ModificationEntity(entity), alias, association)
+            public Reference(object entity, string alias, ConfigurationOptions configuration, ForeignKeyAssociation association = null) :
+                this(new ModificationEntity(entity, configuration), alias, association)
             {
             }
 
@@ -313,7 +287,7 @@ namespace OR_M_Data_Entities.Data
         {
             public static ReferenceMap GetReferenceMap(ModificationEntity entity, ConfigurationOptions options)
             {
-                var result = new ReferenceMap();
+                var result = new ReferenceMap(options);
                 var useTransactions = options.UseTransactions;
                 var entities = _getForeignKeys(entity.Value);
 
@@ -340,9 +314,8 @@ namespace OR_M_Data_Entities.Data
                     // skip lookup tables
                     if (tableInfo.IsLookupTable) continue;
 
-                    // skip children(foreign keys) if option is set
-                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip)
-                        continue;
+                    // skip children(foreign keys) if option is set 
+                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip) continue;
 
                     if (e.Value == null)
                     {
@@ -401,6 +374,21 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
+
+        private void _checkConfiguration()
+        {
+            const string errorMessage = "Keys not configured correctly, must have at at least one key for option: {0}";
+
+            if (Configuration.InsertKeys.Int == null || !Configuration.InsertKeys.Int.Any())
+            {
+                throw new Exception(string.Format(errorMessage, "Integer"));
+            }
+
+            if (Configuration.InsertKeys.UniqueIdentifier == null || !Configuration.InsertKeys.UniqueIdentifier.Any())
+            {
+                throw new Exception(string.Format(errorMessage, "UniqueIdentifier"));
+            }
+        }
 
         private static List<ForeignKeyAssociation> _getForeignKeys(object entity)
         {

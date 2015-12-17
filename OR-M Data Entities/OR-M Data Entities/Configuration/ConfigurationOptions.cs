@@ -1,36 +1,36 @@
-﻿using OR_M_Data_Entities.Enumeration;
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Configuration
 {
-    public class ConfigurationOptions
+    public sealed class ConfigurationOptions
     {
         public ConfigurationOptions(bool useTransactions)
         {
             IsLazyLoading = false;
             UseTransactions = useTransactions;
 
-            Concurrency = new ConcurrencyConfiguration
+            ConcurrencyChecking = new ConcurrencyConfiguration
             {
                 ViolationRule = ConcurrencyViolationRule.Continue,
                 IsOn = true
             };
+
+            InsertKeys = new KeyConfiguration();
         }
 
         public bool IsLazyLoading { get; set; }
-
+        
         public bool UseTransactions { get; set; }
 
-        public ConcurrencyConfiguration Concurrency { get; private set; }
+        public ConcurrencyConfiguration ConcurrencyChecking { get; private set; }
 
-        private class SqlIntegerOptions
-        {
-            
-        }
-
-        private enum SqlIntegerInsertType
-        {
-            Zero,
-            ZeroMin
-        }
+        public KeyConfiguration InsertKeys { get; private set; }
     }
 }

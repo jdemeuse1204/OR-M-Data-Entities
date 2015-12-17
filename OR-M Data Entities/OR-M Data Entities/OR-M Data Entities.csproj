@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Configuration\ConcurrencyConfiguration.cs" />
     <Compile Include="Configuration\ConfigurationOptions.cs" />
+    <Compile Include="Configuration\KeyConfiguration.cs" />
     <Compile Include="Data\Definition\DeleteEntity.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableTransactional.cs" />
@@ -170,8 +171,6 @@
     <Compile Include="Scripts\ScalarFunction.cs" />
     <Compile Include="Scripts\StoredProcedure.cs" />
     <Compile Include="Scripts\StoredScript.cs" />
-    <Compile Include="Tracking\EntityCloner.cs" />
-    <Compile Include="Tracking\EntityStateAnalyzer.cs" />
     <Compile Include="Tracking\EntityStateTrackable.cs" />
   </ItemGroup>
   <ItemGroup>

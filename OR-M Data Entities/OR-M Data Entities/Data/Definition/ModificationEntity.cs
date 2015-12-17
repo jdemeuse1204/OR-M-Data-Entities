@@ -1,7 +1,15 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
@@ -23,18 +31,18 @@ namespace OR_M_Data_Entities.Data.Definition
         #endregion
 
         #region Constructor
-        public ModificationEntity(object entity) 
-            : this(entity, false)
+        public ModificationEntity(object entity, ConfigurationOptions configuration) 
+            : this(entity, false, configuration)
         {
         }
 
-        protected ModificationEntity(object entity, bool isDeleting)
+        protected ModificationEntity(object entity, bool isDeleting, ConfigurationOptions configuration)
             : base(entity)
         {
             // do not initialize when deleting because we will get unnecessary errors
             if (isDeleting) return;
 
-            _initialize();
+            _initialize(configuration);
         }
         #endregion
 
@@ -127,7 +135,7 @@ namespace OR_M_Data_Entities.Data.Definition
             }
         }
 
-        private void _initialize()
+        private void _initialize(ConfigurationOptions configuration)
         {
             var primaryKeys = GetPrimaryKeys();
             var columns = Properties.Where(w => !IsPrimaryKey(w)).ToList();
@@ -161,31 +169,33 @@ namespace OR_M_Data_Entities.Data.Definition
 
                 if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
 
+                if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", key.GetColumnName()));
+
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (pkValue.GetType().Name.ToUpper())
                 {
                     case "INT16":
-                        isUpdating = Convert.ToInt16(pkValue) != 0;
+                        isUpdating = !configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT16";
                         break;
                     case "INT32":
-                        isUpdating = Convert.ToInt32(pkValue) != 0;
+                        isUpdating = !configuration.InsertKeys.Int.Contains(Convert.ToInt32(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT32";
                         break;
                     case "INT64":
-                        isUpdating = Convert.ToInt64(pkValue) != 0;
+                        isUpdating = !configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT64";
                         break;
                     case "GUID":
-                        isUpdating = (Guid)pkValue != Guid.Empty;
+                        isUpdating = !configuration.InsertKeys.UniqueIdentifier.Contains((Guid)pkValue);
                         pkValueTypeString = "zero";
                         pkValueType = "INT16";
                         break;
                     case "STRING":
-                        isUpdating = !string.IsNullOrWhiteSpace(pkValue.ToString());
+                        isUpdating = !configuration.InsertKeys.String.Contains(pkValue.ToString());
                         pkValueTypeString = "null/blank";
                         pkValueType = "STRING";
                         break;
@@ -275,6 +285,25 @@ namespace OR_M_Data_Entities.Data.Definition
             if (field == null) throw new SqlSaveException("Cannot find Pristine Entity");
 
             field.SetValue(instance, EntityCloner.Clone(instance));
+        }
+        #endregion
+
+        #region helpers
+        private static class EntityCloner
+        {
+            public static object Clone(object table)
+            {
+                var instance = Activator.CreateInstance(table.GetType());
+
+                foreach (var item in table.GetType().GetProperties().Where(w => w.IsColumn()))
+                {
+                    var value = item.GetValue(table);
+
+                    instance.GetType().GetProperty(item.Name).SetValue(instance, value);
+                }
+
+                return instance;
+            }
         }
         #endregion
     }

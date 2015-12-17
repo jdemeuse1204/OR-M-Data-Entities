@@ -19,8 +19,15 @@ namespace OR0M_Data_Entities.Console
             : base("sqlExpress")
         {
             Configuration.UseTransactions = true;
-            Configuration.Concurrency.IsOn = true;
-            Configuration.Concurrency.ViolationRule = ConcurrencyViolationRule.ThrowException;
+            Configuration.ConcurrencyChecking.IsOn = true;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.Continue;
+
+            OnConcurrencyViolation += OnOnConcurrencyViolation;
+        }
+
+        private void OnOnConcurrencyViolation(object entity)
+        {
+            
         }
     }
 
@@ -107,11 +114,11 @@ namespace OR0M_Data_Entities.Console
             //    }
             //};
 
-            var x = context.Find<Contact>(2079);
+            var x = context.Find<Contact>(2077);
 
             x.FirstName = "WINss";
 
-            context.SaveChanges(x);
+            context.Delete(x);
 
             //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
             //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");

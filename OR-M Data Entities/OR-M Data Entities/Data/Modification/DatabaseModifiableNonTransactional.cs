@@ -1,4 +1,11 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -195,37 +202,37 @@ namespace OR_M_Data_Entities.Data
 
         private class DeleteContainer : SqlModificationContainer, ISqlContainer
         {
-            private string _where { get; set; }
+            protected string Where { get; set; }
 
-            private readonly string _output;
+            protected string Output { get; set; }
 
-            private readonly string _statement;
+            protected readonly string Statement;
 
             public DeleteContainer(ModificationEntity entity)
                 : base(entity)
             {
-                _output = entity.GetPrimaryKeys()
+                Output = entity.GetPrimaryKeys()
                     .Select(w => w.GetColumnName())
                     .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
                     .TrimEnd(',');
                 
-                _where = string.Empty;
-                _statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
+                Where = string.Empty;
+                Statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
             }
 
             public void AddWhere(ModificationItem item, string parameterKey)
             {
-                _where = string.Concat(_where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
+                Where = string.Concat(Where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
             }
 
             public void AddNullWhere(ModificationItem item)
             {
-                _where = string.Concat(_where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
+                Where = string.Concat(Where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
             }
 
             private string _getWherePrefix()
             {
-                return string.IsNullOrEmpty(_where) ? string.Empty : " AND ";
+                return string.IsNullOrEmpty(Where) ? string.Empty : " AND ";
             }
 
             public string Resolve()
@@ -233,9 +240,9 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public SqlPartStatement Split()
+            public virtual SqlPartStatement Split()
             {
-                var sql = string.Format("{0} {1} WHERE {2}", _statement, _output, _where.TrimEnd(','));
+                var sql = string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
 
                 return new SqlPartStatement(sql);
             }
@@ -601,6 +608,10 @@ ELSE
 
             protected virtual void AddUpdate(ISqlContainer container, ModificationItem item)
             {
+                // Cannot update these types of fields
+                if (item.Generation == DbGenerationOption.DbDefault || 
+                    item.Generation == DbGenerationOption.IdentitySpecification) return;
+
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);
 
@@ -680,12 +691,27 @@ ELSE
 
             protected override ISqlContainer NewContainer()
             {
-                throw new NotImplementedException();
+                return new DeleteContainer(Entity);
+            }
+
+            protected virtual void AddWhere(ISqlContainer container, ModificationItem item)
+            {
+                var value = Entity.GetPropertyValue(item.PropertyName);
+                var parameter = AddParameter(item, value);
+
+                // PK can be null here
+                if (value == null)
+                {
+                    ((DeleteContainer)container).AddNullWhere(item);
+                    return;
+                }
+
+                ((DeleteContainer)container).AddWhere(item, parameter);
             }
 
             public override ISqlContainer CreatePackage()
             {
-                var container = new DeleteContainer(Entity);
+                var container = (DeleteContainer)NewContainer();
 
                 // keys are not part of changes so we need to grab them
                 var primaryKeys = Entity.Keys();
@@ -694,17 +720,8 @@ ELSE
                 for (var i = 0; i < primaryKeys.Count; i++)
                 {
                     var key = primaryKeys[i];
-                    var value = Entity.GetPropertyValue(key.PropertyName);
-                    var parameter = AddParameter(key, value);
 
-                    // PK can be null here
-                    if (value == null)
-                    {
-                        container.AddNullWhere(key);
-                        continue;
-                    }
-
-                    container.AddWhere(key, parameter);
+                    AddWhere(container, key);
                 }
 
                 return container;
@@ -720,13 +737,13 @@ ELSE
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <returns></returns>
-        public virtual bool _saveChanges<T>(T entity)
+        private bool _saveChanges<T>(T entity)
             where T : class
         {
             try
             {
                 var saves = new List<UpdateType>();
-                var parent = new ModificationEntity(entity);
+                var parent = new ModificationEntity(entity, Configuration);
 
                 // get all items to save and get them in order
                 var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
@@ -778,13 +795,14 @@ ELSE
 
                     // check for concurrency violation
                     var hasConcurrencyViolation = reference.Entity.UpdateType == UpdateType.Update &&
-                                                  keyContainer.Count == 0;
+                                                  keyContainer.Count == 0 &&
+                                                  Configuration.ConcurrencyChecking.IsOn;
 
                     // processing for concurrency violation
                     if (hasConcurrencyViolation)
                     {
                         // violation occurred, choose what to do
-                        switch (Configuration.Concurrency.ViolationRule)
+                        switch (Configuration.ConcurrencyChecking.ViolationRule)
                         {
                             case ConcurrencyViolationRule.ThrowException:
                                 throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.PlainTableName));
@@ -825,6 +843,49 @@ ELSE
             }
         }
 
+        private bool _delete<T>(T entity) 
+            where T : class
+        {
+            // check the configuration first
+            _checkConfiguration();
+
+            var saves = new List<UpdateType>();
+            var parent = new DeleteEntity(entity, Configuration);
+
+            // get all items to save and get them in order
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+
+            // reverse the order to back them out of the database
+            referenceMap.Reverse();
+
+            for (var i = 0; i < referenceMap.Count; i++)
+            {
+                var reference = referenceMap[i];
+
+                if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, UpdateType.Delete);
+
+                var builder = new SqlDeleteBuilder(reference.Entity);
+
+                if (OnSaving != null) OnSaving(reference.Entity.Value);
+
+                // execute the sql
+                ExecuteReader(builder);
+
+                // we return the deleted id's to check and see if anything was deleted
+                var keyContainer = GetOutput();
+                var actionTaken = keyContainer.Count > 0 ? UpdateType.Delete : UpdateType.RowNotFound;
+
+                // add the save to the list so we can tell the user what the save action did
+                saves.Add(actionTaken);
+
+                // set the pristine state only if entity tracking is on
+                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+
+                if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, actionTaken);
+            }
+
+            return saves.Any(w => w == UpdateType.Delete);
+        }
         #endregion
     }
 }
