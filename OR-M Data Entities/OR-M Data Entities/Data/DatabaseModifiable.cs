@@ -15,6 +15,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
+using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
@@ -61,7 +62,7 @@ namespace OR_M_Data_Entities.Data
         public virtual bool SaveChanges<T>(T entity)
             where T : class
         {
-            // check the configuration first
+            // check the configuration first, make sure its setup correctly
             _checkConfiguration();
 
             return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
@@ -72,7 +73,7 @@ namespace OR_M_Data_Entities.Data
 
         public virtual bool Delete<T>(T entity) where T : class
         {
-            // check the configuration first
+            // check the configuration first, make sure its setup correctly
             _checkConfiguration();
 
             return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
@@ -306,11 +307,6 @@ namespace OR_M_Data_Entities.Data
                     var foreignKeyIsList = e.Property.IsList();
                     var tableInfo = new Table(e.Property.GetPropertyType());
 
-                    if (e.Value == null && !useTransactions)
-                    {
-                        throw new SqlSaveException(string.Format("Foreign Key [{0}] cannot be null", tableInfo.TableNameOnly));
-                    }
-
                     // skip lookup tables
                     if (tableInfo.IsLookupTable) continue;
 
@@ -321,7 +317,7 @@ namespace OR_M_Data_Entities.Data
                     {
                         if (foreignKeyIsList) continue;
 
-                        var columnName = e.ChildType.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
+                        var columnName = e.Property.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
                         var isNullable = e.Parent.GetType().GetProperty(columnName).PropertyType.IsNullable();
 
                         // we can skip the foreign key if its nullable and one to one
@@ -398,6 +394,76 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region shared
+        /// <summary>
+        /// Provides us a way to get the execution plan for an entity
+        /// </summary>
+        private abstract class SqlExecutionPlan : ISqlBuilder
+        {
+            #region Constructor
+            protected SqlExecutionPlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters)
+            {
+                Entity = entity;
+                Parameters = parameters;
+            }
+            #endregion
+
+            #region Properties and Fields
+            public ModificationEntity Entity { get; private set; }
+
+            protected readonly List<SqlSecureQueryParameter> Parameters;
+            #endregion
+
+            #region Methods
+            public abstract ISqlPackage Build();
+
+            public SqlCommand BuildSqlCommand(SqlConnection connection)
+            {
+                // build the sql package
+                var package = Build();
+
+                // generate the sql command
+                var command = new SqlCommand(package.GetSql(), connection);
+
+                // insert the parameters
+                package.InsertParameters(command);
+
+                return command;
+            }
+
+            #endregion
+        }
+
+        private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
+        {
+            #region Constructor
+            protected SqlModificationPackage(ISqlBuilder plan, List<SqlSecureQueryParameter> parameters)
+                : base(parameters)
+            {
+                Entity = plan.Entity;
+            }
+            #endregion
+
+            #region Properties
+
+            protected readonly ModificationEntity Entity;
+            #endregion
+
+            #region Methods
+
+            protected abstract ISqlContainer NewContainer();
+
+            public abstract ISqlContainer CreatePackage();
+
+            public string GetSql()
+            {
+                var container = CreatePackage();
+
+                return container.Resolve();
+            }
+
+            #endregion
+        }
+
         private class ForeignKeyAssociation
         {
             public ForeignKeyAssociation(object parent, object value, PropertyInfo property)

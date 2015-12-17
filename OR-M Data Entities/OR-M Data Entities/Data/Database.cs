@@ -26,7 +26,7 @@ namespace OR_M_Data_Entities.Data
 
         protected PeekDataReader Reader { get; set; }
 
-        public ConfigurationOptions Configuration { get; private set; }
+        protected ConfigurationOptions Configuration { get; private set; }
         #endregion
 
         protected Database(string connectionStringOrName)
@@ -44,7 +44,7 @@ namespace OR_M_Data_Entities.Data
                 ConnectionString = conn.ConnectionString;
             }
 
-            // make sure MARS is enabled, it is needed for transactions
+            // check to see if MARS is enabled, it is needed for transactions
             Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString));
 
             Connection = new SqlConnection(ConnectionString);

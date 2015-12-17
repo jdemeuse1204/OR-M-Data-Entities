@@ -18,7 +18,7 @@ namespace OR_M_Data_Entities.Configuration
 
             ConcurrencyChecking = new ConcurrencyConfiguration
             {
-                ViolationRule = ConcurrencyViolationRule.Continue,
+                ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue,
                 IsOn = true
             };
 

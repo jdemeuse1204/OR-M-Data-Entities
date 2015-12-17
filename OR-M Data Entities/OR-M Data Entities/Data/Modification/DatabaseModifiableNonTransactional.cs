@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
@@ -256,78 +255,6 @@ namespace OR_M_Data_Entities.Data
             }
 
             protected readonly string SqlFormattedTableName;
-        }
-        #endregion
-
-        #region Base
-        /// <summary>
-        /// Provides us a way to get the execution plan for an entity
-        /// </summary>
-        private abstract class SqlExecutionPlan : ISqlBuilder
-        {
-            #region Constructor
-            protected SqlExecutionPlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters)
-            {
-                Entity = entity;
-                Parameters = parameters;
-            }
-            #endregion
-
-            #region Properties and Fields
-            public ModificationEntity Entity { get; private set; }
-
-            protected readonly List<SqlSecureQueryParameter> Parameters;
-            #endregion
-
-            #region Methods
-            public abstract ISqlPackage Build();
-
-            public SqlCommand BuildSqlCommand(SqlConnection connection)
-            {
-                // build the sql package
-                var package = Build();
-
-                // generate the sql command
-                var command = new SqlCommand(package.GetSql(), connection);
-
-                // insert the parameters
-                package.InsertParameters(command);
-
-                return command;
-            }
-
-            #endregion
-        }
-
-        private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
-        {
-            #region Constructor
-            protected SqlModificationPackage(ISqlBuilder plan, List<SqlSecureQueryParameter> parameters)
-                : base(parameters)
-            {
-                Entity = plan.Entity;
-            }
-            #endregion
-
-            #region Properties
-
-            protected readonly ModificationEntity Entity;
-            #endregion
-
-            #region Methods
-
-            protected abstract ISqlContainer NewContainer();
-
-            public abstract ISqlContainer CreatePackage();
-
-            public string GetSql()
-            {
-                var container = CreatePackage();
-
-                return container.Resolve();
-            }
-
-            #endregion
         }
         #endregion
 
@@ -806,10 +733,10 @@ ELSE
                         {
                             case ConcurrencyViolationRule.ThrowException:
                                 throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.PlainTableName));
-                            case ConcurrencyViolationRule.Continue:
+                            case ConcurrencyViolationRule.OverwriteAndContinue:
                                 break;
                             case ConcurrencyViolationRule.UseHandler:
-                                if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity);
+                                if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity.Value);
                                 break;
                         }   
                     }

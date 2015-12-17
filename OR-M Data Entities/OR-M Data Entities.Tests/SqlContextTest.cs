@@ -20,12 +20,71 @@ namespace OR_M_Data_Entities.Tests
         }
     }
 
+    #region Contexts
+    public class TransactionContext : DbSqlContext
+    {
+        public TransactionContext()
+            : base("sqlExpress")
+        {
+        }
+    }
+
+    public class ConcurrencyExceptionContext : DbSqlContext
+    {
+        public ConcurrencyExceptionContext()
+            : base("sqlExpress")
+        {
+            Configuration.UseTransactions = false;
+            Configuration.ConcurrencyChecking.IsOn = true;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.ThrowException;
+        }
+    }
+
+    public class ConcurrencyHandleContext : DbSqlContext
+    {
+        public ConcurrencyHandleContext()
+            : base("sqlExpress")
+        {
+            Configuration.UseTransactions = false;
+            Configuration.ConcurrencyChecking.IsOn = true;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.UseHandler;
+        }
+    }
+
+    public class ConcurrencyContinueContext : DbSqlContext
+    {
+        public ConcurrencyContinueContext()
+            : base("sqlExpress")
+        {
+            Configuration.UseTransactions = false;
+            Configuration.ConcurrencyChecking.IsOn = true;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
+        }
+    }
+
+    public class DefaultContext : DbSqlContext
+    {
+        public DefaultContext()
+            : base("sqlExpress")
+        {
+            Configuration.UseTransactions = false;
+            Configuration.ConcurrencyChecking.IsOn = false;
+        }
+    }
+    #endregion
+
     // TODO FIX LINKED SERVER LATENCY ISSUE! LOOK AT 2.3.4 Branch for the fix
     [TestClass]
     public class SqlContextTest
     {
-        private readonly DbSqlContext ctx = new DbSqlContext("sqlExpress");
+        private readonly DefaultContext ctx = new DefaultContext();
+        private readonly DefaultContext ctx2 = new DefaultContext();
+        private readonly ConcurrencyContinueContext ccCtx = new ConcurrencyContinueContext();
+        private readonly ConcurrencyHandleContext chCtx = new ConcurrencyHandleContext();
+        private readonly ConcurrencyExceptionContext ceCtx = new ConcurrencyExceptionContext();
+        private readonly TransactionContext tCtx = new TransactionContext();
 
+        #region Non Transaction Tests
         [TestMethod]
         public void Test_1()
         {
@@ -421,37 +480,72 @@ namespace OR_M_Data_Entities.Tests
         {
             try
             {
-                // Save and retrieve with a null FK
-                var pizza = new Pizza
+                // Save with nullable foreign key
+                var contact = new Contact
                 {
-                    CookTime = 35,
-                    Name = "Deep Dish",
-                    Topping = new Topping
+                    CreatedBy = new User
                     {
-                        Cost = .20m,
-                        Name = "Onion"
+                        Name = "James Demeuse"
                     },
-                    Crust = new Crust
+                    EditedBy = new User
                     {
-                        Name = "Stuffed"
+                        Name = "Different User"
                     },
-                    DeliveryMan = new DeliveryMan
+                    FirstName = "Test",
+                    LastName = "User",
+                    Names = new List<Name>
                     {
-                        AverageDeliveryTime = 15,
-                        FirstName = "James",
-                        LastName = "Demeuse",
-                        CreateDate = BitConverter.GetBytes(DateTime.Now.ToOADate())
+                        new Name
+                        {
+                            Value = "Win!"
+                        },
+                        new Name
+                        {
+                            Value = "FTW!"
+                        }
+                    },
+                    Appointments = new List<Appointment>
+                    {
+                        new Appointment
+                        {
+                            Description = "Appointment 1",
+                            IsScheduled = false,
+                            Address = new List<Address>
+                            {
+                                new Address
+                                {
+                                    Addy = "1234 First Ave South",
+                                    State = new StateCode
+                                    {
+                                        Value = "MN"
+                                    },
+                                    ZipCode = new List<Zip>
+                                    {
+                                        new Zip
+                                        {
+                                            Zip4 = "5412",
+                                            Zip5 = "55555"
+                                        },
+                                        new Zip
+                                        {
+                                            Zip5 = "12345"
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 };
 
-                ctx.SaveChanges(pizza);
+                ctx.SaveChanges(contact);
 
-                var that = ctx.Find<Pizza>(pizza.Id);
+                var that = ctx.Find<Contact>(contact.ContactID);
 
-                Assert.IsTrue(that != null && that.Crust.Topping == null);
+                Assert.IsTrue(that != null && that.Number == null);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.Write(ex.Message);
                 Assert.IsTrue(false);
             }
         }
@@ -1235,6 +1329,1363 @@ namespace OR_M_Data_Entities.Tests
                 Assert.IsTrue(false);
             }
         }
+        #endregion
+
+        #region Transaction Tests
+        [TestMethod]
+        public void Test_T_1()
+        {
+            // Disconnnect Test With Execute Query
+            tCtx.ExecuteQuery("Select Top 1 1");
+
+            var state = tCtx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
+
+        [TestMethod]
+        public void Test_T_2()
+        {
+            // Disconnnect Test With Execute Query
+            var result = tCtx.ExecuteQuery<int>("Select Top 1 1").First();
+
+            var state = tCtx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
+
+        [TestMethod]
+        public void Test_T_3()
+        {
+            // Add one record, no foreign keys
+            // make sure it has an id
+            var policy = _addPolicy();
+
+            Assert.IsTrue(policy.Id != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_4()
+        {
+            // Test find method
+            var policy = _addPolicy();
+
+            var foundEntity = tCtx.Find<Policy>(policy.Id);
+
+            Assert.IsTrue(foundEntity != null);
+        }
+
+        [TestMethod]
+        public void Test_T_5()
+        {
+            // Test first or default method
+            var policy = _addPolicy();
+
+            var foundEntity = tCtx.From<Policy>().FirstOrDefault(w => w.Id == policy.Id);
+
+            Assert.IsTrue(foundEntity != null);
+        }
+
+        [TestMethod]
+        public void Test_T_6()
+        {
+            // Test where with first or default method
+            var policy = _addPolicy();
+
+            var foundEntity = tCtx.From<Policy>().Where(w => w.Id == policy.Id).FirstOrDefault();
+
+            Assert.IsTrue(foundEntity != null);
+        }
+
+        [TestMethod]
+        public void Test_T_7()
+        {
+            // Delete one record, no foreign keys
+            var policy = _addPolicy();
+
+            tCtx.Delete(policy);
+
+            var foundEntity = tCtx.Find<Policy>(policy.Id);
+
+            Assert.IsTrue(foundEntity == null);
+        }
+
+        [TestMethod]
+        public void Test_T_8()
+        {
+            // Test Disconnect with expression query
+            var policy = _addPolicy();
+
+            var foundEntity = tCtx.From<Policy>().Where(w => w.Id == policy.Id).FirstOrDefault();
+
+            var state = tCtx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+        }
+
+        [TestMethod]
+        public void Test_T_9()
+        {
+            // Test contains in expression query
+            var policies = _addPolicies().Select(w => w.Id).ToList();
+
+            var foundEntities = tCtx.From<Policy>().ToList(w => policies.Contains(w.Id));
+
+            Assert.AreEqual(policies.Count, foundEntities.Count);
+        }
+
+        [TestMethod]
+        public void Test_T_10()
+        {
+            // Test inner join
+            var policies = _addPolicyWithPolicyInfo();
+
+            var policy = tCtx.From<Policy>()
+                .InnerJoin(
+                    tCtx.From<PolicyInfo>(),
+                    p => p.PolicyInfoId,
+                    pi => pi.Id,
+                    (p, pi) => p).FirstOrDefault(w => w.Id == policies.Key.Id);
+
+            Assert.AreEqual(policy.Id, policies.Key.Id);
+        }
+
+        [TestMethod]
+        public void Test_T_11()
+        {
+            // Test inner join
+            var policies = _addPolicyWithPolicyInfo();
+
+            var policy = tCtx.From<Policy>()
+                .LeftJoin(
+                    tCtx.From<PolicyInfo>(),
+                    p => p.PolicyInfoId,
+                    pi => pi.Id,
+                    (p, pi) => p).FirstOrDefault(w => w.Id == policies.Key.Id);
+
+            Assert.AreEqual(policy.Id, policies.Key.Id);
+        }
+
+        [TestMethod]
+        public void Test_T_12()
+        {
+            // Test connection opening and closing
+            for (var i = 0; i < 100; i++)
+            {
+                var item = tCtx.From<Policy>().FirstOrDefault(w => w.Id == 1);
+
+                if (item != null)
+                {
+                }
+            }
+
+            Assert.IsTrue(true);
+        }
+
+        [TestMethod]
+        public void Test_T_13()
+        {
+            // Disconnnect Test With Execute Script
+            tCtx.ExecuteScript<int>(new CustomScript1()).First();
+
+            var state = tCtx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
+
+        [TestMethod]
+        public void Test_T_14()
+        {
+            // Disconnnect Test With Execute Script
+            tCtx.ExecuteScript(new CustomScript2());
+
+            var state = tCtx.GetConnectionState();
+
+            Assert.AreEqual(state, ConnectionState.Closed);
+            // connection should close when query is done executing
+        }
+
+        [TestMethod]
+        public void Test_T_15()
+        {
+            // saving one-one foreign key
+            var phoneNumber = new PhoneNumber
+            {
+                Phone = "555-555-5555",
+                PhoneType = new PhoneType
+                {
+                    Type = "Cell"
+                }
+            };
+
+            tCtx.SaveChanges(phoneNumber);
+
+            Assert.IsTrue(phoneNumber.ID != 0 && phoneNumber.PhoneType.ID != 0 &&
+                          phoneNumber.PhoneTypeID == phoneNumber.PhoneType.ID);
+        }
+
+        [TestMethod]
+        public void Test_T_16()
+        {
+            // test entity state
+            var phoneType = new PhoneType
+            {
+                Type = "Cell"
+            };
+
+            var beforeSave = phoneType.GetState();
+
+            tCtx.SaveChanges(phoneType);
+
+            var afterSave = phoneType.GetState();
+
+            Assert.IsTrue(beforeSave == EntityState.Modified && afterSave == EntityState.UnChanged);
+        }
+
+        [TestMethod]
+        public void Test_T_17()
+        {
+            // insert complex object
+            var contact = _addContact();
+
+            // test to make sure all data was inserted correctly
+            // keep all variables so we can tell what fails if any
+            var test1 = contact.Appointments.All(w => w.ContactID == contact.ContactID);
+            var test2 = contact.Appointments.All(w => w.ID != Guid.Empty) && contact.ContactID != 0;
+            var test3 = contact.CreatedBy.ID != 0 && contact.CreatedByUserID == contact.CreatedBy.ID;
+            var test4 = contact.EditedBy.ID != 0 && contact.EditedByUserID == contact.EditedBy.ID;
+            var test5 = contact.Names.All(w => w.ContactID == contact.ContactID);
+            var test6 = contact.Names.All(w => w.ID != 0);
+            var test7 = contact.Appointments.All(w => w.Address.All(x => x.AppointmentID == w.ID));
+            var test8 = contact.Appointments.All(w => w.Address.All(x => x.ID != 0));
+            var test9 = contact.Appointments.All(w => w.Address.All(x => x.ZipCode.All(z => z.AddressID == x.ID)));
+            var test10 = contact.Appointments.All(w => w.Address.All(x => x.ZipCode.All(z => z.ID != 0)));
+            var test11 = contact.Appointments.All(w => w.Address.All(x => x.State.ID == x.StateID));
+            var test12 = contact.Appointments.All(w => w.Address.All(x => x.State.ID != 0));
+            var test13 = contact.Number.ID == contact.PhoneID;
+            var test14 = contact.Number.PhoneType.ID == contact.Number.PhoneTypeID && contact.Number.PhoneTypeID != 0;
+
+            Assert.IsTrue(test1 && test2 && test3 && test4 && test5 && test6 && test7 && test8 && test9 && test10 &&
+                          test11 && test12 && test13 && test14);
+        }
+
+
+        [TestMethod]
+        public void Test_T_18()
+        {
+            // delete complex object
+            var contact = _addContact();
+
+            tCtx.Delete(contact);
+
+            // test to make sure all data was inserted correctly
+            // keep all variables so we can tell what fails if any
+            var test1 = tCtx.From<Appointment>().ToList(w => w.ContactID == contact.ContactID).Count == 0;
+            var test2 = tCtx.Find<User>(contact.EditedByUserID) == null;
+            var test3 = tCtx.Find<User>(contact.CreatedByUserID) == null;
+            var test4 = tCtx.From<Name>().ToList(w => w.ContactID == contact.ContactID).Count == 0;
+            bool test5 = true;
+
+            foreach (var appointment in contact.Appointments)
+            {
+                var oldApt = contact.Appointments.First(w => w.ID == appointment.ID);
+
+                foreach (var address in oldApt.Address)
+                {
+                    test5 = tCtx.Find<Address>(address.ID) == null;
+
+                    if (!test5) break;
+
+                    test5 = tCtx.Find<StateCode>(address.StateID) == null;
+
+                    if (!test5) break;
+
+                    foreach (var zip in address.ZipCode)
+                    {
+                        test5 = tCtx.Find<Zip>(zip.ID) == null;
+
+                        if (!test5) break;
+                    }
+                }
+            }
+
+            var test6 = tCtx.Find<PhoneNumber>(contact.Number.ID) == null;
+            var test7 = tCtx.Find<PhoneType>(contact.Number.PhoneTypeID) == null;
+
+            Assert.IsTrue(test1 && test2 && test3 && test4 && test5 && test6 && test7);
+        }
+
+        [TestMethod]
+        public void Test_T_19()
+        {
+            // throw exception on readonly table save
+            try
+            {
+                var person = new Person
+                {
+                    City = "Anywhere",
+                    FirstName = "James",
+                    LastName = "Demeuse",
+                    State = "MN",
+                    Zip = "12345",
+                    StreetAddress = "123 2nd St"
+                };
+
+                tCtx.SaveChanges(person);
+
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_20()
+        {
+            // check to see if we can read from a readonly table
+            var person = tCtx.Find<Person>(2);
+
+            Assert.IsNotNull(person);
+        }
+
+        [TestMethod]
+        public void Test_T_21()
+        {
+            var newContact = _addContact();
+            // test view one table
+            var contact = tCtx.FromView<Contact>("ContactOnly").FirstOrDefault(w => w.ContactID == newContact.ContactID);
+
+            tCtx.Delete(newContact);
+
+            Assert.IsTrue(contact.Appointments == null && contact.CreatedBy == null && contact.EditedBy == null &&
+                             contact.Names == null && contact.Number == null);
+        }
+
+        [TestMethod]
+        public void Test_T_22()
+        {
+            var newContact = _addContact();
+            // test view two tables
+            var contact = tCtx.FromView<Contact>("ContactAndPhone").FirstOrDefault(w => w.ContactID == newContact.ContactID);
+
+            tCtx.Delete(newContact);
+
+            Assert.IsTrue(contact.Appointments == null && contact.CreatedBy == null && contact.EditedBy == null &&
+                             contact.Names == null && contact.Number != null);
+        }
+
+        [TestMethod]
+        public void Test_T_23()
+        {
+            try
+            {
+                // Testing renaming of FK Id and nullable FK
+                var pizza = _addPizza();
+
+                var test1 = pizza.Id != 0 && pizza.ToppingRenameId == pizza.Topping.Id && pizza.Topping.Id != 0;
+                var test2 = pizza.Crust.Id == pizza.CrustId && pizza.CrustId != 0;
+                var test3 = pizza.Crust.Topping.Id == pizza.Crust.ToppingId && pizza.Crust.ToppingId != 0;
+
+                Assert.IsTrue(test1 && test2 && test3);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_24()
+        {
+            try
+            {
+                // remove pizza with renamed FK id
+                var pizza = _addPizza();
+
+                tCtx.Delete(pizza);
+
+                var test1 = tCtx.Find<Pizza>(pizza.Id) == null;
+                var test2 = tCtx.Find<Topping>(pizza.ToppingRenameId) == null;
+                var test3 = tCtx.Find<Crust>(pizza.CrustId) == null;
+                var test4 = tCtx.Find<Topping>(pizza.Crust.ToppingId) == null;
+
+                Assert.IsTrue(test1 && test2 && test3 && test4);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_25()
+        {
+            try
+            {
+                // Save with nullable foreign key
+                var contact = new Contact
+                {
+                    CreatedBy = new User
+                    {
+                        Name = "James Demeuse"
+                    },
+                    EditedBy = new User
+                    {
+                        Name = "Different User"
+                    },
+                    FirstName = "Test",
+                    LastName = "User",
+                    Names = new List<Name>
+                    {
+                        new Name
+                        {
+                            Value = "Win!"
+                        },
+                        new Name
+                        {
+                            Value = "FTW!"
+                        }
+                    },
+                    Appointments = new List<Appointment>
+                    {
+                        new Appointment
+                        {
+                            Description = "Appointment 1",
+                            IsScheduled = false,
+                            Address = new List<Address>
+                            {
+                                new Address
+                                {
+                                    Addy = "1234 First Ave South",
+                                    State = new StateCode
+                                    {
+                                        Value = "MN"
+                                    },
+                                    ZipCode = new List<Zip>
+                                    {
+                                        new Zip
+                                        {
+                                            Zip4 = "5412",
+                                            Zip5 = "55555"
+                                        },
+                                        new Zip
+                                        {
+                                            Zip5 = "12345"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                tCtx.SaveChanges(contact);
+
+                var that = tCtx.Find<Contact>(contact.ContactID);
+
+                Assert.IsTrue(that != null && that.Number == null);
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_26()
+        {
+            try
+            {
+                // Save with two PK's
+                var linking = new Linking
+                {
+                    Description = "Test",
+                    PolicyId = 10,
+                    PolicyInfoId = 1
+                };
+
+                tCtx.SaveChanges(linking);
+
+                var that = tCtx.Find<Linking>(10, 1);
+
+                Assert.IsTrue(that != null);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_27()
+        {
+            try
+            {
+                // Save with two PK's
+                var linking = new Linking
+                {
+                    Description = "Test",
+                    PolicyId = 10,
+                    PolicyInfoId = 1
+                };
+
+                tCtx.SaveChanges(linking);
+
+                var that = tCtx.Find<Linking>(10, 1);
+
+                Assert.IsTrue(that != null);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_28()
+        {
+            // saving in a lookup table
+            var computer = new Computer
+            {
+                Name = "James PC",
+                IsCustom = true,
+                Processor = new Processor
+                {
+                    Name = "intel",
+                    CoreType = CoreType.AMD,
+                    Cores = 4,
+                    Speed = 4
+                },
+                History = new List<History>
+                {
+                    new History
+                    {
+                        Description = "WINNING"
+                    }
+                }
+            };
+
+            tCtx.SaveChanges(computer);
+
+            var that = tCtx.Find<Computer>(computer.Id);
+
+            Assert.IsTrue(that != null && tCtx.Find<Processor>(computer.ProcessorId) != null &&
+                          (that.History == null || !that.History.Any(w => w.ComputerId == computer.Id)));
+        }
+
+        [TestMethod]
+        public void Test_T_29()
+        {
+            // make sure the Lookup Table is directly editable,
+            // IF FAIL!!!!!
+            // Make sure the ComputerId exists first
+            var history = new History
+            {
+                Description = "Winning",
+                ComputerId = 2
+            };
+
+            tCtx.SaveChanges(history);
+
+            Assert.IsTrue(history.Id != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_30()
+        {
+            // making sure nullable types work
+            var computer = new Computer
+            {
+                Name = "James PC",
+                IsCustom = true,
+                Processor = new Processor
+                {
+                    Name = "intel",
+                    Cores = 4
+                },
+                History = new List<History>
+                {
+                    new History
+                    {
+                        Description = "WINNING"
+                    }
+                }
+            };
+
+            tCtx.SaveChanges(computer);
+
+            var that = tCtx.Find<Computer>(computer.Id);
+
+            tCtx.Delete(computer);
+
+            Assert.IsTrue(!that.Processor.Speed.HasValue && !that.Processor.CoreType.HasValue);
+        }
+
+        [TestMethod]
+        public void Test_T_31()
+        {
+            // Make sure entity state tracking is working properly
+            var policy = new Policy();
+
+            var state0 = policy.GetState();
+
+            policy.County = "Hennepin";
+            policy.CreatedBy = "James Demeuse";
+            policy.CreatedDate = DateTime.Now;
+            policy.FeeOwnerName = "Test";
+            policy.FileNumber = 100;
+            policy.InsuredName = "James Demeuse";
+            policy.PolicyAmount = 100;
+            policy.PolicyDate = DateTime.Now;
+            policy.PolicyInfoId = 1;
+            policy.PolicyNumber = "001-8A";
+            policy.StateID = 7;
+            policy.UpdatedBy = "Me";
+            policy.UpdatedDate = DateTime.Now;
+
+            var state1 = policy.GetState();
+
+            tCtx.SaveChanges(policy);
+
+            var state2 = policy.GetState();
+
+            policy = tCtx.Find<Policy>(policy.Id);
+
+            var state3 = policy.GetState();
+
+            policy.InsuredName = Guid.NewGuid().ToString();
+
+            var state4 = policy.GetState();
+
+            Assert.IsTrue(state0 == EntityState.Modified && state1 == EntityState.Modified &&
+                          state2 == EntityState.UnChanged && state3 == EntityState.UnChanged &&
+                          state4 == EntityState.Modified);
+        }
+
+        [TestMethod]
+        public void Test_T_32()
+        {
+            // Make sure the any function works
+            var policy = _addPolicy();
+
+            Assert.IsTrue(tCtx.From<Policy>().Any(w => w.Id == policy.Id));
+
+            // cleanup
+            tCtx.Delete(policy);
+        }
+
+        [TestMethod]
+        public void Test_T_33()
+        {
+            // Make sure the any function works
+            var policy = _addPolicy();
+
+            Assert.IsTrue(tCtx.From<Policy>().Any());
+
+            // cleanup
+            tCtx.Delete(policy);
+        }
+
+        [TestMethod]
+        public void Test_T_34()
+        {
+            // Make sure the any function works
+            var policy = _addPolicy();
+
+            Assert.IsTrue(tCtx.From<Policy>().Count() != 0);
+
+            // cleanup
+            tCtx.Delete(policy);
+        }
+
+        [TestMethod]
+        public void Test_T_35()
+        {
+            try
+            {
+                // make sure first is working, should fail when no records found
+                tCtx.From<Policy>().First(w => w.Id == -1);
+
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_36()
+        {
+            try
+            {
+                // make sure first finds records
+                var policy = _addPolicy();
+
+                Assert.IsTrue(tCtx.From<Policy>().First(w => w.Id == policy.Id) != null);
+
+                // cleanup
+                tCtx.Delete(policy);
+
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_37()
+        {
+            try
+            {
+                // make sure first is working, should fail when no records found
+                Assert.IsTrue(tCtx.From<Policy>().FirstOrDefault(w => w.Id == -1) == null);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_38()
+        {
+            try
+            {
+                // make sure first finds records
+                var policy = _addPolicy();
+
+                Assert.IsTrue(tCtx.From<Policy>().FirstOrDefault(w => w.Id == policy.Id) != null);
+
+                // cleanup
+                tCtx.Delete(policy);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_39()
+        {
+            // max should return the max id
+            var max = tCtx.From<Policy>().Select(w => w.Id).Max();
+
+            Assert.IsTrue(max != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_40()
+        {
+            // min should return the min id
+            var max = tCtx.From<Policy>().Select(w => w.Id).Min();
+
+            Assert.IsTrue(max != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_41()
+        {
+            // make sure order by is working
+            var allItems = tCtx.From<Policy>().OrderByDescending(w => w.Id).Take(2).ToList();
+
+            Assert.IsTrue(allItems[0].Id > allItems[1].Id);
+        }
+
+        [TestMethod]
+        public void Test_T_42()
+        {
+            // make sure order by is working
+            var allItems = tCtx.From<Policy>().OrderBy(w => w.Id).Take(2).ToList();
+
+            Assert.IsTrue(allItems[1].Id > allItems[0].Id);
+        }
+
+        [TestMethod]
+        public void Test_T_43()
+        {
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    _addPolicyWithPolicyInfo();
+            //}
+
+            // make sure then by is working
+            var allItems = tCtx.From<Policy>().OrderByDescending(w => w.Id).ThenBy(w => w.PolicyDate).Take(500).ToList();
+
+            Assert.IsTrue(allItems[0].Id > allItems[499].Id && allItems[0].PolicyDate > allItems[499].PolicyDate);
+        }
+
+        [TestMethod]
+        public void Test_T_44()
+        {
+            // make sure select is working properly
+            var allItems = tCtx.From<Policy>().Where(w => w.Id == 1).Select(w => w.InsuredName).First();
+
+            Assert.IsTrue(!string.IsNullOrWhiteSpace(allItems));
+        }
+
+
+        [TestMethod]
+        public void Test_T_45()
+        {
+            // individual method for take, even though it is test above
+            var allItems = tCtx.From<Policy>().Take(10).Select(w => w.InsuredName).ToList();
+
+            Assert.IsTrue(allItems.Count == 10);
+        }
+
+        [TestMethod]
+        public void Test_T_46()
+        {
+            // individual method for take, even though it is test above
+            var allItems = tCtx.From<Policy>().Select(w => w.PolicyInfoId).Distinct().ToList();
+
+            Assert.IsTrue(allItems.Count > 0);
+        }
+
+        [TestMethod]
+        public void Test_T_47()
+        {
+            // Should be able to select child of a child (not a list) and perform query from it
+            var allItems = tCtx.From<Contact>().Where(w => w.Number.PhoneType.Type == "Cell").ToList();
+
+            Assert.IsTrue(allItems.Select(w => w.Number.PhoneType.Type).All(w => w == "Cell"));
+        }
+
+        [TestMethod]
+        public void Test_T_48()
+        {
+            // Test Pseudo Keys
+            //var artist = new Artist
+            //{
+            //    ActiveDate = DateTime.Now,
+            //    Albums = new List<Album>
+            //    {
+            //        new Album
+            //        {
+            //            Name = "COOLE",
+            //            TimesDownloaded = 1000
+            //        },
+            //        new Album
+            //        {
+            //            Name = "EP",
+            //            TimesDownloaded = 165
+            //        }
+            //    },
+            //    Agent = new Agent
+            //    {
+            //        Name = "James Demeuse"
+            //    },
+            //    FirstName = "Some",
+            //    LastName = "Singer",
+            //    Genre = "Country"
+            //};
+
+            //5,6
+
+            //tCtx.SaveChanges(artist);
+
+            var artist1 = tCtx.Find<Artist>(5);
+            var artist2 = tCtx.Find<Artist>(6);
+
+            Assert.IsTrue(artist1 != null && artist2 != null && artist1.Albums.All(w => w.ArtistId == artist1.Id) &&
+                          artist2.Albums.All(w => w.ArtistId == artist2.Id) && artist1.Agent.Id == artist1.AgentId &&
+                          artist2.Agent.Id == artist2.AgentId);
+        }
+
+        [TestMethod]
+        public void Test_T_49()
+        {
+            // try insert, happens when a table has only PK's
+            var newRefId = tCtx.From<TryInsert>().Select(w => w.RefId).Max() + 1;
+            var newSomeId = tCtx.From<TryInsert>().Select(w => w.SomeId).Max() + 1;
+
+            var item = new TryInsert
+            {
+                RefId = newRefId,
+                SomeId = newSomeId
+            };
+
+            var anyTryOne = tCtx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId);
+
+            tCtx.SaveChanges(item);
+
+            var anyTryTwo = tCtx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId);
+
+            Assert.IsTrue(!anyTryOne && anyTryTwo);
+        }
+
+        [TestMethod]
+        public void Test_T_50()
+        {
+            // try insert, nothing should be inserted
+            var newRefId = tCtx.From<TryInsert>().Select(w => w.RefId).Max();
+            var newSomeId = tCtx.From<TryInsert>().Select(w => w.SomeId).Max();
+
+            var item = new TryInsert
+            {
+                RefId = newRefId,
+                SomeId = newSomeId
+            };
+
+            tCtx.SaveChanges(item);
+
+            Assert.IsTrue(tCtx.From<TryInsert>().Any(w => w.RefId == newRefId && w.SomeId == newSomeId));
+        }
+
+        [TestMethod]
+        public void Test_T_51()
+        {
+            // try insert update
+            var newId = tCtx.From<TryInsertUpdateWithGeneration>().Select(w => w.Id).Max() + 1;
+
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = newId,
+                Name = "Testing"
+            };
+
+            tCtx.SaveChanges(item);
+
+            Assert.IsTrue(tCtx.From<TryInsertUpdateWithGeneration>().Any(w => w.Id == newId) &&
+                item.SequenceNumber != 0 &&
+                item.OtherNumber != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_52()
+        {
+            // try insert update, cannot update identity column
+            var newId = tCtx.From<TryInsertUpdateWithGeneration>().Select(w => w.Id).Max();
+
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = newId,
+                Name = "Testing",
+                OtherNumber = 10
+            };
+
+            try
+            {
+                tCtx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_53()
+        {
+            // try insert update should fail if the PK(s) are 0
+            var item = new TryInsertUpdateWithGeneration
+            {
+                Id = 0,
+                Name = "Testing",
+                OtherNumber = 10
+            };
+
+            try
+            {
+                tCtx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_54()
+        {
+            // Update should be performed even if the id doesnt exist
+            var item = new TestDefaultInsert
+            {
+                Name = "Test",
+                Id = 100000
+            };
+
+            try
+            {
+                tCtx.SaveChanges(item);
+                Assert.IsTrue(true);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_55()
+        {
+            // should use the db default and load it back into the model
+            var item = new TestDefaultInsert
+            {
+                Name = "Test",
+            };
+
+            tCtx.SaveChanges(item);
+
+            Assert.IsTrue(item.Uid != Guid.Empty);
+        }
+
+        [TestMethod]
+        public void Test_T_56()
+        {
+            // test update
+            var contact = _addContact();
+
+            contact.FirstName = "Joe Blow";
+
+            tCtx.SaveChanges(contact);
+
+            contact = tCtx.Find<Contact>(contact.ContactID);
+
+            Assert.IsTrue(contact.FirstName == "Joe Blow");
+        }
+
+        [TestMethod]
+        public void Test_T_57()
+        {
+            var testOne = true;
+            var testTwo = true;
+            var testThree = true;
+
+            // test insert
+            var item = new TestUpdateWithKeyDbGenerationOptionNone
+            {
+                Name = "Name",
+                Id = 0
+            };
+
+            try
+            {
+                tCtx.SaveChanges(item);
+                testOne = false;
+            }
+            catch (Exception)
+            {
+
+            }
+
+            item.Id = tCtx.From<TestUpdateWithKeyDbGenerationOptionNone>().Select(w => w.Id).Max() + 1;
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<TestUpdateWithKeyDbGenerationOptionNone>(item.Id);
+
+            testTwo = item != null;
+
+            item.Name = "NEW NAME!";
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<TestUpdateWithKeyDbGenerationOptionNone>(item.Id);
+
+            testThree = item.Name == "NEW NAME!";
+
+            Assert.IsTrue(testOne && testTwo && testThree);
+        }
+
+        [TestMethod]
+        public void Test_T_58()
+        {
+            var item = new TestKeyWithDbDefaultGeneration
+            {
+                Name = "Name"
+            };
+
+            try
+            {
+                tCtx.SaveChanges(item);
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_59()
+        {
+            // schema changes
+            var item = new SchemaChangeOne_dbo
+            {
+                Name = "Name"
+            };
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<SchemaChangeOne_dbo>(item.Id);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_T_60()
+        {
+            // schema changes for normal insert that generates a pk
+            var item = new SchemaChangeOne_ts
+            {
+                Name = "Name"
+            };
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<SchemaChangeOne_ts>(item.Id);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_T_61()
+        {
+            // schema changes for try insert update
+            var newId = tCtx.From<TestUpdateWithKeyDbGenerationOptionNone_ts>().Select(w => w.Id).Max() + 1;
+
+            // test insert
+            var item = new TestUpdateWithKeyDbGenerationOptionNone_ts
+            {
+                Name = "Name",
+                Id = newId
+            };
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<TestUpdateWithKeyDbGenerationOptionNone_ts>(item.Id);
+
+            Assert.IsTrue(item != null);
+        }
+
+        [TestMethod]
+        public void Test_T_62()
+        {
+            // test updates to tables in different schema
+            var item = new TestUpdateNewSchema
+            {
+                Name = "Name"
+            };
+
+            tCtx.SaveChanges(item);
+
+            item.Name = "NEW NAME!";
+
+            tCtx.SaveChanges(item);
+
+            item = tCtx.Find<TestUpdateNewSchema>(item.Id);
+
+            Assert.IsTrue(item.Name == "NEW NAME!");
+        }
+
+        [TestMethod]
+        public void Test_T_63()
+        {
+            try
+            {
+                // previous issue
+                var test = tCtx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
+                Assert.IsTrue(true);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_64()
+        {
+            // make sure count comes back
+            var test = tCtx.From<Contact>().Where(w => w.FirstName.Contains("Te")).Count(w => w.ContactID == 10);
+
+            Assert.IsTrue(test != 0);
+        }
+
+        [TestMethod]
+        public void Test_T_65()
+        {
+            try
+            {
+                var contact = new Contact
+                {
+                    FirstName = "Test",
+                    LastName = "User"
+                };
+
+                tCtx.SaveChanges(contact);
+
+                if (contact != null)
+                {
+                    contact.Appointments = null;
+                }
+
+                Assert.IsTrue(false);
+            }
+            catch (Exception)
+            {
+                Assert.IsTrue(true);
+            }
+        }
+
+        [TestMethod]
+        public void Test_T_66()
+        {
+            try
+            {
+                // performs a try insert update
+                var max1 = tCtx.From<Linking>().Select(w => w.PolicyId).Max() + 1;
+                var max2 = tCtx.From<Linking>().Select(w => w.PolicyInfoId).Max() + 1;
+
+                // make sure inserting and updating is working for the try insert update
+                var linking = new Linking
+                {
+                    Description = "Test",
+                    PolicyId = max1,
+                    PolicyInfoId = max2
+                };
+
+                tCtx.SaveChanges(linking);
+
+                var that = tCtx.Find<Linking>(max1, max2);
+
+                that.Description = "Changed!";
+
+                tCtx.SaveChanges(that);
+
+                that = tCtx.Find<Linking>(max1, max2);
+
+                var changed = that.Description;
+
+                Assert.IsTrue(that != null && changed == "Changed!");
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
+            }
+        }
+        #endregion
+
+        #region Concurrency Tests
+        private bool _was_Test_C_3_handlerFired { get; set; }
+
+        private void _handle(object entity)
+        {
+            _was_Test_C_3_handlerFired = true;
+        }
+
+        [TestMethod]
+        public void Test_C_1()
+        {
+            // concurrency test - Exception
+            try
+            {
+                // reset the name
+                var id = 3;
+
+                var name = ceCtx.Find<Name>(id);
+                name.Value = "James";
+                ceCtx.SaveChanges(name);
+                ceCtx.OnConcurrencyViolation += _handle; // make sure it was not fired
+
+                // start the test
+
+                // perform update before ceCtx
+                var n = ctx.Find<Name>(id);
+                n.Value = "Megan";
+                ctx.SaveChanges(n);
+
+                name.Value = "New Name";
+                ceCtx.SaveChanges(name);
+
+                Assert.IsFalse(_was_Test_C_3_handlerFired);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(ex is DBConcurrencyException);
+            }
+
+        }
+
+        [TestMethod]
+        public void Test_C_2()
+        {
+            // concurrency test - Continue
+            try
+            {
+                // reset the name
+                var id = 3;
+
+                var name = ccCtx.Find<Name>(id);
+                name.Value = "James";
+                ccCtx.SaveChanges(name);
+                ccCtx.OnConcurrencyViolation += _handle; // make sure it was not fired
+
+                // start the test
+
+                // perform update before ceCtx
+                var n = ctx.Find<Name>(id);
+                n.Value = "Megan";
+                ctx.SaveChanges(n);
+
+                name.Value = "New Name";
+                ccCtx.SaveChanges(name);
+
+                Assert.IsFalse(_was_Test_C_3_handlerFired);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
+            }
+
+        }
+
+        [TestMethod]
+        public void Test_C_3()
+        {
+            // concurrency test - Use Handler
+            try
+            {
+                // reset the name
+                var id = 3;
+                _was_Test_C_3_handlerFired = false;
+                chCtx.OnConcurrencyViolation += _handle; 
+
+                var name = chCtx.Find<Name>(id);
+                name.Value = "James";
+                chCtx.SaveChanges(name);
+
+                // start the test
+
+                // perform update before ceCtx
+                var n = ctx.Find<Name>(id);
+                n.Value = "Megan";
+                ctx.SaveChanges(n);
+
+                name.Value = "New Name";
+                chCtx.SaveChanges(name);
+
+                Assert.IsTrue(_was_Test_C_3_handlerFired);
+            }
+            catch (Exception ex)
+            {
+                Assert.IsTrue(false);
+            }
+
+        }
+        #endregion
 
         #region helpers
         private Policy _addPolicy()
@@ -1430,6 +2881,7 @@ namespace OR_M_Data_Entities.Tests
         #endregion
     }
 
+    #region scripts
     public class CustomScript1 : CustomScript<int>
     {
         protected override string Sql
@@ -1450,4 +2902,5 @@ namespace OR_M_Data_Entities.Tests
     {
         
     }
+    #endregion
 }

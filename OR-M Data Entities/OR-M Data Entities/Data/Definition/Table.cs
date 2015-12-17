@@ -65,6 +65,11 @@ namespace OR_M_Data_Entities.Data.Definition
             get { return _readOnlyAttribute != null; }
         }
 
+        public bool IsUsingLinkedServer
+        {
+            get { return _linkedServerAttribute != null; }
+        }
+
         public string PlainTableName
         {
             get

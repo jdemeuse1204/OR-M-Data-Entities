@@ -57,27 +57,33 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         {
             return _joins.Aggregate("",
                 (current, @join) => current + string.Format(" {0} JOIN {1} On [{2}].[{3}] = [{4}].[{5}] ",
+
                     @join.HeirarchyContainsList ? "LEFT" : "INNER",
-                    string.Format("{0} As [{1}]", @join.ChildTable.TableInfo, @join.ChildTable.Alias),
-                    @join.ParentTable.Alias, @join.ParentTable.GetForeignKeyDatabaseColumnName(), @join.ChildTable.Alias,
+
+                    string.Format("{0} As [{1}]",
+                        @join.ChildTable.TableInfo.IsUsingLinkedServer
+                            ? _getLinkedServerJoinSubQuery(@join)
+                            : @join.ChildTable.TableInfo.ToString(),
+                        @join.ChildTable.Alias),
+
+                    @join.ParentTable.Alias,
+
+                    @join.ParentTable.GetForeignKeyDatabaseColumnName(),
+
+                    @join.ChildTable.Alias,
+
                     @join.ChildTable.GetForeignKeyDatabaseColumnName()));
         }
 
-        private string _getJoinName(JoinType joinType)
+        private string _getLinkedServerJoinSubQuery(JoinTablePair pair)
         {
-            switch (joinType)
-            {
-                case JoinType.ForeignKeyLeft:
-                case JoinType.Left:
-                case JoinType.PseudoKeyLeft:
-                    return "LEFT";
-                case JoinType.ForeignKeyInner:
-                case JoinType.Inner:
-                case JoinType.PseudoKeyInner:
-                    return "INNER";
-                default:
-                    return "";
-            }
+            //var query = new SqlLinkedServerSelectBuilder();
+            //query.Table(pair.ChildTable.Type);
+            //query.SetValidation(pair);
+            //query.SelectAll(pair);
+            //return query.GetSql();
+
+            return "";
         }
     }
 }

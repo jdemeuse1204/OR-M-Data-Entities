@@ -71,7 +71,6 @@
     <Compile Include="Enumeration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
     <Compile Include="Enumeration\MaxLengthViolationType.cs" />
-    <Compile Include="Enumeration\PackageBuildType.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
@@ -81,14 +80,12 @@
     <Compile Include="Data\Secure\SqlSecureObject.cs" />
     <Compile Include="Data\Query\ISqlBuilder.cs" />
     <Compile Include="Data\Query\SqlFunctionTextBuilder.cs" />
-    <Compile Include="Enumeration\DataTransformType.cs" />
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
     <Compile Include="Data\DatabaseReading.cs" />
     <Compile Include="Data\DatabaseFetching.cs" />
     <Compile Include="Data\DatabaseModifiable.cs" />
-    <Compile Include="Enumeration\DataQueryType.cs" />
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Enumeration\OrderType.cs" />
     <Compile Include="Exceptions\DataLoadException.cs" />
@@ -115,8 +112,6 @@
     <Compile Include="Expressions\Resolution\Base\ResolutionContainerBase.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryViewResolvable.cs" />
-    <Compile Include="Expressions\Resolution\Functions\FunctionResolutionContainer.cs" />
-    <Compile Include="Expressions\Resolution\Functions\FunctionResolver.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryViewResolvable.cs" />
     <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />

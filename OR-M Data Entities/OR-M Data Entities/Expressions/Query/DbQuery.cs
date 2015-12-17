@@ -94,11 +94,19 @@ namespace OR_M_Data_Entities.Expressions.Query
                 : HasForeignKeys ? Columns.GetPrimaryKeyOrderStatement() : Columns.GetOrderByStatement();
 
             Sql = string.Format("SELECT {0}{1} {2} FROM {3} {4} {5} {6}",
+
                 Columns.IsSelectDistinct ? " DISTINCT" : string.Empty,
-                Columns.TakeRows > 0 ? string.Format("TOP {0}", Columns.TakeRows) : string.Empty, select,
+
+                Columns.TakeRows > 0 ? string.Format("TOP {0}", Columns.TakeRows) : string.Empty, 
+                
+                select,
+
                 from.Contains("[") ? from : string.Format("[{0}]", from),
+
                 join,
+
                 string.IsNullOrWhiteSpace(where) ? string.Empty : string.Format("WHERE {0}", where),
+
                 order);
         }
     }
