@@ -296,6 +296,25 @@ namespace OR_M_Data_Entities.Data
 
                 for (var i = 0; i < entities.Count; i++)
                 {
+                    var e = entities[i];
+                    var foreignKeyIsList = e.Property == null ? false : e.Property.IsList();
+                    var tableType = e.Property == null ? e.Value.GetType() : e.Property.GetPropertyType();
+                    var tableInfo = new Table(tableType);
+
+                    if (tableInfo.IsReadOnly)
+                    {
+                        switch (tableInfo.GetReadOnlySaveOption())
+                        {
+                            case ReadOnlySaveOption.ThrowException:
+                                // Check for readonly attribute and see if we should throw an error
+                                throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
+                            case ReadOnlySaveOption.Skip:
+                                // skip children(foreign keys) if option is set 
+                                continue;
+                        }
+                    }
+
+                    // check to see if its the base entity
                     if (i == 0)
                     {
                         // is the base entity, will never have a parent, set it and continue to the next entity
@@ -303,15 +322,8 @@ namespace OR_M_Data_Entities.Data
                         continue;
                     }
 
-                    var e = entities[i];
-                    var foreignKeyIsList = e.Property.IsList();
-                    var tableInfo = new Table(e.Property.GetPropertyType());
-
-                    // skip lookup tables
+                    // skip lookup tables only when its not the parent
                     if (tableInfo.IsLookupTable) continue;
-
-                    // skip children(foreign keys) if option is set 
-                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.Skip) continue;
 
                     if (e.Value == null)
                     {
@@ -330,12 +342,6 @@ namespace OR_M_Data_Entities.Data
                             // maintaining the relationship
                             throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
                         }
-                    }
-
-                    // Check for readonly attribute and see if we should throw an error
-                    if (tableInfo.IsReadOnly && tableInfo.GetReadOnlySaveOption() == ReadOnlySaveOption.ThrowException)
-                    {
-                        throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
                     }
 
                     // doesnt have dependencies
@@ -367,6 +373,7 @@ namespace OR_M_Data_Entities.Data
                 return result;
             }
         }
+
         #endregion
 
         #region Methods
@@ -394,26 +401,34 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region shared
+
         /// <summary>
         /// Provides us a way to get the execution plan for an entity
         /// </summary>
         private abstract class SqlExecutionPlan : ISqlBuilder
         {
             #region Constructor
-            protected SqlExecutionPlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters)
+
+            protected SqlExecutionPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
             {
                 Entity = entity;
                 Parameters = parameters;
+                Configuration = configurationOptions;
             }
+
             #endregion
 
             #region Properties and Fields
+
             public ModificationEntity Entity { get; private set; }
 
             protected readonly List<SqlSecureQueryParameter> Parameters;
+
+            protected readonly ConfigurationOptions Configuration;
             #endregion
 
             #region Methods
+
             public abstract ISqlPackage Build();
 
             public SqlCommand BuildSqlCommand(SqlConnection connection)
@@ -436,16 +451,23 @@ namespace OR_M_Data_Entities.Data
         private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
         {
             #region Constructor
-            protected SqlModificationPackage(ISqlBuilder plan, List<SqlSecureQueryParameter> parameters)
+
+
+            protected SqlModificationPackage(ISqlBuilder plan, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
                 : base(parameters)
             {
                 Entity = plan.Entity;
+                Configuration = configurationOptions;
             }
+
             #endregion
 
             #region Properties
 
             protected readonly ModificationEntity Entity;
+
+            protected readonly ConfigurationOptions Configuration;
+
             #endregion
 
             #region Methods
@@ -493,10 +515,13 @@ namespace OR_M_Data_Entities.Data
         private abstract class SqlSecureExecutable
         {
             #region Fields
+
             private readonly List<SqlSecureQueryParameter> _parameters;
+
             #endregion
 
             #region Constructor
+
             protected SqlSecureExecutable()
             {
                 _parameters = new List<SqlSecureQueryParameter>();
@@ -506,9 +531,11 @@ namespace OR_M_Data_Entities.Data
             {
                 _parameters = parameters;
             }
+
             #endregion
 
             #region Methods
+
             // key where the data will be insert into the secure command
             private string _getNextKey()
             {
@@ -531,11 +558,7 @@ namespace OR_M_Data_Entities.Data
 
                 _parameters.Add(new SqlSecureQueryParameter
                 {
-                    Key = parameterKey,
-                    DbColumnName = addPristineParameter ? string.Format("Pristine{0}", item.DatabaseColumnName) : item.DatabaseColumnName,
-                    TableName = item.GetTableName(),
-                    ForeignKeyPropertyName = item.GetTableName(),
-                    Value = item.TranslateDataType ? new SqlSecureObject(value, item.DbTranslationType) : new SqlSecureObject(value)
+                    Key = parameterKey, DbColumnName = addPristineParameter ? string.Format("Pristine{0}", item.DatabaseColumnName) : item.DatabaseColumnName, TableName = item.GetTableName(), ForeignKeyPropertyName = item.GetTableName(), Value = item.TranslateDataType ? new SqlSecureObject(value, item.DbTranslationType) : new SqlSecureObject(value)
                 });
 
                 return parameterKey;
@@ -561,8 +584,10 @@ namespace OR_M_Data_Entities.Data
 
                 return parameter != null ? parameter.Key : null;
             }
+
             #endregion
         }
+
         #endregion
     }
 }

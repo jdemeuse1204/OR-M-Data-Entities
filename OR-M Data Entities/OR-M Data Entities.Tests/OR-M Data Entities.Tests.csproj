@@ -53,6 +53,10 @@
   </Choose>
   <ItemGroup>
     <Compile Include="CoreType.cs" />
+    <Compile Include="Extensions.cs" />
+    <Compile Include="Scripts\CustomScript1.cs" />
+    <Compile Include="Scripts\CustomScript2.cs" />
+    <Compile Include="Scripts\ScalarFunction1.cs" />
     <Compile Include="SqlContextTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tables\Address.cs" />
@@ -93,6 +97,16 @@
     <Compile Include="Tables\TryInsertUpdateWithGeneration.cs" />
     <Compile Include="Tables\User.cs" />
     <Compile Include="Tables\Zip.cs" />
+    <Compile Include="Testing\Base\ConcurrencyTests.cs" />
+    <Compile Include="Testing\Base\DefaultTests.cs" />
+    <Compile Include="Testing\Context\ConcurrencyContinueContext.cs" />
+    <Compile Include="Testing\Context\ConcurrencyExceptionContext.cs" />
+    <Compile Include="Testing\Context\ConcurrencyHandleContext.cs" />
+    <Compile Include="Testing\Context\DefaultContext.cs" />
+    <Compile Include="Testing\Context\TransactionContext.cs" />
+    <Compile Include="Testing\SqlConcurrencyContextTests.cs" />
+    <Compile Include="Testing\SqlDefaultContextTests.cs" />
+    <Compile Include="Testing\SqlTransactionContextTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -112,6 +126,7 @@
       <DependentUpon>Test.mdf</DependentUpon>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

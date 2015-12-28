@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
@@ -31,7 +32,7 @@ namespace OR_M_Data_Entities.Data.Definition
         #endregion
 
         #region Constructor
-        public ModificationEntity(object entity, ConfigurationOptions configuration) 
+        public ModificationEntity(object entity, ConfigurationOptions configuration)
             : this(entity, false, configuration)
         {
         }
@@ -99,11 +100,12 @@ namespace OR_M_Data_Entities.Data.Definition
         private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable)
         {
             return (from item in entityStateTrackable.GetType().GetProperties().Where(w => w.IsColumn())
-                let current = _getCurrentObject(entityStateTrackable, item.Name)
-                let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
-                let hasChanged = _hasChanged(pristineEntity, current)
-                select new ModificationItem(item, hasChanged)).ToList();
+                    let current = _getCurrentObject(entityStateTrackable, item.Name)
+                    let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
+                    let hasChanged = _hasChanged(pristineEntity, current)
+                    select new ModificationItem(item, hasChanged)).ToList();
         }
+
         private static bool _hasChanged(object pristineEntity, object entity)
         {
             return ((entity == null && pristineEntity != null) || (entity != null && pristineEntity == null))
@@ -115,7 +117,7 @@ namespace OR_M_Data_Entities.Data.Definition
         {
             var properties =
                 TableType.GetProperties()
-                    .Where(w => w.GetCustomAttribute<MaxLengthAttribute>() != null && w.PropertyType == typeof (string))
+                    .Where(w => w.GetCustomAttribute<MaxLengthAttribute>() != null && w.PropertyType == typeof(string))
                     .ToList();
 
             foreach (var property in properties)
@@ -155,8 +157,6 @@ namespace OR_M_Data_Entities.Data.Definition
 
             UpdateType = UpdateType.Insert;
 
-            _checkIdentityUpdates(EntityTrackable, columns);
-
             // need to find the Update Type
             for (var i = 0; i < primaryKeys.Count; i++)
             {
@@ -171,31 +171,29 @@ namespace OR_M_Data_Entities.Data.Definition
 
                 if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", key.GetColumnName()));
 
+                // check to see if we are updating or not
+                isUpdating = !isValueInInsertArray(configuration, pkValue);
+
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (pkValue.GetType().Name.ToUpper())
                 {
                     case "INT16":
-                        isUpdating = !configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT16";
                         break;
                     case "INT32":
-                        isUpdating = !configuration.InsertKeys.Int.Contains(Convert.ToInt32(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT32";
                         break;
                     case "INT64":
-                        isUpdating = !configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(pkValue));
                         pkValueTypeString = "zero";
                         pkValueType = "INT64";
                         break;
                     case "GUID":
-                        isUpdating = !configuration.InsertKeys.UniqueIdentifier.Contains((Guid)pkValue);
                         pkValueTypeString = "zero";
                         pkValueType = "INT16";
                         break;
                     case "STRING":
-                        isUpdating = !configuration.InsertKeys.String.Contains(pkValue.ToString());
                         pkValueTypeString = "null/blank";
                         pkValueType = "STRING";
                         break;
@@ -208,11 +206,15 @@ namespace OR_M_Data_Entities.Data.Definition
                     {
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
                         throw new SqlSaveException(string.Format(
-                            "Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}", key.Name,
+                            "Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}",
+                            key.Name,
                             pkValueTypeString, pkValueType));
                     }
                     continue;
                 }
+
+                // only check on updates
+                _checkIdentityUpdates(EntityTrackable, columns);
 
                 // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
                 // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
@@ -223,6 +225,26 @@ namespace OR_M_Data_Entities.Data.Definition
             }
         }
 
+        private bool isValueInInsertArray(ConfigurationOptions configuration, object value)
+        {
+            // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
+            switch (value.GetType().Name.ToUpper())
+            {
+                case "INT16":
+                    return configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(value));
+                case "INT32":
+                    return configuration.InsertKeys.Int.Contains(Convert.ToInt32(value));
+                case "INT64":
+                    return configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(value));
+                case "GUID":
+                    return configuration.InsertKeys.UniqueIdentifier.Contains((Guid)value);
+                case "STRING":
+                    return configuration.InsertKeys.String.Contains(value.ToString());
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// make sure the user is not trying to update an IDENTITY column, these cannot be updated
         /// </summary>
@@ -231,25 +253,31 @@ namespace OR_M_Data_Entities.Data.Definition
         private static void _checkIdentityUpdates(EntityStateTrackable entityStateTrackable,
             IReadOnlyList<PropertyInfo> columns)
         {
-            foreach (
-                var column in
-                    columns.Where(
-                        w =>
-                            w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
-                            w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
-                            DbGenerationOption.IdentitySpecification)
-                        .Where(
-                            column =>
-                                entityStateTrackable != null &&
-                                _hasColumnChanged(entityStateTrackable, column.Name)))
-            {
-                throw new SqlSaveException(string.Format("Cannot update value if IDENTITY column.  Column: {0}",
-                    column.Name));
-            }
+            // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
+            if (entityStateTrackable == null || _getPristineEntity(entityStateTrackable) == null) return;
+
+            // can only check when entity state tracking is on
+            // only can get here when updating, try insert, or try insert update
+            var list = columns.Where(
+                w =>
+                    w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
+                    w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
+                    DbGenerationOption.IdentitySpecification)
+                .Where(
+                    column => _hasColumnChanged(entityStateTrackable, column.Name))
+                .Select(w => w.Name).ToList();
+
+            if (!list.Any()) return;
+
+            const string error = "Cannot update value if IDENTITY column.  Column: {0}\r\r";
+            var message = list.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
+            throw new SqlSaveException(message);
         }
 
         private static bool _hasColumnChanged(EntityStateTrackable entity, string propertyName)
         {
+            // only check when the pristine entity is not null, try insert update will fail otherwise.
+            // if the pristine entity is null then there is nothing to compare to
             var pristineEntity = _getPristineProperty(entity, propertyName);
             var current = _getCurrentObject(entity, propertyName);
 
@@ -263,15 +291,21 @@ namespace OR_M_Data_Entities.Data.Definition
 
         private static object _getPristineProperty(EntityStateTrackable entity, string propertyName)
         {
+            var tableOnLoad = _getPristineEntity(entity);
+
+            return tableOnLoad == null
+                ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
+                : tableOnLoad.GetType().GetProperty(propertyName).GetValue(tableOnLoad);
+        }
+
+        private static object _getPristineEntity(EntityStateTrackable entity)
+        {
             var field = GetPristineEntityFieldInfo();
 
             // cannot be null here, should never happen
             if (field == null) throw new ArgumentNullException("_pristineEntity");
 
-            var tableOnLoad = field.GetValue(entity);
-            return tableOnLoad == null
-                ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
-                : tableOnLoad.GetType().GetProperty(propertyName).GetValue(tableOnLoad);
+            return field.GetValue(entity);
         }
 
         public static void TrySetPristineEntity(object instance)

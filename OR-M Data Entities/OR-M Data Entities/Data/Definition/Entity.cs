@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Columns;
@@ -242,13 +243,23 @@ namespace OR_M_Data_Entities.Data.Definition
             return GetPropertyValue(property);
         }
 
+        public bool IsPristineEntityNull()
+        {
+            return !IsEntityStateTrackingOn || _getPristineEntity() == null;
+        }
+
+        private object _getPristineEntity()
+        {
+            var field = GetPristineEntityFieldInfo();
+
+            return field.GetValue(Value);
+        }
+
         public object GetPristineEntityPropertyValue(string propertyName)
         {
             if (!IsEntityStateTrackingOn) throw new Exception("Entity State Tracking is not on, error in GetPristineEntityPropertyValue");
 
-            var field = GetPristineEntityFieldInfo();
-
-            var pristineEntity = field.GetValue(Value);
+            var pristineEntity = _getPristineEntity();
 
             var property = pristineEntity.GetType().GetProperty(propertyName);
 
