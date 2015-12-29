@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Remoting;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
@@ -61,7 +60,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         public IReadOnlyList<ModificationItem> Changes()
         {
-            return ModificationItems.Where(w => w.IsModified).ToList();
+            // this is for updates and we should never update a PK
+            return ModificationItems.Where(w => w.IsModified && !w.IsPrimaryKey).ToList();
         }
 
         public IReadOnlyList<ModificationItem> Keys()
@@ -172,7 +172,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", key.GetColumnName()));
 
                 // check to see if we are updating or not
-                isUpdating = !isValueInInsertArray(configuration, pkValue);
+                isUpdating = !_isValueInInsertArray(configuration, pkValue);
 
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (pkValue.GetType().Name.ToUpper())
@@ -214,7 +214,7 @@ namespace OR_M_Data_Entities.Data.Definition
                 }
 
                 // only check on updates
-                _checkIdentityUpdates(EntityTrackable, columns);
+                _checkIdentityUpdates(EntityTrackable, configuration, columns);
 
                 // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
                 // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
@@ -225,7 +225,7 @@ namespace OR_M_Data_Entities.Data.Definition
             }
         }
 
-        private bool isValueInInsertArray(ConfigurationOptions configuration, object value)
+        private static bool _isValueInInsertArray(ConfigurationOptions configuration, object value)
         {
             // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
             switch (value.GetType().Name.ToUpper())
@@ -250,27 +250,44 @@ namespace OR_M_Data_Entities.Data.Definition
         /// </summary>
         /// <param name="entityStateTrackable"></param>
         /// <param name="columns"></param>
-        private static void _checkIdentityUpdates(EntityStateTrackable entityStateTrackable,
-            IReadOnlyList<PropertyInfo> columns)
+        private static void _checkIdentityUpdates(EntityStateTrackable entityStateTrackable, ConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
         {
             // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
-            if (entityStateTrackable == null || _getPristineEntity(entityStateTrackable) == null) return;
+            if (entityStateTrackable == null) return;
 
-            // can only check when entity state tracking is on
-            // only can get here when updating, try insert, or try insert update
-            var list = columns.Where(
+            List<string> errorColumns;
+
+            var allIdentityColumns = columns.Where(
                 w =>
                     w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
                     w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
-                    DbGenerationOption.IdentitySpecification)
-                .Where(
-                    column => _hasColumnChanged(entityStateTrackable, column.Name))
-                .Select(w => w.Name).ToList();
+                    DbGenerationOption.IdentitySpecification).ToList();
 
-            if (!list.Any()) return;
+            // entity state tracking is on, check to see if the identity column has been updated
+            if (_getPristineEntity(entityStateTrackable) == null)
+            {
+                // any identity columns should be zero/null or whatever the insert value is
+                errorColumns = (from column in allIdentityColumns
+                    let value = column.GetValue(entityStateTrackable)
+                    let hasError = !_isValueInInsertArray(configuration, value)
+                    where hasError
+                    select column.Name).ToList();
+            }
+            else
+            {
+                // can only check when entity state tracking is on
+                // only can get here when updating, try insert, or try insert update
+                errorColumns =
+                    allIdentityColumns.Where(column => _hasColumnChanged(entityStateTrackable, column.Name))
+                        .Select(w => w.Name)
+                        .ToList();
+            }
+
+            if (!errorColumns.Any()) return;
 
             const string error = "Cannot update value if IDENTITY column.  Column: {0}\r\r";
-            var message = list.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
+            var message = errorColumns.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
+
             throw new SqlSaveException(message);
         }
 

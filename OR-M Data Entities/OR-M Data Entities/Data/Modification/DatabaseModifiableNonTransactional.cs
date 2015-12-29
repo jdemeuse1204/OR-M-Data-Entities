@@ -166,6 +166,11 @@ namespace OR_M_Data_Entities.Data
                 Output = string.Format("[INSERTED].[{0}]", keys.First().GetColumnName());
             }
 
+            public void AddOutput(ModificationItem item)
+            {
+                Output = string.Concat(Output, string.Format(",[INSERTED].[{0}]", item.DatabaseColumnName));
+            }
+
             public void AddUpdate(ModificationItem item, string parameterKey)
             {
                 SetItems = string.Concat(SetItems, string.Format("[{0}] = {1},", item.DatabaseColumnName, parameterKey));
@@ -259,119 +264,119 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
 
-        #region Builders
-        private class SqlInsertBuilder : SqlExecutionPlan
+        #region Plans
+        private class SqlInsertPlan : SqlExecutionPlan
         {
-            public SqlInsertBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlInsertBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlInsertPackage(this, Configuration, Parameters);
+                return new SqlInsertBuilder(this, Configuration, Parameters);
             }
         }
 
-        private class SqlTryInsertBuilder : SqlExecutionPlan
+        private class SqlTryInsertPlan : SqlExecutionPlan
         {
-            public SqlTryInsertBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlTryInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlTryInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                var insert = new SqlInsertPackage(this, Configuration, Parameters);
+                var insert = new SqlInsertBuilder(this, Configuration, Parameters);
 
-                return new SqlExistsPackage(this, Configuration, Parameters, insert);
+                return new SqlExistsBuilder(this, Configuration, Parameters, insert);
             }
         }
 
-        private class SqlTryInsertUpdateBuilder : SqlExecutionPlan
+        private class SqlTryInsertUpdatePlan : SqlExecutionPlan
         {
-            public SqlTryInsertUpdateBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlTryInsertUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertUpdateBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlTryInsertUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
                 // insert and update need to share (by reference) their parameters list so they are in sync and do not overlap keys
                 var parameters = new List<SqlSecureQueryParameter>();
-                var insert = new SqlInsertPackage(this, Configuration, parameters);
-                var update = new SqlUpdatePackage(this, Configuration, parameters);
+                var insert = new SqlInsertBuilder(this, Configuration, parameters);
+                var update = new SqlUpdateBuilder(this, Configuration, parameters);
 
-                return new SqlExistsPackage(this, Configuration, parameters, insert, update);
+                return new SqlExistsBuilder(this, Configuration, parameters, insert, update);
             }
         }
 
-        private class SqlUpdateBuilder : SqlExecutionPlan
+        private class SqlUpdatePlan : SqlExecutionPlan
         {
-            public SqlUpdateBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlUpdateBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlUpdatePackage(this, Configuration, Parameters);
+                return new SqlUpdateBuilder(this, Configuration, Parameters);
             }
         }
 
-        private class SqlDeleteBuilder : SqlExecutionPlan
+        private class SqlDeletePlan : SqlExecutionPlan
         {
-            public SqlDeleteBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlDeletePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlDeleteBuilder(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlDeletePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlDeletePackage(this, Configuration, Parameters);
+                return new SqlDeleteBuilder(this, Configuration, Parameters);
             }
         }
         #endregion
 
-        #region Packages
-        private class SqlExistsPackage : SqlModificationPackage
+        #region Builders
+        private class SqlExistsBuilder : SqlModificationBuilder
         {
-            private SqlModificationPackage _exists { get; set; }
+            private SqlModificationBuilder _exists { get; set; }
 
-            private SqlModificationPackage _notExists { get; set; }
+            private SqlModificationBuilder _notExists { get; set; }
 
             private string _existsStatement { get; set; }
 
             private string _where { get; set; }
 
-            public SqlExistsPackage(ISqlBuilder plan, ConfigurationOptions configurationOptions,
-                List<SqlSecureQueryParameter> parameters, SqlModificationPackage exists,
-                SqlModificationPackage notExists = null)
+            public SqlExistsBuilder(ISqlExecutionPlan plan, ConfigurationOptions configurationOptions,
+                List<SqlSecureQueryParameter> parameters, SqlModificationBuilder exists,
+                SqlModificationBuilder notExists = null)
                 : base(plan, configurationOptions, parameters)
             {
                 _initialize(plan, exists, notExists);
@@ -383,7 +388,7 @@ namespace OR_M_Data_Entities.Data
                 _where = string.Concat(_where, string.Format("{0}[{1}] = {2}", wherePrefix, item.DatabaseColumnName, parameterKey));
             }
 
-            private void _initialize(ISqlBuilder plan, SqlModificationPackage exists, SqlModificationPackage notExists)
+            private void _initialize(ISqlExecutionPlan plan, SqlModificationBuilder exists, SqlModificationBuilder notExists)
             {
                 _exists = exists;
                 _notExists = notExists;
@@ -427,7 +432,7 @@ ELSE
                 throw new NotImplementedException(); // this smells
             }
 
-            public override ISqlContainer CreatePackage()
+            public override ISqlContainer BuildContainer()
             {
                 return _notExists != null
                     ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql()))
@@ -435,10 +440,10 @@ ELSE
             }
         }
 
-        private class SqlInsertPackage : SqlModificationPackage
+        private class SqlInsertBuilder : SqlModificationBuilder
         {
             #region Constructor
-            public SqlInsertPackage(ISqlBuilder builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlInsertBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
 
@@ -486,7 +491,7 @@ ELSE
                 ((InsertContainer)container).AddOutput(item);
             }
 
-            public override ISqlContainer CreatePackage()
+            public override ISqlContainer BuildContainer()
             {
                 var items = Entity.All();
                 var container = NewContainer();
@@ -519,11 +524,11 @@ ELSE
             #endregion
         }
 
-        private class SqlUpdatePackage : SqlModificationPackage
+        private class SqlUpdateBuilder : SqlModificationBuilder
         {
             #region Constructor
 
-            public SqlUpdatePackage(ISqlBuilder builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlUpdateBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
             }
@@ -538,18 +543,13 @@ ELSE
 
             protected virtual void AddUpdate(ISqlContainer container, ModificationItem item)
             {
-                // Cannot update these types of fields
-                if (item.Generation == DbGenerationOption.DbDefault ||
-                    item.Generation == DbGenerationOption.IdentitySpecification)
+                // Cannot update this type of field
+                if (item.Generation == DbGenerationOption.IdentitySpecification)
                 {
-                    if (Entity.IsEntityStateTrackingOn && item.IsModified)
-                    {
-                        // if entity state tracking is on, then we need to see if the field has changed
-                        throw new SqlSaveException(
-                            string.Format("Cannot update Identify/DbDefault column.  Column Name: {0}",
-                                item.DatabaseColumnName));
-                    }
-                    return; // let the database handle the error
+                    // select back the real value in case the user tried to update it.  Need 
+                    // to load back the generated column
+                    ((UpdateContainer)container).AddOutput(item);
+                    return;
                 }
 
                 var value = Entity.GetPropertyValue(item.PropertyName);
@@ -567,7 +567,7 @@ ELSE
                 ((UpdateContainer)container).AddWhere(item, parameter);
             }
 
-            public override ISqlContainer CreatePackage()
+            public override ISqlContainer BuildContainer()
             {
                 var items = Entity.Changes();
                 var container = (UpdateContainer)NewContainer();
@@ -587,7 +587,8 @@ ELSE
                     // cannot concurrency check if entity state tracking is not on 
                     // because we do not know what the user has and has not changed. If entity state tracking is on and the 
                     // pristine entity is null then we have a try insert update, make sure to skip the concurrency check
-                    if (!Entity.IsEntityStateTrackingOn || item.Generation == DbGenerationOption.IdentitySpecification ||
+                    if (!Entity.IsEntityStateTrackingOn || 
+                        item.Generation == DbGenerationOption.IdentitySpecification ||
                         (Entity.IsEntityStateTrackingOn && Entity.IsPristineEntityNull()))
                     {
                         continue;
@@ -625,11 +626,11 @@ ELSE
             #endregion
         }
 
-        private class SqlDeletePackage : SqlModificationPackage
+        private class SqlDeleteBuilder : SqlModificationBuilder
         {
             #region Constructor
 
-            public SqlDeletePackage(ISqlBuilder builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlDeleteBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
             }
@@ -657,7 +658,7 @@ ELSE
                 ((DeleteContainer)container).AddWhere(item, parameter);
             }
 
-            public override ISqlContainer CreatePackage()
+            public override ISqlContainer BuildContainer()
             {
                 var container = (DeleteContainer)NewContainer();
 
@@ -699,7 +700,7 @@ ELSE
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
                     var reference = referenceMap[i];
-                    ISqlBuilder builder;
+                    ISqlExecutionPlan plan;
 
                     // add the save to the list so we can tell the user what the save action did
                     saves.Add(reference.Entity.UpdateType);
@@ -710,16 +711,16 @@ ELSE
                     switch (reference.Entity.UpdateType)
                     {
                         case UpdateType.Insert:
-                            builder = new SqlInsertBuilder(reference.Entity, Configuration);
+                            plan = new SqlInsertPlan(reference.Entity, Configuration);
                             break;
                         case UpdateType.TryInsert:
-                            builder = new SqlTryInsertBuilder(reference.Entity, Configuration);
+                            plan = new SqlTryInsertPlan(reference.Entity, Configuration);
                             break;
                         case UpdateType.TryInsertUpdate:
-                            builder = new SqlTryInsertUpdateBuilder(reference.Entity, Configuration);
+                            plan = new SqlTryInsertUpdatePlan(reference.Entity, Configuration);
                             break;
                         case UpdateType.Update:
-                            builder = new SqlUpdateBuilder(reference.Entity, Configuration);
+                            plan = new SqlUpdatePlan(reference.Entity, Configuration);
                             break;
                         case UpdateType.Skip:
                             continue;
@@ -736,7 +737,7 @@ ELSE
                     if (OnSaving != null) OnSaving(reference.Entity.Value);
 
                     // execute the sql
-                    ExecuteReader(builder);
+                    ExecuteReader(plan);
 
                     // get output and clean up connections
                     var keyContainer = GetOutput();
@@ -812,7 +813,7 @@ ELSE
 
                 if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, UpdateType.Delete);
 
-                var builder = new SqlDeleteBuilder(reference.Entity, Configuration);
+                var builder = new SqlDeletePlan(reference.Entity, Configuration);
 
                 if (OnSaving != null) OnSaving(reference.Entity.Value);
 

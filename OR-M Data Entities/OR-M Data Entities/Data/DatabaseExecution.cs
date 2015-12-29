@@ -65,7 +65,7 @@ namespace OR_M_Data_Entities.Data
         /// Execute the SqlBuilder on the database
         /// </summary>
         /// <param name="builder"></param>
-        protected void ExecuteReader(ISqlBuilder builder)
+        protected void ExecuteReader(ISqlExecutionPlan builder)
         {
             TryDisposeCloseReader();
 
@@ -80,7 +80,7 @@ namespace OR_M_Data_Entities.Data
         /// Execute the SqlBuilder on the database
         /// </summary>
         /// <param name="builder"></param>
-        protected void ExecuteReaderAsTransaction(ISqlBuilder builder)
+        protected void ExecuteReaderAsTransaction(ISqlExecutionPlan builder)
         {
             TryDisposeCloseReader();
 
@@ -124,7 +124,7 @@ namespace OR_M_Data_Entities.Data
             return ExecuteQuery<T>(sql, parameters.ToList());
         }
 
-        public DataReader<T> ExecuteQuery<T>(ISqlBuilder builder)
+        public DataReader<T> ExecuteQuery<T>(ISqlExecutionPlan builder)
         {
             ExecuteReader(builder);
 

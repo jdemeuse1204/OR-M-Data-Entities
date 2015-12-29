@@ -203,42 +203,42 @@ namespace OR_M_Data_Entities.Data
 
         #endregion
 
-        #region Builder
+        #region Plans
 
-        private class SqlTransactionBuilder : ISqlBuilder
+        private class SqlTransactionPlan : ISqlExecutionPlan
         {
             private readonly ReferenceMap _referenceMap;
 
-            private readonly List<ISqlBuilder> _builders;
+            private readonly List<ISqlExecutionPlan> _builders;
 
             private readonly List<SqlSecureQueryParameter> _parameters;
 
-            public SqlTransactionBuilder(ReferenceMap map, List<SqlSecureQueryParameter> parameters)
+            public SqlTransactionPlan(ReferenceMap map, List<SqlSecureQueryParameter> parameters)
             {
                 _referenceMap = map;
-                _builders = new List<ISqlBuilder>();
+                _builders = new List<ISqlExecutionPlan>();
                 _parameters = parameters;
             }
 
-            public void Add<T>(T builder) where T : ISqlBuilder, ISqlTransactionBuilder
+            public void Add<T>(T builder) where T : ISqlExecutionPlan, ISqlTransaction
             {
                 _builders.Add(builder);
             }
 
-            public ISqlPackage Build()
+            public ISqlBuilder GetBuilder()
             {
                 if (_builders == null || _builders.Count == 0)
                 {
                     throw new SqlSaveException("No items to save");
                 }
 
-                return new SqlTransactionPackage(_referenceMap, _builders, _parameters);
+                return new SqlTransactionBuilder(_referenceMap, _builders, _parameters);
             }
 
             public SqlCommand BuildSqlCommand(SqlConnection connection)
             {
-                // build the sql package
-                var package = Build();
+                // get the builder
+                var package = GetBuilder();
 
                 // generate the sql command
                 var command = new SqlCommand(package.GetSql(), connection);
@@ -252,111 +252,106 @@ namespace OR_M_Data_Entities.Data
             public ModificationEntity Entity { get; private set; }
         }
 
-        private class SqlTransactionInsertBuilder : SqlInsertBuilder, ISqlTransactionBuilder
+        private class SqlTransactionInsertPlan : SqlInsertPlan, ISqlTransaction
         {
-            private readonly Reference _reference;
+            public Reference Reference { get; private set; }
 
-            public SqlTransactionInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference)
-                : base(entity, sharedParameters)
+            public SqlTransactionInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, configuration, sharedParameters)
             {
-                _reference = reference;
+                Reference = reference;
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlTransactionInsertPackage(this, Parameters, _reference);
+                return new SqlTransactionInsertBuilder(this, Parameters, Reference, Configuration);
             }
         }
 
-        private class SqlTransactionTryInsertBuilder : SqlTryInsertBuilder, ISqlTransactionBuilder
+        private class SqlTransactionTryInsertPlan : SqlTryInsertPlan, ISqlTransaction
         {
-            private readonly Reference _reference;
+            public Reference Reference { get; private set; }
 
-            public SqlTransactionTryInsertBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference)
-                : base(entity, sharedParameters)
+            public SqlTransactionTryInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, configuration, sharedParameters)
             {
-                _reference = reference;
+                Reference = reference;
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                var insert = new SqlTransactionInsertPackage(this, Parameters, _reference);
+                var insert = new SqlTransactionInsertBuilder(this, Parameters, Reference, Configuration);
 
-                return new SqlExistsPackage(this, Parameters, insert);
+                return new SqlExistsBuilder(this, Configuration, Parameters, insert);
             }
         }
 
-        private class SqlTransactionTryInsertUpdateBuilder : SqlTryInsertUpdateBuilder, ISqlTransactionBuilder
+        private class SqlTransactionTryInsertUpdatePlan : SqlTryInsertUpdatePlan, ISqlTransaction
         {
-            private readonly Reference _reference;
+            public Reference Reference { get; private set; }
 
-            private readonly ConfigurationOptions _configuration;
-
-            public SqlTransactionTryInsertUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
-                : base(entity, parameters)
+            public SqlTransactionTryInsertUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, configuration, parameters)
             {
-                _reference = reference;
-                _configuration = configuration;
+                Reference = reference;
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
                 // insert and update need to share (by reference) their parameters list so they are in sync and do not overlap keys
-                var insert = new SqlTransactionInsertPackage(this, Parameters, _reference);
+                var insert = new SqlTransactionInsertBuilder(this, Parameters, Reference, Configuration);
 
                 // change table alias otherwise they will be the same and we will get errors
-                var update = new SqlTransactionUpdatePackage(this, Parameters, _reference, _configuration, string.Format("{0}_1", _reference.Alias));
+                var update = new SqlTransactionUpdateBuilder(this, Parameters, Reference, Configuration, string.Format("{0}_1", Reference.Alias));
 
-                return new SqlExistsPackage(this, Parameters, insert, update);
+                return new SqlExistsBuilder(this, Configuration, Parameters, insert, update);
             }
         }
 
-        private class SqlTransactionUpdateBuilder : SqlUpdateBuilder, ISqlTransactionBuilder
+        private class SqlTransactionUpdatePlan : SqlUpdatePlan, ISqlTransaction
         {
-            private readonly Reference _reference;
+            public Reference Reference { get; private set; }
 
-            private readonly ConfigurationOptions _configuration;
-
-            public SqlTransactionUpdateBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
-                : base(entity, parameters)
+            public SqlTransactionUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+                : base(entity, configuration, parameters)
             {
-                _reference = reference;
-                _configuration = configuration;
+                Reference = reference;
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlTransactionUpdatePackage(this, Parameters, _reference, _configuration);
+                return new SqlTransactionUpdateBuilder(this, Parameters, Reference, Configuration);
             }
         }
 
-        private class SqlTransactionDeleteBuilder : SqlDeleteBuilder, ISqlTransactionBuilder
+        private class SqlTransactionDeletePlan : SqlDeletePlan, ISqlTransaction
         {
-            private readonly Reference _reference;
+            public Reference Reference { get; private set; }
 
-            public SqlTransactionDeleteBuilder(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference) : base(entity, parameters)
+            public SqlTransactionDeletePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration) 
+                : base(entity, configuration, parameters)
             {
-                _reference = reference;
+                Reference = reference;
             }
 
-            public override ISqlPackage Build()
+            public override ISqlBuilder GetBuilder()
             {
-                return new SqlDeletePackage(this, Parameters);
+                return new SqlDeleteBuilder(this, Configuration, Parameters);
             }
         }
 
-        // for constraint only
-        private interface ISqlTransactionBuilder
+        private interface ISqlTransaction
         {
+            Reference Reference { get; }
         }
 
         #endregion
 
         #region Package
 
-        private class SqlTransactionPackage : ISqlPackage
+        private class SqlTransactionBuilder : ISqlBuilder
         {
-            private readonly List<ISqlBuilder> _builders;
+            private readonly List<ISqlExecutionPlan> _builders;
 
             private readonly ReferenceMap _referenceMap;
 
@@ -390,7 +385,7 @@ IF @@TRANCOUNT > 0
 
             private readonly List<SqlSecureQueryParameter> _parameters;
 
-            public SqlTransactionPackage(ReferenceMap referenceMap, List<ISqlBuilder> builders, List<SqlSecureQueryParameter> parameters)
+            public SqlTransactionBuilder(ReferenceMap referenceMap, List<ISqlExecutionPlan> builders, List<SqlSecureQueryParameter> parameters)
             {
                 _builders = builders;
                 _referenceMap = referenceMap;
@@ -399,12 +394,12 @@ IF @@TRANCOUNT > 0
 
             public string GetSql()
             {
-                var container = CreatePackage();
+                var container = BuildContainer();
 
                 return container.Resolve();
             }
 
-            public ISqlContainer CreatePackage()
+            public ISqlContainer BuildContainer()
             {
                 var sql = string.Empty;
                 var declare = string.Empty;
@@ -416,10 +411,10 @@ IF @@TRANCOUNT > 0
                     var builder = _builders[i];
 
                     // build the package
-                    var package = builder.Build();
+                    var package = builder.GetBuilder();
 
                     // create the container
-                    var container = package.CreatePackage();
+                    var container = package.BuildContainer();
 
                     // split the sql into the set, sql, and declare statements
                     var split = container.Split();
@@ -457,12 +452,12 @@ IF @@TRANCOUNT > 0
             }
         }
 
-        private class SqlTransactionDeletePackage : SqlDeletePackage
+        private class SqlTransactionDeleteBuilder : SqlDeleteBuilder
         {
             private readonly Reference _reference;
 
-            public SqlTransactionDeletePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference)
-                : base(builder, parameters)
+            public SqlTransactionDeleteBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+                : base(builder, configuration, parameters)
             {
                 _reference = reference;
             }
@@ -480,14 +475,14 @@ IF @@TRANCOUNT > 0
             }
         }
 
-        private class SqlTransactionInsertPackage : SqlInsertPackage
+        private class SqlTransactionInsertBuilder : SqlInsertBuilder
         {
             private readonly Reference _reference;
 
             private readonly string _tableAliasOverride;
 
-            public SqlTransactionInsertPackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference, string tableAliasOverride = null)
-                : base(builder, parameters)
+            public SqlTransactionInsertBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
+                : base(builder, configuration, parameters)
             {
                 _reference = reference;
                 _tableAliasOverride = tableAliasOverride;
@@ -546,25 +541,23 @@ IF @@TRANCOUNT > 0
             }
         }
 
-        private class SqlTransactionUpdatePackage : SqlUpdatePackage
+        private class SqlTransactionUpdateBuilder : SqlUpdateBuilder
         {
             private readonly Reference _reference;
 
-            private readonly ConfigurationOptions _configuration;
 
             private readonly string _tableAliasOverride;
 
-            public SqlTransactionUpdatePackage(ISqlBuilder builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
-                : base(builder, parameters)
+            public SqlTransactionUpdateBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
+                : base(builder, configuration, parameters)
             {
                 _reference = reference;
-                _configuration = configuration;
                 _tableAliasOverride = tableAliasOverride;
             }
 
             protected override ISqlContainer NewContainer()
             {
-                return new TransactionUpdateContainer(Entity, _configuration,
+                return new TransactionUpdateContainer(Entity, Configuration,
                     string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
@@ -711,7 +704,7 @@ IF @@TRANCOUNT > 0
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
             var parameters = new List<SqlSecureQueryParameter>();
-            var builder = new SqlTransactionBuilder(referenceMap, parameters);
+            var plan = new SqlTransactionPlan(referenceMap, parameters);
 
             for (var i = 0; i < referenceMap.Count; i++)
             {
@@ -726,16 +719,16 @@ IF @@TRANCOUNT > 0
                 switch (reference.Entity.UpdateType)
                 {
                     case UpdateType.Insert:
-                        builder.Add(new SqlTransactionInsertBuilder(reference.Entity, parameters, reference));
+                        plan.Add(new SqlTransactionInsertPlan(reference.Entity, parameters, reference, Configuration));
                         break;
                     case UpdateType.TryInsert:
-                        builder.Add(new SqlTransactionTryInsertBuilder(reference.Entity, parameters, reference));
+                        plan.Add(new SqlTransactionTryInsertPlan(reference.Entity, parameters, reference, Configuration));
                         break;
                     case UpdateType.TryInsertUpdate:
-                        builder.Add(new SqlTransactionTryInsertUpdateBuilder(reference.Entity, parameters, reference, Configuration));
+                        plan.Add(new SqlTransactionTryInsertUpdatePlan(reference.Entity, parameters, reference, Configuration));
                         break;
                     case UpdateType.Update:
-                        builder.Add(new SqlTransactionUpdateBuilder(reference.Entity, parameters, reference, Configuration));
+                        plan.Add(new SqlTransactionUpdatePlan(reference.Entity, parameters, reference, Configuration));
                         break;
                     case UpdateType.Skip:
                         continue;
@@ -749,7 +742,7 @@ IF @@TRANCOUNT > 0
             // execute the sql.  make sure all the saves are not skips
             if (!(saves.All(w => w == UpdateType.Skip)))
             {
-                ExecuteReader(builder);
+                ExecuteReader(plan);
 
                 // load back the data from the save into the model
                 _loadObjectFromMultipleActiveResults(referenceMap, saves);
@@ -778,7 +771,7 @@ IF @@TRANCOUNT > 0
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
             var parameters = new List<SqlSecureQueryParameter>();
-            var builder = new SqlTransactionBuilder(referenceMap, parameters);
+            var builder = new SqlTransactionPlan(referenceMap, parameters);
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();
@@ -789,7 +782,7 @@ IF @@TRANCOUNT > 0
 
                 if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
 
-                builder.Add(new SqlTransactionDeleteBuilder(reference.Entity, parameters, reference));
+                builder.Add(new SqlTransactionDeletePlan(reference.Entity, parameters, reference, Configuration));
             }
 
             if (OnSaving != null) OnSaving(entity);

@@ -405,7 +405,7 @@ namespace OR_M_Data_Entities.Data
         /// <summary>
         /// Provides us a way to get the execution plan for an entity
         /// </summary>
-        private abstract class SqlExecutionPlan : ISqlBuilder
+        private abstract class SqlExecutionPlan : ISqlExecutionPlan
         {
             #region Constructor
 
@@ -429,12 +429,12 @@ namespace OR_M_Data_Entities.Data
 
             #region Methods
 
-            public abstract ISqlPackage Build();
+            public abstract ISqlBuilder GetBuilder();
 
             public SqlCommand BuildSqlCommand(SqlConnection connection)
             {
                 // build the sql package
-                var package = Build();
+                var package = GetBuilder();
 
                 // generate the sql command
                 var command = new SqlCommand(package.GetSql(), connection);
@@ -448,12 +448,12 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private abstract class SqlModificationPackage : SqlSecureExecutable, ISqlPackage
+        private abstract class SqlModificationBuilder : SqlSecureExecutable, ISqlBuilder
         {
             #region Constructor
 
 
-            protected SqlModificationPackage(ISqlBuilder plan, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
+            protected SqlModificationBuilder(ISqlExecutionPlan plan, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
                 : base(parameters)
             {
                 Entity = plan.Entity;
@@ -474,11 +474,11 @@ namespace OR_M_Data_Entities.Data
 
             protected abstract ISqlContainer NewContainer();
 
-            public abstract ISqlContainer CreatePackage();
+            public abstract ISqlContainer BuildContainer();
 
             public string GetSql()
             {
-                var container = CreatePackage();
+                var container = BuildContainer();
 
                 return container.Resolve();
             }
@@ -521,11 +521,6 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-
-            protected SqlSecureExecutable()
-            {
-                _parameters = new List<SqlSecureQueryParameter>();
-            }
 
             protected SqlSecureExecutable(List<SqlSecureQueryParameter> parameters)
             {
@@ -576,13 +571,6 @@ namespace OR_M_Data_Entities.Data
                         cmd.Parameters[item.Key].SqlDbType = item.Value.DbTranslationType;
                     }
                 }
-            }
-
-            protected string FindParameterKey(string dbColumnName)
-            {
-                var parameter = _parameters.FirstOrDefault(w => w.DbColumnName == dbColumnName);
-
-                return parameter != null ? parameter.Key : null;
             }
 
             #endregion

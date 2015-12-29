@@ -1210,6 +1210,26 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             }
         }
 
+        public static bool Test_67(DbSqlContext ctx)
+        {
+            // make sure we cannot update identity column when EST is on
+            var id = ctx.From<TryInsertUpdateWithGeneration>().Select(w => w.Id).Max();
+
+            var item = ctx.Find<TryInsertUpdateWithGeneration>(id);
+
+            item.OtherNumber = 20;
+
+            try
+            {
+                ctx.SaveChanges(item);
+                return false;
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
         #region helpers
         private static Policy _addPolicy(DbSqlContext ctx)
         {

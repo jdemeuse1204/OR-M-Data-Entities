@@ -10,9 +10,9 @@ using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data.Query
 {
-	public interface ISqlBuilder
+	public interface ISqlExecutionPlan
 	{
-        ISqlPackage Build();
+        ISqlBuilder GetBuilder();
 
 	    SqlCommand BuildSqlCommand(SqlConnection connection);
 

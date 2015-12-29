@@ -10,11 +10,11 @@ using OR_M_Data_Entities.Data.Modification;
 
 namespace OR_M_Data_Entities.Data.Query
 {
-    public interface ISqlPackage
+    public interface ISqlBuilder
     {
         string GetSql();
 
-        ISqlContainer CreatePackage();
+        ISqlContainer BuildContainer();
 
         void InsertParameters(SqlCommand cmd);
     }
