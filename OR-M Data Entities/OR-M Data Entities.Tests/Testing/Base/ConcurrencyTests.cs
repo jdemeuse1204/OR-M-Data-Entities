@@ -75,7 +75,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 return _was_Test_C_3_handlerFired == false;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return false;
             }

@@ -1230,6 +1230,67 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             }
         }
 
+        public static bool Test_68(DbSqlContext ctx)
+        {
+            // save timestamp test
+            var history = new History
+            {
+                Description = "Winning",
+                ComputerId = 2
+            };
+
+            ctx.SaveChanges(history);
+
+            return (history.CreateDate != null);
+        }
+
+        public static bool Test_69(DbSqlContext ctx)
+        {
+            try
+            {
+                // make sure we can update with a timestamp
+                var history = new History
+                {
+                    Description = "Winning",
+                    ComputerId = 2
+                };
+
+                ctx.SaveChanges(history);
+
+                history.Description = "Changed";
+
+                ctx.SaveChanges(history);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_70(DbSqlContext ctx)
+        {
+            try
+            {
+                // Should get errors when we try an update a timestamp
+                var history = new History
+                {
+                    Description = "Winning",
+                    ComputerId = 2,
+                    CreateDate =   new byte[] {0,0,0,0,68,30}
+                };
+
+                ctx.SaveChanges(history);
+
+                return false;
+            }
+            catch (SqlSaveException)
+            {
+                return true;
+            }
+        }
+
         #region helpers
         private static Policy _addPolicy(DbSqlContext ctx)
         {
@@ -1280,7 +1341,6 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                     AverageDeliveryTime = 15,
                     FirstName = "James",
                     LastName = "Demeuse",
-                    CreateDate = BitConverter.GetBytes(DateTime.Now.ToOADate())
                 }
             };
 

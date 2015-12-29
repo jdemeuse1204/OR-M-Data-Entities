@@ -14,6 +14,8 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Definition.Rules;
+using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -63,7 +65,7 @@ namespace OR_M_Data_Entities.Data
             where T : class
         {
             // check the configuration first, make sure its setup correctly
-            _checkConfiguration();
+            RuleProcessor.ProcessRule<IsConfigurationValidRule>(Configuration);
 
             return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
         }
@@ -74,7 +76,7 @@ namespace OR_M_Data_Entities.Data
         public virtual bool Delete<T>(T entity) where T : class
         {
             // check the configuration first, make sure its setup correctly
-            _checkConfiguration();
+            RuleProcessor.ProcessRule<IsConfigurationValidRule>(Configuration);
 
             return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
         }
@@ -377,21 +379,6 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-
-        private void _checkConfiguration()
-        {
-            const string errorMessage = "Keys not configured correctly, must have at at least one key for option: {0}";
-
-            if (Configuration.InsertKeys.Int == null || !Configuration.InsertKeys.Int.Any())
-            {
-                throw new Exception(string.Format(errorMessage, "Integer"));
-            }
-
-            if (Configuration.InsertKeys.UniqueIdentifier == null || !Configuration.InsertKeys.UniqueIdentifier.Any())
-            {
-                throw new Exception(string.Format(errorMessage, "UniqueIdentifier"));
-            }
-        }
 
         private static List<ForeignKeyAssociation> _getForeignKeys(object entity)
         {

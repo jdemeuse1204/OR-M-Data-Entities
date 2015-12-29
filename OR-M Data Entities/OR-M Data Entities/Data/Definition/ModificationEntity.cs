@@ -8,8 +8,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Definition.Rules;
+using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
@@ -113,33 +114,13 @@ namespace OR_M_Data_Entities.Data.Definition
                 : entity == null && pristineEntity == null ? false : !entity.Equals(pristineEntity);
         }
 
-        private void _validateMaxLengthAttributes()
-        {
-            var properties =
-                TableType.GetProperties()
-                    .Where(w => w.GetCustomAttribute<MaxLengthAttribute>() != null && w.PropertyType == typeof(string))
-                    .ToList();
-
-            foreach (var property in properties)
-            {
-                var value = (string)property.GetValue(Value);
-                var maxLengthAttribute = property.GetCustomAttribute<MaxLengthAttribute>();
-
-                if (value == null || value.Length <= maxLengthAttribute.Length) continue;
-
-                if (maxLengthAttribute.ViolationType == MaxLengthViolationType.Truncate)
-                {
-                    Value.SetPropertyInfoValue(property, value.Substring(0, maxLengthAttribute.Length));
-                    continue;
-                }
-
-                throw new MaxLengthException(string.Format("Max Length violated on column: {0}", property.Name));
-            }
-        }
-
         private void _initialize(ConfigurationOptions configuration)
         {
             var primaryKeys = GetPrimaryKeys();
+
+            // make sure the table is valid
+            RuleProcessor.ProcessRule<IsEntityValidRule>(Value);
+
             var columns = Properties.Where(w => !IsPrimaryKey(w)).ToList();
             var hasPrimaryKeysOnly = HasPrimaryKeysOnly();
             var areAnyPkGenerationOptionsNone = false;
@@ -153,7 +134,7 @@ namespace OR_M_Data_Entities.Data.Definition
             if (State == EntityState.UnChanged) return;
 
             // validate all max length attributes
-            _validateMaxLengthAttributes();
+            RuleProcessor.ProcessRule<MaxLengthViolationRule>(Value, TableType);
 
             UpdateType = UpdateType.Insert;
 
@@ -163,58 +144,29 @@ namespace OR_M_Data_Entities.Data.Definition
                 var key = primaryKeys[i];
                 var pkValue = key.GetValue(Value);
                 var generationOption = GetGenerationOption(key);
-                var isUpdating = false;
-                var pkValueTypeString = "";
-                var pkValueType = "";
 
-                if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
-
-                if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", key.GetColumnName()));
+                RuleProcessor.ProcessRule<PkValueNotNullRule>(pkValue, key);
 
                 // check to see if we are updating or not
-                isUpdating = !_isValueInInsertArray(configuration, pkValue);
+                var isUpdating = !IsValueInInsertArray(configuration, pkValue);
 
-                // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
-                switch (pkValue.GetType().Name.ToUpper())
-                {
-                    case "INT16":
-                        pkValueTypeString = "zero";
-                        pkValueType = "INT16";
-                        break;
-                    case "INT32":
-                        pkValueTypeString = "zero";
-                        pkValueType = "INT32";
-                        break;
-                    case "INT64":
-                        pkValueTypeString = "zero";
-                        pkValueType = "INT64";
-                        break;
-                    case "GUID":
-                        pkValueTypeString = "zero";
-                        pkValueType = "INT16";
-                        break;
-                    case "STRING":
-                        pkValueTypeString = "null/blank";
-                        pkValueType = "STRING";
-                        break;
-                }
+                if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
 
                 // break because we are already updating, do not want to set to false
                 if (!isUpdating)
                 {
-                    if (generationOption == DbGenerationOption.None)
+                    if (generationOption != DbGenerationOption.None)
                     {
-                        // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
-                        throw new SqlSaveException(string.Format(
-                            "Primary Key cannot be {1} for {2} when DbGenerationOption is set to None.  Primary Key Name: {0}",
-                            key.Name,
-                            pkValueTypeString, pkValueType));
+                        RuleProcessor.ProcessRule<TimeStampColumnInsertRule>(Value, columns);
+                        continue;
                     }
-                    continue;
-                }
 
-                // only check on updates
-                _checkIdentityUpdates(EntityTrackable, configuration, columns);
+                    // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
+                    throw new SqlSaveException(string.Format(
+                        "Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}",
+                        key.Name,
+                        PlainTableName));
+                }
 
                 // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
                 // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
@@ -222,10 +174,18 @@ namespace OR_M_Data_Entities.Data.Definition
                 UpdateType = hasPrimaryKeysOnly
                     ? UpdateType.TryInsert
                     : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
+
+                if (UpdateType != UpdateType.Update && UpdateType != UpdateType.TryInsertUpdate) continue;
+
+                // make sure identity columns were not updated
+                RuleProcessor.ProcessRule<IdentityColumnUpdateRule>(EntityTrackable, configuration, columns);
+
+                // make sure time stamps were not updated if any
+                RuleProcessor.ProcessRule<TimeStampColumnUpdateRule>(EntityTrackable, columns);
             }
         }
 
-        private static bool _isValueInInsertArray(ConfigurationOptions configuration, object value)
+        public static bool IsValueInInsertArray(ConfigurationOptions configuration, object value)
         {
             // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
             switch (value.GetType().Name.ToUpper())
@@ -245,53 +205,7 @@ namespace OR_M_Data_Entities.Data.Definition
             return false;
         }
 
-        /// <summary>
-        /// make sure the user is not trying to update an IDENTITY column, these cannot be updated
-        /// </summary>
-        /// <param name="entityStateTrackable"></param>
-        /// <param name="columns"></param>
-        private static void _checkIdentityUpdates(EntityStateTrackable entityStateTrackable, ConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
-        {
-            // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
-            if (entityStateTrackable == null) return;
-
-            List<string> errorColumns;
-
-            var allIdentityColumns = columns.Where(
-                w =>
-                    w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
-                    w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
-                    DbGenerationOption.IdentitySpecification).ToList();
-
-            // entity state tracking is on, check to see if the identity column has been updated
-            if (_getPristineEntity(entityStateTrackable) == null)
-            {
-                // any identity columns should be zero/null or whatever the insert value is
-                errorColumns = (from column in allIdentityColumns
-                    let value = column.GetValue(entityStateTrackable)
-                    let hasError = !_isValueInInsertArray(configuration, value)
-                    where hasError
-                    select column.Name).ToList();
-            }
-            else
-            {
-                // can only check when entity state tracking is on
-                // only can get here when updating, try insert, or try insert update
-                errorColumns =
-                    allIdentityColumns.Where(column => _hasColumnChanged(entityStateTrackable, column.Name))
-                        .Select(w => w.Name)
-                        .ToList();
-            }
-
-            if (!errorColumns.Any()) return;
-
-            const string error = "Cannot update value if IDENTITY column.  Column: {0}\r\r";
-            var message = errorColumns.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
-
-            throw new SqlSaveException(message);
-        }
-
-        private static bool _hasColumnChanged(EntityStateTrackable entity, string propertyName)
+        public static bool HasColumnChanged(EntityStateTrackable entity, string propertyName)
         {
             // only check when the pristine entity is not null, try insert update will fail otherwise.
             // if the pristine entity is null then there is nothing to compare to
@@ -308,14 +222,14 @@ namespace OR_M_Data_Entities.Data.Definition
 
         private static object _getPristineProperty(EntityStateTrackable entity, string propertyName)
         {
-            var tableOnLoad = _getPristineEntity(entity);
+            var tableOnLoad = GetPristineEntity(entity);
 
             return tableOnLoad == null
                 ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
                 : tableOnLoad.GetType().GetProperty(propertyName).GetValue(tableOnLoad);
         }
 
-        private static object _getPristineEntity(EntityStateTrackable entity)
+        public static object GetPristineEntity(EntityStateTrackable entity)
         {
             var field = GetPristineEntityFieldInfo();
 

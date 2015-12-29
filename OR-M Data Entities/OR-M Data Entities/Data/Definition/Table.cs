@@ -6,8 +6,9 @@
  * Copyright (c) 2014 James Demeuse
  */
 using System;
-using System.Dynamic;
 using System.Reflection;
+using OR_M_Data_Entities.Data.Definition.Rules;
+using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data.Definition
@@ -34,13 +35,7 @@ namespace OR_M_Data_Entities.Data.Definition
             _readOnlyAttribute = type.GetCustomAttribute<ReadOnlyAttribute>();
             _lookupTableAttribute = type.GetCustomAttribute<LookupTableAttribute>();
 
-            if (_linkedServerAttribute != null && _schemaAttribute != null)
-            {
-                throw new Exception(
-                    string.Format(
-                        "Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other",
-                        ClassName));
-            }
+            RuleProcessor.ProcessRule<IsTableValidRule>(TableType);
 
             TableNameOnly = _tableAttribute == null
                 ? _lookupTableAttribute != null && !string.IsNullOrEmpty(_lookupTableAttribute.Name)

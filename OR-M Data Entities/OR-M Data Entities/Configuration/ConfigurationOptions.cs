@@ -5,7 +5,6 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Configuration
 {

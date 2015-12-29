@@ -50,6 +50,16 @@
     <Compile Include="Configuration\KeyConfiguration.cs" />
     <Compile Include="Data\Definition\DeleteEntity.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
+    <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
+    <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
+    <Compile Include="Data\Definition\Rules\IdentityColumnUpdateRule.cs" />
+    <Compile Include="Data\Definition\Rules\IsConfigurationValidRule.cs" />
+    <Compile Include="Data\Definition\Rules\IsTableValidRule.cs" />
+    <Compile Include="Data\Definition\Rules\MaxLengthViolationRule.cs" />
+    <Compile Include="Data\Definition\Rules\TimeStampColumnInsertRule.cs" />
+    <Compile Include="Data\Definition\Rules\TimeStampColumnUpdateRule.cs" />
+    <Compile Include="Data\Definition\Rules\IsEntityValidRule.cs" />
+    <Compile Include="Data\Definition\Rules\PkValueNotNullRule.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableTransactional.cs" />
     <Compile Include="Data\Modification\ISqlContainer.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableNonTransactional.cs" />
@@ -68,7 +78,7 @@
     <Compile Include="Data\Definition\SqlExistsString.cs" />
     <Compile Include="Data\Execution\ISqlPayload.cs" />
     <Compile Include="Data\Execution\SqlPayload.cs" />
-    <Compile Include="Enumeration\ConcurrencyViolationRule.cs" />
+    <Compile Include="Configuration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
     <Compile Include="Enumeration\MaxLengthViolationType.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
@@ -89,6 +99,7 @@
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Enumeration\OrderType.cs" />
     <Compile Include="Exceptions\DataLoadException.cs" />
+    <Compile Include="Exceptions\InvalidTableException.cs" />
     <Compile Include="Exceptions\MaxLengthException.cs" />
     <Compile Include="Exceptions\OrderByException.cs" />
     <Compile Include="Exceptions\SqlReferenceConstraintException.cs" />

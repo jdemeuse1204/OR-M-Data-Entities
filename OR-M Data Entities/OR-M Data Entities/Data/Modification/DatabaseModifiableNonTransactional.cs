@@ -429,14 +429,14 @@ ELSE
             // not used
             protected override ISqlContainer NewContainer()
             {
-                throw new NotImplementedException(); // this smells
+                return _notExists != null
+                    ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql()))
+                    : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
             }
 
             public override ISqlContainer BuildContainer()
             {
-                return _notExists != null
-                    ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql()))
-                    : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
+                return NewContainer();
             }
         }
 
@@ -543,8 +543,8 @@ ELSE
 
             protected virtual void AddUpdate(ISqlContainer container, ModificationItem item)
             {
-                // Cannot update this type of field
-                if (item.Generation == DbGenerationOption.IdentitySpecification)
+                // These instances cannot be updated, we should read them back and insert the original value into the entity
+                if (item.Generation == DbGenerationOption.IdentitySpecification || item.DbTranslationType == SqlDbType.Timestamp)
                 {
                     // select back the real value in case the user tried to update it.  Need 
                     // to load back the generated column
@@ -795,9 +795,6 @@ ELSE
         private bool _delete<T>(T entity) 
             where T : class
         {
-            // check the configuration first
-            _checkConfiguration();
-
             var saves = new List<UpdateType>();
             var parent = new DeleteEntity(entity, Configuration);
 
