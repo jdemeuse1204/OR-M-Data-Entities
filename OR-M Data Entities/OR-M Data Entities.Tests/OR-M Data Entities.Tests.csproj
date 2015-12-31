@@ -99,12 +99,14 @@
     <Compile Include="Tables\Zip.cs" />
     <Compile Include="Testing\Base\ConcurrencyTests.cs" />
     <Compile Include="Testing\Base\DefaultTests.cs" />
+    <Compile Include="Testing\Base\LazyLoadTests.cs" />
     <Compile Include="Testing\Base\OtherTests.cs" />
     <Compile Include="Testing\Context\ConcurrencyContinueContext.cs" />
     <Compile Include="Testing\Context\ConcurrencyExceptionContext.cs" />
     <Compile Include="Testing\Context\ConcurrencyHandleContext.cs" />
     <Compile Include="Testing\Context\DefaultContext.cs" />
     <Compile Include="Testing\Context\InsertKeyChangeContext.cs" />
+    <Compile Include="Testing\Context\LazyLoadContext.cs" />
     <Compile Include="Testing\Context\TransactionContext.cs" />
     <Compile Include="Testing\KeyChangeContextTests.cs" />
     <Compile Include="Testing\SqlConcurrencyContinueContextTests.cs" />

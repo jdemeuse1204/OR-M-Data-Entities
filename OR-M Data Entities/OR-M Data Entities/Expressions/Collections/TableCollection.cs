@@ -12,8 +12,6 @@ namespace OR_M_Data_Entities.Expressions.Collections
 {
     public class TableCollection : ReadOnlyTableCollection
     {
-
-
         public string Add(ForeignKeyTable foreignKeyTable)
         {
             foreignKeyTable.Alias = string.Format("AkA{0}", Internal.Count);

@@ -188,6 +188,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         {
             Function = FunctionType.Count;
         }
+
+        public void ResolveInclude(string tableName)
+        {
+            
+        }
         #endregion
     }
 }

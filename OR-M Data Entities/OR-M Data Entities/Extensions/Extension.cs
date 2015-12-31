@@ -198,6 +198,13 @@ namespace OR_M_Data_Entities
         {
             return _min(source);
         }
+
+        public static ExpressionQuery<TSource> Include<TSource>(this ExpressionQuery<TSource> source, string tableName)
+        {
+            ((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
+
+            return source;
+        }
         #endregion
 
         #region Count

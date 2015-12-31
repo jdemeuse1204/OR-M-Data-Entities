@@ -32,6 +32,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         protected OSchematic QuerySchematic { get; private set; }
 
         private readonly TableCollection _tables;
+
         public ReadOnlyTableCollection Tables
         {
             get { return _tables; }
@@ -161,7 +162,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
                     }
                 }
 
-                // only load base type, this could be a sub query or lazy loading
+                // only load base type, this could be a sub query
                 if (ConstructionType == ExpressionQueryConstructionType.Join ||
                     ConstructionType == ExpressionQueryConstructionType.SubQuery) break;
 
