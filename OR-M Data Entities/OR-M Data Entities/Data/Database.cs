@@ -23,7 +23,7 @@ namespace OR_M_Data_Entities.Data
 
         protected readonly string ConnectionString;
 
-        protected SqlConnection Connection { get; set; }
+        protected SqlConnection Connection { get; private set; }
 
         protected SqlCommand Command { get; set; }
 

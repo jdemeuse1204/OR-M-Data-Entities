@@ -122,6 +122,7 @@
     <Compile Include="Expressions\Resolution\Base\ExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\Base\ResolutionContainerBase.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolvable.cs" />
+    <Compile Include="Expressions\Resolution\ExpressionQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryViewResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryViewResolvable.cs" />

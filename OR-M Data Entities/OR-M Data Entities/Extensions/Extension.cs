@@ -267,6 +267,7 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
+        #region Order By
         public static OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TKey>> keySelector)
         {
@@ -298,7 +299,9 @@ namespace OR_M_Data_Entities
 
             return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
         }
+        #endregion
 
+        #region Any
         public static bool Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
@@ -324,14 +327,28 @@ namespace OR_M_Data_Entities
 
             return result;
         }
+        #endregion
 
+        #region Where
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
+            var item = ExpressionQueryResolver.Resolve(source, expression);
+
+            if (item != null)
+            {
+                foreach (var sqlDbParameter in item.Parameters)
+                {
+                    
+                }
+            }
+
             ((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
 
             return source;
         }
+        #endregion
 
+        #region Joins
         public static ExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
             ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
@@ -347,11 +364,28 @@ namespace OR_M_Data_Entities
             return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
                 innerKeySelector, resultSelector, JoinType.Left);
         }
+        #endregion
 
+        #region Select
         public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
             return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
+        }
+        #endregion
+
+        private static T _max<T>(this ExpressionQuery<T> source)
+        {
+            ((ExpressionQueryResolvable<T>)source).ResoveMax();
+
+            return source.FirstOrDefault();
+        }
+
+        private static T _min<T>(this ExpressionQuery<T> source)
+        {
+            ((ExpressionQueryResolvable<T>)source).ResoveMin();
+
+            return source.FirstOrDefault();
         }
 
         public static bool IsExpressionQuery(this MethodCallExpression expression)
@@ -373,20 +407,6 @@ namespace OR_M_Data_Entities
         public static bool IsExpressionQuery(this object o)
         {
             return IsExpressionQuery(o.GetType());
-        }
-
-        private static T _max<T>(this ExpressionQuery<T> source)
-        {
-            ((ExpressionQueryResolvable<T>)source).ResoveMax();
-
-            return source.FirstOrDefault();
-        }
-
-        private static T _min<T>(this ExpressionQuery<T> source)
-        {
-            ((ExpressionQueryResolvable<T>)source).ResoveMin();
-
-            return source.FirstOrDefault();
         }
     }
 
@@ -504,11 +524,12 @@ namespace OR_M_Data_Entities
                 {
                     var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
                     var dbValue = reader[ordinal];
+                    var dbNullValue = dbValue as DBNull;
 
                     // the rest of the object will be null.  No data exists for the object
-                    if (property.IsPrimaryKey && dbValue is DBNull) return false;
+                    if (property.IsPrimaryKey && dbNullValue != null) return false;
 
-                    instance.SetPropertyInfoValue(property.NewPropertyName, dbValue is DBNull ? null : dbValue);
+                    instance.SetPropertyInfoValue(property.NewPropertyName, dbNullValue != null ? null : dbValue);
                 }
 
                 return true;

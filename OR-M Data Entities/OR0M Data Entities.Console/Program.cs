@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Dynamic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
 using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Expressions.Resolution;
+using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
@@ -33,9 +37,25 @@ namespace OR0M_Data_Entities.Console
 
     class Program
     {
+
+
         static void Main(string[] args)
         {
             var context = new SqlContext();
+            var ids = new [] {1};
+            var tests = new List<int> {1};
+            context.From<Contact>()
+                .Where(
+                    w =>
+                        w.ContactID == 1 ||
+                        w.CreatedByUserID == 1 ||
+                        !w.FirstName.Equals("James")
+                        || w.LastName.Equals("WIN") == false
+                        && tests.Contains(w.ContactID)
+                        //&& 
+                        //w.EditedBy.Name.StartsWith("James") 
+                        && ids.Contains(w.ContactID)
+                        );
 
             //var c1 = context.Find<Contact>(1);
 
@@ -262,6 +282,28 @@ namespace OR0M_Data_Entities.Console
         public class GetLastName2 : ScalarFunction<string>
         {
             public int Id { get; set; }
+        }
+    }
+
+    public static class PredicateBuilder
+    {
+        public static Expression<Func<T, bool>> True<T>() { return f => true; }
+        public static Expression<Func<T, bool>> False<T>() { return f => false; }
+
+        public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)
+        {
+            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters);
+
+            return Expression.Lambda<Func<T, bool>>
+                  (Expression.OrElse(expr1.Body, invokedExpr), expr1.Parameters);
+        }
+
+        public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> expr1,
+                                                             Expression<Func<T, bool>> expr2)
+        {
+            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters.Cast<Expression>());
+            return Expression.Lambda<Func<T, bool>>
+                  (Expression.AndAlso(expr1.Body, invokedExpr), expr1.Parameters);
         }
     }
 }

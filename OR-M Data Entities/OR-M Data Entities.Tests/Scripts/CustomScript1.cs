@@ -3,7 +3,7 @@ using OR_M_Data_Entities.Tests.Tables;
 
 namespace OR_M_Data_Entities.Tests.Scripts
 {
-    public class CustomScript1 : CustomScript<Contact>
+    public class CustomScript1 : CustomScript<int>
     {
         protected override string Sql
         {
