@@ -332,6 +332,13 @@ namespace OR_M_Data_Entities
         #region Where
         public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
+            //var s = DateTime.Now;
+
+            //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
+            //var e = DateTime.Now;
+
+            //Console.WriteLine((e-s).TotalMilliseconds);
+
             var item = ExpressionQueryResolver.Resolve(source, expression);
 
             if (item != null)
@@ -983,29 +990,6 @@ namespace OR_M_Data_Entities
             }
 
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
-        }
-    }
-
-    public static class SqlCompareObjectExtensions
-    {
-        public static bool GreaterThan(this object first, object second)
-        {
-            return false;
-        }
-
-        public static bool GreaterThanOrEqual(this object first, object second)
-        {
-            return false;
-        }
-
-        public static bool LessThan(this object first, object second)
-        {
-            return false;
-        }
-
-        public static bool LessThanOrEqual(this object first, object second)
-        {
-            return false;
         }
     }
 }

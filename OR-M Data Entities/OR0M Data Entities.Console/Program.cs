@@ -6,6 +6,7 @@ using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
 using OR_M_Data_Entities.Enumeration;
@@ -37,25 +38,41 @@ namespace OR0M_Data_Entities.Console
 
     class Program
     {
-
+        static bool Test(int i)
+        {
+            return false;
+        }
 
         static void Main(string[] args)
         {
+            var date = DateTime.Now;
+
+            DateTimeOffset offset = date;
+
+            System.Console.WriteLine(offset.ToString("O"));
+            System.Console.WriteLine(TimeZoneInfo.Local);
+            if (offset != null)
+            {
+                offset.AddHours(1);
+            }
+
             var context = new SqlContext();
             var ids = new [] {1};
             var tests = new List<int> {1};
-            context.From<Contact>()
-                .Where(
-                    w =>
-                        w.ContactID == 1 ||
-                        w.CreatedByUserID == 1 ||
-                        !w.FirstName.Equals("James")
-                        || w.LastName.Equals("WIN") == false
-                        && tests.Contains(w.ContactID)
-                        //&& 
-                        //w.EditedBy.Name.StartsWith("James") 
-                        && ids.Contains(w.ContactID)
-                        );
+            //context.From<Contact>()
+            //    .Where(
+            //        w =>
+            //            w.ContactID == 1 ||
+            //            w.CreatedByUserID == 1 ||
+            //            !w.FirstName.Equals("James")
+            //            || w.LastName.Equals("WIN") == false
+            //            && tests.Contains(w.ContactID)
+            //            && w.EditedBy.Name.StartsWith("James") &&
+            //            false == w.LastName.EndsWith("WIN")
+            //            && !(w.ContactID > -1)
+            //            && 1 >= w.ContactID);
+
+            context.From<Contact>().Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
 
             //var c1 = context.Find<Contact>(1);
 

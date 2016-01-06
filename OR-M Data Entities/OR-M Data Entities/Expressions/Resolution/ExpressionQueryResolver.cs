@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Security;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Transform;
 using OR_M_Data_Entities.Expressions.Collections;
@@ -31,20 +33,33 @@ namespace OR_M_Data_Entities.Expressions.Resolution
     {
         public static LambdaToSqlResolution Resolve<T>(ExpressionQuery<T> source, Expression<Func<T, bool>> expressionQuery)
         {
-            QueryId = source.Id;
+            return Resolve(source, new List<SqlDbParameter>(), expressionQuery);
+        }
+
+        public static LambdaToSqlResolution Resolve<T>(ExpressionQuery<T> source, List<SqlDbParameter> parameters, Expression<Func<T, bool>> expressionQuery)
+        {
+            return Resolve(source.Id, source.Tables, parameters, expressionQuery.Body);
+        }
+
+        public static LambdaToSqlResolution Resolve(Guid queryId, ReadOnlyTableCollection tables, List<SqlDbParameter> parameters, Expression expressionQuery)
+        {
+            QueryId = queryId;
             Parameters = new List<SqlDbParameter>();
             Order = new Queue<KeyValuePair<string, Expression>>();
-            Tables = source.Tables;
+            Tables = tables;
             Sql = string.Empty;
-            
-            _evaluate(expressionQuery.Body as dynamic);
+
+            _evaluate(expressionQuery as dynamic);
 
             return new LambdaToSqlResolution(Sql, Parameters);
         }
 
         private static void _evaluate(MethodCallExpression expression)
         {
-            return;
+            // get the sql from the expression
+            Sql = WhereUtilities.GetSqlFromExpression(expression);
+
+            _processExpression(expression, expression.ToString(), false);
         }
 
         private static void _evaluate(UnaryExpression expression)
@@ -54,133 +69,225 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         private static void _evaluate(MemberExpression expression)
         {
-            return;
+            // get the sql from the expression
+            Sql = WhereUtilities.GetSqlFromExpression(expression);
+
+            _processExpression(expression, expression.ToString(), false);
         }
 
         private static void _evaluate(BinaryExpression expression)
         {
+            // get the sql from the expression
+            Sql = WhereUtilities.GetSqlFromExpression(expression);
+
             // decompile the expression and break it into individual expressions
             var expressions = new List<Expression>
             {
                 expression
             };
-            var finalList = new List<Expression>();
 
             for (var i = 0; i < expressions.Count; i++)
             {
                 var e = expressions[i];
 
-                if (e.NodeType == ExpressionType.Equal ||
-                    e.NodeType == ExpressionType.Call ||
-                    e.NodeType == ExpressionType.Lambda ||
-                    e.NodeType == ExpressionType.Not)
+                if (WhereUtilities.IsFinalExpressionNodeType(e.NodeType))
                 {
-                    finalList.Add(e);
+                    // the key for an expression is its string value.  We can just
+                    // do a ToString on the expression to get what we want.  We just 
+                    // need to replace that value in the parent to get our sql value
+                    var replacementString = WhereUtilities.GetReplaceString(e);
+
+                    // process the not nodes like this because the actual
+                    // expression is embedded inside of it
+                    if (e.NodeType == ExpressionType.Not)
+                    {
+                        _processNotExpression(e, replacementString);
+                        continue;
+                    }
+
+                    // process normal expression
+                    _processExpression(e, replacementString, false);
                     continue;
                 }
 
                 expressions.Add(((BinaryExpression)e).Left);
                 expressions.Add(((BinaryExpression)e).Right);
             }
-
-            Sql = _getSqlFromExpression(expression);
-
-            // loop through the expressions and get the sql
-            foreach (dynamic item in finalList)
-            {
-                // the key for an expression is its string value.  We can just
-                // do a ToString on the expression to get what we want.  We just 
-                // need to replace that value in the parent to get our sql value
-                var replacementString = _getReplaceString(item);
-
-                if (item.NodeType == ExpressionType.Call)
-                {
-                    Sql = Sql.Replace(replacementString, _getSql(item as MethodCallExpression, false));
-                    continue;
-                }
-
-                if (item.NodeType == ExpressionType.Equal)
-                {
-                    // check to see if the user is using (test == true) instead of (test)
-                    bool outLeft ;
-                    if (isLeftBooleanValue(item, out outLeft))
-                    {
-                        Sql = Sql.Replace(replacementString, _getSql(item.Right as MethodCallExpression, outLeft));
-                        continue;
-                    }
-
-                    // check to see if the user is using (test == true) instead of (test)
-                    bool outRight;
-                    if (isRightBooleanValue(item, out outRight))
-                    {
-                        Sql = Sql.Replace(replacementString, _getSql(item.Left as MethodCallExpression, outRight));
-                        continue;
-                    }
-
-                    Sql = Sql.Replace(replacementString, _getSql(item as BinaryExpression));
-                    continue;   
-                }
-
-                if (item.NodeType == ExpressionType.Not)
-                {
-                    Sql = Sql.Replace(replacementString, _getSql(item.Operand as MethodCallExpression, true));
-                    continue;
-                }
-
-                throw new ArgumentNullException(item.NodeType);
-            }
         }
 
-        // checks to see if the left side of the binary expression is a boolean value
-        private static bool isLeftBooleanValue(BinaryExpression expression, out bool value)
+        private static void _processNotExpression(dynamic item, string replacementString)
         {
-            value = false;
-            var left = expression.Left as ConstantExpression;
+            var unaryExpression = item as UnaryExpression;
 
-            if (left != null && left.Value is bool)
+            if (unaryExpression != null)
             {
-                value = !(bool)left.Value; // invert for method that asks whether its a not expression, true = false
-
-                return true;
+                _processExpression(unaryExpression.Operand, replacementString, true);
+                return;
             }
 
-            return false;
-        }
+            var binaryExpression = item as BinaryExpression;
 
-        // checks to see if the right side of the binary expression is a boolean value
-        private static bool isRightBooleanValue(BinaryExpression expression, out bool value)
-        {
-            value = false;
-            var right = expression.Right as ConstantExpression;
-
-            if (right != null && right.Value is bool)
+            if (binaryExpression != null)
             {
-                value = !(bool) right.Value; // invert for method that asks whether its a not expression, false = true
-
-                return true;
+                _processExpression(binaryExpression, replacementString, true);
+                return;
             }
 
-            return false;
+            throw new Exception(string.Format("Expression Type not valid.  Type: {0}", item.NodeType));
         }
 
-        private static string _getReplaceString(Expression expression)
+        private static void _processExpression(dynamic item, string replacementString, bool isNotExpressionType)
         {
-            return expression.ToString();
+            if (item.NodeType == ExpressionType.Call)
+            {
+                Sql = Sql.Replace(replacementString, _getSql(item as MethodCallExpression, isNotExpressionType));
+                return;
+            }
+
+            if (item.NodeType == ExpressionType.Equal)
+            {
+                // check to see if the user is using (test == true) instead of (test)
+                bool outLeft;
+                if (WhereUtilities.IsLeftBooleanValue(item, out outLeft))
+                {
+                    Sql = Sql.Replace(replacementString, _getSql(item.Right as MethodCallExpression, outLeft || isNotExpressionType));
+                    return;
+                }
+
+                // check to see if the user is using (test == true) instead of (test)
+                bool outRight;
+                if (WhereUtilities.IsRightBooleanValue(item, out outRight))
+                {
+                    Sql = Sql.Replace(replacementString, _getSql(item.Left as MethodCallExpression, outRight || isNotExpressionType));
+                    return;
+                }
+
+                Sql = Sql.Replace(replacementString, _getSqlEquals(item as BinaryExpression, isNotExpressionType));
+                return;
+            }
+
+            if (item.NodeType == ExpressionType.GreaterThan ||
+                item.NodeType == ExpressionType.GreaterThanOrEqual ||
+                item.NodeType == ExpressionType.LessThan ||
+                item.NodeType == ExpressionType.LessThanOrEqual)
+            {
+                // check to see the order the user typed the statement
+                if (WhereUtilities.IsType<ConstantExpression>(item.Left))
+                {
+                    Sql = Sql.Replace(replacementString, _getSqlGreaterThanLessThan(item as BinaryExpression, isNotExpressionType, item.NodeType));
+                    return;
+                }
+
+                // check to see the order the user typed the statement
+                if (WhereUtilities.IsType<ConstantExpression>(item.Right))
+                {
+                    Sql = Sql.Replace(replacementString, _getSqlGreaterThanLessThan(item as BinaryExpression, isNotExpressionType, item.NodeType));
+                    return;
+                }
+
+                throw new Exception("invalid comparison");
+            }
+
+            // double negative check will go into recursive check
+            if (item.NodeType == ExpressionType.Not)
+            {
+                _processNotExpression(item, replacementString);
+                return;
+            }
+
+            throw new ArgumentNullException(item.NodeType);
         }
 
-        private static string _getSqlFromExpression(Expression expression)
+        private static string _getSqlEquals(BinaryExpression expression, bool isNotExpressionType)
         {
-            return string.Format("WHERE {0}", expression.ToString().Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND"));
+            var comparison = isNotExpressionType ? "!=" : "=";
+            var left = string.Empty;
+            var right = string.Empty;
+
+            // check to see if the left and right are not constants, if so they need to be evaulated
+            if (WhereUtilities.IsType<ConstantExpression>(expression.Left) || WhereUtilities.IsType<ConstantExpression>(expression.Right))
+            {
+                left = _getTableAliasAndColumnName(expression);
+                right = string.Format("@DATA{0}", Parameters.Count);
+
+                Parameters.Add(new SqlDbParameter(right, GetValue(expression)));
+
+                return string.Format("({0} {1} {2})", left, comparison, right);
+            }
+
+            var isLeftLambdaMethod = WhereUtilities.IsLambdaMethod(expression.Left as dynamic);
+            var isRightLambdaMethod = WhereUtilities.IsLambdaMethod(expression.Right as dynamic);
+
+            if (isLeftLambdaMethod)
+            {
+                // first = Select Top 1 X From Y Where X
+                left = _getSqlFromLambdaMethod(expression.Left as dynamic);
+            }
+
+            if (isRightLambdaMethod)
+            {
+                right = _getSqlFromLambdaMethod(expression.Right as dynamic);
+            }
+
+            if (!isLeftLambdaMethod && !isRightLambdaMethod)
+            {
+                right = LoadColumnAndTableName(expression.Right as dynamic);
+                left = LoadColumnAndTableName(expression.Left as dynamic);
+            }
+
+            return string.Format("({0} {1} {2})", left, comparison, right);
         }
 
-        private static string _getSql(BinaryExpression expression)
+        private static string _getSqlFromLambdaMethod(MemberExpression expression)
+        {
+            var methodCallExpression = expression.Expression as MethodCallExpression;
+
+            if (methodCallExpression == null)
+            {
+                throw new InvalidExpressionException("Expected MethodCallExpression");
+            }
+
+            var methodName = methodCallExpression.Method.Name;
+
+            switch (methodName.ToUpper())
+            {
+                case "FIRST":
+                case "FIRSTORDEFAULT":
+                    var c = Resolve(QueryId, Tables, Parameters, methodCallExpression);
+                    return string.Format("SELECT {0} FROM {1} WHERE {2}","", "", c.Sql);
+            }
+
+            throw new Exception(string.Format("Lambda Method not recognized.  Method Name: {0}", methodName));
+        }
+
+        private static string _getSqlGreaterThanLessThan(BinaryExpression expression, bool isNotExpressionType, ExpressionType comparisonType)
         {
             var aliasAndColumnName = _getTableAliasAndColumnName(expression);
             var parameter = string.Format("@DATA{0}", Parameters.Count);
+            string comparison;
+
+            switch (comparisonType)
+            {
+                case ExpressionType.GreaterThan:
+                    comparison = IsValueOnRight(expression) ? ">" : "<";
+                    break;
+                case ExpressionType.GreaterThanOrEqual:
+                    comparison = IsValueOnRight(expression) ? ">=" : "<=";
+                    break;
+                case ExpressionType.LessThan:
+                    comparison = IsValueOnRight(expression) ? "<" : ">";
+                    break;
+                case ExpressionType.LessThanOrEqual:
+                    comparison = IsValueOnRight(expression) ? "<=" : ">=";
+                    break;
+                default:
+                    throw new Exception(string.Format("Comparison not valid.  Comparison Type: {0}", comparisonType));
+            }
 
             Parameters.Add(new SqlDbParameter(parameter, GetValue(expression)));
+            var result = string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
 
-            return string.Format("({0} = {1})", aliasAndColumnName, parameter);
+            return isNotExpressionType ? string.Format("(NOT{0})", result) : result;
         }
 
         private static string _getSqlEquality(MethodCallExpression expression, bool isNotExpressionType)
@@ -191,6 +298,18 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             var parameter = string.Format("@DATA{0}", Parameters.Count);
 
             Parameters.Add(new SqlDbParameter(parameter, value));
+
+            return string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
+        }
+
+        private static string _getSqlStartsEndsWith(MethodCallExpression expression, bool isNotExpressionType, bool isStartsWith)
+        {
+            var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic);
+            var value = GetValue(expression as dynamic);
+            var comparison = isNotExpressionType ? "NOT LIKE" : "LIKE";
+            var parameter = string.Format("@DATA{0}", Parameters.Count);
+
+            Parameters.Add(new SqlDbParameter(parameter, string.Format(isStartsWith ? "{0}%" : "%{0}", value)));
 
             return string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
         }
@@ -227,14 +346,15 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         private static string _getSql(MethodCallExpression expression, bool isNotExpressionType)
         {
-            var isConverting =
-                expression.Arguments.Any(
-                    w =>
-                        w is MethodCallExpression &&
-                        ((MethodCallExpression)w).Method.DeclaringType == typeof(DbTransform) &&
-                        ((MethodCallExpression)w).Method.Name == "Convert");
+            //var isConverting =
+            //    expression.Arguments.Any(
+            //        w =>
+            //            w is MethodCallExpression &&
+            //            ((MethodCallExpression)w).Method.DeclaringType == typeof(DbTransform) &&
+            //            ((MethodCallExpression)w).Method.Name == "Convert");
+            var methodName = expression.Method.Name;
 
-            switch (expression.Method.Name.ToUpper())
+            switch (methodName.ToUpper())
             {
                 case "EQUALS":
                 case "OP_EQUALITY":
@@ -242,38 +362,12 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 case "CONTAINS":
                     return _getSqlContains(expression, isNotExpressionType);
                 case "STARTSWITH":
-                    //result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    //result.CompareValue = resolution.GetAndAddParameter(string.Format("{0}%", value));
-                    break;
+                    return _getSqlStartsEndsWith(expression, isNotExpressionType, true);
                 case "ENDSWITH":
-                    //result.Comparison = invertComparison ? CompareType.NotLike : CompareType.Like;
-                    //result.CompareValue = resolution.GetAndAddParameter(string.Format("%{0}", value));
-                    break;
-
-
-                case "GREATERTHAN":
-                    //result.Comparison = CompareType.GreaterThan;
-                    //result.InvertComparison = invertComparison;
-                    //result.CompareValue = resolution.GetAndAddParameter(value);
-                    break;
-                case "GREATERTHANOREQUAL":
-                    //result.Comparison = CompareType.GreaterThanEquals;
-                    //result.InvertComparison = invertComparison;
-                    //result.CompareValue = resolution.GetAndAddParameter(value);
-                    break;
-                case "LESSTHAN":
-                    //result.Comparison = CompareType.LessThan;
-                    //result.InvertComparison = invertComparison;
-                    //result.CompareValue = resolution.GetAndAddParameter(value);
-                    break;
-                case "LESSTHANOREQUAL":
-                    //result.Comparison = CompareType.LessThanEquals;
-                    //result.InvertComparison = invertComparison;
-                    //result.CompareValue = resolution.GetAndAddParameter(value);
-                    break;
+                    return _getSqlStartsEndsWith(expression, isNotExpressionType, false);
             }
 
-            throw new ArgumentNullException();
+            throw new Exception(string.Format("Method does not translate into Sql.  Method Name: {0}", methodName));
         }
 
         private static string _getTableAliasAndColumnName(BinaryExpression expression)
@@ -284,6 +378,79 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             }
 
             return LoadColumnAndTableName(expression.Right as dynamic);
+        }
+
+        private static class WhereUtilities
+        {
+            public static bool IsLambdaMethod(Expression expression)
+            {
+                var e = expression as MemberExpression;
+
+                if (e == null) return false;
+
+                var methodCallExpression = e.Expression as MethodCallExpression;
+
+                return methodCallExpression != null && methodCallExpression.ToString().Contains("=>");
+            }
+
+            public static string GetSqlFromExpression(Expression expression)
+            {
+                return string.Format("WHERE {0}", expression.ToString().Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND"));
+            }
+
+            // checks to see if the left side of the binary expression is a boolean value
+            public static bool IsLeftBooleanValue(BinaryExpression expression, out bool value)
+            {
+                value = false;
+                var left = expression.Left as ConstantExpression;
+
+                if (left != null && left.Value is bool)
+                {
+                    value = !(bool)left.Value; // invert for method that asks whether its a not expression, true = false
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            // checks to see if the right side of the binary expression is a boolean value
+            public static bool IsRightBooleanValue(BinaryExpression expression, out bool value)
+            {
+                value = false;
+                var right = expression.Right as ConstantExpression;
+
+                if (right != null && right.Value is bool)
+                {
+                    value = !(bool)right.Value; // invert for method that asks whether its a not expression, false = true
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            public static bool IsType<T>(Expression expression)
+            {
+                return expression is T;
+            }
+
+            public static string GetReplaceString(Expression expression)
+            {
+                return expression.ToString();
+            }
+
+            public static bool IsFinalExpressionNodeType(ExpressionType expressionType)
+            {
+                var finalExpressionTypes = new[]
+                {
+                    ExpressionType.Equal, ExpressionType.Call, ExpressionType.Lambda, ExpressionType.Not,
+                    ExpressionType.GreaterThan, ExpressionType.GreaterThanOrEqual, ExpressionType.LessThan,
+                    ExpressionType.LessThanOrEqual
+                };
+
+                return finalExpressionTypes.Contains(expressionType);
+            }
         }
     }
 
@@ -355,7 +522,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 throw new ArgumentException("Comparison value not found");
             }
 
-            if (methodName.Equals("EQUALS"))
+            if (methodName.Equals("EQUALS") || methodName.Equals("STARTSWITH") || methodName.Equals("ENDSWITH"))
             {
                 // need to look for the argument that has the constant
                 foreach (var argument in expression.Arguments)
@@ -405,6 +572,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return expression.Right.NodeType == ExpressionType.Constant
                 ? ((ConstantExpression)expression.Right).Value
                 : ((ConstantExpression)expression.Left).Value;
+        }
+
+        protected static bool IsValueOnRight(BinaryExpression expression)
+        {
+            return expression.Right is ConstantExpression;
         }
         #endregion
 
