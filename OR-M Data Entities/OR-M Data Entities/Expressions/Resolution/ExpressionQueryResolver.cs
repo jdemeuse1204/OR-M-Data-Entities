@@ -5,9 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Security;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Transform;
 using OR_M_Data_Entities.Expressions.Collections;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
 using OR_M_Data_Entities.Mapping;
@@ -41,13 +39,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return Resolve(source.Id, source.Tables, parameters, expressionQuery.Body);
         }
 
-        public static LambdaToSqlResolution Resolve(Guid queryId, ReadOnlyTableCollection tables, List<SqlDbParameter> parameters, Expression expressionQuery)
+        public static LambdaToSqlResolution Resolve(Guid queryId, ReadOnlyTableCollection tables, List<SqlDbParameter> parameters, Expression expressionQuery, bool isSubQuery = false)
         {
             QueryId = queryId;
             Parameters = new List<SqlDbParameter>();
             Order = new Queue<KeyValuePair<string, Expression>>();
             Tables = tables;
             Sql = string.Empty;
+            IsSubQuery = isSubQuery;
 
             _evaluate(expressionQuery as dynamic);
 
@@ -172,14 +171,14 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 item.NodeType == ExpressionType.LessThanOrEqual)
             {
                 // check to see the order the user typed the statement
-                if (WhereUtilities.IsType<ConstantExpression>(item.Left))
+                if (WhereUtilities.IsConstant(item.Left))
                 {
                     Sql = Sql.Replace(replacementString, _getSqlGreaterThanLessThan(item as BinaryExpression, isNotExpressionType, item.NodeType));
                     return;
                 }
 
                 // check to see the order the user typed the statement
-                if (WhereUtilities.IsType<ConstantExpression>(item.Right))
+                if (WhereUtilities.IsConstant(item.Right))
                 {
                     Sql = Sql.Replace(replacementString, _getSqlGreaterThanLessThan(item as BinaryExpression, isNotExpressionType, item.NodeType));
                     return;
@@ -205,9 +204,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             var right = string.Empty;
 
             // check to see if the left and right are not constants, if so they need to be evaulated
-            if (WhereUtilities.IsType<ConstantExpression>(expression.Left) || WhereUtilities.IsType<ConstantExpression>(expression.Right))
+            if (WhereUtilities.IsConstant(expression.Left) || WhereUtilities.IsConstant(expression.Right))
             {
-                left = _getTableAliasAndColumnName(expression);
+                left = _getTableAliasAndColumnName(expression).GetTableAndColumnName(IsSubQuery);
                 right = string.Format("@DATA{0}", Parameters.Count);
 
                 Parameters.Add(new SqlDbParameter(right, GetValue(expression)));
@@ -222,17 +221,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             {
                 // first = Select Top 1 X From Y Where X
                 left = _getSqlFromLambdaMethod(expression.Left as dynamic);
+                right = LoadColumnAndTableName(expression.Right as dynamic).GetTableAndColumnName(IsSubQuery);
             }
 
             if (isRightLambdaMethod)
             {
                 right = _getSqlFromLambdaMethod(expression.Right as dynamic);
+                left = LoadColumnAndTableName(expression.Left as dynamic).GetTableAndColumnName(IsSubQuery);
             }
 
             if (!isLeftLambdaMethod && !isRightLambdaMethod)
             {
-                right = LoadColumnAndTableName(expression.Right as dynamic);
-                left = LoadColumnAndTableName(expression.Left as dynamic);
+                right = LoadColumnAndTableName(expression.Right as dynamic).GetTableAndColumnName(IsSubQuery);
+                left = LoadColumnAndTableName(expression.Left as dynamic).GetTableAndColumnName(IsSubQuery);
             }
 
             return string.Format("({0} {1} {2})", left, comparison, right);
@@ -253,8 +254,20 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             {
                 case "FIRST":
                 case "FIRSTORDEFAULT":
-                    var c = Resolve(QueryId, Tables, Parameters, methodCallExpression);
-                    return string.Format("SELECT {0} FROM {1} WHERE {2}","", "", c.Sql);
+
+                    dynamic lambdaExpression =
+                        methodCallExpression.Arguments.FirstOrDefault(w => w.ToString().Contains("=>"));
+                    
+                    if (lambdaExpression == null)
+                    {
+                        throw new Exception("Lambda subquery expression not found");
+                    }
+
+                    var columnName = expression.Member.GetColumnName();
+                    var tableName = WhereUtilities.GetTableNameFromLambdaParameter(lambdaExpression.Body);
+
+                    var c = Resolve(QueryId, Tables, Parameters, lambdaExpression.Body, true);
+                    return string.Format("(SELECT TOP 1 {0} FROM {1} {2}", string.Format("[{0}].[{1}])", tableName, columnName), tableName, c.Sql);
             }
 
             throw new Exception(string.Format("Lambda Method not recognized.  Method Name: {0}", methodName));
@@ -285,7 +298,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             }
 
             Parameters.Add(new SqlDbParameter(parameter, GetValue(expression)));
-            var result = string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
+            var result = string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(IsSubQuery), comparison, parameter);
 
             return isNotExpressionType ? string.Format("(NOT{0})", result) : result;
         }
@@ -299,7 +312,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             Parameters.Add(new SqlDbParameter(parameter, value));
 
-            return string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
+            return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(IsSubQuery), comparison, parameter);
         }
 
         private static string _getSqlStartsEndsWith(MethodCallExpression expression, bool isNotExpressionType, bool isStartsWith)
@@ -311,7 +324,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
             Parameters.Add(new SqlDbParameter(parameter, string.Format(isStartsWith ? "{0}%" : "%{0}", value)));
 
-            return string.Format("({0} {1} {2})", aliasAndColumnName, comparison, parameter);
+            return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(IsSubQuery), comparison, parameter);
         }
 
         private static string _getSqlContains(MethodCallExpression expression, bool isNotExpressionType)
@@ -328,7 +341,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 var containsParameter = string.Format("@DATA{0}", Parameters.Count);
 
                 Parameters.Add(new SqlDbParameter(containsParameter, string.Format("%{0}%", value)));
-                return string.Format("{0} {1} {2}", aliasAndColumnName, comparison, containsParameter);
+                return string.Format("{0} {1} {2}", aliasAndColumnName.GetTableAndColumnName(IsSubQuery), comparison, containsParameter);
             }
 
             var inString = string.Empty;
@@ -370,93 +383,121 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             throw new Exception(string.Format("Method does not translate into Sql.  Method Name: {0}", methodName));
         }
 
-        private static string _getTableAliasAndColumnName(BinaryExpression expression)
+        private static TableColumnContainer _getTableAliasAndColumnName(BinaryExpression expression)
         {
-            if (expression.Right.NodeType == ExpressionType.Constant)
+            if (WhereUtilities.IsConstant(expression.Right))
             {
                 return LoadColumnAndTableName(expression.Left as dynamic);
             }
 
             return LoadColumnAndTableName(expression.Right as dynamic);
         }
+    }
 
-        private static class WhereUtilities
+    static class WhereUtilities
+    {
+        public static bool IsLambdaMethod(Expression expression)
         {
-            public static bool IsLambdaMethod(Expression expression)
+            var e = expression as MemberExpression;
+
+            if (e == null) return false;
+
+            var methodCallExpression = e.Expression as MethodCallExpression;
+
+            return methodCallExpression != null && methodCallExpression.ToString().Contains("=>");
+        }
+
+        public static string GetTableNameFromLambdaParameter(BinaryExpression expression)
+        {
+            var left = expression.Left as MemberExpression;
+            var right = expression.Right as MemberExpression;
+
+            if (left != null && left.Expression != null && left.Expression is ParameterExpression)
             {
-                var e = expression as MemberExpression;
-
-                if (e == null) return false;
-
-                var methodCallExpression = e.Expression as MethodCallExpression;
-
-                return methodCallExpression != null && methodCallExpression.ToString().Contains("=>");
+                return left.Expression.Type.GetTableName();
             }
 
-            public static string GetSqlFromExpression(Expression expression)
+            if (right != null && right.Expression != null && right.Expression is ParameterExpression)
             {
-                return string.Format("WHERE {0}", expression.ToString().Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND"));
+                return right.Expression.Type.GetTableName();
+            }
+            return "";
+        }
+
+        public static string GetSqlFromExpression(Expression expression)
+        {
+            return string.Format("WHERE {0}", expression.ToString().Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND"));
+        }
+
+        // checks to see if the left side of the binary expression is a boolean value
+        public static bool IsLeftBooleanValue(BinaryExpression expression, out bool value)
+        {
+            value = false;
+            var left = expression.Left as ConstantExpression;
+
+            if (left != null && left.Value is bool)
+            {
+                value = !(bool)left.Value; // invert for method that asks whether its a not expression, true = false
+
+                return true;
             }
 
-            // checks to see if the left side of the binary expression is a boolean value
-            public static bool IsLeftBooleanValue(BinaryExpression expression, out bool value)
+            return false;
+        }
+
+        // checks to see if the right side of the binary expression is a boolean value
+        public static bool IsRightBooleanValue(BinaryExpression expression, out bool value)
+        {
+            value = false;
+            var right = expression.Right as ConstantExpression;
+
+            if (right != null && right.Value is bool)
             {
-                value = false;
-                var left = expression.Left as ConstantExpression;
+                value = !(bool)right.Value; // invert for method that asks whether its a not expression, false = true
 
-                if (left != null && left.Value is bool)
-                {
-                    value = !(bool)left.Value; // invert for method that asks whether its a not expression, true = false
-
-                    return true;
-                }
-
-                return false;
+                return true;
             }
 
-            // checks to see if the right side of the binary expression is a boolean value
-            public static bool IsRightBooleanValue(BinaryExpression expression, out bool value)
+            return false;
+        }
+
+        public static bool IsConstant(Expression expression)
+        {
+            var constant = expression as ConstantExpression;
+
+            if (constant != null) return true;
+
+            var memberExpression = expression as MemberExpression;
+
+            // could be something like Guid.Empty, DateTime.Now
+            if (memberExpression != null) return memberExpression.Member.DeclaringType == memberExpression.Type;
+
+            return false;
+        }
+
+        public static string GetReplaceString(Expression expression)
+        {
+            return expression.ToString();
+        }
+
+        public static bool IsFinalExpressionNodeType(ExpressionType expressionType)
+        {
+            var finalExpressionTypes = new[]
             {
-                value = false;
-                var right = expression.Right as ConstantExpression;
-
-                if (right != null && right.Value is bool)
-                {
-                    value = !(bool)right.Value; // invert for method that asks whether its a not expression, false = true
-
-                    return true;
-                }
-
-                return false;
-            }
-
-            public static bool IsType<T>(Expression expression)
-            {
-                return expression is T;
-            }
-
-            public static string GetReplaceString(Expression expression)
-            {
-                return expression.ToString();
-            }
-
-            public static bool IsFinalExpressionNodeType(ExpressionType expressionType)
-            {
-                var finalExpressionTypes = new[]
-                {
                     ExpressionType.Equal, ExpressionType.Call, ExpressionType.Lambda, ExpressionType.Not,
                     ExpressionType.GreaterThan, ExpressionType.GreaterThanOrEqual, ExpressionType.LessThan,
                     ExpressionType.LessThanOrEqual
                 };
 
-                return finalExpressionTypes.Contains(expressionType);
-            }
+            return finalExpressionTypes.Contains(expressionType);
         }
     }
 
     public abstract class ExpressQueryResolverBase
     {
         public static string Sql { get; protected set; }
+
+        public static bool IsSubQuery { get; protected set; }
 
         protected static List<SqlDbParameter> Parameters { get; set; }
 
@@ -465,16 +506,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         protected static ReadOnlyTableCollection Tables { get; set; }
 
         protected static Guid QueryId { get; set; }
-
-        protected static bool IsSubQuery(MethodCallExpression expression)
-        {
-            return
-                expression.Arguments.OfType<MethodCallExpression>()
-                    .Select(
-                        methodCallExpression =>
-                            methodCallExpression.IsExpressionQuery() || IsSubQuery(methodCallExpression))
-                    .FirstOrDefault();
-        }
 
         #region Get Value
         protected static object GetValue(ConstantExpression expression)
@@ -498,11 +529,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         protected static object GetValue(MethodCallExpression expression)
         {
             var methodName = expression.Method.Name.ToUpper();
-
-            if (IsSubQuery(expression))
-            {
-                return SubQueryResolver.Resolve(expression, null);
-            }
 
             if (methodName.Equals("CONTAINS"))
             {
@@ -569,9 +595,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution
 
         protected static object GetValue(BinaryExpression expression)
         {
-            return expression.Right.NodeType == ExpressionType.Constant
-                ? ((ConstantExpression)expression.Right).Value
-                : ((ConstantExpression)expression.Left).Value;
+            return WhereUtilities.IsConstant(expression.Right)
+                ?  GetValue(expression.Right as dynamic)
+                : GetValue(expression.Left as dynamic);
         }
 
         protected static bool IsValueOnRight(BinaryExpression expression)
@@ -612,33 +638,28 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         #endregion
 
         #region Load Table And Column Name
-        protected static string LoadColumnAndTableName(MemberExpression expression)
+        protected static TableColumnContainer LoadColumnAndTableName(MemberExpression expression)
         {
             var columnAttribute = expression.Member.GetCustomAttribute<ColumnAttribute>();
             var columnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
             string alias;
+            string tableName;
 
             if (expression.Expression.NodeType == ExpressionType.Parameter)
             {
-                // cannot come from a foriegn key, is the base type
-                //result.ColumnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
-                //result.TableName = expression.Expression.Type.GetTableName();
                 alias = Tables.Find(expression.Expression.Type, QueryId).Alias;
-                //tableName = expression.Expression.Type.GetTableName();
+                tableName = expression.Expression.Type.GetTableName();
             }
             else
             {
-                // will be from a foreign key, not the base type
-                //result.ColumnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
-                //result.TableName = ((MemberExpression)expression.Expression).Member.Name;
                 alias = Tables.FindByPropertyName(((MemberExpression)expression.Expression).Member.Name, QueryId).Alias;
-                //tableName = ((MemberExpression)expression.Expression).Member.Name;
+                tableName = ((MemberExpression)expression.Expression).Member.Name;
             }
 
-            return string.Format("[{0}].[{1}]", alias, columnName);
+            return new TableColumnContainer(tableName,columnName, alias);
         }
 
-        protected static string LoadColumnAndTableName(MethodCallExpression expression)
+        protected static TableColumnContainer LoadColumnAndTableName(MethodCallExpression expression)
         {
             if (expression.Object == null)
             {
@@ -656,7 +677,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             return LoadColumnAndTableName(expression.Object as MemberExpression);
         }
 
-        protected static string LoadColumnAndTableName(UnaryExpression expression)
+        protected static TableColumnContainer LoadColumnAndTableName(UnaryExpression expression)
         {
             return LoadColumnAndTableName(expression.Operand as MemberExpression);
         }
@@ -668,5 +689,28 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                    type.IsArray);
         }
         #endregion
+    }
+
+    public class TableColumnContainer
+    {
+        public readonly string TableName;
+
+        public readonly string ColumnName;
+
+        public readonly string Alias;
+
+        public TableColumnContainer(string tableName, string columnName, string alias)
+        {
+            TableName = tableName;
+            ColumnName = columnName;
+            Alias = alias;
+        }
+
+        public string GetTableAndColumnName(bool isSubQuery)
+        {
+            return isSubQuery
+                ? string.Format("[{0}].[{1}]", TableName, ColumnName)
+                : string.Format("[{0}].[{1}]", Alias, ColumnName);
+        }
     }
 }

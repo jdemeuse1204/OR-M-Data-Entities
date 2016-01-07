@@ -45,17 +45,6 @@ namespace OR0M_Data_Entities.Console
 
         static void Main(string[] args)
         {
-            var date = DateTime.Now;
-
-            DateTimeOffset offset = date;
-
-            System.Console.WriteLine(offset.ToString("O"));
-            System.Console.WriteLine(TimeZoneInfo.Local);
-            if (offset != null)
-            {
-                offset.AddHours(1);
-            }
-
             var context = new SqlContext();
             var ids = new [] {1};
             var tests = new List<int> {1};
