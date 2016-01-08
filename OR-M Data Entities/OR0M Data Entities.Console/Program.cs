@@ -20,7 +20,7 @@ namespace OR0M_Data_Entities.Console
 {
     public class SqlContext : DbSqlContext
     {
-        public SqlContext() 
+        public SqlContext()
             : base("sqlExpress")
         {
             Configuration.UseTransactions = true;
@@ -32,22 +32,21 @@ namespace OR0M_Data_Entities.Console
 
         private void OnOnConcurrencyViolation(object entity)
         {
-            
+
         }
     }
-
-    class Program
+    internal class Program
     {
-        static bool Test(int i)
+        private static bool Test(int i)
         {
             return false;
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             var context = new SqlContext();
-            var ids = new [] {1};
-            var tests = new List<int> {1};
+            var ids = new[] { 1 };
+            var tests = new List<int> { 1 };
             //context.From<Contact>()
             //    .Where(
             //        w =>
@@ -61,7 +60,8 @@ namespace OR0M_Data_Entities.Console
             //            && !(w.ContactID > -1)
             //            && 1 >= w.ContactID);
 
-            context.From<Contact>().Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
+            context.From<Contact>()
+                .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
 
             //var c1 = context.Find<Contact>(1);
 
@@ -208,14 +208,11 @@ namespace OR0M_Data_Entities.Console
 
             protected override string Sql
             {
-                get
-                {
-                    return @"
+                get { return @"
 
                     Select Top 1 * From Contacts Where Id = @Id
 
-                ";
-                }
+                "; }
             }
         }
 
@@ -227,14 +224,11 @@ namespace OR0M_Data_Entities.Console
 
             protected override string Sql
             {
-                get
-                {
-                    return @"
+                get { return @"
 
                     Update Contacts Set LastName = @Changed Where Id = @Id
 
-                ";
-                }
+                "; }
             }
         }
 
@@ -288,28 +282,6 @@ namespace OR0M_Data_Entities.Console
         public class GetLastName2 : ScalarFunction<string>
         {
             public int Id { get; set; }
-        }
-    }
-
-    public static class PredicateBuilder
-    {
-        public static Expression<Func<T, bool>> True<T>() { return f => true; }
-        public static Expression<Func<T, bool>> False<T>() { return f => false; }
-
-        public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)
-        {
-            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters);
-
-            return Expression.Lambda<Func<T, bool>>
-                  (Expression.OrElse(expr1.Body, invokedExpr), expr1.Parameters);
-        }
-
-        public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> expr1,
-                                                             Expression<Func<T, bool>> expr2)
-        {
-            var invokedExpr = Expression.Invoke(expr2, expr1.Parameters.Cast<Expression>());
-            return Expression.Lambda<Func<T, bool>>
-                  (Expression.AndAlso(expr1.Body, invokedExpr), expr1.Parameters);
         }
     }
 }

@@ -38,3 +38,7 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Release\OR0M Data Entities.Console.pdb
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\protobuf-net.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\TimeZoneNames.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\protobuf-net.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Release\protobuf-net.xml
