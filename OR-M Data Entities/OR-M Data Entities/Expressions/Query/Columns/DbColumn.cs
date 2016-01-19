@@ -6,6 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 using System;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Tables;
@@ -15,7 +16,13 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
 {
     public class DbColumn : SimpleColumn
     {
-        public DbColumn(Guid expressionQueryId, Type tableType, PropertyInfo property, string tableAlias, string parentPropertyName, bool isPrimaryKey, int ordinal)
+        public DbColumn(Guid expressionQueryId, 
+            Type tableType, 
+            PropertyInfo property, 
+            string tableAlias, 
+            string parentPropertyName, 
+            bool isPrimaryKey, 
+            int ordinal)
             : base(expressionQueryId, tableType, property, tableAlias, isPrimaryKey)
         {
             Ordinal = ordinal;
@@ -43,6 +50,8 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
 
         public MemberInfo NewProperty { get; set; }
 
+        public string ChangedPropertyName { get; set; }
+
         private string _newPropertyName;
         public string NewPropertyName
         {
@@ -63,5 +72,10 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
         }
 
         public DbTable NewTable { get; set; }
+
+        public void ChangeColumnName(string newPropertyName)
+        {
+            ChangedPropertyName = newPropertyName;
+        }
     }
 }

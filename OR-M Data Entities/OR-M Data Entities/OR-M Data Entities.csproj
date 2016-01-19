@@ -145,7 +145,10 @@
     <Compile Include="Expressions\Resolution\Where\SqlConnector.cs" />
     <Compile Include="Expressions\Resolution\SubQuery\SubQueryResolver.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereExpressionResolver.cs" />
+    <Compile Include="Extensions\ExpressionQueryExtensions.cs" />
     <Compile Include="Extensions\Extension.cs" />
+    <Compile Include="Extensions\PeekDataReaderExtensions.cs" />
+    <Compile Include="Extensions\SqlCommandExtensions.cs" />
     <Compile Include="Mapping\Base\AutoLoadKey.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />

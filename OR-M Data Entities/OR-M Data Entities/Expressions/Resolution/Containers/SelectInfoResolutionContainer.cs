@@ -63,13 +63,9 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public void Add(PropertyInfo item, Type baseType, string tableName, string tableAlias, string foreignKeyPropertyName, string foreignKeyTableName, bool isPrimaryKey)
         {
-            if (!_tableAliases.Select(w => w.Alias).Contains(tableAlias))
-            {
-                _tableAliases.Add(new ForeignKeyTable(this.ExpressionQueryId, baseType, foreignKeyPropertyName, tableAlias));
-            }
+            if (!_tableAliases.Select(w => w.Alias).Contains(tableAlias)) _tableAliases.Add(new ForeignKeyTable(ExpressionQueryId, baseType, foreignKeyPropertyName, tableAlias));
 
-            _infos.Add(new DbColumn(this.ExpressionQueryId, item.DeclaringType, item, tableAlias, foreignKeyTableName, isPrimaryKey,
-                _infos.Count));
+            _infos.Add(new DbColumn(ExpressionQueryId, item.DeclaringType, item, tableAlias, foreignKeyTableName, isPrimaryKey, _infos.Count));
         }
 
         public string GetNextTableReadName()
@@ -79,10 +75,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public void UnSelectAll()
         {
-            foreach (var info in _infos)
-            {
-                info.IsSelected = false;
-            }
+            foreach (var info in _infos) info.IsSelected = false;
 
             ReturnPropertyOnly = false;
         }
@@ -171,6 +164,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 .TrimEnd(',');
 
             return string.IsNullOrWhiteSpace(order) ? string.Empty : string.Format("ORDER BY {0}", order);
+        }
+
+        public DbColumn Find(string tableAlias, string columnName)
+        {
+            return _infos.First(w => w.GetTableAlias() == "" && w.NewProperty.Name == columnName);
         }
 
         private string _getOrderTypeString(OrderType orderType)

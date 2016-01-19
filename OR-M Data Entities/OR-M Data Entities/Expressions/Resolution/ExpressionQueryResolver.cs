@@ -12,21 +12,6 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Resolution
 {
-
-
-    public class LambdaToSqlResolution
-    {
-        public LambdaToSqlResolution(string sql, List<SqlDbParameter> parameters)
-        {
-            Sql = sql;
-            Parameters = parameters;
-        }
-
-        public readonly string Sql;
-
-        public readonly IReadOnlyList<SqlDbParameter> Parameters;
-    }
-
     public class ExpressionQueryResolver : ExpressQueryResolverBase
     {
         public static LambdaToSqlResolution Resolve<T>(ExpressionQuery<T> source, Expression<Func<T, bool>> expressionQuery)
@@ -333,7 +318,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
             var value = GetValue(expression);
             var isEnumerable = IsEnumerable(value.GetType());
             var comparison = isEnumerable
-                ? (isNotExpressionType ? "NOT IN({0})" : "IN({0})")
+                ? (isNotExpressionType ? "NOT IN ({0})" : "IN ({0})")
                 : (isNotExpressionType ? "LIKE" : "NOT LIKE");
 
             if (!isEnumerable)
@@ -354,7 +339,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 inString = string.Concat(inString, string.Format("{0},", inParameter));
             }
 
-            return string.Format("({0} {1})", aliasAndColumnName, string.Format(comparison, inString.TrimEnd(',')));
+            return string.Format("({0} {1})", aliasAndColumnName.GetTableAndColumnName(IsSubQuery), string.Format(comparison, inString.TrimEnd(',')));
         }
 
         private static string _getSql(MethodCallExpression expression, bool isNotExpressionType)
@@ -394,7 +379,108 @@ namespace OR_M_Data_Entities.Expressions.Resolution
         }
     }
 
-    static class WhereUtilities
+    public class ExpressionQuerySelectResolver : ExpressQueryResolverBase
+    {
+        public static object ReturnObject { get; private set; }
+
+        public static LambdaToSqlResolution Resolve<TSource, TResult>(ExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> expressionQuery)
+        {
+            return Resolve(source, new List<SqlDbParameter>(), expressionQuery);
+        }
+
+        public static LambdaToSqlResolution Resolve<TSource, TResult>(ExpressionQuery<TSource> source, List<SqlDbParameter> parameters, Expression<Func<TSource, TResult>> expressionQuery)
+        {
+            return Resolve(source.Id, source.Tables, parameters, expressionQuery.Body);
+        }
+
+        public static LambdaToSqlResolution Resolve(Guid queryId, ReadOnlyTableCollection tables, List<SqlDbParameter> parameters, Expression expressionQuery, bool isSubQuery = false)
+        {
+            QueryId = queryId;
+            Parameters = null;
+            Order = new Queue<KeyValuePair<string, Expression>>();
+            Tables = tables;
+            Sql = SelectUtilities.GetSqlFromExpression(expressionQuery);
+            IsSubQuery = isSubQuery;
+
+            _evaluate(expressionQuery as dynamic);
+
+            return new LambdaToSqlResolution(Sql, Parameters);
+        }
+
+        private static void _evaluate(MemberInitExpression expression)
+        {
+            var sql = _getSql(expression);
+
+            Sql = Sql.Replace(expression.ToString(), sql);
+
+            ReturnObject = expression;
+        }
+
+        private static void _evaluate(NewExpression expression)
+        {
+            var sql = string.Empty;
+
+            for (var i = 0; i < expression.Arguments.Count; i++)
+            {
+                var argument = expression.Arguments[i];
+                var member = expression.Members[i];
+
+                var tableAndColumnName = LoadColumnAndTableName((dynamic)argument);
+                var tableAndColmnNameSql = SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, member.Name);
+
+                sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
+            }
+
+            Sql = Sql.Replace(expression.ToString(), sql);
+
+            ReturnObject = expression;
+        }
+
+        private static void _evaluate(MemberExpression expression)
+        {
+            var tableAndColumnName = LoadColumnAndTableName(expression);
+            var tableAndColumnNameSql = tableAndColumnName.GetTableAndColumnName(false);
+
+            Sql = Sql.Replace(expression.ToString(), SelectUtilities.GetSqlSelectColumn(tableAndColumnNameSql));
+        }
+
+        private static string _getSql(MemberInitExpression expression)
+        {
+            var sql = string.Empty;
+
+            for (var i = 0; i < expression.Bindings.Count; i++)
+            {
+                var binding = expression.Bindings[i];
+
+                switch (binding.BindingType)
+                {
+                    case MemberBindingType.Assignment:
+                        var assignment = (MemberAssignment)binding;
+                        var memberInitExpression = assignment.Expression as MemberInitExpression;
+
+                        if (memberInitExpression != null)
+                        {
+                            sql = string.Concat(sql, _getSql(memberInitExpression));
+                            continue;
+                        }
+
+                        var tableAndColumnName = LoadColumnAndTableName((dynamic)assignment.Expression);
+                        var tableAndColmnNameSql = SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, assignment.Member.Name);
+
+                        sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
+                        break;
+                    case MemberBindingType.ListBinding:
+                        break;
+                    case MemberBindingType.MemberBinding:
+                        break;
+                }
+            }
+
+            return sql;
+        }
+    }
+
+    internal static class WhereUtilities
     {
         public static bool IsLambdaMethod(Expression expression)
         {
@@ -490,6 +576,24 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                 };
 
             return finalExpressionTypes.Contains(expressionType);
+        }
+    }
+
+    internal static class SelectUtilities
+    {
+        public static string GetSqlFromExpression(Expression expression)
+        {
+            return string.Format("SELECT\r\n {0}", expression);
+        }
+
+        public static string GetSqlSelectColumn(string tableAndColumnName)
+        {
+            return string.Format("{0}{1}{2}", "\t", tableAndColumnName, "\r\n");
+        }
+
+        public static string GetTableAndColumnNameWithAlias(TableColumnContainer container, string alias)
+        {
+            return string.Format("{0} AS [{1}],", container.GetTableAndColumnName(false), alias);
         }
     }
 
@@ -689,6 +793,19 @@ namespace OR_M_Data_Entities.Expressions.Resolution
                    type.IsArray);
         }
         #endregion
+    }
+
+    public class LambdaToSqlResolution
+    {
+        public LambdaToSqlResolution(string sql, List<SqlDbParameter> parameters)
+        {
+            Sql = sql;
+            Parameters = parameters;
+        }
+
+        public readonly string Sql;
+
+        public readonly IReadOnlyList<SqlDbParameter> Parameters;
     }
 
     public class TableColumnContainer

@@ -15,6 +15,7 @@ using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
+// ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
 {
     public static class SchemaExtensions

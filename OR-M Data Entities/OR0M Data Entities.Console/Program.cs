@@ -1,17 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.SqlClient;
-using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using OR_M_Data_Entities;
-using OR_M_Data_Entities.Diagnostics.HealthMonitoring;
-using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Expressions.Resolution.Containers;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
@@ -35,6 +25,23 @@ namespace OR0M_Data_Entities.Console
 
         }
     }
+
+    public class Test
+    {
+        public int Id { get; set; }
+
+        public string Phone { get; set; }
+
+        public Test2 Item { get; set; }
+    }
+
+    public class Test2
+    {
+        public int TestingId { get; set; }
+
+        public string FirstName { get; set; }
+    }
+
     internal class Program
     {
         private static bool Test(int i)
@@ -48,22 +55,22 @@ namespace OR0M_Data_Entities.Console
             var ids = new[] { 1 };
             var tests = new List<int> { 1 };
             //context.From<Contact>()
-            //    .Where(
-            //        w =>
-            //            w.ContactID == 1 ||
-            //            w.CreatedByUserID == 1 ||
-            //            !w.FirstName.Equals("James")
-            //            || w.LastName.Equals("WIN") == false
-            //            && tests.Contains(w.ContactID)
-            //            && w.EditedBy.Name.StartsWith("James") &&
-            //            false == w.LastName.EndsWith("WIN")
-            //            && !(w.ContactID > -1)
-            //            && 1 >= w.ContactID);
+            //    .Where(w => w.ContactID == 1)
+            //    .Select(w => new Test
+            //    {
+            //        Id = w.CreatedByUserID,
+            //        Phone = w.Number.Phone,
+            //        Item = new Test2
+            //        {
+            //            FirstName = w.FirstName,
+            //            TestingId = w.ContactID
+            //        }
+            //    });
 
-            context.From<Contact>()
-                .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
+            //context.From<Contact>()
+            //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
 
-            //var c1 = context.Find<Contact>(1);
+            var c1 = context.Find<Contact>(1);
 
             //c1.FirstName = "WINing!";
 
