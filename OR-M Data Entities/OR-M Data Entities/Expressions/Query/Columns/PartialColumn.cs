@@ -13,25 +13,21 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Query.Columns
 {
-    public class PartialColumn : IQueryPart
+    public class PartialColumn 
     {
-        public PartialColumn(Guid expressionQueryId, Type tableType, PropertyInfo property)
+        public PartialColumn(Type tableType, PropertyInfo property)
         {
-            ExpressionQueryId = expressionQueryId;
-            Table = new DbTable(expressionQueryId, tableType);
+            Table = new DbTable(tableType);
             Property = property;
         }
 
-        public PartialColumn(Guid expressionQueryId, Type tableType, string propertyName)
+        public PartialColumn(Type tableType, string propertyName)
         {
-            ExpressionQueryId = expressionQueryId;
-            Table = new DbTable(expressionQueryId, tableType);
+            Table = new DbTable(tableType);
             _propertyName = propertyName;
 
             Property = tableType.GetProperty(propertyName);
         }
-
-        public Guid ExpressionQueryId { get; set; }
 
         public DbTable Table { get; set; }
 

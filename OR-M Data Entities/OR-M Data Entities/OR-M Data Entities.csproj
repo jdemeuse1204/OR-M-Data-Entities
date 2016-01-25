@@ -48,8 +48,10 @@
     <Compile Include="Configuration\ConcurrencyConfiguration.cs" />
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Configuration\KeyConfiguration.cs" />
+    <Compile Include="Data\DatabaseSchematic.cs" />
     <Compile Include="Data\Definition\DeleteEntity.cs" />
     <Compile Include="Data\Definition\Entity.cs" />
+    <Compile Include="Data\Definition\ITable.cs" />
     <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
     <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
     <Compile Include="Data\Definition\Rules\IdentityColumnUpdateRule.cs" />
@@ -72,7 +74,6 @@
     <Compile Include="Data\Transform\TransformContainer.cs" />
     <Compile Include="Configuration\ORMDataEntitiesConfigurationSection.cs" />
     <Compile Include="Data\DatabaseExecution.cs" />
-    <Compile Include="Data\Definition\Table.cs" />
     <Compile Include="Data\Definition\OSchematic.cs" />
     <Compile Include="Data\Definition\SqlDbParameter.cs" />
     <Compile Include="Data\Definition\SqlExistsString.cs" />
@@ -81,6 +82,7 @@
     <Compile Include="Configuration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
     <Compile Include="Enumeration\MaxLengthViolationType.cs" />
+    <Compile Include="Enumeration\TableNameFormat.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />
     <Compile Include="Enumeration\ConnectorType.cs" />
@@ -105,6 +107,7 @@
     <Compile Include="Exceptions\SqlReferenceConstraintException.cs" />
     <Compile Include="Exceptions\SqlSaveException.cs" />
     <Compile Include="Exceptions\ViewException.cs" />
+    <Compile Include="ExpressionsRewrite\ExpressionQueryRewrite.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
@@ -126,18 +129,15 @@
     <Compile Include="Expressions\Resolution\ExpressionQueryViewResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\IExpressionQueryViewResolvable.cs" />
-    <Compile Include="Expressions\Resolution\Join\DbJoinQuery.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinColumnPair.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinTablePair.cs" />
     <Compile Include="Expressions\Resolution\Order\OrderExpressionResolver.cs" />
     <Compile Include="Expressions\Resolution\Select\DbSelectQuery.cs" />
-    <Compile Include="Expressions\Resolution\SubQuery\DbSubQuery.cs" />
     <Compile Include="Expressions\Resolution\Base\IQueryPart.cs" />
     <Compile Include="Expressions\Resolution\Base\IResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\SelectInfoResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Containers\JoinResolutionContainer.cs" />
     <Compile Include="Expressions\Resolution\Join\JoinExpressionResolver.cs" />
-    <Compile Include="Expressions\Resolution\Where\DbWhereQuery.cs" />
     <Compile Include="Expressions\Resolution\Where\WhereResolutionPart.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
     <Compile Include="Expressions\Resolution\Containers\WhereResolutionContainer.cs" />

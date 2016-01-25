@@ -12,9 +12,8 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
     public class DbTable : IQueryPart
     {
-        public DbTable(Guid expressionQueryId, Type type)
+        public DbTable(Type type)
         {
-            ExpressionQueryId = expressionQueryId;
             Type = type;
         }
 

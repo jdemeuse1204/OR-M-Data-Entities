@@ -18,6 +18,7 @@ using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 
+// ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities.Data
 {
     public partial class DatabaseModifiable

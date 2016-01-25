@@ -15,8 +15,8 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
     public class ForeignKeyTable : AliasTable
     {
-        public ForeignKeyTable(Guid expressionQueryId, Type type, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
-            : base(expressionQueryId, type, alias)
+        public ForeignKeyTable(Type type, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
+            : base(type, alias)
         {
             TableInfo = new Table(type);
             ForeignKeyPropertyName = foreignKeyTableName;

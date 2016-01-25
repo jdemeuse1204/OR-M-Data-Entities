@@ -134,7 +134,7 @@ namespace OR_M_Data_Entities.Data.Definition
             if (State == EntityState.UnChanged) return;
 
             // validate all max length attributes
-            RuleProcessor.ProcessRule<MaxLengthViolationRule>(Value, TableType);
+            RuleProcessor.ProcessRule<MaxLengthViolationRule>(Value, Type);
 
             UpdateType = UpdateType.Insert;
 
@@ -165,7 +165,7 @@ namespace OR_M_Data_Entities.Data.Definition
                     throw new SqlSaveException(string.Format(
                         "Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}",
                         key.Name,
-                        PlainTableName));
+                        ToString(TableNameFormat.Plain)));
                 }
 
                 // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.

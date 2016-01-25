@@ -11,8 +11,8 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
     public class AliasTable : DbTable
     {
-        public AliasTable(Guid expressionQueryId, Type type, string alias)
-            : base(expressionQueryId, type)
+        public AliasTable(Type type, string alias)
+            : base(type)
         {
             Alias = alias;
         }

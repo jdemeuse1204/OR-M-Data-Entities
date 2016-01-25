@@ -6,7 +6,6 @@
  * Copyright (c) 2014 James Demeuse
  */
 using System;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Query.Tables;
@@ -16,8 +15,7 @@ namespace OR_M_Data_Entities.Expressions.Query.Columns
 {
     public class DbColumn : SimpleColumn
     {
-        public DbColumn(Guid expressionQueryId, 
-            Type tableType, 
+        public DbColumn(Type tableType, 
             PropertyInfo property, 
             string tableAlias, 
             string parentPropertyName, 

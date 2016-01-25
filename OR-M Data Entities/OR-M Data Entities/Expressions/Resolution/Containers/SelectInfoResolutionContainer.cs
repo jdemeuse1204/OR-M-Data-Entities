@@ -17,7 +17,7 @@ using OR_M_Data_Entities.Expressions.Resolution.Base;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 {
-    public class SelectInfoResolutionContainer : ResolutionContainerBase, IResolutionContainer
+    public class SelectInfoResolutionContainer : IResolutionContainer
     {
         private List<DbColumn> _infos;
         private List<ForeignKeyTable> _tableAliases;
@@ -38,8 +38,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
 
         public IEnumerable<ForeignKeyTable> TableAliases { get { return _tableAliases; } }
 
-        public SelectInfoResolutionContainer(Guid expressionQueryId)
-            : base(expressionQueryId)
+        public SelectInfoResolutionContainer()
         {
             _infos = new List<DbColumn>();
             _tableAliases = new List<ForeignKeyTable>();

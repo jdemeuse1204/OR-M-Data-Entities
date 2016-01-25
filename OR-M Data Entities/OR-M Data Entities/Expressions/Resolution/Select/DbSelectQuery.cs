@@ -33,20 +33,11 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
 
         private readonly TableCollection _tables;
 
-        public ReadOnlyTableCollection Tables
-        {
-            get { return _tables; }
-        }
-
         public bool HasForeignKeys {
             get { return _foreignKeyJoinPairs.Count > 0; }
         }
 
         protected readonly string ViewId;
-
-        public ExpressionQueryConstructionType ConstructionType { get; private set; }
-
-        public Guid Id { get; private set; }
 
         protected readonly Type Type;
         #endregion
@@ -55,7 +46,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
         protected DbSelectQuery(string viewId = null)
         {
             ViewId = viewId;
-            Id = Guid.NewGuid();
             Columns = new SelectInfoResolutionContainer(this.Id);
             _foreignKeyJoinPairs = new List<JoinTablePair>();
             _tables = new TableCollection { new ForeignKeyTable(this.Id, typeof(T), null, null) };
@@ -63,52 +53,6 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Select
             ConstructionType = ExpressionQueryConstructionType.Main;
 
             InitializeQuery();
-        }
-
-        protected DbSelectQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
-        {
-            ConstructionType = constructionType;
-            Id = Guid.NewGuid();
-
-            // never combine columns, selects don't matter, only tables and parameters do for aliasing
-            Columns = new SelectInfoResolutionContainer(this.Id);
-
-            if (ConstructionType == ExpressionQueryConstructionType.Join ||
-                ConstructionType == ExpressionQueryConstructionType.Select ||
-                ConstructionType == ExpressionQueryConstructionType.Order)
-            {
-                Id = query.Id;
-                Columns =
-                 query.GetType()
-                     .GetField("Columns", BindingFlags.NonPublic | BindingFlags.Instance)
-                     .GetValue(query) as SelectInfoResolutionContainer;
-            }
-
-            _foreignKeyJoinPairs =
-                query.GetType()
-                    .GetProperty("ForeignKeyJoinPairs", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .GetValue(query) as List<JoinTablePair>;
-
-            _tables =
-                query.GetType()
-                    .GetProperty("Tables", BindingFlags.Public | BindingFlags.Instance)
-                    .GetValue(query) as TableCollection;
-
-            Type =
-                query.GetType()
-                    .GetField("Type", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .GetValue(query) as Type;
-
-            ViewId =
-                query.GetType()
-                    .GetField("ViewId", BindingFlags.NonPublic | BindingFlags.Instance)
-                    .GetValue(query) as string;
-
-            if (!(this.Type == typeof(T)) && ConstructionType != ExpressionQueryConstructionType.Join &&
-                !typeof(T).IsValueType && typeof(T) != typeof(string))
-            {
-                this.Type = typeof(T);
-            }
         }
         #endregion
 

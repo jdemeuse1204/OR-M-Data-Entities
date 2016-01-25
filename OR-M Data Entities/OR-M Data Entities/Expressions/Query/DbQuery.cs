@@ -6,27 +6,22 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using System;
 using System.Linq;
-using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Expressions.Resolution;
-using OR_M_Data_Entities.Expressions.Resolution.Containers;
-using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
+using OR_M_Data_Entities.Expressions.Resolution.Select;
+using OR_M_Data_Entities.Expressions.Resolution.Where;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
-    public abstract class DbQuery<T> : DbSubQuery<T>
+    public abstract class DbQuery<T> : DbSelectQuery<T>
     {
         #region Fields
         protected readonly DatabaseReading Context;
         #endregion
 
         #region Properties
-        public bool IsSubQuery { get; private set; }
-
         public string Sql { get; private set; }
 
         protected FunctionType Function { get; set; }
@@ -35,29 +30,12 @@ namespace OR_M_Data_Entities.Expressions.Query
         #endregion
 
         #region Constructor
-        protected DbQuery(DatabaseReading context, string viewId = null)
-            : base(viewId)
+        protected DbQuery(DatabaseReading context)
         {
             Context = context;
             Function = FunctionType.None;
-            IsSubQuery = context == null && ConstructionType == ExpressionQueryConstructionType.SubQuery;
         }
 
-        protected DbQuery(IExpressionQueryResolvable query, ExpressionQueryConstructionType constructionType)
-            : base(query, constructionType)
-        {
-            Context =
-                query.GetType().GetField("Context", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(query) as
-                    DatabaseReading;
-            Function =
-                (FunctionType)
-                    query.GetType()
-                        .GetProperty("Function", BindingFlags.NonPublic | BindingFlags.Instance)
-                        .GetValue(query);
-            IsSubQuery = (this.ConstructionType !=
-                          (ExpressionQueryConstructionType.Main | ExpressionQueryConstructionType.Order)) &&
-                         this.Id != query.Id;
-        }
         #endregion
 
         // if tables are coming into the function then we need to change all table aliases (AkA) in this query before we resolve it
@@ -94,7 +72,7 @@ namespace OR_M_Data_Entities.Expressions.Query
             var from = string.Format("{0} As [{1}]", tableInfo,
                 Tables.FindAlias(Type, this.Id));
 
-            var order = IsSubQuery || Function != FunctionType.None
+            var order = Function != FunctionType.None
                 ? string.Empty
                 : HasForeignKeys ? Columns.GetPrimaryKeyOrderStatement() : Columns.GetOrderByStatement();
 

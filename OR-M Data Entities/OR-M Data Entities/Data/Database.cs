@@ -13,6 +13,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
@@ -44,10 +45,15 @@ namespace OR_M_Data_Entities.Data
         {
             _tableScriptMappings.Add(new KeyValuePair<Type, Type>(typeof(T), typeof(TK)));
         }
+
+        private readonly IDictionary<Type, Table> _tableCache;
         #endregion
 
+        #region Constructor
         protected Database(string connectionStringOrName)
         {
+            _tableCache = new Dictionary<Type, Table>();
+
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
                 ConnectionString = connectionStringOrName;
@@ -66,7 +72,9 @@ namespace OR_M_Data_Entities.Data
 
             Connection = new SqlConnection(ConnectionString);
         }
+        #endregion
 
+        #region Methods
         private bool _isMARSEnabled(string connectionString)
         {
             return connectionString.ToUpper().Contains("MULTIPLEACTIVERESULTSETS=TRUE");
@@ -136,7 +144,7 @@ namespace OR_M_Data_Entities.Data
             var connection = innerConnection.GetValue(Connection).GetType().Name;
 
             return connection.EndsWith("PreviouslyOpened");
-        }
+        } 
 
         public void Dispose()
         {
@@ -160,5 +168,6 @@ namespace OR_M_Data_Entities.Data
                 Connection.Dispose();
             }
         }
+        #endregion
     }
 }

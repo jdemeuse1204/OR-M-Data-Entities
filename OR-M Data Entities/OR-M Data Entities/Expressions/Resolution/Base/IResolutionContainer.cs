@@ -12,7 +12,5 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
         string Resolve(string viewId = null);
 
         bool HasItems { get; }
-
-        void Combine(IResolutionContainer container);
     }
 }

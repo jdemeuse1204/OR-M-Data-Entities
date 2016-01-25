@@ -5,7 +5,9 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
-namespace OR_M_Data_Entities.Enumeration
+
+// ReSharper disable once CheckNamespace
+namespace OR_M_Data_Entities
 {
     public enum FunctionType
     {

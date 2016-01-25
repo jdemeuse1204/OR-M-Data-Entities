@@ -18,6 +18,7 @@ using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
+// ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities.Data
 {
     /// <summary>
@@ -257,7 +258,7 @@ namespace OR_M_Data_Entities.Data
         {
             protected SqlModificationContainer(ModificationEntity entity)
             {
-                SqlFormattedTableName = entity.SqlFormattedTableName();
+                SqlFormattedTableName = entity.ToString(TableNameFormat.SqlWithSchemaTrimStartAndEnd);
             }
 
             protected readonly string SqlFormattedTableName;
@@ -413,7 +414,7 @@ namespace OR_M_Data_Entities.Data
     BEGIN
         {{0}}
     END {2}",
-plan.Entity.SqlFormattedTableName(),
+plan.Entity.ToString(TableNameFormat.SqlWithSchemaTrimStartAndEnd),
 
 _where,
 
@@ -754,7 +755,7 @@ ELSE
                         switch (Configuration.ConcurrencyChecking.ViolationRule)
                         {
                             case ConcurrencyViolationRule.ThrowException:
-                                throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.PlainTableName));
+                                throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.ToString(TableNameFormat.Plain)));
                             case ConcurrencyViolationRule.OverwriteAndContinue:
                                 break;
                             case ConcurrencyViolationRule.UseHandler:

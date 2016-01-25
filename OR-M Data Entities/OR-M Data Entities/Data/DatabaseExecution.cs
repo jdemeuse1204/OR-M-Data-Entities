@@ -24,7 +24,7 @@ using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class DatabaseExecution : Database
+    public abstract class DatabaseExecution : DatabaseSchematic
     {
         #region Constructor
         protected DatabaseExecution(string connectionStringOrName)
