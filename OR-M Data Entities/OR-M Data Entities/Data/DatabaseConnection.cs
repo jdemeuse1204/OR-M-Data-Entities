@@ -7,18 +7,15 @@
  */
 
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class Database : IDisposable
+    public abstract class DatabaseConnection : IDisposable
     {
         #region Properties
 
@@ -32,28 +29,11 @@ namespace OR_M_Data_Entities.Data
 
         protected ConfigurationOptions Configuration { get; private set; }
 
-        private List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
-
-        public IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
-        {
-            get { return _tableScriptMappings; }
-        }
-
-        public void MapTableToScript<T, TK>()
-            where T : class
-            where TK : IReadScript<T>
-        {
-            _tableScriptMappings.Add(new KeyValuePair<Type, Type>(typeof(T), typeof(TK)));
-        }
-
-        private readonly IDictionary<Type, Table> _tableCache;
         #endregion
 
         #region Constructor
-        protected Database(string connectionStringOrName)
+        protected DatabaseConnection(string connectionStringOrName)
         {
-            _tableCache = new Dictionary<Type, Table>();
-
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
                 ConnectionString = connectionStringOrName;

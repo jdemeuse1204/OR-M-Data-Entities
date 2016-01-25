@@ -5,6 +5,7 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -15,16 +16,16 @@ namespace OR_M_Data_Entities.Expressions.Query.Tables
 {
     public class ForeignKeyTable : AliasTable
     {
-        public ForeignKeyTable(Type type, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
+        public ForeignKeyTable(ITable table, string foreignKeyTableName,  string alias = "", string parentTableAlias = "")
             : base(type, alias)
         {
-            TableInfo = new Table(type);
+            TableInfo = table;
             ForeignKeyPropertyName = foreignKeyTableName;
             _typeChanges = new List<Type>();
             ParentTableAlias = parentTableAlias;
         }
 
-        public readonly Table TableInfo;
+        public readonly ITable TableInfo;
 
         public readonly string ParentTableAlias;
 

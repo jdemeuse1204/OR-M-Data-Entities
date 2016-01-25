@@ -5,6 +5,7 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
 using System;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Base

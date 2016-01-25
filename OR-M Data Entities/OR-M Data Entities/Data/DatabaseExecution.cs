@@ -5,6 +5,7 @@
  * Email: james.demeuse@gmail.com
  * Copyright (c) 2014 James Demeuse
  */
+
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -24,7 +25,7 @@ using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class DatabaseExecution : DatabaseSchematic
+    public abstract class DatabaseExecution : DatabaseQuery
     {
         #region Constructor
         protected DatabaseExecution(string connectionStringOrName)

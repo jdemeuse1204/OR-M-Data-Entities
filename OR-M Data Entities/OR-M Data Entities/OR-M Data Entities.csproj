@@ -48,9 +48,13 @@
     <Compile Include="Configuration\ConcurrencyConfiguration.cs" />
     <Compile Include="Configuration\ConfigurationOptions.cs" />
     <Compile Include="Configuration\KeyConfiguration.cs" />
+    <Compile Include="Data\DatabaseQuery.cs" />
     <Compile Include="Data\DatabaseSchematic.cs" />
     <Compile Include="Data\Definition\DeleteEntity.cs" />
-    <Compile Include="Data\Definition\Entity.cs" />
+    <Compile Include="Data\Definition\IColumn.cs" />
+    <Compile Include="Data\Definition\IColumnList.cs" />
+    <Compile Include="Data\Definition\IEntity.cs" />
+    <Compile Include="Data\Definition\IModificationEntity.cs" />
     <Compile Include="Data\Definition\ITable.cs" />
     <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
     <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
@@ -66,7 +70,6 @@
     <Compile Include="Data\Modification\ISqlContainer.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableNonTransactional.cs" />
     <Compile Include="Data\Secure\SqlSecureQueryParameter.cs" />
-    <Compile Include="Data\Definition\ModificationEntity.cs" />
     <Compile Include="Data\Modification\ModificationItem.cs" />
     <Compile Include="Data\Query\ISqlPackage.cs" />
     <Compile Include="Data\Modification\SqlPartStatement.cs" />
@@ -93,7 +96,7 @@
     <Compile Include="Data\Query\ISqlBuilder.cs" />
     <Compile Include="Data\Query\SqlFunctionTextBuilder.cs" />
     <Compile Include="Data\Transform\DbFunctions.cs" />
-    <Compile Include="Data\Database.cs" />
+    <Compile Include="Data\DatabaseConnection.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
     <Compile Include="Data\DatabaseReading.cs" />
     <Compile Include="Data\DatabaseFetching.cs" />
