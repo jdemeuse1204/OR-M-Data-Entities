@@ -17,6 +17,6 @@ namespace OR_M_Data_Entities.Data.Query
 
 	    SqlCommand BuildSqlCommand(SqlConnection connection);
 
-        ModificationEntity Entity { get; }
+        IModificationEntity Entity { get; }
     }
 }

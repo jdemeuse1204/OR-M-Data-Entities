@@ -6,10 +6,6 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Resolution;
-
 namespace OR_M_Data_Entities.Data
 {
     /// <summary>
@@ -43,31 +39,6 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
 
-        #region Data Execution
-        public ExpressionQuery<T> From<T>()
-        {
-            return new ExpressionQueryResolvable<T>(this);
-        }
 
-        public ExpressionQuery<T> FromView<T>(string viewId)
-        {
-            if (!typeof(T).IsPartOfView(viewId))
-            {
-                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
-                    typeof(T).Name, viewId));
-            }
-
-            return new ExpressionQueryViewResolvable<T>(this, viewId);
-        }
-
-        public T Find<T>(params object[] pks)
-        {
-            var query = From<T>();
-
-            ((ExpressionQueryResolvable<T>)query).ResolveFind(pks);
-
-            return query.FirstOrDefault();
-        }
-        #endregion
     }
 }

@@ -19,7 +19,7 @@ namespace OR_M_Data_Entities.Data
     {
         #region Properties
 
-        protected readonly string ConnectionString;
+        protected string ConnectionString { get; private set; }
 
         protected SqlConnection Connection { get; private set; }
 
@@ -29,6 +29,9 @@ namespace OR_M_Data_Entities.Data
 
         protected ConfigurationOptions Configuration { get; private set; }
 
+        protected delegate void OnDisposeHandler();
+
+        protected event OnDisposeHandler OnDisposing;
         #endregion
 
         #region Constructor
@@ -116,8 +119,7 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
         private bool _wasConnectionPreviouslyOpened()
         {
-            var innerConnection = Connection.GetType()
-                .GetField("_innerConnection", BindingFlags.Instance | BindingFlags.NonPublic);
+            var innerConnection = Connection.GetType().GetField("_innerConnection", BindingFlags.Instance | BindingFlags.NonPublic);
 
             if (innerConnection == null) throw new Exception("Cannot connect to database, inner connection not found");
 
@@ -147,6 +149,12 @@ namespace OR_M_Data_Entities.Data
                 Connection.Close();
                 Connection.Dispose();
             }
+
+            Configuration = null;
+            ConnectionString = null;
+
+            // so inherited classes can utilize the dispose method
+            if (OnDisposing != null) OnDisposing();
         }
         #endregion
     }

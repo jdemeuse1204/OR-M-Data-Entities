@@ -6,9 +6,11 @@
  * Copyright (c) 2014 James Demeuse
  */
 
+using System.Collections.Generic;
+
 namespace OR_M_Data_Entities.Expressions
 {
-    public interface IExpressionQuery
+    public interface IExpressionQuery<out T> : IEnumerable<T>
     {
         string Sql { get; }
     }

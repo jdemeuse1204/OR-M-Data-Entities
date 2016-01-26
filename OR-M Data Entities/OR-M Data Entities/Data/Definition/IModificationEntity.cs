@@ -11,7 +11,7 @@ using OR_M_Data_Entities.Data.Modification;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
-    public interface IModificationEntity
+    public interface IModificationEntity : IEntity
     {
         UpdateType UpdateType { get; }
 

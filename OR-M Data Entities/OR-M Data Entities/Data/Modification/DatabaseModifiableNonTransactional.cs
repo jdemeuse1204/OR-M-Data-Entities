@@ -15,7 +15,6 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
@@ -33,7 +32,7 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly string _sql;
 
-            public CustomContainer(ModificationEntity entity, string sql)
+            public CustomContainer(IModificationEntity entity, string sql)
                 : base(entity)
             {
                 _sql = sql;
@@ -67,7 +66,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public InsertContainer(ModificationEntity entity)
+            public InsertContainer(IModificationEntity entity)
                 : base(entity)
             {
                 _fields = string.Empty;
@@ -154,7 +153,7 @@ namespace OR_M_Data_Entities.Data
 
             protected string Output { get; set; }
 
-            public UpdateContainer(ModificationEntity entity)
+            public UpdateContainer(IModificationEntity entity)
                 : base(entity)
             {
                 SetItems = string.Empty;
@@ -215,7 +214,7 @@ namespace OR_M_Data_Entities.Data
 
             protected readonly string Statement;
 
-            public DeleteContainer(ModificationEntity entity)
+            public DeleteContainer(IModificationEntity entity)
                 : base(entity)
             {
                 Output = entity.GetPrimaryKeys()
@@ -257,7 +256,7 @@ namespace OR_M_Data_Entities.Data
 
         protected abstract class SqlModificationContainer
         {
-            protected SqlModificationContainer(ModificationEntity entity)
+            protected SqlModificationContainer(IModificationEntity entity)
             {
                 SqlFormattedTableName = entity.ToString(TableNameFormat.SqlWithSchemaTrimStartAndEnd);
             }

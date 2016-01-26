@@ -9,12 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Reflection;
-using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Enumeration;
-using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Resolution;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
@@ -22,46 +17,46 @@ namespace OR_M_Data_Entities
     public static class ExpressionQueryExtensions
     {
         #region First
-        public static TSource First<TSource>(this ExpressionQuery<TSource> source)
+        public static TSource First<TSource>(this IExpressionQuery<TSource> source)
         {
-            var resolvable = ((IExpressionQueryResolvable)source);
+            //var resolvable = ((IExpressionQueryResolvable)source);
 
-            TSource result;
+            //TSource result;
 
-            using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            {
-                result = reader.First();
-            }
+            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            //{
+            //    result = reader.First();
+            //}
 
-            resolvable.DbContext.Dispose();
+            //resolvable.DbContext.Dispose();
 
-            return result;
+            return default(TSource);
         }
 
-        public static TSource First<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static TSource First<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
             return First(source);
         }
 
-        public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source)
+        public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source)
         {
-            var resolvable = ((IExpressionQueryResolvable)source);
+            //var resolvable = ((IExpressionQueryResolvable)source);
 
-            TSource result;
+            //TSource result;
 
-            using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            {
-                result = reader.FirstOrDefault();
-            }
+            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            //{
+            //    result = reader.FirstOrDefault();
+            //}
 
-            resolvable.DbContext.Dispose();
+            //resolvable.DbContext.Dispose();
 
-            return result;
+            return default(TSource);
         }
 
-        public static TSource FirstOrDefault<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
@@ -71,159 +66,159 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Max
-        public static decimal? Max(this ExpressionQuery<decimal?> source)
+        public static decimal? Max(this IExpressionQuery<decimal?> source)
         {
             return _max(source);
         }
 
-        public static decimal Max(this ExpressionQuery<decimal> source)
+        public static decimal Max(this IExpressionQuery<decimal> source)
         {
             return _max(source);
         }
 
-        public static double? Max(this ExpressionQuery<double?> source)
+        public static double? Max(this IExpressionQuery<double?> source)
         {
             return _max(source);
         }
 
-        public static double Max(this ExpressionQuery<double> source)
+        public static double Max(this IExpressionQuery<double> source)
         {
             return _max(source);
         }
 
-        public static float? Max(this ExpressionQuery<float?> source)
+        public static float? Max(this IExpressionQuery<float?> source)
         {
             return _max(source);
         }
 
-        public static float Max(this ExpressionQuery<float> source)
+        public static float Max(this IExpressionQuery<float> source)
         {
             return _max(source);
         }
 
-        public static int? Max(this ExpressionQuery<int?> source)
+        public static int? Max(this IExpressionQuery<int?> source)
         {
             return _max(source);
         }
 
-        public static int Max(this ExpressionQuery<int> source)
+        public static int Max(this IExpressionQuery<int> source)
         {
             return _max(source);
         }
 
-        public static long? Max(this ExpressionQuery<long?> source)
+        public static long? Max(this IExpressionQuery<long?> source)
         {
             return _max(source);
         }
 
-        public static long Max(this ExpressionQuery<long> source)
+        public static long Max(this IExpressionQuery<long> source)
         {
             return _max(source);
         }
         #endregion
 
         #region Functions
-        public static ExpressionQuery<T> Distinct<T>(this ExpressionQuery<T> source)
+        public static IExpressionQuery<T> Distinct<T>(this IExpressionQuery<T> source)
         {
-            ((ExpressionQueryResolvable<T>)source).ResolveDistinct();
+            //((ExpressionQueryResolvable<T>)source).ResolveDistinct();
 
             return source;
         }
 
-        public static ExpressionQuery<T> Take<T>(this ExpressionQuery<T> source, int rows)
+        public static IExpressionQuery<T> Take<T>(this IExpressionQuery<T> source, int rows)
         {
-            ((ExpressionQueryResolvable<T>)source).ResolveTakeRows(rows);
+            //((ExpressionQueryResolvable<T>)source).ResolveTakeRows(rows);
 
             return source;
         }
         #endregion
 
         #region Min
-        public static decimal? Min(this ExpressionQuery<decimal?> source)
+        public static decimal? Min(this IExpressionQuery<decimal?> source)
         {
             return _min(source);
         }
 
-        public static decimal Min(this ExpressionQuery<decimal> source)
+        public static decimal Min(this IExpressionQuery<decimal> source)
         {
             return _min(source);
         }
 
-        public static double? Min(this ExpressionQuery<double?> source)
+        public static double? Min(this IExpressionQuery<double?> source)
         {
             return _min(source);
         }
 
-        public static double Min(this ExpressionQuery<double> source)
+        public static double Min(this IExpressionQuery<double> source)
         {
             return _min(source);
         }
 
-        public static float? Min(this ExpressionQuery<float?> source)
+        public static float? Min(this IExpressionQuery<float?> source)
         {
             return _min(source);
         }
 
-        public static float Min(this ExpressionQuery<float> source)
+        public static float Min(this IExpressionQuery<float> source)
         {
             return _min(source);
         }
 
-        public static int? Min(this ExpressionQuery<int?> source)
+        public static int? Min(this IExpressionQuery<int?> source)
         {
             return _min(source);
         }
 
-        public static int Min(this ExpressionQuery<int> source)
+        public static int Min(this IExpressionQuery<int> source)
         {
             return _min(source);
         }
 
-        public static long? Min(this ExpressionQuery<long?> source)
+        public static long? Min(this IExpressionQuery<long?> source)
         {
             return _min(source);
         }
 
-        public static long Min(this ExpressionQuery<long> source)
+        public static long Min(this IExpressionQuery<long> source)
         {
             return _min(source);
         }
 
-        public static ExpressionQuery<TSource> Include<TSource>(this ExpressionQuery<TSource> source, string tableName)
+        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
         {
-            ((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
+            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
 
             return source;
         }
         #endregion
 
         #region Count
-        public static int Count<TSource>(this ExpressionQuery<TSource> source)
+        public static int Count<TSource>(this IExpressionQuery<TSource> source)
         {
             //public static int Count<TSource>(this IEnumerable<TSource> source);
-            ((ExpressionQueryResolvable<TSource>)source).ResolveCount();
+            //((ExpressionQueryResolvable<TSource>)source).ResolveCount();
 
-            var resolvable = ((IExpressionQueryResolvable)source);
-            int result;
+            //var resolvable = ((IExpressionQueryResolvable)source);
+            //int result;
 
-            using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            {
-                var peekDataReaderField = reader.GetType()
-                    .GetField("_reader", BindingFlags.Instance | BindingFlags.NonPublic);
-                var peekDataReader = peekDataReaderField.GetValue(reader);
+            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            //{
+            //    var peekDataReaderField = reader.GetType()
+            //        .GetField("_reader", BindingFlags.Instance | BindingFlags.NonPublic);
+            //    var peekDataReader = peekDataReaderField.GetValue(reader);
 
-                using (var dbReader = new DataReader<int>(peekDataReader as PeekDataReader))
-                {
-                    result = dbReader.FirstOrDefault();
-                }
-            }
+            //    using (var dbReader = new DataReader<int>(peekDataReader as PeekDataReader))
+            //    {
+            //        result = dbReader.FirstOrDefault();
+            //    }
+            //}
 
-            resolvable.DbContext.Dispose();
+            //resolvable.DbContext.Dispose();
 
-            return result;
+            return 1;
         }
 
-        public static int Count<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static int Count<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
@@ -233,23 +228,23 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region To List
-        public static List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source)
+        public static List<TSource> ToList<TSource>(this IExpressionQuery<TSource> source)
         {
-            var resolvable = ((IExpressionQueryResolvable)source);
+            //var resolvable = ((IExpressionQueryResolvable)source);
 
-            List<TSource> result;
+            //List<TSource> result;
 
-            using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            {
-                result = reader.ToList();
-            }
+            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            //{
+            //    result = reader.ToList();
+            //}
 
-            resolvable.DbContext.Dispose();
+            //resolvable.DbContext.Dispose();
 
-            return result;
+            return new List<TSource>();
         }
 
-        public static List<TSource> ToList<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static List<TSource> ToList<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
@@ -258,69 +253,77 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Order By
-        public static OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this ExpressionQuery<TSource> source,
-            Expression<Func<TSource, TKey>> keySelector)
-        {
-            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+        //public static OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this IExpressionQuery<TSource> source,
+        //    Expression<Func<TSource, TKey>> keySelector)
+        //{
+        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
 
-            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
-        }
+        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
 
-        public static OrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this ExpressionQuery<TSource> source,
-            Expression<Func<TSource, TKey>> keySelector)
-        {
-            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+        //    return null;
+        //}
 
-            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
-        }
+        //public static OrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this IExpressionQuery<TSource> source,
+        //    Expression<Func<TSource, TKey>> keySelector)
+        //{
+        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
 
-        public static OrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
-            Expression<Func<TSource, TKey>> keySelector)
-        {
-            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
 
-            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
-        }
+        //    return null;
+        //}
 
-        public static OrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
-            Expression<Func<TSource, TKey>> keySelector)
-        {
-            if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+        //public static OrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
+        //    Expression<Func<TSource, TKey>> keySelector)
+        //{
+        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
 
-            return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
-        }
+        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
+
+        //    return null;
+        //}
+
+        //public static OrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
+        //    Expression<Func<TSource, TKey>> keySelector)
+        //{
+        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+
+        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
+
+        //    return null;
+        //}
         #endregion
 
         #region Any
-        public static bool Any<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static bool Any<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             source.Where(expression);
 
             return Any(source);
         }
 
-        public static bool Any<TSource>(this ExpressionQuery<TSource> source)
+        public static bool Any<TSource>(this IExpressionQuery<TSource> source)
         {
             // only take one, we only care if it exists or not
-            source.Take(1);
+            //source.Take(1);
 
-            var resolvable = ((IExpressionQueryResolvable)source);
+            //var resolvable = ((IExpressionQueryResolvable)source);
 
-            bool result;
+            //bool result;
 
-            using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            {
-                result = reader.HasRows;
-            }
+            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
+            //{
+            //    result = reader.HasRows;
+            //}
 
-            resolvable.DbContext.Dispose();
+            //resolvable.DbContext.Dispose();
 
-            return result;
+            return false;
         }
         #endregion
 
         #region Where
-        public static ExpressionQuery<TSource> Where<TSource>(this ExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        public static IExpressionQuery<TSource> Where<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
             //var s = DateTime.Now;
             //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
@@ -329,63 +332,69 @@ namespace OR_M_Data_Entities
             //Console.WriteLine((e - s).TotalMilliseconds);
 
 
-            var item = ExpressionQueryResolver.Resolve(source, expression);
-            if (item != null)
-            {
-                foreach (var sqlDbParameter in item.Parameters)
-                {
+            //var item = ExpressionQueryResolver.Resolve(source, expression);
+            //if (item != null)
+            //{
+            //    foreach (var sqlDbParameter in item.Parameters)
+            //    {
 
-                }
-            }
+            //    }
+            //}
 
-            ((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
+            //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
 
             return source;
         }
         #endregion
 
         #region Joins
-        public static ExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
-            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+        public static IExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
+            IExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
-                innerKeySelector, resultSelector, JoinType.Inner);
+            //return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
+            //    innerKeySelector, resultSelector, JoinType.Inner);
+
+            return null;
         }
 
-        public static ExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this ExpressionQuery<TOuter> outer,
-            ExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+        public static IExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
+            IExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
-            return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
-                innerKeySelector, resultSelector, JoinType.Left);
+            //return ((ExpressionQueryResolvable<TOuter>)outer).ResolveJoin(inner, outerKeySelector,
+            //    innerKeySelector, resultSelector, JoinType.Left);
+
+            return null;
         }
         #endregion
 
         #region Select
-        public static ExpressionQuery<TResult> Select<TSource, TResult>(this ExpressionQuery<TSource> source,
+        public static IExpressionQuery<TResult> Select<TSource, TResult>(this IExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            var item = ExpressionQuerySelectResolver.Resolve(source, selector);
-            if (item != null)
-            {
-            }
+            //var item = ExpressionQuerySelectResolver.Resolve(source, selector);
+            //if (item != null)
+            //{
+            //}
 
 
-            return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
+            //return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
+
+            return null;
         }
         #endregion
 
-        private static T _max<T>(this ExpressionQuery<T> source)
+        private static T _max<T>(this IExpressionQuery<T> source)
         {
-            ((ExpressionQueryResolvable<T>)source).ResoveMax();
+            //((ExpressionQueryResolvable<T>)source).ResoveMax();
 
             return source.FirstOrDefault();
         }
 
-        private static T _min<T>(this ExpressionQuery<T> source)
+        private static T _min<T>(this IExpressionQuery<T> source)
         {
-            ((ExpressionQueryResolvable<T>)source).ResoveMin();
+            //((ExpressionQueryResolvable<T>)source).ResoveMin();
 
             return source.FirstOrDefault();
         }
@@ -394,16 +403,14 @@ namespace OR_M_Data_Entities
         {
             return expression != null && (expression.Method.ReturnType.IsGenericType &&
                                           expression.Method.ReturnType.GetGenericTypeDefinition()
-                                              .IsAssignableFrom(typeof(ExpressionQuery<>)));
+                                              .IsAssignableFrom(typeof(IExpressionQuery<>)));
         }
 
         public static bool IsExpressionQuery(this Type type)
         {
             return type.IsGenericType &&
                    type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQuery<>)) || type.IsGenericType &&
-                   type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(ExpressionQueryResolvable<>));
+                       .IsAssignableFrom(typeof(IExpressionQuery<>));
         }
 
         public static bool IsExpressionQuery(this object o)

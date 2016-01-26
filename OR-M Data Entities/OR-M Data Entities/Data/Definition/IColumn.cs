@@ -1,12 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace OR_M_Data_Entities.Data.Definition
+﻿namespace OR_M_Data_Entities.Data.Definition
 {
     public interface IColumn
     {
+        ITable Table { get; }
+
+        bool IsPrimaryKey { get; }
+
+        bool IsForeignKey { get;  }
+
+        bool IsPseudoKey { get; }
+
+        bool IsList { get;  }
+
+        string PropertyName { get; }
+
+        string DatabaseColumnName { get; }
     }
 }

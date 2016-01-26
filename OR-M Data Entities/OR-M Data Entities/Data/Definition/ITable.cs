@@ -39,6 +39,10 @@ namespace OR_M_Data_Entities.Data.Definition
 
         bool IsPrimaryKey(PropertyInfo property);
 
+        bool IsForeignKey(PropertyInfo property);
+
+        bool IsPseudoKey(PropertyInfo property);
+
         bool HasForeignKeys();
 
         bool HasPrimaryKeysOnly();
@@ -54,5 +58,7 @@ namespace OR_M_Data_Entities.Data.Definition
         ReadOnlySaveOption? GetReadOnlySaveOption();
 
         List<PropertyInfo> GetPrimaryKeys();
+
+        string GetPrimaryKeyName(int index);
     }
 }

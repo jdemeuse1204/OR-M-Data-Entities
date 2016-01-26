@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -16,8 +17,6 @@ using OR_M_Data_Entities.Data.Definition.Rules;
 using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Expressions.Query.Columns;
-using OR_M_Data_Entities.Expressions.Resolution.Join;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 using OR_M_Data_Entities.Scripts.Base;
@@ -28,7 +27,7 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseSchematic : DatabaseConnection
     {
         #region Properties
-        protected static IDictionary<Type, ITable> TableCache { get; private set; }
+        protected IDictionary<Type, ITable> TableCache { get; private set; }
 
         private List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
@@ -43,6 +42,104 @@ namespace OR_M_Data_Entities.Data
             : base(connectionStringOrName)
         {
             TableCache = new Dictionary<Type, ITable>();
+            OnDisposing += _dispose;
+        }
+
+        #endregion
+
+        #region Rules
+        private class IsEntityValidRule : IRule
+        {
+            private readonly object _entity;
+
+            public IsEntityValidRule(object entity)
+            {
+                _entity = entity;
+            }
+
+            public void Process()
+            {
+                var primaryKeys = ReflectionCacheTable.GetPrimaryKeys(_entity.GetType());
+                var plainTableName = _entity.GetTableName();
+                var entityType = _entity.GetType();
+                var linkedServerAttribute = entityType.GetCustomAttribute<LinkedServerAttribute>();
+                var schemaAttribute = entityType.GetCustomAttribute<SchemaAttribute>();
+
+                if (primaryKeys.Count == 0)
+                {
+                    throw new InvalidTableException(string.Format("{0} must have at least one Primary Key defined", plainTableName));
+                }
+
+                if (linkedServerAttribute != null && schemaAttribute != null)
+                {
+                    throw new Exception(
+                        string.Format(
+                            "Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other",
+                            entityType.Name));
+                }
+            }
+        }
+
+        // make sure the user is not trying to update an IDENTITY column, these cannot be updated
+        private sealed class IdentityColumnUpdateRule : IRule
+        {
+            private readonly EntityStateTrackable _entityStateTrackable;
+
+            private readonly ConfigurationOptions _configuration;
+
+            private readonly IReadOnlyList<PropertyInfo> _columns;
+
+            public IdentityColumnUpdateRule(EntityStateTrackable entityStateTrackable, ConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
+            {
+                _entityStateTrackable = entityStateTrackable;
+                _configuration = configuration;
+                _columns = columns;
+            }
+
+            public void Process()
+            {
+                // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
+                if (_entityStateTrackable == null) return;
+
+                List<string> errorColumns;
+
+                var allIdentityColumns = _columns.Where(
+                    w =>
+                        w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
+                        w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
+                        DbGenerationOption.IdentitySpecification).ToList();
+
+                if (allIdentityColumns.Count == 0) return;
+
+                // entity state tracking is on, check to see if the identity column has been updated
+                if (ModificationEntity.GetPristineEntity(_entityStateTrackable) == null)
+                {
+                    // any identity columns should be zero/null or whatever the insert value is
+                    errorColumns = (from column in allIdentityColumns
+                                    let value = column.GetValue(_entityStateTrackable)
+                                    let hasError = !ModificationEntity.IsValueInInsertArray(_configuration, value)
+                                    where hasError
+                                    select column.Name).ToList();
+                }
+                else
+                {
+                    // can only check when entity state tracking is on
+                    // only can get here when updating, try insert, or try insert update
+                    errorColumns =
+                        allIdentityColumns.Where(
+                            column => ModificationEntity.HasColumnChanged(_entityStateTrackable, column.Name))
+                            .Select(w => w.Name)
+                            .ToList();
+                }
+
+                if (!errorColumns.Any()) return;
+
+                const string error = "Cannot update value of IDENTITY column.  Column: {0}\r\r";
+                var message = errorColumns.Aggregate(string.Empty,
+                    (current, item) => string.Concat(current, string.Format(error, item)));
+
+                throw new SqlSaveException(message);
+            }
         }
         #endregion
 
@@ -58,7 +155,7 @@ namespace OR_M_Data_Entities.Data
             table = new Table(type, "dbo");
 
             TableCache.Add(type, table);
-                
+
             return table;
         }
 
@@ -67,16 +164,117 @@ namespace OR_M_Data_Entities.Data
             return GetTable(typeof(T));
         }
 
+        public static EntityState GetEntityState(EntityStateTrackable entity)
+        {
+            return ModificationEntity.GetState(entity);
+        }
+
+        public static void TrySetPristineEntity(object entity)
+        {
+            ModificationEntity.TrySetPristineEntity(entity);
+        }
+
         public void MapTableToScript<T, TK>()
             where T : class
             where TK : IReadScript<T>
         {
             _tableScriptMappings.Add(new KeyValuePair<Type, Type>(typeof(T), typeof(TK)));
         }
+
+        private void _dispose()
+        {
+            TableCache = null;
+            _tableScriptMappings = null;
+        }
         #endregion
 
         #region Schematic Classes
-        private abstract class ReflectionCacheTable
+
+        private class ColumnList : IColumnList
+        {
+            private readonly ITable _table;
+
+            private readonly int _columnCount;
+
+            private readonly List<IColumn> _columns;
+
+            public ColumnList(ITable table)
+            {
+                _columns = new List<IColumn>();
+                _table = table;
+                _columnCount = table.GetAllProperties().Count;
+            }
+
+            public IEnumerator<IColumn> GetEnumerator()
+            {
+                foreach (var column in _table.GetAllProperties().Select(propertyInfo => new Column(_table, propertyInfo)))
+                {
+                    _columns.Add(column);
+
+                    yield return column;
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return _columns.Count == _columnCount ? _columns.GetEnumerator() : GetEnumerator();
+            }
+        }
+
+        private class Column : IColumn
+        {
+            public ITable Table { get; private set; }
+
+            private readonly PropertyInfo _property;
+
+            public bool IsPrimaryKey { get; private set; }
+
+            public bool IsForeignKey { get; private set; }
+
+            public bool IsPseudoKey { get; private set; }
+
+            public bool IsList { get; private set; }
+
+            public string PropertyName
+            {
+                get { return _property.Name; }
+            }
+
+            private string _databaseColumnName;
+            public string DatabaseColumnName
+            {
+                get
+                {
+                    if (!string.IsNullOrEmpty(_databaseColumnName)) return _databaseColumnName;
+
+                    _databaseColumnName = _getColumnName(_property);
+
+                    return _databaseColumnName;
+                }
+            }
+
+            public Column(ITable table, PropertyInfo property)
+            {
+                _property = property;
+                IsPrimaryKey = table.IsPrimaryKey(property);
+                IsForeignKey = table.IsForeignKey(property);
+                IsPseudoKey = table.IsPseudoKey(property);
+                IsList = property.IsList();
+
+                Table = table;
+            }
+
+            #region Methods
+            private string _getColumnName(PropertyInfo property)
+            {
+                var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
+
+                return columnAttribute == null ? property.Name : columnAttribute.Name;
+            }
+            #endregion
+        }
+
+        protected abstract class ReflectionCacheTable
         {
             #region Constructor
             protected ReflectionCacheTable(Type type, string defaultSchema)
@@ -182,7 +380,7 @@ namespace OR_M_Data_Entities.Data
                 return _hasPrimaryKeysOnly(entity.GetType().GetProperties());
             }
 
-            private List<PropertyInfo> _allForeignAndPseudoKeys; 
+            private List<PropertyInfo> _allForeignAndPseudoKeys;
 
             public List<PropertyInfo> GetAllForeignAndPseudoKeys(string viewId = null)
             {
@@ -199,7 +397,7 @@ namespace OR_M_Data_Entities.Data
                         .ToList();
 
                 return _allForeignAndPseudoKeys;
-            } 
+            }
 
             private static bool _hasForeignKeys(List<PropertyInfo> properties)
             {
@@ -307,7 +505,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private class Table : ReflectionCacheTable, ITable
+        protected class Table : ReflectionCacheTable, ITable
         {
             #region Constructor
             public Table(object entity)
@@ -322,6 +520,8 @@ namespace OR_M_Data_Entities.Data
                 ClassName = type.Name;
 
                 IsEntityStateTrackingOn = type.IsSubclassOf(typeof(EntityStateTrackable));
+
+                Columns = new ColumnList(this);
             }
 
             #endregion
@@ -400,6 +600,25 @@ namespace OR_M_Data_Entities.Data
                 return columnName == "ID" || property.GetCustomAttribute<KeyAttribute>() != null;
             }
 
+            public bool IsForeignKey(PropertyInfo property)
+            {
+                return property.GetCustomAttribute<ForeignKeyAttribute>() != null;
+            }
+
+            public bool IsPseudoKey(PropertyInfo property)
+            {
+                return property.GetCustomAttribute<PseudoKeyAttribute>() != null;
+            }
+
+            public string GetPrimaryKeyName(int index)
+            {
+                var keys = GetPrimaryKeys();
+
+                var key = keys[index];
+
+                return GetColumnName(key);
+            }
+
             public static List<PropertyInfo> GetAllColumns(object entity)
             {
                 return GetAllColumns(entity.GetType());
@@ -435,7 +654,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private class Entity : Table, IEquatable<Entity>, IEntity
+        protected class Entity : Table, IEquatable<Entity>, IEntity
         {
             #region Properties and Fields
 
@@ -649,7 +868,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private class ModificationEntity : Entity, IModificationEntity
+        protected class ModificationEntity : Entity, IModificationEntity
         {
             #region Properties
             public UpdateType UpdateType { get; private set; }
@@ -705,7 +924,7 @@ namespace OR_M_Data_Entities.Data
                 }
                 // if _pristineEntity == null then that means a new instance was created and it is an insert
 
-                ModificationItems = _getChanges(EntityTrackable);
+                ModificationItems = _getChanges(EntityTrackable, AllColumns);
 
                 State = _getState(ModificationItems);
             }
@@ -715,9 +934,16 @@ namespace OR_M_Data_Entities.Data
                 return changes.Any(w => w.IsModified) ? EntityState.Modified : EntityState.UnChanged;
             }
 
-            private IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable)
+            public static EntityState GetState(EntityStateTrackable entityStateTrackable)
             {
-                return (from item in AllColumns
+                var changes = _getChanges(entityStateTrackable, GetAllColumns(entityStateTrackable));
+
+                return _getState(changes);
+            }
+
+            private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
+            {
+                return (from item in allColumns
                         let current = _getCurrentObject(entityStateTrackable, item.Name)
                         let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
                         let hasChanged = _hasChanged(pristineEntity, current)
@@ -887,6 +1113,15 @@ namespace OR_M_Data_Entities.Data
                 }
             }
             #endregion
+        }
+
+        protected class DeleteEntity : ModificationEntity
+        {
+            public DeleteEntity(object entity, ConfigurationOptions configuration)
+                : base(entity, configuration)
+            {
+                ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
+            }
         }
         #endregion
     }

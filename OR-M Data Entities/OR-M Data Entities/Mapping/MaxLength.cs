@@ -7,7 +7,6 @@
  */
 
 using System;
-using OR_M_Data_Entities.Enumeration;
 
 namespace OR_M_Data_Entities.Mapping
 {

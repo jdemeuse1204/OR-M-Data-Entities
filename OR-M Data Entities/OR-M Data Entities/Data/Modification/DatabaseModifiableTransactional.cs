@@ -16,7 +16,6 @@ using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 
 // ReSharper disable once CheckNamespace
@@ -66,7 +65,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly ConfigurationOptions _configuration;
 
-            public TransactionUpdateContainer(ModificationEntity entity, ConfigurationOptions configuration, string tableAlias)
+            public TransactionUpdateContainer(IModificationEntity entity, ConfigurationOptions configuration, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;
@@ -155,7 +154,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly string _tableAlias;
 
-            public TransactionInsertContainer(ModificationEntity entity, string tableAlias)
+            public TransactionInsertContainer(IModificationEntity entity, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;
@@ -251,7 +250,7 @@ namespace OR_M_Data_Entities.Data
                 return command;
             }
 
-            public ModificationEntity Entity { get; private set; }
+            public IModificationEntity Entity { get; private set; }
         }
 
         private class SqlTransactionInsertPlan : SqlInsertPlan, ISqlTransaction

@@ -10,7 +10,6 @@ using System;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data.Definition.Rules.Base;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 

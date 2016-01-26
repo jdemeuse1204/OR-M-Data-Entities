@@ -15,17 +15,14 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Execution;
 using OR_M_Data_Entities.Data.Query;
-using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts.Base;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class DatabaseExecution : DatabaseQuery
+    public abstract class DatabaseExecution : DatabaseSchematic
     {
         #region Constructor
         protected DatabaseExecution(string connectionStringOrName)
@@ -92,18 +89,18 @@ namespace OR_M_Data_Entities.Data
             Reader = Command.ExecuteReaderWithPeeking(Connection);
         }
 
-        protected void ExecuteReader(IExpressionQueryResolvable query)
-        {
-            TryDisposeCloseReader();
+        //protected void ExecuteReader(IExpressionQueryResolvable query)
+        //{
+        //    TryDisposeCloseReader();
 
-            Connect();
+        //    Connect();
 
-            Command = new SqlCommand(query.Sql, Connection);
+        //    Command = new SqlCommand(query.Sql, Connection);
 
-            _addParameters(query.Parameters);
+        //    _addParameters(query.Parameters);
 
-            Reader = Command.ExecuteReaderWithPeeking(Connection, new SqlPayload(query));
-        }
+        //    Reader = Command.ExecuteReaderWithPeeking(Connection, new SqlPayload(query));
+        //}
 
         #region Query Execution
         public DataReader<T> ExecuteQuery<T>(string sql)
@@ -133,17 +130,17 @@ namespace OR_M_Data_Entities.Data
         }
 
 
-        public DataReader<T> ExecuteQuery<T>(ExpressionQuery<T> query)
-        {
-            var resolvableQuery = (IExpressionQueryResolvable)query;
+        //public DataReader<T> ExecuteQuery<T>(IExpressionQuery<T> query)
+        //{
+        //    var resolvableQuery = (IExpressionQueryResolvable)query;
 
-            // execute query
-            resolvableQuery.ResolveExpression();
+        //    // execute query
+        //    resolvableQuery.ResolveExpression();
 
-            ExecuteReader(resolvableQuery);
+        //    ExecuteReader(resolvableQuery);
 
-            return new DataReader<T>(Reader);
-        }
+        //    return new DataReader<T>(Reader);
+        //}
 
         public void ExecuteQuery(string sql, List<SqlDbParameter> parameters)
         {

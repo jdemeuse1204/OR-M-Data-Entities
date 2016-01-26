@@ -6,8 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Enumeration;
+using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Tracking
 {
@@ -17,7 +16,7 @@ namespace OR_M_Data_Entities.Tracking
 
         public EntityState GetState()
         {
-            return ModificationEntity.GetState(this);
+            return DatabaseSchematic.GetEntityState(this); // TODO - Test this
         }
     }
 }

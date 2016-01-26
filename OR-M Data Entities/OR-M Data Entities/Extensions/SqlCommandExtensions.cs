@@ -8,7 +8,6 @@
 
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Data;
-using OR_M_Data_Entities.Data.Execution;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities

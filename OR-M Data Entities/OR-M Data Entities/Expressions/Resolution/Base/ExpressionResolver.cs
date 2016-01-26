@@ -10,7 +10,6 @@ using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
 
 namespace OR_M_Data_Entities.Expressions.Resolution.Base
 {
@@ -75,10 +74,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Base
 
         protected static object GetValue(MethodCallExpression expression, IExpressionQueryResolvable baseQuery)
         {
-            if (IsSubQuery(expression))
-            {
-                return SubQueryResolver.Resolve(expression, baseQuery);
-            }
+
 
             var objectMember = Expression.Convert(expression, typeof(object));
 

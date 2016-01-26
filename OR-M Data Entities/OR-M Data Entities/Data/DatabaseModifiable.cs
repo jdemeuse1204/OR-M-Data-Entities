@@ -19,7 +19,6 @@ using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 
@@ -407,7 +406,7 @@ namespace OR_M_Data_Entities.Data
 
             #region Properties and Fields
 
-            public ModificationEntity Entity { get; private set; }
+            public IModificationEntity Entity { get; private set; }
 
             protected readonly List<SqlSecureQueryParameter> Parameters;
 
@@ -451,7 +450,7 @@ namespace OR_M_Data_Entities.Data
 
             #region Properties
 
-            protected readonly ModificationEntity Entity;
+            protected readonly IModificationEntity Entity;
 
             protected readonly ConfigurationOptions Configuration;
 

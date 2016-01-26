@@ -15,7 +15,6 @@ using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Expressions.Query.Columns;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
 
@@ -24,13 +23,6 @@ namespace OR_M_Data_Entities
 {
     public static class PeekDataReaderExtensions
     {
-        private static class DataLoader
-        {
-            public static T Load<T>(PeekDataReader reader)
-            {
-                return default(T);
-            }
-        }
         /// <summary>
         /// Turns a record into a dynamic object
         /// </summary>
@@ -201,7 +193,7 @@ namespace OR_M_Data_Entities
             reader._loadObject(instance, null);
 
             // set the table on load if possible, we don't care about foreign keys
-            ModificationEntity.TrySetPristineEntity(instance);
+            DatabaseSchematic.TrySetPristineEntity(instance);
 
             // load first row, do not move next.  While loop will move next 
             _loadObjectWithForeignKeys(reader, instance);
@@ -230,7 +222,7 @@ namespace OR_M_Data_Entities
             reader._loadObject(instance, null);
 
             // set the table on load if possible, we don't care about foreign keys
-            ModificationEntity.TrySetPristineEntity(instance);
+            DatabaseSchematic.TrySetPristineEntity(instance);
 
             return instance;
         }
@@ -244,7 +236,7 @@ namespace OR_M_Data_Entities
             reader._loadObjectByColumnNames(instance);
 
             // set the table on load if possible
-            ModificationEntity.TrySetPristineEntity(instance);
+            DatabaseSchematic.TrySetPristineEntity(instance);
 
             return instance;
         }
@@ -349,7 +341,7 @@ namespace OR_M_Data_Entities
                 if (!reader._loadObject(newInstance, currentSchematic.PropertyName)) continue;
 
                 // set the table on load if possible, we don't care about foreign keys
-                ModificationEntity.TrySetPristineEntity(newInstance);
+                DatabaseSchematic.TrySetPristineEntity(newInstance);
 
                 // List
                 if (currentSchematic.ActualType.IsList())

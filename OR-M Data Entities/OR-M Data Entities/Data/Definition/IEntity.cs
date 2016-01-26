@@ -8,15 +8,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using OR_M_Data_Entities.Expressions.Resolution.Join;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
-    public interface IEntity
+    public interface IEntity : ITable
     {
         List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId);
 
