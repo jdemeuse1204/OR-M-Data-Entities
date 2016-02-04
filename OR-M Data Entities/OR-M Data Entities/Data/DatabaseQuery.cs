@@ -13,14 +13,14 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseQuery : DatabaseExecution
     {
         #region Properties and Fields
-        private readonly HashSet<QueryMap> Mappings;
+        private readonly HashSet<QuerySchematic> Mappings;
         #endregion
 
         #region Constructor
         protected DatabaseQuery(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            Mappings = new HashSet<QueryMap>();
+            Mappings = new HashSet<QuerySchematic>();
         }
         #endregion
 
@@ -61,7 +61,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        private QueryMap _getMap(ITable table, string viewId = null)
+        private QuerySchematic _getMap(ITable table, string viewId = null)
         {
             var map = Mappings.FirstOrDefault(w => w.Key == table.Type && w.ViewId == viewId);
 
@@ -133,7 +133,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private QueryMap _createMap(ITable from, string viewId)
+        private QuerySchematic _createMap(ITable from, string viewId)
         {
             var aliasString = "AkA{0}";
             var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain));
@@ -159,7 +159,7 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            return new QueryMap(from.Type, viewId, tables);
+            return new QuerySchematic(from.Type, viewId, tables);
 
 
             //return (from property in autoLoadProperties
@@ -214,9 +214,12 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private class QueryMap
+        /// <summary>
+        /// Tells us which tables are involved in the query
+        /// </summary>
+        private class QuerySchematic
         {
-            public QueryMap(Type key, string viewid, List<MappedTable> map)
+            public QuerySchematic(Type key, string viewid, List<MappedTable> map)
             {
                 Key = key;
                 ViewId = viewid;
@@ -257,7 +260,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly string _viewId;
 
-            private readonly QueryMap _map;
+            private readonly QuerySchematic _map;
 
             public string Sql { get; private set; }
 
@@ -265,7 +268,7 @@ namespace OR_M_Data_Entities.Data
 
             #region Constructor
 
-            public ExpressionQuery(DatabaseExecution context, QueryMap map, string viewId = null)
+            public ExpressionQuery(DatabaseExecution context, QuerySchematic map, string viewId = null)
             {
                 _context = context;
                 _viewId = viewId;
@@ -286,9 +289,11 @@ namespace OR_M_Data_Entities.Data
 
             public IEnumerator<T> GetEnumerator()
             {
-                foreach (var item in _context.ExecuteQuery(this)) yield return item;
+                //foreach (var item in _context.ExecuteQuery(this)) yield return item;
 
-                _context.Dispose();
+                //_context.Dispose();
+
+                return null;
             }
 
             IEnumerator IEnumerable.GetEnumerator()

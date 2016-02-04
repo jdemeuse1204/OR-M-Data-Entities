@@ -76,21 +76,23 @@ namespace OR_M_Data_Entities
 
         private static T _toObject<T>(this PeekDataReader reader)
         {
-            if (typeof(T).IsValueType || typeof(T) == typeof(string)) return reader[0] == DBNull.Value ? default(T) : (T)reader[0];
+            //if (typeof(T).IsValueType || typeof(T) == typeof(string)) return reader[0] == DBNull.Value ? default(T) : (T)reader[0];
 
-            if (typeof(T) == typeof(object)) return reader.ToDynamic();
+            //if (typeof(T) == typeof(object)) return reader.ToDynamic();
 
-                   // if its an anonymous type, use the correct loader
-            return typeof(T).IsAnonymousType() ? (T)reader._getAnonymousObject(typeof(T))
+            //       // if its an anonymous type, use the correct loader
+            //return typeof(T).IsAnonymousType() ? (T)reader._getAnonymousObject(typeof(T))
 
-                   // if the payload is null, load by column names
-                   : reader.Payload == null ? reader._getObjectFromReaderUsingDatabaseColumnNames<T>()
+            //       // if the payload is null, load by column names
+            //       : reader.Payload == null ? reader._getObjectFromReaderUsingDatabaseColumnNames<T>()
 
-                   // if the payload has foreign keys, use the foreign key loader
-                   : reader.Payload.Query.HasForeignKeys ? reader._getObjectFromReaderWithForeignKeys<T>()
+            //       // if the payload has foreign keys, use the foreign key loader
+            //       : reader.Payload.Query.HasForeignKeys ? reader._getObjectFromReaderWithForeignKeys<T>()
 
-                   // default if all are false
-                   : reader._getObjectFromReader<T>();
+            //       // default if all are false
+            //       : reader._getObjectFromReader<T>();
+
+            return default(T);
         }
 
         #region Load Object Methods
@@ -98,41 +100,41 @@ namespace OR_M_Data_Entities
         {
             try
             {
-                List<DbColumn> properties;
+                //List<DbColumn> properties;
 
-                // decide how to select columns
-                // They should be ordered by the Primary key.  If the primary key is a dbnull then we do
-                // not want to load the object because the rest is null.  Set the object to null
-                if (parentPropertyName == null)
-                {
-                    // Parent object
-                    properties =
-                        reader.Payload.Query.SelectInfos.Where(
-                            w => w.NewTable.Type == instance.GetType() && w.IsSelected)
-                            .OrderByDescending(w => w.IsPrimaryKey)
-                            .ToList();
-                }
-                else
-                {
-                    // foreign/pseudo keys
-                    properties =
-                        reader.Payload.Query.SelectInfos.Where(
-                            w =>
-                                w.NewTable.Type == instance.GetType() && w.IsSelected &&
-                                w.ParentPropertyName == parentPropertyName).OrderByDescending(w => w.IsPrimaryKey).ToList();
-                }
+                //// decide how to select columns
+                //// They should be ordered by the Primary key.  If the primary key is a dbnull then we do
+                //// not want to load the object because the rest is null.  Set the object to null
+                //if (parentPropertyName == null)
+                //{
+                //    // Parent object
+                //    properties =
+                //        reader.Payload.Query.SelectInfos.Where(
+                //            w => w.NewTable.Type == instance.GetType() && w.IsSelected)
+                //            .OrderByDescending(w => w.IsPrimaryKey)
+                //            .ToList();
+                //}
+                //else
+                //{
+                //    // foreign/pseudo keys
+                //    properties =
+                //        reader.Payload.Query.SelectInfos.Where(
+                //            w =>
+                //                w.NewTable.Type == instance.GetType() && w.IsSelected &&
+                //                w.ParentPropertyName == parentPropertyName).OrderByDescending(w => w.IsPrimaryKey).ToList();
+                //}
 
-                foreach (var property in properties)
-                {
-                    var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
-                    var dbValue = reader[ordinal];
-                    var dbNullValue = dbValue as DBNull;
+                //foreach (var property in properties)
+                //{
+                //    var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
+                //    var dbValue = reader[ordinal];
+                //    var dbNullValue = dbValue as DBNull;
 
-                    // the rest of the object will be null.  No data exists for the object
-                    if (property.IsPrimaryKey && dbNullValue != null) return false;
+                //    // the rest of the object will be null.  No data exists for the object
+                //    if (property.IsPrimaryKey && dbNullValue != null) return false;
 
-                    instance.SetPropertyInfoValue(property.NewPropertyName, dbNullValue != null ? null : dbValue);
-                }
+                //    instance.SetPropertyInfoValue(property.NewPropertyName, dbNullValue != null ? null : dbValue);
+                //}
 
                 return true;
             }
@@ -171,11 +173,13 @@ namespace OR_M_Data_Entities
 
         private static object _getValue(this PeekDataReader reader, Type instanceType, string propertyName)
         {
-            var table = reader.Payload.Query.Tables.Find(instanceType, reader.Payload.Query.Id);
-            var property = reader.Payload.Query.SelectInfos.First(w => w.Table.Type == table.Type && w.IsSelected && w.NewPropertyName == propertyName);
-            var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
+            //var table = reader.Payload.Query.Tables.Find(instanceType, reader.Payload.Query.Id);
+            //var property = reader.Payload.Query.SelectInfos.First(w => w.Table.Type == table.Type && w.IsSelected && w.NewPropertyName == propertyName);
+            //var ordinal = reader.Payload.Query.GetOrdinalBySelectedColumns(property.Ordinal);
 
-            return reader[ordinal];
+            //return reader[ordinal];
+
+            return null;
         }
 
         private static T _getObjectFromReaderWithForeignKeys<T>(this PeekDataReader reader)
@@ -184,31 +188,31 @@ namespace OR_M_Data_Entities
             var instance = Activator.CreateInstance<T>();
 
             // get the key so we can look at the key of each row
-            var compositeKeyArray = reader.Payload.Query.LoadSchematic._getCompositKeyArray(reader);
+            //var compositeKeyArray = reader.Payload.Query.LoadSchematic._getCompositKeyArray(reader);
 
-            // grab the starting composite key
-            var compositeKey = reader.Payload.Query.LoadSchematic._getCompositKey(reader);
+            //// grab the starting composite key
+            //var compositeKey = reader.Payload.Query.LoadSchematic._getCompositKey(reader);
 
-            // load the instance
-            reader._loadObject(instance, null);
+            //// load the instance
+            //reader._loadObject(instance, null);
 
-            // set the table on load if possible, we don't care about foreign keys
-            DatabaseSchematic.TrySetPristineEntity(instance);
+            //// set the table on load if possible, we don't care about foreign keys
+            //DatabaseSchematic.TrySetPristineEntity(instance);
 
-            // load first row, do not move next.  While loop will move next 
-            _loadObjectWithForeignKeys(reader, instance);
+            //// load first row, do not move next.  While loop will move next 
+            //_loadObjectWithForeignKeys(reader, instance);
 
-            // Loop through the dataset and fill our object.  Check to see if the next PK is the same as the starting PK
-            // if it is then we need to stop and return our object
-            while (reader.Peek() &&
-                compositeKey.Equals(compositeKeyArray.Sum(w => reader[w].GetHashCode())) &&
-                reader.Read())
-            {
-                _loadObjectWithForeignKeys(reader, instance);
-            }
+            //// Loop through the dataset and fill our object.  Check to see if the next PK is the same as the starting PK
+            //// if it is then we need to stop and return our object
+            //while (reader.Peek() &&
+            //    compositeKey.Equals(compositeKeyArray.Sum(w => reader[w].GetHashCode())) &&
+            //    reader.Read())
+            //{
+            //    _loadObjectWithForeignKeys(reader, instance);
+            //}
 
-            // Rows with a PK from the initial object are done loading.  Clear Schematics
-            reader.Payload.Query.LoadSchematic.ClearRowReadCache();
+            //// Rows with a PK from the initial object are done loading.  Clear Schematics
+            //reader.Payload.Query.LoadSchematic.ClearRowReadCache();
 
             return instance;
         }
@@ -296,12 +300,15 @@ namespace OR_M_Data_Entities
             // after this method is completed we need to make sure we can read the next set.  This method should go in a loop
             // load the instance before it comes into thos method
 
-            var schematic = reader.Payload.Query.LoadSchematic;
+            var schematic = new object();// reader.Payload.Query.LoadSchematic;
             var schematicsToScan = new List<OSchematic>();
             var parentInstance = startingInstance;
 
             // initialize the list
-            schematicsToScan.AddRange(schematic.Children);
+
+
+
+            //schematicsToScan.AddRange(schematic.Children);
 
             // set the original count so we know wether to look in the parent or reference to parent
             var originalCount = schematicsToScan.Count - 1;
@@ -409,10 +416,12 @@ namespace OR_M_Data_Entities
 
         private static int[] _getCompositKeyArray(this OSchematic schematic, PeekDataReader reader)
         {
-            var infos = reader.Payload.Query.SelectInfos.Where(
-                w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyNames.Contains(w.NewPropertyName));
+            //var infos = reader.Payload.Query.SelectInfos.Where(
+            //    w => w.NewTable.Type == schematic.Type && schematic.PrimaryKeyNames.Contains(w.NewPropertyName));
 
-            return infos.Select(w => w.Ordinal).ToArray();
+            //return infos.Select(w => w.Ordinal).ToArray();
+
+            return null;
         }
         #endregion
     }

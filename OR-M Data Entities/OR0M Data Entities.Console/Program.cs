@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
-using OR_M_Data_Entities.Tests.Tables;
+using OR_M_Data_Entities.Scripts.Base;
+using OR_M_Data_Entities.Tracking;
 
 namespace OR0M_Data_Entities.Console
 {
@@ -193,20 +193,6 @@ namespace OR0M_Data_Entities.Console
 
             }
 
-            var user = context.Find<User>(1);
-            var user2 = context.Find<User>(2);
-
-            var contact = new Contact
-            {
-                CreatedBy = user,
-                CreatedByUserID = user.ID,
-                EditedBy = user2,
-                EditedByUserID = user2.ID,
-                FirstName = "James",
-                LastName = "Demeuse"
-            };
-
-            context.SaveChanges(contact);
         }
 
         public class CS1 : CustomScript<Contact>
@@ -288,7 +274,139 @@ namespace OR0M_Data_Entities.Console
 
         public class GetLastName2 : ScalarFunction<string>
         {
+
             public int Id { get; set; }
+        }
+
+        [View("ContactOnly", "ContactAndPhone")]
+        [Table("Contacts")]
+        public class Contact : EntityStateTrackable, IReadScript<Contact>
+        {
+            [Key]
+            [Column("ID")]
+            [DbGenerationOption(DbGenerationOption.Generate)]
+            public int ContactID { get; set; }
+
+            [DbGenerationOption(DbGenerationOption.Generate)]
+            public int Test { get; set; }
+
+            [DbGenerationOption(DbGenerationOption.Generate)]
+            public Guid TestUnique { get; set; }
+
+            [MaxLength(25)]
+            public string FirstName { get; set; }
+
+            public string LastName { get; set; }
+
+            public int? PhoneID { get; set; }
+
+            public int CreatedByUserID { get; set; }
+
+            public int EditedByUserID { get; set; }
+
+            [ForeignKey("CreatedByUserID")]
+            public User CreatedBy { get; set; }
+
+            [ForeignKey("EditedByUserID")]
+            public User EditedBy { get; set; }
+
+            [ForeignKey("PhoneID")]
+            public PhoneNumber Number { get; set; }
+
+            [ForeignKey("ContactID")]
+            public List<Appointment> Appointments { get; set; }
+
+            [ForeignKey("ContactID")]
+            public List<Name> Names { get; set; }
+        }
+
+        public class User : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Name { get; set; }
+        }
+
+        [View("ContactAndPhone")]
+        [Table("PhoneNumbers")]
+        public class PhoneNumber : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Phone { get; set; }
+
+            public int PhoneTypeID { get; set; }
+
+            [ForeignKey("PhoneTypeID")]
+            public PhoneType PhoneType { get; set; }
+        }
+
+        public class PhoneType : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Type { get; set; }
+        }
+
+        [Table("Appointments")]
+        public class Appointment : EntityStateTrackable
+        {
+            [DbGenerationOption(DbGenerationOption.Generate)]
+            public Guid ID { get; set; }
+
+            public int ContactID { get; set; }
+
+            public string Description { get; set; }
+
+            public bool IsScheduled { get; set; }
+
+            [ForeignKey("AppointmentID")]
+            public List<Address> Address { get; set; }
+        }
+
+        public class Address : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Addy { get; set; }
+
+            public Guid AppointmentID { get; set; }
+
+            public int StateID { get; set; }
+
+            [ForeignKey("StateID")]
+            public StateCode State { get; set; }
+
+            [ForeignKey("AddressID")]
+            public List<Zip> ZipCode { get; set; }
+        }
+
+        public class StateCode : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Value { get; set; }
+        }
+
+        [Table("ZipCode")]
+        public class Zip : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Zip5 { get; set; }
+
+            public string Zip4 { get; set; }
+
+            public int AddressID { get; set; }
+        }
+
+        public class Name : EntityStateTrackable
+        {
+            public int ID { get; set; }
+
+            public string Value { get; set; }
+
+            public int ContactID { get; set; }
         }
     }
 }

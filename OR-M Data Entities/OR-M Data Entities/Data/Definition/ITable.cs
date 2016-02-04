@@ -33,6 +33,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         bool IsEntityStateTrackingOn { get; }
 
+        DelayedEnumerationCachedList<IColumn> Columns { get; }
+
         string ToString(TableNameFormat format);
 
         bool IsPrimaryKey(string columnName);

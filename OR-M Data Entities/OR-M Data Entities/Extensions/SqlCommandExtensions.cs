@@ -19,7 +19,7 @@ namespace OR_M_Data_Entities
             return new PeekDataReader(cmd, connection);
         }
 
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection, string payload)
         {
             return new PeekDataReader(cmd, connection, payload);
         }

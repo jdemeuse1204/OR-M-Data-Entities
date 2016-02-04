@@ -7,8 +7,8 @@
  */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
@@ -27,14 +27,15 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseSchematic : DatabaseConnection
     {
         #region Properties
-        protected IDictionary<Type, ITable> TableCache { get; private set; }
+        protected static IDictionary<Type, ITable> TableCache { get; private set; }
 
-        private List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
+        private static List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
-        public IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
+        public  IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
         {
             get { return _tableScriptMappings; }
         }
+
         #endregion
 
         #region Constructor
@@ -48,6 +49,62 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Rules
+        public sealed class TimeStampColumnUpdateRule : IRule
+        {
+            private readonly EntityStateTrackable _entityStateTrackable;
+
+            private readonly IReadOnlyList<PropertyInfo> _columns;
+
+            public TimeStampColumnUpdateRule(EntityStateTrackable entityStateTrackable, IReadOnlyList<PropertyInfo> columns)
+            {
+                _entityStateTrackable = entityStateTrackable;
+                _columns = columns;
+            }
+
+            public void Process()
+            {
+                // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
+                if (_entityStateTrackable == null) return;
+
+                List<string> errorColumns;
+
+                var allTimestampColumns = _columns.Where(
+                    w =>
+                        w.GetCustomAttribute<DbTypeAttribute>() != null &&
+                        w.GetCustomAttribute<DbTypeAttribute>().Type ==
+                        SqlDbType.Timestamp).ToList();
+
+                if (allTimestampColumns.Count == 0) return;
+
+                // entity state tracking is on, check to see if the identity column has been updated
+                if (ModificationEntity.GetPristineEntity(_entityStateTrackable) == null)
+                {
+                    // any identity columns should be zero/null or whatever the insert value is
+                    errorColumns = (from column in allTimestampColumns
+                                    let value = column.GetValue(_entityStateTrackable)
+                                    let hasError = value != null
+                                    where hasError
+                                    select column.Name).ToList();
+                }
+                else
+                {
+                    // can only check when entity state tracking is on
+                    // only can get here when updating, try insert, or try insert update
+                    errorColumns =
+                        allTimestampColumns.Where(column => ModificationEntity.HasColumnChanged(_entityStateTrackable, column.Name))
+                            .Select(w => w.Name)
+                            .ToList();
+                }
+
+                if (!errorColumns.Any()) return;
+
+                const string error = "Cannot update value of TIMESTAMP column.  Column: {0}\r\r";
+                var message = errorColumns.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
+
+                throw new SqlSaveException(message);
+            }
+        }
+
         private class IsEntityValidRule : IRule
         {
             private readonly object _entity;
@@ -190,34 +247,87 @@ namespace OR_M_Data_Entities.Data
 
         #region Schematic Classes
 
-        private class ColumnList : IColumnList
+        protected interface IAutoLoadKeyRelationship
         {
-            private readonly ITable _table;
+            IColumn ChildColumn { get; }
 
-            private readonly int _columnCount;
+            IColumn ParentColumn { get; }
 
-            private readonly List<IColumn> _columns;
+            JoinType JoinType { get; }
+        }
 
-            public ColumnList(ITable table)
+        private class AutoLoadKeyRelationship : IAutoLoadKeyRelationship
+        {
+            public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn,
+                JoinType joinType)
             {
-                _columns = new List<IColumn>();
-                _table = table;
-                _columnCount = table.GetAllProperties().Count;
+                ParentColumn = parentColumn;
+                ChildColumn = childColumn;
+                JoinType = joinType;
             }
 
-            public IEnumerator<IColumn> GetEnumerator()
-            {
-                foreach (var column in _table.GetAllProperties().Select(propertyInfo => new Column(_table, propertyInfo)))
-                {
-                    _columns.Add(column);
+            public IColumn ChildColumn { get; private set; }
 
-                    yield return column;
+            public IColumn ParentColumn { get; private set; }
+
+            public JoinType JoinType { get; private set; }
+        }
+
+        private class AutoLoadList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
+        {
+            public AutoLoadList(ITable table, int count, Delegate getTable) 
+                : base(table, count)
+            {
+            }
+
+            public override IEnumerator<IAutoLoadKeyRelationship> GetEnumerator()
+            {
+                if (Internal.Count == Count)
+                {
+                    var enumerator = Internal.GetEnumerator();
+
+                    while (enumerator.MoveNext()) yield return enumerator.Current;
+                }
+                else
+                {
+                    var columns = ParentTable.GetAllProperties().Select(w => new AutoLoadKeyRelationship(ParentTable, w)).ToList();
+
+                    foreach (var column in columns)
+                    {
+                        //Internal.Add(column);
+
+                        yield return null;
+                    }
                 }
             }
+        }
 
-            IEnumerator IEnumerable.GetEnumerator()
+        private class ColumnList : DelayedEnumerationCachedList<IColumn>
+        {
+            public ColumnList(ITable table, int count)
+                : base (table,count)
             {
-                return _columns.Count == _columnCount ? _columns.GetEnumerator() : GetEnumerator();
+            }
+
+            public override IEnumerator<IColumn> GetEnumerator()
+            {
+                if (Internal.Count == Count)
+                {
+                    var enumerator = Internal.GetEnumerator();
+
+                    while (enumerator.MoveNext()) yield return enumerator.Current;
+                }
+                else
+                {
+                    var columns = ParentTable.GetAllProperties().Select(w => new Column(ParentTable, w)).ToList();
+
+                    foreach (var column in columns)
+                    {
+                        Internal.Add(column);
+
+                        yield return column;
+                    }
+                }
             }
         }
 
@@ -280,7 +390,7 @@ namespace OR_M_Data_Entities.Data
             protected ReflectionCacheTable(Type type, string defaultSchema)
             {
                 // Make sure the table is setup correctly
-                RuleProcessor.ProcessRule<IsTableValidRule>(Type);
+                RuleProcessor.ProcessRule<IsTableValidRule>(type);
 
                 AllProperties = type.GetProperties().ToList();
                 AllColumns = AllProperties.Where(IsColumn).ToList();
@@ -302,8 +412,6 @@ namespace OR_M_Data_Entities.Data
             protected List<PropertyInfo> AllProperties { get; private set; }
 
             protected List<PropertyInfo> AllColumns { get; private set; }
-
-            //protected List<IColumn> DbColumns 
             #endregion
 
             #region Fields
@@ -521,7 +629,7 @@ namespace OR_M_Data_Entities.Data
 
                 IsEntityStateTrackingOn = type.IsSubclassOf(typeof(EntityStateTrackable));
 
-                Columns = new ColumnList(this);
+                Columns = new ColumnList(this, AllProperties.Count);
             }
 
             #endregion
@@ -555,7 +663,7 @@ namespace OR_M_Data_Entities.Data
                 get { return LinkedServerAttribute == null ? string.Empty : LinkedServerAttribute.DatabaseName; }
             }
 
-            public readonly IColumnList Columns;
+            public DelayedEnumerationCachedList<IColumn> Columns { get; private set; }
 
             public string SchemaName
             {
@@ -678,53 +786,16 @@ namespace OR_M_Data_Entities.Data
             }
             #endregion
 
-            #region Foreign Key Methods
-            public List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId)
-            {
-                var autoLoadProperties = string.IsNullOrWhiteSpace(viewId)
-                    ? Type.GetProperties().Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
-                    : Type.GetProperties()
-                        .Where(
-                            w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
-                                w.GetPropertyType().GetCustomAttribute<ViewAttribute>() != null &&
-                                 w.GetPropertyType().GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId));
-
-                return (from property in autoLoadProperties
-                        let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
-                        let pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>()
-                        select new JoinColumnPair
-                        {
-                            ChildColumn =
-                                new PartialColumn(property.GetPropertyType(),
-                                    fkAttribute != null
-                                        ? property.PropertyType.IsList()
-                                            ? fkAttribute.ForeignKeyColumnName
-                                            : GetPrimaryKeys(property.PropertyType).First().Name
-                                        : pskAttribute.ChildTableColumnName),
-                            ParentColumn =
-                                new PartialColumn(Type,
-                                    fkAttribute != null
-                                        ? property.PropertyType.IsList()
-                                            ? GetPrimaryKeys(Type).First().Name
-                                            : fkAttribute.ForeignKeyColumnName
-                                        : pskAttribute.ParentTableColumnName),
-                            JoinType =
-                                property.PropertyType.IsList()
-                                    ? JoinType.Left
-                                    : Type.GetProperty(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ParentTableColumnName).PropertyType.IsNullable()
-                                        ? JoinType.Left
-                                        : JoinType.Inner,
-                            JoinPropertyName = property.Name,
-                            FromType = property.PropertyType
-                        }).ToList();
-            }
-            #endregion
-
             #region Property Methods
             protected static FieldInfo GetPristineEntityFieldInfo()
             {
                 return typeof(EntityStateTrackable).GetField("_pristineEntity",
                     BindingFlags.Instance | BindingFlags.NonPublic);
+            }
+
+            public List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId)
+            {
+                throw new NotImplementedException();
             }
 
             public object GetPropertyValue(PropertyInfo property)
@@ -939,6 +1010,26 @@ namespace OR_M_Data_Entities.Data
                 var changes = _getChanges(entityStateTrackable, GetAllColumns(entityStateTrackable));
 
                 return _getState(changes);
+            }
+
+            public static bool IsValueInInsertArray(ConfigurationOptions configuration, object value)
+            {
+                // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
+                switch (value.GetType().Name.ToUpper())
+                {
+                    case "INT16":
+                        return configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(value));
+                    case "INT32":
+                        return configuration.InsertKeys.Int.Contains(Convert.ToInt32(value));
+                    case "INT64":
+                        return configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(value));
+                    case "GUID":
+                        return configuration.InsertKeys.UniqueIdentifier.Contains((Guid)value);
+                    case "STRING":
+                        return configuration.InsertKeys.String.Contains(value.ToString());
+                }
+
+                return false;
             }
 
             private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)

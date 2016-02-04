@@ -25,12 +25,18 @@ namespace OR_M_Data_Entities.Data
 
         #region Properties
         public int Depth { get { return _wrappedReader.Depth; } }
+
         public int RecordsAffected { get { return _wrappedReader.RecordsAffected; } }
+
         public bool IsClosed { get { return _wrappedReader.IsClosed; } }
+
         public bool HasRows { get; private set; }
+
         public int FieldCount { get; private set; }
+
         public bool WasPeeked { get; private set; }
-        public ISqlPayload Payload { get; private set; }
+
+        //public ISqlPayload Payload { get; private set; }
 
         public object this[int i]
         {
@@ -61,7 +67,7 @@ namespace OR_M_Data_Entities.Data
             _connection = connection;
         }
 
-        public PeekDataReader(SqlCommand cmd, SqlConnection connection, ISqlPayload payload)
+        public PeekDataReader(SqlCommand cmd, SqlConnection connection, string payload)
         {
             try
             {
@@ -71,7 +77,7 @@ namespace OR_M_Data_Entities.Data
                 HasRows = wrappedReader.HasRows;
                 FieldCount = wrappedReader.FieldCount;
 
-                Payload = payload;
+                //Payload = payload;
 
                 _connection = connection;
             }

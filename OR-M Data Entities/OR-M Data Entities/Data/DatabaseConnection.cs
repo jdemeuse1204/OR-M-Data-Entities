@@ -78,6 +78,7 @@ namespace OR_M_Data_Entities.Data
                     // if the connection was opened before we need to renew it
                     if (_wasConnectionPreviouslyOpened())
                     {
+                        // connection needs to be renewed
                         Connection.Dispose();
                         Connection = null;
                         Connection = new SqlConnection(ConnectionString);
