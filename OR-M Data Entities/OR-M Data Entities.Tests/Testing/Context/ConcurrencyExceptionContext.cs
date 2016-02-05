@@ -1,6 +1,4 @@
-﻿using OR_M_Data_Entities.Enumeration;
-
-namespace OR_M_Data_Entities.Tests.Testing.Context
+﻿namespace OR_M_Data_Entities.Tests.Testing.Context
 {
     public class ConcurrencyExceptionContext : DbSqlContext
     {

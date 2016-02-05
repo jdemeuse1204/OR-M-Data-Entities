@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Tests.Scripts;
 using OR_M_Data_Entities.Tests.Tables;

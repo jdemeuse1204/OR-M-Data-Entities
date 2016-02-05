@@ -201,7 +201,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        protected ITable GetTable(Type type)
+        protected static ITable GetTable(Type type)
         {
             ITable table;
 
@@ -216,7 +216,7 @@ namespace OR_M_Data_Entities.Data
             return table;
         }
 
-        protected ITable GetTable<T>()
+        protected static ITable GetTable<T>()
         {
             return GetTable(typeof(T));
         }
@@ -247,15 +247,6 @@ namespace OR_M_Data_Entities.Data
 
         #region Schematic Classes
 
-        protected interface IAutoLoadKeyRelationship
-        {
-            IColumn ChildColumn { get; }
-
-            IColumn ParentColumn { get; }
-
-            JoinType JoinType { get; }
-        }
-
         private class AutoLoadKeyRelationship : IAutoLoadKeyRelationship
         {
             public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn,
@@ -273,11 +264,12 @@ namespace OR_M_Data_Entities.Data
             public JoinType JoinType { get; private set; }
         }
 
-        private class AutoLoadList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
+        private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
         {
-            public AutoLoadList(ITable table, int count, Delegate getTable) 
+            public AutoLoadRelationshipList(ITable table, int count)
                 : base(table, count)
             {
+
             }
 
             public override IEnumerator<IAutoLoadKeyRelationship> GetEnumerator()
@@ -290,13 +282,27 @@ namespace OR_M_Data_Entities.Data
                 }
                 else
                 {
-                    var columns = ParentTable.GetAllProperties().Select(w => new AutoLoadKeyRelationship(ParentTable, w)).ToList();
+                    var autoLoadRelationshipProperties = ParentTable.Columns.Where(w => w.IsForeignKey || w.IsPseudoKey).ToList();
 
-                    foreach (var column in columns)
+                    foreach (var info in autoLoadRelationshipProperties)
                     {
-                        //Internal.Add(column);
+                        var joinType = info.IsList || info.IsNullable ? JoinType.Left : JoinType.Inner;
+                        var childTable = GetTable(info.PropertyType);
+                        var childColumn = info.IsForeignKey
+                            ? childTable.Columns.FirstOrDefault(
+                                w =>
+                                    w.PropertyName ==
+                                    info.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
+                            : childTable.Columns.FirstOrDefault(
+                                w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
 
-                        yield return null;
+                        if (childColumn == null) throw new KeyNotFoundException(string.Format("Cannot find {0}.  Key Name - {1}", info.IsForeignKey ? "Foreign Key" : "Pseudo Key", info.PropertyName));
+                        
+                        var relationship = new AutoLoadKeyRelationship(info, childColumn, joinType);
+
+                        Internal.Add(relationship);
+
+                        yield return relationship;
                     }
                 }
             }
@@ -345,6 +351,12 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsList { get; private set; }
 
+            public bool IsNullable { get; private set; }
+
+            public Type PropertyType {
+                get { return _property.PropertyType; }
+            }
+
             public string PropertyName
             {
                 get { return _property.Name; }
@@ -369,7 +381,8 @@ namespace OR_M_Data_Entities.Data
                 IsPrimaryKey = table.IsPrimaryKey(property);
                 IsForeignKey = table.IsForeignKey(property);
                 IsPseudoKey = table.IsPseudoKey(property);
-                IsList = property.IsList();
+                IsList = property.PropertyType.IsList();
+                IsNullable = property.PropertyType.IsNullable();
 
                 Table = table;
             }
@@ -380,6 +393,11 @@ namespace OR_M_Data_Entities.Data
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
 
                 return columnAttribute == null ? property.Name : columnAttribute.Name;
+            }
+
+            public T GetCustomAttribute<T>() where T : Attribute
+            {
+                return _property.GetCustomAttribute<T>();
             }
             #endregion
         }
@@ -630,8 +648,14 @@ namespace OR_M_Data_Entities.Data
                 IsEntityStateTrackingOn = type.IsSubclassOf(typeof(EntityStateTrackable));
 
                 Columns = new ColumnList(this, AllProperties.Count);
+                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this,0);
             }
 
+            #endregion
+
+            #region Fields
+
+            public readonly Func<Type, ITable> _findTable;
             #endregion
 
             #region Properties
@@ -664,6 +688,8 @@ namespace OR_M_Data_Entities.Data
             }
 
             public DelayedEnumerationCachedList<IColumn> Columns { get; private set; }
+
+            public DelayedEnumerationCachedList<IAutoLoadKeyRelationship> AutoLoadKeyRelationships { get; private set; }
 
             public string SchemaName
             {

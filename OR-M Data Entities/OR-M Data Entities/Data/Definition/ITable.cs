@@ -35,6 +35,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         DelayedEnumerationCachedList<IColumn> Columns { get; }
 
+        DelayedEnumerationCachedList<IAutoLoadKeyRelationship> AutoLoadKeyRelationships { get; }
+
         string ToString(TableNameFormat format);
 
         bool IsPrimaryKey(string columnName);

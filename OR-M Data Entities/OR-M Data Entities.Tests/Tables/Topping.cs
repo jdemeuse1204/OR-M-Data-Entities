@@ -1,6 +1,4 @@
-﻿using OR_M_Data_Entities.Mapping;
-
-namespace OR_M_Data_Entities.Tests.Tables
+﻿namespace OR_M_Data_Entities.Tests.Tables
 {
     public class Topping
     {

@@ -143,15 +143,16 @@ namespace OR_M_Data_Entities.Data
             {
                 var parentMappedTable = tables[i];
                 var nextAlias = string.Format("AkA{0}", i);
-                var autoLoadProperties = parentMappedTable.Table.GetAllForeignAndPseudoKeys();
+                var autoLoadProperties = parentMappedTable.Table.AutoLoadKeyRelationships;
 
                 foreach (var property in autoLoadProperties)
                 {
-                    var currentMappedtable = tables.FirstOrDefault(w => w.Key == property.Name);
+                    var currentMappedtable = tables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName);
 
                     if (currentMappedtable == null)
                     {
-                        currentMappedtable = new MappedTable(GetTable(property.GetPropertyType()), nextAlias, property.Name);
+                        currentMappedtable = new MappedTable(GetTable(property.ParentColumn.PropertyType.GetTypeInfo()), nextAlias, property.ParentColumn.PropertyName);
+
                         tables.Add(currentMappedtable);
                     }
 
@@ -160,36 +161,6 @@ namespace OR_M_Data_Entities.Data
             }
 
             return new QuerySchematic(from.Type, viewId, tables);
-
-
-            //return (from property in autoLoadProperties
-            //        let fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>()
-            //        let pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>()
-            //        select new JoinColumnPair
-            //        {
-            //            ChildColumn =
-            //                new PartialColumn(expressionQueryId, property.GetPropertyType(),
-            //                    fkAttribute != null
-            //                        ? property.PropertyType.IsList()
-            //                            ? fkAttribute.ForeignKeyColumnName
-            //                            : GetPrimaryKeys(property.PropertyType).First().Name
-            //                        : pskAttribute.ChildTableColumnName),
-            //            ParentColumn =
-            //                new PartialColumn(expressionQueryId, _fromType,
-            //                    fkAttribute != null
-            //                        ? property.PropertyType.IsList()
-            //                            ? GetPrimaryKeys(_fromType).First().Name
-            //                            : fkAttribute.ForeignKeyColumnName
-            //                        : pskAttribute.ParentTableColumnName),
-            //            JoinType =
-            //                property.PropertyType.IsList()
-            //                    ? JoinType.Left
-            //                    : _fromType.GetProperty(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ParentTableColumnName).PropertyType.IsNullable()
-            //                        ? JoinType.Left
-            //                        : JoinType.Inner,
-            //            JoinPropertyName = property.Name,
-            //            FromType = property.PropertyType
-            //        }).ToList();
         }
 
         #endregion

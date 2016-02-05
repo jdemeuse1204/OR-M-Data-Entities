@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts.Base;
 using OR_M_Data_Entities.Tracking;
