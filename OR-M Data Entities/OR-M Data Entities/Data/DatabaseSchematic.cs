@@ -31,7 +31,7 @@ namespace OR_M_Data_Entities.Data
 
         private static List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
-        public  IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
+        protected IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
         {
             get { return _tableScriptMappings; }
         }
@@ -249,11 +249,11 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadKeyRelationship : IAutoLoadKeyRelationship
         {
-            public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn,
-                JoinType joinType)
+            public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn, IColumn autoLoadPropertyColumn, JoinType joinType)
             {
                 ParentColumn = parentColumn;
                 ChildColumn = childColumn;
+                AutoLoadPropertyColumn = autoLoadPropertyColumn;
                 JoinType = joinType;
             }
 
@@ -262,6 +262,8 @@ namespace OR_M_Data_Entities.Data
             public IColumn ParentColumn { get; private set; }
 
             public JoinType JoinType { get; private set; }
+
+            public IColumn AutoLoadPropertyColumn { get; private set; }
         }
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
@@ -282,29 +284,67 @@ namespace OR_M_Data_Entities.Data
                 }
                 else
                 {
+                    // enumerate the columns first
                     var autoLoadRelationshipProperties = ParentTable.Columns.Where(w => w.IsForeignKey || w.IsPseudoKey).ToList();
 
-                    foreach (var info in autoLoadRelationshipProperties)
+                    foreach (var relationship in autoLoadRelationshipProperties.Select(_getRelationship))
                     {
-                        var joinType = info.IsList || info.IsNullable ? JoinType.Left : JoinType.Inner;
-                        var childTable = GetTable(info.PropertyType);
-                        var childColumn = info.IsForeignKey
-                            ? childTable.Columns.FirstOrDefault(
-                                w =>
-                                    w.PropertyName ==
-                                    info.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
-                            : childTable.Columns.FirstOrDefault(
-                                w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
-
-                        if (childColumn == null) throw new KeyNotFoundException(string.Format("Cannot find {0}.  Key Name - {1}", info.IsForeignKey ? "Foreign Key" : "Pseudo Key", info.PropertyName));
-                        
-                        var relationship = new AutoLoadKeyRelationship(info, childColumn, joinType);
-
                         Internal.Add(relationship);
 
                         yield return relationship;
                     }
                 }
+            }
+
+            private AutoLoadKeyRelationship _getRelationship(IColumn column)
+            {
+                var joinType = column.IsList || column.IsNullable ? JoinType.Left : JoinType.Inner;
+                var childColumn = _getChildColumn(column);
+                var parentColumn = _getParentColumn(column);
+
+                if (childColumn == null) throw new KeyNotFoundException(string.Format("Cannot find {0}.  Key Name - {1}", column.IsForeignKey ? "Foreign Key" : "Pseudo Key", column.PropertyName));
+
+                return new AutoLoadKeyRelationship(parentColumn, childColumn, column, joinType);
+            }
+
+            private IColumn _getChildColumn(IColumn column)
+            {
+                var childTable = GetTable(column.PropertyType.GetUnderlyingType());
+
+                if (column.IsList)
+                {
+                    return column.IsForeignKey
+                        ? childTable.Columns.FirstOrDefault(
+                            w =>
+                                w.PropertyName ==
+                                column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
+                        : childTable.Columns.FirstOrDefault(
+                            w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                }
+
+                return column.IsForeignKey
+                    ? childTable.Columns.FirstOrDefault(w => w.IsPrimaryKey)
+                    : childTable.Columns.FirstOrDefault(
+                        w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+            }
+
+            private IColumn _getParentColumn(IColumn column)
+            {
+                if (column.IsList)
+                {
+                    return column.IsForeignKey
+                        ? column.Table.Columns.FirstOrDefault(w => w.IsPrimaryKey)
+                        : column.Table.Columns.FirstOrDefault(
+                            w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                }
+
+                return column.IsForeignKey
+                    ? column.Table.Columns.FirstOrDefault(
+                        w =>
+                            w.PropertyName ==
+                            column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
+                    : column.Table.Columns.FirstOrDefault(
+                        w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
             }
         }
 
@@ -648,7 +688,12 @@ namespace OR_M_Data_Entities.Data
                 IsEntityStateTrackingOn = type.IsSubclassOf(typeof(EntityStateTrackable));
 
                 Columns = new ColumnList(this, AllProperties.Count);
-                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this,0);
+
+                // count the number of auto load properties
+                // needed for the cached list
+                var autoLoadColumnCount = GetAllForeignAndPseudoKeys();
+
+                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this, autoLoadColumnCount.Count);
             }
 
             #endregion

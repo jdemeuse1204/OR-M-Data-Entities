@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Expressions;
+using OR_M_Data_Entities.Expressions.Resolution;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
@@ -332,14 +333,15 @@ namespace OR_M_Data_Entities
             //Console.WriteLine((e - s).TotalMilliseconds);
 
 
-            //var item = ExpressionQueryResolver.Resolve(source, expression);
-            //if (item != null)
-            //{
-            //    foreach (var sqlDbParameter in item.Parameters)
-            //    {
+            var item = ExpressionQueryResolver.Resolve(source, expression);
 
-            //    }
-            //}
+            if (item != null)
+            {
+                foreach (var sqlDbParameter in item.Parameters)
+                {
+
+                }
+            }
 
             //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
 

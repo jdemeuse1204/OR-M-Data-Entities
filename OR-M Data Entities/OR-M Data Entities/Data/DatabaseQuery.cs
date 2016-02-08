@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
@@ -13,7 +12,9 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseQuery : DatabaseExecution
     {
         #region Properties and Fields
-        private readonly HashSet<QuerySchematic> Mappings;
+        private HashSet<QuerySchematic> Mappings { get; set; }
+
+        private HashSet<MappedTable> MappedTables { get; set; }
         #endregion
 
         #region Constructor
@@ -21,7 +22,10 @@ namespace OR_M_Data_Entities.Data
             : base(connectionStringOrName)
         {
             Mappings = new HashSet<QuerySchematic>();
+            MappedTables = new HashSet<MappedTable>();
+            OnDisposing += _dispose;
         }
+
         #endregion
 
         #region Expression Query Methods
@@ -75,59 +79,44 @@ namespace OR_M_Data_Entities.Data
             return map;
         }
 
-        private void _processMappedTable(MappedTable currentMappedTable, MappedTable parentTable, PropertyInfo property)
+        private void _processMappedTable(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column)
         {
             string sql;
             TableRelationship relationship;
 
-            if (property.PropertyType.IsList() || property.PropertyType.IsNullable())
+            if (column.IsList || column.IsNullable)
             {
-                sql = _getRelationshipSql(currentMappedTable, parentTable, property, RelationshipType.OneToMany);
-                relationship = new TableRelationship(RelationshipType.OneToMany, sql);
-                currentMappedTable.Relationships.Add(relationship);
+                sql = _getRelationshipSql(currentMappedTable, parentTable, column, RelationshipType.OneToMany);
+                relationship = new TableRelationship(RelationshipType.OneToMany, currentMappedTable, sql);
+                parentTable.Relationships.Add(relationship);
                 return;   
             }
 
-            sql = _getRelationshipSql(currentMappedTable, parentTable, property, RelationshipType.OneToOne);
-            relationship = new TableRelationship(RelationshipType.OneToOne, sql);
-            currentMappedTable.Relationships.Add(relationship);
+            sql = _getRelationshipSql(currentMappedTable, parentTable, column, RelationshipType.OneToOne);
+            relationship = new TableRelationship(RelationshipType.OneToOne, currentMappedTable, sql);
+            parentTable.Relationships.Add(relationship);
         }
 
-        private string _getRelationshipSql(MappedTable currentMappedTable, MappedTable parentTable, PropertyInfo property, RelationshipType relationshipType)
+        private string _getRelationshipSql(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column, RelationshipType relationshipType)
         {
             const string sql = "{0} JOIN {1} ON {2} = {3}";
-            const string tableColumn = "{0}.[{1}]";
+            const string tableColumn = "[{0}].[{1}]";
             var alias = string.Format("{0} AS [{1}]", currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema), currentMappedTable.Alias);
-            var fkAttribute = property.GetCustomAttribute<ForeignKeyAttribute>();
-            var pskAttribute = property.GetCustomAttribute<PseudoKeyAttribute>();
+            var fkAttribute = column.GetCustomAttribute<ForeignKeyAttribute>();
+            var pskAttribute = column.GetCustomAttribute<PseudoKeyAttribute>();
 
             switch (relationshipType)
             {
                 case RelationshipType.OneToOne:
-                    var oneToOneParent = string.Format(tableColumn, parentTable.Table.ToString(TableNameFormat.SqlWithSchema),
-                        fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName); // pk in parent
-                    var oneToOneChild = string.Format(tableColumn,
-                        currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema),
-                        currentMappedTable.Table.GetPrimaryKeyName(0));// fk attribute in parent... in other table
+                    var oneToOneParent = string.Format(tableColumn, parentTable.Alias, fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName); // pk in parent
+                    var oneToOneChild = string.Format(tableColumn, currentMappedTable.Alias, currentMappedTable.Table.GetPrimaryKeyName(0)); // fk attribute in child
 
-                    return string.Format(sql, 
-                        "INNER",
-                        alias,
-                        oneToOneChild,
-                        oneToOneParent);
+                    return string.Format(sql, "INNER", alias, oneToOneChild, oneToOneParent);
                 case RelationshipType.OneToMany:
-                    var oneToManyParent = string.Format(tableColumn,
-                        parentTable.Table.ToString(TableNameFormat.SqlWithSchema),
-                        parentTable.Table.GetPrimaryKeyName(0)); // pk in parent
-                    var oneToManyChild = string.Format(tableColumn,
-                        currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema),
-                        fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName);// fk attribute in parent... in other table
+                    var oneToManyParent = string.Format(tableColumn, parentTable.Alias, parentTable.Table.GetPrimaryKeyName(0)); // pk in parent
+                    var oneToManyChild = string.Format(tableColumn, currentMappedTable.Alias, fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName);// fk attribute in parent... in other table
 
-                    return string.Format(sql,
-                        "LEFT",
-                        alias,
-                        oneToManyChild,
-                        oneToManyParent);
+                    return string.Format(sql, "LEFT", alias, oneToManyChild, oneToManyParent);
                 default:
                     throw new ArgumentOutOfRangeException("relationshipType");
             }
@@ -135,92 +124,103 @@ namespace OR_M_Data_Entities.Data
 
         private QuerySchematic _createMap(ITable from, string viewId)
         {
-            var aliasString = "AkA{0}";
+            const string aliasString = "AkA{0}";
             var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain));
-            var tables = new List<MappedTable> {initMappedTable};
+            var tables = new List<IMappedTable> {initMappedTable};
 
             for (var i = 0; i < tables.Count; i++)
             {
                 var parentMappedTable = tables[i];
-                var nextAlias = string.Format("AkA{0}", i);
                 var autoLoadProperties = parentMappedTable.Table.AutoLoadKeyRelationships;
 
                 foreach (var property in autoLoadProperties)
                 {
-                    var currentMappedtable = tables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName);
+                    var nextAlias = string.Format("AkA{0}", tables.Count);
+                    var currentMappedtable =
+                        MappedTables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName) ??
+                        new MappedTable(GetTable(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType()),
+                            nextAlias, property.AutoLoadPropertyColumn.PropertyName);
 
-                    if (currentMappedtable == null)
-                    {
-                        currentMappedtable = new MappedTable(GetTable(property.ParentColumn.PropertyType.GetTypeInfo()), nextAlias, property.ParentColumn.PropertyName);
+                    tables.Add(currentMappedtable);
 
-                        tables.Add(currentMappedtable);
-                    }
-
-                    _processMappedTable(currentMappedtable, parentMappedTable, property);
+                    _processMappedTable(currentMappedtable, parentMappedTable, property.AutoLoadPropertyColumn);
                 }
             }
 
             return new QuerySchematic(from.Type, viewId, tables);
         }
 
+        private void _dispose()
+        {
+            Mappings = null;
+            MappedTables = null;
+        }
         #endregion
 
         #region helpers
 
-        private class MappedTable
+        private class MappedTable : IMappedTable
         {
-            public readonly string Alias;
+            public string Alias { get; private set; }
 
-            public readonly string Key; // either table name or FK/PSK property name
+            public string Key { get; private set; } // either table name or FK/PSK property name
 
-            public readonly ITable Table;
+            public ITable Table { get; private set; }
 
-            public List<TableRelationship> Relationships;
+            public List<ITableRelationship> Relationships { get; private set; }
 
             public MappedTable(ITable table, string alias, string key)
             {
                 Key = key;
                 Alias = alias;
                 Table = table;
+                Relationships = new List<ITableRelationship>();
             }
         }
 
         /// <summary>
         /// Tells us which tables are involved in the query
         /// </summary>
-        private class QuerySchematic
+        private class QuerySchematic : IQuerySchematic
         {
-            public QuerySchematic(Type key, string viewid, List<MappedTable> map)
+            public QuerySchematic(Type key, string viewid, List<IMappedTable> map)
             {
                 Key = key;
                 ViewId = viewid;
                 Map = map;
             }
 
-            public readonly Type Key;
+            public Type Key { get; private set; }
 
-            public readonly string ViewId;
+            public string ViewId { get; private set; }
 
-            public readonly List<MappedTable> Map;
+            public List<IMappedTable> Map { get; private set; }
+
+            public IMappedTable FindTable(Type type)
+            {
+                return Map.FirstOrDefault(w => w.Table.Type == type);
+            }
+
+            public IMappedTable FindTable(string tableKey)
+            {
+                return Map.FirstOrDefault(w => w.Key == tableKey);
+            }
         }
 
-        private class TableRelationship
+        private class TableRelationship : ITableRelationship
         {
-            public TableRelationship(RelationshipType relationshipType, string sql)
+            public TableRelationship(RelationshipType relationshipType, IMappedTable childMappedTable, string sql)
             {
                 RelationshipType = relationshipType;
                 Sql = sql;
+                ChildTable = childMappedTable;
             }
 
-            public readonly RelationshipType RelationshipType;
+            public RelationshipType RelationshipType { get; private set; }
 
-            public readonly string Sql;
-        }
+            public string Sql { get; private set; }
 
-        private enum RelationshipType
-        {
-            OneToOne,
-            OneToMany
+            public IMappedTable ChildTable { get; private set; }
         }
 
         private class ExpressionQuery<T> : IExpressionQuery<T>

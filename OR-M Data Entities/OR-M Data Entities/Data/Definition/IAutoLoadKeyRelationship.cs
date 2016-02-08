@@ -6,6 +6,8 @@
 
         IColumn ParentColumn { get; }
 
+        IColumn AutoLoadPropertyColumn { get; }
+
         JoinType JoinType { get; }
     }
 }

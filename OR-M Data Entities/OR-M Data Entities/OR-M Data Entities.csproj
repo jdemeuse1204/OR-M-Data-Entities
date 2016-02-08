@@ -54,8 +54,11 @@
     <Compile Include="Data\Definition\IAutoLoadKeyRelationship.cs" />
     <Compile Include="Data\Definition\IColumn.cs" />
     <Compile Include="Data\Definition\IEntity.cs" />
+    <Compile Include="Data\Definition\IMappedTable.cs" />
     <Compile Include="Data\Definition\IModificationEntity.cs" />
+    <Compile Include="Data\Definition\IQuerySchematic.cs" />
     <Compile Include="Data\Definition\ITable.cs" />
+    <Compile Include="Data\Definition\ITableRelationship.cs" />
     <Compile Include="Data\Definition\JoinColumnPair.cs" />
     <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
     <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
@@ -81,6 +84,7 @@
     <Compile Include="Configuration\ConcurrencyViolationRule.cs" />
     <Compile Include="Enumeration\EntityState.cs" />
     <Compile Include="Enumeration\MaxLengthViolationType.cs" />
+    <Compile Include="Enumeration\RelationshipType.cs" />
     <Compile Include="Enumeration\TableNameFormat.cs" />
     <Compile Include="Enumeration\UpdateType.cs" />
     <Compile Include="Enumeration\CompareType.cs" />
@@ -110,6 +114,7 @@
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\IExpressionQuery.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
+    <Compile Include="Expressions\Resolution\ExpressionQueryResolver.cs" />
     <Compile Include="Extensions\ExpressionQueryExtensions.cs" />
     <Compile Include="Extensions\Extension.cs" />
     <Compile Include="Extensions\PeekDataReaderExtensions.cs" />

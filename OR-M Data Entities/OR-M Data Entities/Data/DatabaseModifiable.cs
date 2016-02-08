@@ -226,13 +226,6 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        public enum RelationshipType
-        {
-            OneToOne,
-            OneToMany,
-            Parent
-        }
-
         private class Reference : IEquatable<Reference>
         {
             public Reference(ModificationEntity entity, string alias, ForeignKeyAssociation association = null)
