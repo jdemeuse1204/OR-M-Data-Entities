@@ -7,10 +7,12 @@ namespace OR_M_Data_Entities.Data.Definition
     {
         Type Key { get; }
 
-        List<IMappedTable> Map { get; }
+        List<IMappedTable> MappedTables { get; }
 
         IMappedTable FindTable(Type type);
 
         IMappedTable FindTable(string tableKey);
+
+        IDataLoadSchematic DataLoadSchematic { get; }
     }
 }

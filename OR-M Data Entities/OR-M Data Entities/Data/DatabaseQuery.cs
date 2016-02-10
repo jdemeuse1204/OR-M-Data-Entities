@@ -13,11 +13,11 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class DatabaseQuery : DatabaseExecution
+    public abstract partial class DatabaseQuery : DatabaseExecution
     {
         #region Properties and Fields
 
-        private static QuerySchematicCache Schematics { get; set; }
+        private static QuerySchematicManager _schematicManager { get; set; }
         #endregion
 
         #region Constructor
@@ -25,7 +25,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseQuery(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            Schematics = new QuerySchematicCache();
+            _schematicManager = new QuerySchematicManager();
             OnDisposing += _dispose;
         }
         #endregion
@@ -38,7 +38,7 @@ namespace OR_M_Data_Entities.Data
             var table = Tables.Find<T>(Configuration);
 
             // get the schematic
-            var schematic = Schematics.Find(table, Configuration);
+            var schematic = _schematicManager.Find(table, Configuration);
 
             return new ExpressionQuery<T>(this, schematic);
         }
@@ -54,7 +54,7 @@ namespace OR_M_Data_Entities.Data
             var table = Tables.Find<T>(Configuration);
 
             // get the schematic
-            var schematic = Schematics.Find(table, Configuration);
+            var schematic = _schematicManager.Find(table, Configuration);
 
             return new ExpressionQuery<T>(this, schematic, viewId);
         }
@@ -77,110 +77,85 @@ namespace OR_M_Data_Entities.Data
 
         private void _dispose()
         {
-            Schematics = null;
+            _schematicManager = null;
         }
 
         #endregion
 
         #region helpers
 
-        private class MappedTable : IMappedTable
+        // manages the schematics for all queries
+        private class QuerySchematicManager
         {
-            public string Alias { get; private set; }
-
-            public string Key { get; private set; } // either table name or FK/PSK property name
-
-            public ITable Table { get; }
-
-            public List<ITableRelationship> Relationships { get; private set; }
-
-            public MappedTable(ITable table, string alias, string key)
+            public QuerySchematicManager()
             {
-                Key = key;
-                Alias = alias;
-                Table = table;
-                Relationships = new List<ITableRelationship>();
-            }
-        }
-
-        private class QueryLoadSchematic
-        {
-            public QueryLoadSchematic(Type type, Type actualType, string propertyName)
-            {
-                Type = type;
-                ActualType = actualType;
-                PropertyName = propertyName;
-                PrimaryKeyNames = type.GetPrimaryKeyNames();
-                LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
-                Children = new HashSet<QueryLoadSchematic>();
+                _mappings = new Dictionary<Type, IQuerySchematic>();
+                _mappedTables = new HashSet<IMappedTable>();
             }
 
-            public HashSet<QueryLoadSchematic> Children { get; private set; }
+            // cache for all current maps
+            private IDictionary<Type, IQuerySchematic> _mappings { get; set; }
 
-            public Type ActualType { get; private set; }
-
-            public string[] PrimaryKeyNames { get; private set; }
-
-            public OSchematicLoadedKeys LoadedCompositePrimaryKeys { get; private set; }
-
-            public object ReferenceToCurrent { get; set; }
-
-            /// <summary>
-            /// used to identity Foreign Key because object can have Foreign Key with same type,
-            /// but load different data.  IE - User CreatedBy, User EditedBy
-            /// </summary>
-            public string PropertyName { get; private set; }
-
-            public Type Type { get; private set; }
-        }
-
-        private class QuerySchematicCache
-        {
-            public QuerySchematicCache()
-            {
-                _mappings = new Dictionary<Type, QuerySchematic>();
-                _mappedTables = new HashSet<MappedTable>();
-            }
-
-            private IDictionary<Type, QuerySchematic> _mappings { get; set; }
-
-            private HashSet<MappedTable> _mappedTables { get; set; }
+            // cache for all mapped tables
+            private HashSet<IMappedTable> _mappedTables { get; set; }
 
             public IQuerySchematic Find(ITable table, ConfigurationOptions configuration)
             {
-                QuerySchematic result;
+                IQuerySchematic result;
 
                 _mappings.TryGetValue(table.Type, out result);
 
                 // create map if not found
                 if (result != null) return result;
 
-                result = _createMap(table, configuration);
+                result = _createSchematic(table, configuration);
 
                 _mappings.Add(table.Type, result);
 
                 return result;
             }
 
-            private QuerySchematic _createMap(ITable from, ConfigurationOptions configuration)
+            // creates the schematic so we know how to load the object
+            private IQuerySchematic _createSchematic(ITable from, ConfigurationOptions configuration)
             {
                 const string aliasString = "AkA{0}";
                 var initMappedTable = new MappedTable(from, string.Format(aliasString, 0),
                     from.ToString(TableNameFormat.Plain));
                 var tables = new List<IMappedTable> { initMappedTable };
 
+                // create the schematic so the Data loader knows how to populate the object
+                // save the base object so we can search for children that were already processed
+                IDataLoadSchematic baseDataLoadSchematic = new DataLoadSchematic(from.Type, from.Type, null);
+
+                // set the current schematic
+                var currentDataLoadSchematic = baseDataLoadSchematic;
+
                 for (var i = 0; i < tables.Count; i++)
                 {
                     var parentMappedTable = tables[i];
                     var autoLoadProperties = parentMappedTable.Table.AutoLoadKeyRelationships;
 
+                    if (i > 0 && autoLoadProperties.Any())
+                    {
+                        currentDataLoadSchematic = _findDataLoadSchematic(baseDataLoadSchematic, currentDataLoadSchematic, parentMappedTable.Table.Type, parentMappedTable.Key);
+                    }
+
                     foreach (var property in autoLoadProperties)
                     {
                         var nextAlias = string.Format(aliasString, tables.Count);
-                        var currentMappedtable =
-                            _mappedTables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName) ??
-                            new MappedTable(Tables.Find(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration),
+                        var currentMappedtable = _mappedTables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName);
+
+                        if (currentMappedtable == null)
+                        {
+                            currentMappedtable = new MappedTable(Tables.Find(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration),
                                 nextAlias, property.AutoLoadPropertyColumn.PropertyName);
+
+                            _mappedTables.Add(currentMappedtable);
+                        }
+                            
+                        currentDataLoadSchematic.Children.Add(new DataLoadSchematic(currentMappedtable.Table.Type,
+                            property.AutoLoadPropertyColumn.PropertyType,
+                            currentMappedtable.Key));
 
                         tables.Add(currentMappedtable);
 
@@ -188,7 +163,35 @@ namespace OR_M_Data_Entities.Data
                     }
                 }
 
-                return new QuerySchematic(from.Type, tables);
+                return new QuerySchematic(from.Type, tables, currentDataLoadSchematic);
+            }
+
+            private IDataLoadSchematic _findDataLoadSchematic(IDataLoadSchematic beginningSchematic, IDataLoadSchematic currentSchematic,
+                Type type, string parentJoinPropertyName)
+            {
+                var firstSearch =
+                       currentSchematic.Children.FirstOrDefault(
+                           w =>
+                               w.Type == type &&
+                               w.PropertyName == parentJoinPropertyName);
+
+                if (firstSearch != null) return firstSearch;
+
+                // do not want a reference to the list and mess up the schematic
+                var schematicsToSearch = new List<IDataLoadSchematic>();
+
+                schematicsToSearch.AddRange(beginningSchematic.Children);
+
+                for (var i = 0; i < schematicsToSearch.Count; i++)
+                {
+                    var schematic = schematicsToSearch[i];
+
+                    if (schematic.PropertyName == parentJoinPropertyName) return schematic;
+
+                    schematicsToSearch.AddRange(schematic.Children);
+                }
+
+                throw new Exception(string.Format("Cannot find foreign key instance of by name.  NAME: {0}, TYPE: {1}", parentJoinPropertyName, type.Name));
             }
 
             private void _processMappedTable(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column)
@@ -241,48 +244,155 @@ namespace OR_M_Data_Entities.Data
                         throw new ArgumentOutOfRangeException("relationshipType");
                 }
             }
-        }
 
-        /// <summary>
-        /// Tells us which tables are involved in the query
-        /// </summary>
-        private class QuerySchematic : IQuerySchematic
-        {
-            public QuerySchematic(Type key, List<IMappedTable> map)
+            #region helpers
+            /// <summary>
+            /// Schematic for loaded and reading data from the server
+            /// </summary>
+            private class QuerySchematic : IQuerySchematic
             {
-                Key = key;
-                Map = map;
+                public QuerySchematic(Type key, List<IMappedTable> mappedTables, IDataLoadSchematic dataLoadSchematic)
+                {
+                    Key = key;
+                    MappedTables = mappedTables;
+                    DataLoadSchematic = dataLoadSchematic;
+                }
+
+                public Type Key { get; private set; }
+
+                // map tells the DbReader how the object should be loaded
+                public List<IMappedTable> MappedTables { get; private set; }
+
+                // skeleton for the data being returned
+                public IDataLoadSchematic DataLoadSchematic { get; private set; }
+
+                public IMappedTable FindTable(Type type)
+                {
+                    return MappedTables.FirstOrDefault(w => w.Table.Type == type);
+                }
+
+                public IMappedTable FindTable(string tableKey)
+                {
+                    return MappedTables.FirstOrDefault(w => w.Key == tableKey);
+                }
             }
 
-            public Type Key { get; private set; }
-
-            public List<IMappedTable> Map { get; private set; }
-
-            public IMappedTable FindTable(Type type)
+            private class DataLoadSchematic : IDataLoadSchematic
             {
-                return Map.FirstOrDefault(w => w.Table.Type == type);
+                public DataLoadSchematic(Type type, Type actualType, string propertyName)
+                {
+                    Type = type;
+                    ActualType = actualType;
+                    PropertyName = propertyName;
+                    PrimaryKeyNames = type.GetPrimaryKeyNames();
+                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+                    Children = new HashSet<IDataLoadSchematic>();
+                }
+
+                public HashSet<IDataLoadSchematic> Children { get; private set; }
+
+                public Type ActualType { get; private set; }
+
+                public string[] PrimaryKeyNames { get; private set; }
+
+                public OSchematicLoadedKeys LoadedCompositePrimaryKeys { get; private set; }
+
+                public object ReferenceToCurrent { get; set; }
+
+                /// <summary>
+                /// used to identity Foreign Key because object can have Foreign Key with same type,
+                /// but load different data.  IE - User CreatedBy, User EditedBy
+                /// </summary>
+                public string PropertyName { get; private set; }
+
+                public Type Type { get; private set; }
             }
 
-            public IMappedTable FindTable(string tableKey)
+            private class TableRelationship : ITableRelationship
             {
-                return Map.FirstOrDefault(w => w.Key == tableKey);
-            }
-        }
+                public TableRelationship(RelationshipType relationshipType, IMappedTable childMappedTable, string sql)
+                {
+                    RelationshipType = relationshipType;
+                    Sql = sql;
+                    ChildTable = childMappedTable;
+                }
 
-        private class TableRelationship : ITableRelationship
-        {
-            public TableRelationship(RelationshipType relationshipType, IMappedTable childMappedTable, string sql)
+                public RelationshipType RelationshipType { get; private set; }
+
+                public string Sql { get; private set; }
+
+                public IMappedTable ChildTable { get; private set; }
+            }
+
+            private class MappedColumn : IMappedColumn
             {
-                RelationshipType = relationshipType;
-                Sql = sql;
-                ChildTable = childMappedTable;
+                public MappedColumn(IColumn column, int ordinal)
+                {
+                    Column = column;
+                    Ordinal = ordinal;
+                }
+
+                public IColumn Column { get; }
+
+                public int Ordinal { get; }
             }
 
-            public RelationshipType RelationshipType { get; private set; }
+            private class MappedTable : IMappedTable
+            {
+                public string Alias { get; private set; }
 
-            public string Sql { get; private set; }
+                public string Key { get; private set; } // either table name or FK/PSK property name
 
-            public IMappedTable ChildTable { get; private set; }
+                public ITable Table { get; }
+
+                public HashSet<ITableRelationship> Relationships { get; private set; }
+
+                public HashSet<IMappedColumn> MappedColumns { get; private set; }
+
+                public string Sql { get; private set; }
+
+                public MappedTable(ITable table, string alias, string key)
+                {
+                    Key = key;
+                    Alias = alias;
+                    Table = table;
+                    Relationships = new HashSet<ITableRelationship>();
+                    MappedColumns = new HashSet<IMappedColumn>();
+                }
+
+                public void Clear()
+                {
+                    Sql = string.Empty;
+                    MappedColumns = new HashSet<IMappedColumn>();
+                }
+
+                public void Select(string propertyName, int ordinal)
+                {
+                    var column = Table.Columns.FirstOrDefault(w => w.PropertyName == propertyName);
+
+                    if (column == null) throw new Exception(string.Format("Column not found for table {0}.  Column Name: {1}", Table.DatabaseName, propertyName));
+
+                    Sql = string.Concat(Sql, "\t", column.ToString(Alias));
+
+                    MappedColumns.Add(new MappedColumn(column, ordinal));
+                }
+
+                public int SelectAll(int startingOrdinal)
+                {
+                    foreach (var column in Table.Columns)
+                    {
+                        MappedColumns.Add(new MappedColumn(column, startingOrdinal));
+                        Sql = string.Concat(Sql, "\t", column.ToString(Alias, ",\r"));
+
+                        startingOrdinal++;
+                    }
+
+                    Sql = Sql.TrimEnd('\r').TrimEnd(',');
+
+                    return Table.Columns.Count();
+                }
+            }
+            #endregion
         }
 
         private class ExpressionQuery<T> : IExpressionQuery<T>, IExpressionQueryResolvable<T>
@@ -333,15 +443,17 @@ namespace OR_M_Data_Entities.Data
 
             public void ResolveSelect<TResult>(Expression<Func<T, TResult>> selector)
             {
-
+                _select = ExpressionQuerySelectResolver.Resolve(selector, _schematic);
             }
 
             public void SelectAll()
             {
-                var resolution = ExpressionQuerySelectResolver.SelectAll(_schematic);
+                var columns = ExpressionQuerySelectResolver.SelectAll(_schematic);
+                const string @select = "SELECT \r";
+                var fromTable = _schematic.MappedTables[0];
+                var from = string.Format("\rFROM {0} AS [{1}] \r", fromTable.Table.ToString(TableNameFormat.SqlWithSchema), fromTable.Alias);
 
-                _parameters = new List<SqlDbParameter>();
-                _where = resolution.Sql;
+                _select = string.Concat(select, columns, from);
             }
 
             public DataReader<T> ExecuteReader()
@@ -762,17 +874,17 @@ namespace OR_M_Data_Entities.Data
         {
             public static object ReturnObject { get; private set; }
 
-            public static LambdaToSqlResolution Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
+            public static string Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
             {
                 return Resolve(new List<SqlDbParameter>(), expressionQuery, schematic);
             }
 
-            public static LambdaToSqlResolution Resolve<TSource, TResult>(List<SqlDbParameter> parameters, Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
+            public static string Resolve<TSource, TResult>(List<SqlDbParameter> parameters, Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
             {
                 return Resolve(schematic, parameters, expressionQuery.Body);
             }
 
-            public static LambdaToSqlResolution Resolve(IQuerySchematic schematic, List<SqlDbParameter> parameters,
+            public static string Resolve(IQuerySchematic schematic, List<SqlDbParameter> parameters,
                 Expression expressionQuery, bool isSubQuery = false)
             {
                 Parameters = parameters;
@@ -783,13 +895,22 @@ namespace OR_M_Data_Entities.Data
 
                 _evaluate(expressionQuery as dynamic);
 
-                return new LambdaToSqlResolution(Sql, Parameters);
+                return Sql;
             }
 
-            public static LambdaToSqlResolution SelectAll(IQuerySchematic schematic)
+            public static string SelectAll(IQuerySchematic schematic)
             {
+                var ordinal = 0;
+                var result = string.Empty;
 
-                return new LambdaToSqlResolution(Sql, Parameters);
+                foreach (var mappedTable in schematic.MappedTables)
+                {
+                    ordinal += mappedTable.SelectAll(ordinal);
+                    result = string.Concat(result, mappedTable.Sql, ",\r");
+                }
+
+                Sql = result.TrimEnd('\r').TrimEnd(',');
+                return Sql;
             }
 
             private static void _evaluate(MemberInitExpression expression)
@@ -1230,5 +1351,10 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
         #endregion
+    }
+
+    public abstract partial class DatabaseQuery
+    {
+        
     }
 }

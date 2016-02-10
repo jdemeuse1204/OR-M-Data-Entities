@@ -23,5 +23,7 @@ namespace OR_M_Data_Entities.Data.Definition
         string DatabaseColumnName { get; }
 
         T GetCustomAttribute<T>() where T : Attribute;
+
+        string ToString(string tableAlias, string postAppendString = "");
     }
 }

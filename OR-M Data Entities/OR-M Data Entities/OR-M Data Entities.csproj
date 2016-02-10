@@ -53,7 +53,9 @@
     <Compile Include="Data\Definition\DelayedEnumerationList.cs" />
     <Compile Include="Data\Definition\IAutoLoadKeyRelationship.cs" />
     <Compile Include="Data\Definition\IColumn.cs" />
+    <Compile Include="Data\Definition\IDataLoadSchematic.cs" />
     <Compile Include="Data\Definition\IEntity.cs" />
+    <Compile Include="Data\Definition\IMappedColumn.cs" />
     <Compile Include="Data\Definition\IMappedTable.cs" />
     <Compile Include="Data\Definition\IModificationEntity.cs" />
     <Compile Include="Data\Definition\IQuerySchematic.cs" />

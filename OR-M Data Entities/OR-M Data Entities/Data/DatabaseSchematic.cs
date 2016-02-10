@@ -298,13 +298,12 @@ namespace OR_M_Data_Entities.Data
                 {
                     // enumerate the columns first
                     var autoLoadRelationshipProperties = ParentTable.Columns.Where(w => w.IsForeignKey || w.IsPseudoKey).ToList();
+                    
+                    // only perform the above operation once.  
+                    foreach (var relationship in autoLoadRelationshipProperties.Select(_getRelationship)) Internal.Add(relationship);
 
-                    foreach (var relationship in autoLoadRelationshipProperties.Select(_getRelationship))
-                    {
-                        Internal.Add(relationship);
-
-                        yield return relationship;
-                    }
+                    // return the results
+                    foreach (var autoLoadKeyRelationship in Internal) yield return autoLoadKeyRelationship;
                 }
             }
 
@@ -381,12 +380,13 @@ namespace OR_M_Data_Entities.Data
                 {
                     var columns = ParentTable.GetAllProperties().Select(w => new Column(ParentTable, w)).ToList();
 
-                    foreach (var column in columns)
-                    {
-                        Internal.Add(column);
+                    // load the list right away.  If we do a first or default and we dont 
+                    // enumerate through the whole list then we need to perform the above operation again,
+                    // we should perform it once
+                    foreach (var column in columns) Internal.Add(column);
 
-                        yield return column;
-                    }
+                    // iterate through the list and yield our return
+                    foreach (var column in Internal) yield return column;
                 }
             }
         }
@@ -452,6 +452,11 @@ namespace OR_M_Data_Entities.Data
             public T GetCustomAttribute<T>() where T : Attribute
             {
                 return Property.GetCustomAttribute<T>();
+            }
+
+            public string ToString(string tableAlias, string postAppendString = "")
+            {
+                return string.Format("[{0}].[{1}]{2}", tableAlias, DatabaseColumnName, string.IsNullOrEmpty(postAppendString) ? string.Empty : postAppendString);
             }
             #endregion
         }
