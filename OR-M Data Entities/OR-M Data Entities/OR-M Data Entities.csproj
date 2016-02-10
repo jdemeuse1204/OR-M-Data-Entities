@@ -114,6 +114,7 @@
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\IExpressionQuery.cs" />
     <Compile Include="Data\Definition\SqlColumnSchematic.cs" />
+    <Compile Include="Expressions\IExpressionQueryResolvable.cs" />
     <Compile Include="Expressions\Resolution\ExpressionQueryResolver.cs" />
     <Compile Include="Extensions\ExpressionQueryExtensions.cs" />
     <Compile Include="Extensions\Extension.cs" />

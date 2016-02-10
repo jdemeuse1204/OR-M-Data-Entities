@@ -10,7 +10,7 @@ namespace OR_M_Data_Entities.Configuration
 {
     public sealed class ConfigurationOptions
     {
-        public ConfigurationOptions(bool useTransactions)
+        public ConfigurationOptions(bool useTransactions, string defaultSchema)
         {
             IsLazyLoading = false;
             UseTransactions = useTransactions;
@@ -22,6 +22,7 @@ namespace OR_M_Data_Entities.Configuration
             };
 
             InsertKeys = new KeyConfiguration();
+            DefaultSchema = defaultSchema;
         }
 
         public bool IsLazyLoading { get; set; }
@@ -31,5 +32,7 @@ namespace OR_M_Data_Entities.Configuration
         public ConcurrencyConfiguration ConcurrencyChecking { get; private set; }
 
         public KeyConfiguration InsertKeys { get; private set; }
+
+        public string DefaultSchema { get; private set; }
     }
 }

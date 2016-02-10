@@ -24,10 +24,10 @@ using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract class DatabaseSchematic : DatabaseConnection
+    public abstract partial class DatabaseSchematic : DatabaseConnection
     {
         #region Properties
-        protected static IDictionary<Type, ITable> TableCache { get; private set; }
+        protected static TableCache Tables { get; private set; }
 
         private static List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
@@ -42,7 +42,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseSchematic(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            TableCache = new Dictionary<Type, ITable>();
+            Tables = new TableCache();
             OnDisposing += _dispose;
         }
 
@@ -201,26 +201,6 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
-        protected static ITable GetTable(Type type)
-        {
-            ITable table;
-
-            TableCache.TryGetValue(type, out table);
-
-            if (table != null) return table;
-
-            table = new Table(type, "dbo");
-
-            TableCache.Add(type, table);
-
-            return table;
-        }
-
-        protected static ITable GetTable<T>()
-        {
-            return GetTable(typeof(T));
-        }
-
         public static EntityState GetEntityState(EntityStateTrackable entity)
         {
             return ModificationEntity.GetState(entity);
@@ -240,12 +220,44 @@ namespace OR_M_Data_Entities.Data
 
         private void _dispose()
         {
-            TableCache = null;
+            Tables = null;
             _tableScriptMappings = null;
         }
         #endregion
+    }
 
-        #region Schematic Classes
+    // all helpers go in here
+    public abstract partial class DatabaseSchematic
+    {
+        protected class TableCache
+        {
+            private readonly IDictionary<Type, ITable> _internal;
+
+            public TableCache()
+            {
+                _internal = new Dictionary<Type, ITable>();
+            }
+
+            public ITable Find(Type type, ConfigurationOptions configuration)
+            {
+                ITable table;
+
+                _internal.TryGetValue(type, out table);
+
+                if (table != null) return table;
+
+                table = new Table(type, configuration);
+
+                _internal.Add(type, table);
+
+                return table;
+            }
+
+            public ITable Find<T>(ConfigurationOptions configuration)
+            {
+                return Find(typeof(T), configuration);
+            }
+        }
 
         private class AutoLoadKeyRelationship : IAutoLoadKeyRelationship
         {
@@ -268,8 +280,8 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
         {
-            public AutoLoadRelationshipList(ITable table, int count)
-                : base(table, count)
+            public AutoLoadRelationshipList(ITable table, int count, ConfigurationOptions configuration)
+                : base(table, configuration, count)
             {
 
             }
@@ -309,7 +321,7 @@ namespace OR_M_Data_Entities.Data
 
             private IColumn _getChildColumn(IColumn column)
             {
-                var childTable = GetTable(column.PropertyType.GetUnderlyingType());
+                var childTable = Tables.Find(column.PropertyType.GetUnderlyingType(), Configuration);
 
                 if (column.IsList)
                 {
@@ -350,10 +362,12 @@ namespace OR_M_Data_Entities.Data
 
         private class ColumnList : DelayedEnumerationCachedList<IColumn>
         {
-            public ColumnList(ITable table, int count)
-                : base (table,count)
+            #region Constructor
+            public ColumnList(ITable table, ConfigurationOptions configuration, int count)
+                : base(table, configuration, count)
             {
             }
+            #endregion
 
             public override IEnumerator<IColumn> GetEnumerator()
             {
@@ -381,7 +395,7 @@ namespace OR_M_Data_Entities.Data
         {
             public ITable Table { get; private set; }
 
-            private readonly PropertyInfo _property;
+            public PropertyInfo Property { get; private set; }
 
             public bool IsPrimaryKey { get; private set; }
 
@@ -393,13 +407,14 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsNullable { get; private set; }
 
-            public Type PropertyType {
-                get { return _property.PropertyType; }
+            public Type PropertyType
+            {
+                get { return Property.PropertyType; }
             }
 
             public string PropertyName
             {
-                get { return _property.Name; }
+                get { return Property.Name; }
             }
 
             private string _databaseColumnName;
@@ -409,7 +424,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     if (!string.IsNullOrEmpty(_databaseColumnName)) return _databaseColumnName;
 
-                    _databaseColumnName = _getColumnName(_property);
+                    _databaseColumnName = _getColumnName(Property);
 
                     return _databaseColumnName;
                 }
@@ -417,13 +432,12 @@ namespace OR_M_Data_Entities.Data
 
             public Column(ITable table, PropertyInfo property)
             {
-                _property = property;
+                Property = property;
                 IsPrimaryKey = table.IsPrimaryKey(property);
                 IsForeignKey = table.IsForeignKey(property);
                 IsPseudoKey = table.IsPseudoKey(property);
                 IsList = property.PropertyType.IsList();
                 IsNullable = property.PropertyType.IsNullable();
-
                 Table = table;
             }
 
@@ -437,7 +451,7 @@ namespace OR_M_Data_Entities.Data
 
             public T GetCustomAttribute<T>() where T : Attribute
             {
-                return _property.GetCustomAttribute<T>();
+                return Property.GetCustomAttribute<T>();
             }
             #endregion
         }
@@ -445,7 +459,7 @@ namespace OR_M_Data_Entities.Data
         protected abstract class ReflectionCacheTable
         {
             #region Constructor
-            protected ReflectionCacheTable(Type type, string defaultSchema)
+            protected ReflectionCacheTable(Type type, ConfigurationOptions configuration)
             {
                 // Make sure the table is setup correctly
                 RuleProcessor.ProcessRule<IsTableValidRule>(type);
@@ -460,7 +474,7 @@ namespace OR_M_Data_Entities.Data
                 ReadOnlyAttribute = type.GetCustomAttribute<ReadOnlyAttribute>();
                 LookupTableAttribute = type.GetCustomAttribute<LookupTableAttribute>();
 
-                DefaultSchema = defaultSchema;
+                DefaultSchema = configuration.DefaultSchema;
             }
             #endregion
 
@@ -497,7 +511,7 @@ namespace OR_M_Data_Entities.Data
             private List<PropertyInfo> _primaryKeys;
 
 
-            protected readonly string DefaultSchema;
+            public readonly string DefaultSchema;
 
             #endregion
 
@@ -674,51 +688,38 @@ namespace OR_M_Data_Entities.Data
         protected class Table : ReflectionCacheTable, ITable
         {
             #region Constructor
-            public Table(object entity)
-                : this(entity.GetType())
+            public Table(object entity, ConfigurationOptions configuration)
+                : this(entity.GetType(), configuration)
             {
 
             }
 
-            public Table(Type type, string defaultSchema = "dbo")
-                : base(type, defaultSchema)
+            public Table(Type type, ConfigurationOptions configuration)
+                : base(type, configuration)
             {
                 ClassName = type.Name;
 
                 IsEntityStateTrackingOn = type.IsSubclassOf(typeof(EntityStateTrackable));
 
-                Columns = new ColumnList(this, AllProperties.Count);
+                Columns = new ColumnList(this, configuration, AllProperties.Count);
 
                 // count the number of auto load properties
                 // needed for the cached list
                 var autoLoadColumnCount = GetAllForeignAndPseudoKeys();
 
-                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this, autoLoadColumnCount.Count);
+                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this, autoLoadColumnCount.Count, configuration);
             }
-
-            #endregion
-
-            #region Fields
-
-            public readonly Func<Type, ITable> _findTable;
             #endregion
 
             #region Properties
 
-            public bool IsReadOnly
-            {
-                get { return ReadOnlyAttribute != null; }
-            }
+            public bool IsReadOnly { get { return ReadOnlyAttribute != null; } }
 
-            public bool IsUsingLinkedServer
-            {
-                get { return LinkedServerAttribute != null; }
-            }
+            public string Schema { get { return DefaultSchema; } }
 
-            public bool IsLookupTable
-            {
-                get { return LookupTableAttribute != null; }
-            }
+            public bool IsUsingLinkedServer { get { return LinkedServerAttribute != null; } }
+
+            public bool IsLookupTable { get { return LookupTableAttribute != null; } }
 
             public string ClassName { get; private set; }
 
@@ -750,7 +751,6 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
-
             public ReadOnlySaveOption? GetReadOnlySaveOption()
             {
                 return ReadOnlyAttribute == null ? null : (ReadOnlySaveOption?)ReadOnlyAttribute.ReadOnlySaveOption;
@@ -848,8 +848,8 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public Entity(object entity)
-                : base(entity)
+            public Entity(object entity, ConfigurationOptions configuration)
+                : base(entity, configuration)
             {
                 if (entity == null) throw new ArgumentNullException("entity");
 
@@ -1029,7 +1029,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             protected ModificationEntity(object entity, ConfigurationOptions configuration, bool isDeleting)
-                : base(entity)
+                : base(entity, configuration)
             {
                 // do not initialize when deleting because we will get unnecessary errors
                 if (isDeleting) return;
@@ -1285,6 +1285,5 @@ namespace OR_M_Data_Entities.Data
                 ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
             }
         }
-        #endregion
     }
 }

@@ -51,7 +51,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             // check to see if MARS is enabled, it is needed for transactions
-            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString));
+            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString), "dbo");
 
             Connection = new SqlConnection(ConnectionString);
         }
@@ -102,8 +102,25 @@ namespace OR_M_Data_Entities.Data
         /// </summary>
         public void Disconnect()
         {
-            // Disconnect our connection
-            Connection.Close();
+            // disconnect our db reader
+            if (Reader != null)
+            {
+                Reader.Close();
+                Reader.Dispose();
+            }
+
+            // dispose of our sql command
+            if (Command != null)
+            {
+                Command.Dispose();
+            }
+
+            // close our connection
+            if (Connection != null)
+            {
+                Connection.Close();
+                Connection.Dispose();
+            }
         }
 
         protected void TryDisposeCloseReader()
@@ -127,29 +144,17 @@ namespace OR_M_Data_Entities.Data
             var connection = innerConnection.GetValue(Connection).GetType().Name;
 
             return connection.EndsWith("PreviouslyOpened");
-        } 
+        }
+
+        public void CleanupReader()
+        {
+
+        }
 
         public void Dispose()
         {
-            // disconnect our db reader
-            if (Reader != null)
-            {
-                Reader.Close();
-                Reader.Dispose();
-            }
-
-            // dispose of our sql command
-            if (Command != null)
-            {
-                Command.Dispose();
-            }
-
-            // close our connection
-            if (Connection != null)
-            {
-                Connection.Close();
-                Connection.Dispose();
-            }
+            // clean up the command, connection and reader
+            Disconnect();
 
             Configuration = null;
             ConnectionString = null;

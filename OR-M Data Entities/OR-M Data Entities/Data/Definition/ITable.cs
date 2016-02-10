@@ -31,6 +31,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string SchemaName { get; }
 
+        string Schema { get; }
+
         bool IsEntityStateTrackingOn { get; }
 
         DelayedEnumerationCachedList<IColumn> Columns { get; }

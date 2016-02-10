@@ -7,8 +7,6 @@ namespace OR_M_Data_Entities.Data.Definition
     {
         Type Key { get; }
 
-        string ViewId { get; }
-
         List<IMappedTable> Map { get; }
 
         IMappedTable FindTable(Type type);

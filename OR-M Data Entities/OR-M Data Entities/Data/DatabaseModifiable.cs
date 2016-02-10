@@ -280,10 +280,10 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, ConfigurationOptions options)
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, ConfigurationOptions configuration)
             {
-                var result = new ReferenceMap(options);
-                var useTransactions = options.UseTransactions;
+                var result = new ReferenceMap(configuration);
+                var useTransactions = configuration.UseTransactions;
                 var entities = _getForeignKeys(entity.Value);
 
                 entities.Insert(0, new ForeignKeyAssociation(null, entity.Value, null));
@@ -293,7 +293,7 @@ namespace OR_M_Data_Entities.Data
                     var e = entities[i];
                     var foreignKeyIsList = e.Property == null ? false : e.Property.IsList();
                     var tableType = e.Property == null ? e.Value.GetType() : e.Property.GetPropertyType();
-                    var tableInfo = new Table(tableType);
+                    var tableInfo = new Table(tableType, configuration);
 
                     if (tableInfo.IsReadOnly)
                     {

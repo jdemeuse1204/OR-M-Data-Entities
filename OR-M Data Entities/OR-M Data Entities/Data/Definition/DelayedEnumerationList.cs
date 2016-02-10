@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Configuration;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -14,13 +15,16 @@ namespace OR_M_Data_Entities.Data.Definition
 
         protected readonly int Count;
 
-        protected readonly List<T> Internal;
+        protected readonly HashSet<T> Internal;
 
-        protected DelayedEnumerationCachedList(ITable table, int count)
+        protected readonly ConfigurationOptions Configuration;
+
+        protected DelayedEnumerationCachedList(ITable table, ConfigurationOptions configuration, int count)
         {
-            Internal = new List<T>();
+            Internal = new HashSet<T>();
             ParentTable = table;
             Count = count;
+            Configuration = configuration;
         }
 
         public abstract IEnumerator<T> GetEnumerator();

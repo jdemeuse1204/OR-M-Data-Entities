@@ -10,7 +10,7 @@ using System.Collections.Generic;
 
 namespace OR_M_Data_Entities.Expressions
 {
-    public interface IExpressionQuery<out T> : IEnumerable<T>
+    public interface IExpressionQuery<out TSource> : IEnumerable<TSource>
     {
         string Sql { get; }
     }

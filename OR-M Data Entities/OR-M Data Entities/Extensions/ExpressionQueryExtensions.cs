@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Expressions;
-using OR_M_Data_Entities.Expressions.Resolution;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
@@ -20,18 +19,19 @@ namespace OR_M_Data_Entities
         #region First
         public static TSource First<TSource>(this IExpressionQuery<TSource> source)
         {
-            //var resolvable = ((IExpressionQueryResolvable)source);
+            TSource result;
+            var resolvable = ((IExpressionQueryResolvable<TSource>) source);
 
-            //TSource result;
+            // select all
+            resolvable.SelectAll();
 
-            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            //{
-            //    result = reader.First();
-            //}
+            // get the object
+            using (var reader = resolvable.ExecuteReader()) result = reader.First();
 
-            //resolvable.DbContext.Dispose();
+            // clean disconnect from the server
+            resolvable.Disconnect();
 
-            return default(TSource);
+            return result;
         }
 
         public static TSource First<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -191,6 +191,20 @@ namespace OR_M_Data_Entities
 
             return source;
         }
+
+        public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
+
+            return source;
+        }
+
+        public static IExpressionQuery<TSource> IncludeUpTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
+
+            return source;
+        }
         #endregion
 
         #region Count
@@ -326,24 +340,7 @@ namespace OR_M_Data_Entities
         #region Where
         public static IExpressionQuery<TSource> Where<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            //var s = DateTime.Now;
-            //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
-            //var e = DateTime.Now;
-
-            //Console.WriteLine((e - s).TotalMilliseconds);
-
-
-            var item = ExpressionQueryResolver.Resolve(source, expression);
-
-            if (item != null)
-            {
-                foreach (var sqlDbParameter in item.Parameters)
-                {
-
-                }
-            }
-
-            //((ExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
+            ((IExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
 
             return source;
         }
