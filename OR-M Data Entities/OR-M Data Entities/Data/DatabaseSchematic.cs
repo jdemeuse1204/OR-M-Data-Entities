@@ -299,7 +299,7 @@ namespace OR_M_Data_Entities.Data
                     // enumerate the columns first
                     var autoLoadRelationshipProperties = ParentTable.Columns.Where(w => w.IsForeignKey || w.IsPseudoKey).ToList();
                     
-                    // only perform the above operation once.  
+                    // only perform the above operation once.  Populate list for enumeration later
                     foreach (var relationship in autoLoadRelationshipProperties.Select(_getRelationship)) Internal.Add(relationship);
 
                     // return the results
@@ -407,6 +407,8 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsNullable { get; private set; }
 
+            public bool IsSelectable { get; private set; }
+
             public Type PropertyType
             {
                 get { return Property.PropertyType; }
@@ -439,6 +441,7 @@ namespace OR_M_Data_Entities.Data
                 IsList = property.PropertyType.IsList();
                 IsNullable = property.PropertyType.IsNullable();
                 Table = table;
+                IsSelectable = table.IsSelectable(property);
             }
 
             #region Methods
@@ -775,6 +778,11 @@ namespace OR_M_Data_Entities.Data
             public bool IsPrimaryKey(string columnName)
             {
                 return IsPrimaryKey(Type, columnName);
+            }
+
+            public bool IsSelectable(PropertyInfo property)
+            {
+                return property.GetCustomAttribute<NonSelectableAttribute>() == null;
             }
 
             public bool IsPrimaryKey(PropertyInfo property)

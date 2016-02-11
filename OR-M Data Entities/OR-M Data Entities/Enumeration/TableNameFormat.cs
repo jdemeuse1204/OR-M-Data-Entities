@@ -6,7 +6,7 @@
  * Copyright (c) 2014 James Demeuse
  */
 
- // ReSharper disable once CheckNamespace
+// ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
 {
     public enum TableNameFormat

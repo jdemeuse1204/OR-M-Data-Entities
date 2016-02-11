@@ -1,4 +1,12 @@
-﻿using System;
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -119,13 +127,12 @@ namespace OR_M_Data_Entities.Data
             private IQuerySchematic _createSchematic(ITable from, ConfigurationOptions configuration)
             {
                 const string aliasString = "AkA{0}";
-                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0),
-                    from.ToString(TableNameFormat.Plain));
+                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain), false);
                 var tables = new List<IMappedTable> { initMappedTable };
 
                 // create the schematic so the Data loader knows how to populate the object
                 // save the base object so we can search for children that were already processed
-                IDataLoadSchematic baseDataLoadSchematic = new DataLoadSchematic(from.Type, from.Type, null);
+                IDataLoadSchematic baseDataLoadSchematic = new DataLoadSchematic(from.Type, from.Type, initMappedTable, null);
 
                 // set the current schematic
                 var currentDataLoadSchematic = baseDataLoadSchematic;
@@ -147,14 +154,14 @@ namespace OR_M_Data_Entities.Data
 
                         if (currentMappedtable == null)
                         {
-                            currentMappedtable = new MappedTable(Tables.Find(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration),
-                                nextAlias, property.AutoLoadPropertyColumn.PropertyName);
+                            currentMappedtable = new MappedTable(Tables.Find(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration), nextAlias, property.AutoLoadPropertyColumn.PropertyName, true);
 
                             _mappedTables.Add(currentMappedtable);
                         }
-                            
+
                         currentDataLoadSchematic.Children.Add(new DataLoadSchematic(currentMappedtable.Table.Type,
                             property.AutoLoadPropertyColumn.PropertyType,
+                            currentMappedtable,
                             currentMappedtable.Key));
 
                         tables.Add(currentMappedtable);
@@ -275,11 +282,16 @@ namespace OR_M_Data_Entities.Data
                 {
                     return MappedTables.FirstOrDefault(w => w.Key == tableKey);
                 }
+
+                public bool AreForeignKeysSelected()
+                {
+                    throw new NotImplementedException();
+                }
             }
 
             private class DataLoadSchematic : IDataLoadSchematic
             {
-                public DataLoadSchematic(Type type, Type actualType, string propertyName)
+                public DataLoadSchematic(Type type, Type actualType, IMappedTable mappedTable, string propertyName)
                 {
                     Type = type;
                     ActualType = actualType;
@@ -287,6 +299,7 @@ namespace OR_M_Data_Entities.Data
                     PrimaryKeyNames = type.GetPrimaryKeyNames();
                     LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
                     Children = new HashSet<IDataLoadSchematic>();
+                    MappedTable = mappedTable;
                 }
 
                 public HashSet<IDataLoadSchematic> Children { get; private set; }
@@ -299,6 +312,8 @@ namespace OR_M_Data_Entities.Data
 
                 public object ReferenceToCurrent { get; set; }
 
+                public IMappedTable MappedTable { get; private set; }
+
                 /// <summary>
                 /// used to identity Foreign Key because object can have Foreign Key with same type,
                 /// but load different data.  IE - User CreatedBy, User EditedBy
@@ -306,6 +321,30 @@ namespace OR_M_Data_Entities.Data
                 public string PropertyName { get; private set; }
 
                 public Type Type { get; private set; }
+
+                public void ClearRowReadCache()
+                {
+                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+
+                    var toClear = new List<IDataLoadSchematic>();
+
+                    // do not keep reference to the original list
+                    toClear.AddRange(Children);
+
+                    for (var i = 0; i < toClear.Count; i++)
+                    {
+                        var child = toClear[i];
+
+                        if (child.Children.Count > 0) toClear.AddRange(child.Children);
+
+                        child.ClearLoadedCompositePrimaryKeys();
+                    }
+                }
+
+                public void ClearLoadedCompositePrimaryKeys()
+                {
+                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+                }
             }
 
             private class TableRelationship : ITableRelationship
@@ -324,9 +363,9 @@ namespace OR_M_Data_Entities.Data
                 public IMappedTable ChildTable { get; private set; }
             }
 
-            private class MappedColumn : IMappedColumn
+            private class SelectedColumn : ISelectedColumn
             {
-                public MappedColumn(IColumn column, int ordinal)
+                public SelectedColumn(IColumn column, int ordinal)
                 {
                     Column = column;
                     Ordinal = ordinal;
@@ -345,51 +384,101 @@ namespace OR_M_Data_Entities.Data
 
                 public ITable Table { get; }
 
+                public bool IsAutoLoad { get; private set; }
+
                 public HashSet<ITableRelationship> Relationships { get; private set; }
 
-                public HashSet<IMappedColumn> MappedColumns { get; private set; }
+                public HashSet<ISelectedColumn> SelectedColumns { get; private set; }
 
-                public string Sql { get; private set; }
+                public HashSet<ISelectedColumn> OrderByColumns { get; private set; }
 
-                public MappedTable(ITable table, string alias, string key)
+                public bool IsIncluded { get; private set; }
+
+                public MappedTable(ITable table, string alias, string key, bool isAutoLoad, bool isIncluded = true)
                 {
                     Key = key;
                     Alias = alias;
                     Table = table;
                     Relationships = new HashSet<ITableRelationship>();
-                    MappedColumns = new HashSet<IMappedColumn>();
+                    SelectedColumns = new HashSet<ISelectedColumn>();
+                    OrderByColumns = new HashSet<ISelectedColumn>();
+                    IsIncluded = isIncluded;
+                    IsAutoLoad = isAutoLoad;
+                }
+
+                public void Include()
+                {
+                    IsIncluded = true;
+                }
+
+                public void Exclude()
+                {
+                    IsIncluded = false;
                 }
 
                 public void Clear()
                 {
-                    Sql = string.Empty;
-                    MappedColumns = new HashSet<IMappedColumn>();
+                    SelectedColumns = new HashSet<ISelectedColumn>();
                 }
 
-                public void Select(string propertyName, int ordinal)
+                private IColumn _find(string propertyName)
                 {
                     var column = Table.Columns.FirstOrDefault(w => w.PropertyName == propertyName);
 
                     if (column == null) throw new Exception(string.Format("Column not found for table {0}.  Column Name: {1}", Table.DatabaseName, propertyName));
 
-                    Sql = string.Concat(Sql, "\t", column.ToString(Alias));
+                    return column;
+                }
 
-                    MappedColumns.Add(new MappedColumn(column, ordinal));
+                public void Select(string propertyName, int ordinal)
+                {
+                    var column = _find(propertyName);
+
+                    if (!column.IsSelectable) throw new Exception(string.Format("Invalid operation, column is not a selectable type.  Column - {0}", column.DatabaseColumnName));
+
+                    _addSelectColumn(column, ordinal);
                 }
 
                 public int SelectAll(int startingOrdinal)
                 {
-                    foreach (var column in Table.Columns)
+                    foreach (var column in Table.Columns.Where(w => w.IsSelectable))
                     {
-                        MappedColumns.Add(new MappedColumn(column, startingOrdinal));
-                        Sql = string.Concat(Sql, "\t", column.ToString(Alias, ",\r"));
-
+                        _addSelectColumn(column, startingOrdinal);
                         startingOrdinal++;
                     }
 
-                    Sql = Sql.TrimEnd('\r').TrimEnd(',');
-
                     return Table.Columns.Count();
+                }
+
+                public void OrderByPrimaryKeys()
+                {
+                    var columns = Table.Columns.Where(w => w.IsPrimaryKey).ToList();
+
+                    foreach (var column in columns) _addOrderByColumn(column, OrderByColumns.Count);
+                }
+
+                public IMappedTable OrderByPrimaryKeysInline()
+                {
+                    OrderByPrimaryKeys();
+
+                    return this;
+                }
+
+                public void OrderByColumn(string propertyName)
+                {
+                    var column = _find(propertyName);
+
+                    _addOrderByColumn(column, OrderByColumns.Count);
+                }
+
+                private void _addOrderByColumn(IColumn column, int ordinal)
+                {
+                    OrderByColumns.Add(new SelectedColumn(column, ordinal));
+                }
+
+                private void _addSelectColumn(IColumn column, int ordinal)
+                {
+                    SelectedColumns.Add(new SelectedColumn(column, ordinal));
                 }
             }
             #endregion
@@ -405,14 +494,21 @@ namespace OR_M_Data_Entities.Data
 
             private readonly IQuerySchematic _schematic;
 
-            public string Sql
-            {
-                get { return string.Concat(_select, _where); }
-            }
-
             private string _where { get; set; }
 
             private string _select { get; set; }
+
+            private string _join { get; set; }
+
+            private string _orderBy { get; set; }
+
+            private string _columns { get; set; }
+
+            private bool _distinct { get; set; }
+
+            private int _take { get; set; }
+
+            private bool _exists { get; set; }
 
             private IReadOnlyList<SqlDbParameter> _parameters { get; set; }
 
@@ -427,6 +523,11 @@ namespace OR_M_Data_Entities.Data
                 _schematic = schematic;
                 _where = string.Empty;
                 _select = string.Empty;
+                _orderBy = string.Empty;
+                _join = string.Empty;
+                _columns = string.Empty;
+                _distinct = false;
+                _take = 0;
             }
 
             #endregion
@@ -443,22 +544,37 @@ namespace OR_M_Data_Entities.Data
 
             public void ResolveSelect<TResult>(Expression<Func<T, TResult>> selector)
             {
-                _select = ExpressionQuerySelectResolver.Resolve(selector, _schematic);
+                _columns = ExpressionQuerySelectResolver.Resolve(selector, _schematic);
+            }
+
+            public void OrderByPrimaryKeys()
+            {
+                _orderBy = ExpressionQueryOrderByResolver.ResolveOrderByPrimaryKeys(_schematic);
             }
 
             public void SelectAll()
             {
-                var columns = ExpressionQuerySelectResolver.SelectAll(_schematic);
-                const string @select = "SELECT \r";
-                var fromTable = _schematic.MappedTables[0];
-                var from = string.Format("\rFROM {0} AS [{1}] \r", fromTable.Table.ToString(TableNameFormat.SqlWithSchema), fromTable.Alias);
+                _columns = ExpressionQuerySelectResolver.ResolveSelectAll(_schematic);
+            }
 
-                _select = string.Concat(select, columns, from);
+            public void ResolveForeignKeyJoins()
+            {
+                _join = ExpressionJoinResolver.ResolveForeignKeyJoins(_schematic);
+            }
+
+            public void MakeDistinct()
+            {
+                _distinct = true;
+            }
+
+            public void Take(int count)
+            {
+                _take = count;
             }
 
             public DataReader<T> ExecuteReader()
             {
-                return _context.ExecuteQuery<T>(Sql, _parameters.ToList());
+                return _context.ExecuteQuery<T>(Sql(), _parameters.ToList(), _schematic);
             }
 
             public void Disconnect()
@@ -466,6 +582,54 @@ namespace OR_M_Data_Entities.Data
                 _context.Disconnect();
             }
 
+            public string Sql()
+            {
+                var fromTable = _schematic.MappedTables[0];
+                var select = _resolveSelect();
+                var columns = _resolveColumns();
+                var from = _resolveFrom(fromTable);
+                var where = _resolveWhere();
+                var orderBy = _resolveOrderBy();
+                var join = _resolveJoin();
+
+                return string.Concat(select, columns, from, join, where, orderBy);
+            }
+
+            private string _resolveOrderBy()
+            {
+                return _orderBy;
+            }
+
+            private string _resolveJoin()
+            {
+                return _join;
+            }
+
+            private string _resolveWhere()
+            {
+                return string.Format("{0}\r", _where);
+            }
+
+            private string _resolveFrom(IMappedTable fromTable)
+            {
+                return string.Format("FROM {0} AS [{1}]\r", fromTable.Table.ToString(TableNameFormat.SqlWithSchema), fromTable.Alias);
+            }
+
+            private string _resolveColumns()
+            {
+                return string.Format("{0}\r", _columns);
+            }
+
+            private string _resolveSelect()
+            {
+                const string select = "SELECT{0}{1}\r";
+                var distinct = _distinct ? " DISTINCT " : string.Empty;
+
+                // do not do exists with top
+                var take = _exists ? " TOP 1 1 " : _take > 0 ? string.Format(" TOP {0} ", _take) : string.Empty;
+
+                return string.Format(select, distinct, take);
+            }
             #endregion
 
             #region Enumeration
@@ -870,6 +1034,43 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
+        private class ExpressionJoinResolver : ExpressQueryResolverBase
+        {
+            public static string ResolveForeignKeyJoins(IQuerySchematic schematic)
+            {
+                return schematic.MappedTables.Where(w => w.IsIncluded)
+                    .Select(w => w.Relationships)
+                    .Aggregate("",
+                        (current1, table) =>
+                            table.Aggregate(current1, (current, relationship) =>  string.Concat(current,relationship.Sql,"\r")));
+            }
+        }
+
+        private class ExpressionQueryOrderByResolver : ExpressionQuerySelectResolver
+        {
+            public static string ResolveOrderByPrimaryKeys(IQuerySchematic schematic)
+            {
+                var result = schematic.MappedTables.Where(w => w.IsIncluded).Select(w => w.OrderByPrimaryKeysInline())
+                    .Aggregate("",
+                        (current1, table) =>
+                            current1 +
+                            table.OrderByColumns.Aggregate("",
+                                (current, selectedColumn) =>
+                                    current + selectedColumn.Column.ToString(table.Alias, " ASC,"))).TrimEnd(',');
+
+                return string.Format("ORDER BY {0}", result);
+            }
+
+            public static string ResolveOrderBy(IQuerySchematic schematic, Expression expression)
+            {
+                var result = string.Empty;
+
+
+
+                return result;
+            }
+        }
+
         private class ExpressionQuerySelectResolver : ExpressQueryResolverBase
         {
             public static object ReturnObject { get; private set; }
@@ -898,19 +1099,20 @@ namespace OR_M_Data_Entities.Data
                 return Sql;
             }
 
-            public static string SelectAll(IQuerySchematic schematic)
+            public static string ResolveSelectAll(IQuerySchematic schematic)
             {
                 var ordinal = 0;
                 var result = string.Empty;
 
-                foreach (var mappedTable in schematic.MappedTables)
+                foreach (var mappedTable in schematic.MappedTables.Where(w => w.IsIncluded))
                 {
                     ordinal += mappedTable.SelectAll(ordinal);
-                    result = string.Concat(result, mappedTable.Sql, ",\r");
+                    result = string.Concat(result, mappedTable.SelectedColumns.Aggregate("",
+                        (current, selectedColumn) =>
+                            string.Concat(current, "\t", selectedColumn.Column.ToString(mappedTable.Alias, ",\r"))));
                 }
 
-                Sql = result.TrimEnd('\r').TrimEnd(',');
-                return Sql;
+                return result.TrimEnd('\r').TrimEnd(',');
             }
 
             private static void _evaluate(MemberInitExpression expression)
@@ -1351,10 +1553,5 @@ namespace OR_M_Data_Entities.Data
         }
         #endregion
         #endregion
-    }
-
-    public abstract partial class DatabaseQuery
-    {
-        
     }
 }

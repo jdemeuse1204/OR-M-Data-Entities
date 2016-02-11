@@ -8,6 +8,7 @@
 
 using System.Data.SqlClient;
 using OR_M_Data_Entities.Data;
+using OR_M_Data_Entities.Data.Definition;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
@@ -19,9 +20,9 @@ namespace OR_M_Data_Entities
             return new PeekDataReader(cmd, connection);
         }
 
-        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection, string payload)
+        public static PeekDataReader ExecuteReaderWithPeeking(this SqlCommand cmd, SqlConnection connection, IQuerySchematic schematic)
         {
-            return new PeekDataReader(cmd, connection, payload);
+            return new PeekDataReader(cmd, connection, schematic);
         }
     }
 }

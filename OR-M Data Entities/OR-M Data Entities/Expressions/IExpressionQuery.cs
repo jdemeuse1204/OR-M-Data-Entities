@@ -12,6 +12,6 @@ namespace OR_M_Data_Entities.Expressions
 {
     public interface IExpressionQuery<out TSource> : IEnumerable<TSource>
     {
-        string Sql { get; }
+        string Sql();
     }
 }

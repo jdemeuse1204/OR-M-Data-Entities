@@ -1,6 +1,14 @@
-﻿namespace OR_M_Data_Entities.Data.Definition
+﻿/*
+ * OR-M Data Entities v3.0
+ * License: The MIT License (MIT)
+ * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
+ * Email: james.demeuse@gmail.com
+ * Copyright (c) 2014 James Demeuse
+ */
+
+namespace OR_M_Data_Entities.Data.Definition
 {
-    public interface IMappedColumn
+    public interface ISelectedColumn
     {
         IColumn Column { get; }
 

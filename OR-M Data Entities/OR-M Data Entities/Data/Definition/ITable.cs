@@ -47,6 +47,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         bool IsForeignKey(PropertyInfo property);
 
+        bool IsSelectable(PropertyInfo property);
+
         bool IsPseudoKey(PropertyInfo property);
 
         bool HasForeignKeys();

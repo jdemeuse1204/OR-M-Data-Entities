@@ -46,7 +46,7 @@ namespace OR_M_Data_Entities.Data
             ExecuteReader(sql, new List<SqlDbParameter>());
         }
 
-        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters)
+        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
         {
             TryDisposeCloseReader();
 
@@ -56,7 +56,7 @@ namespace OR_M_Data_Entities.Data
 
             _addParameters(parameters);
 
-            Reader = Command.ExecuteReaderWithPeeking(Connection);
+            Reader = Command.ExecuteReaderWithPeeking(Connection, schematic);
         }
 
         /// <summary>
@@ -110,9 +110,9 @@ namespace OR_M_Data_Entities.Data
             return new DataReader<T>(Reader);
         }
 
-        public DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters)
+        public DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
         {
-            ExecuteReader(sql, parameters);
+            ExecuteReader(sql, parameters, schematic);
 
             return new DataReader<T>(Reader);
         }

@@ -25,6 +25,12 @@ namespace OR_M_Data_Entities
             // select all
             resolvable.SelectAll();
 
+            // order by primary keys
+            resolvable.OrderByPrimaryKeys();
+
+            // resolve the foreign key joins
+            resolvable.ResolveForeignKeyJoins();
+
             // get the object
             using (var reader = resolvable.ExecuteReader()) result = reader.First();
 
