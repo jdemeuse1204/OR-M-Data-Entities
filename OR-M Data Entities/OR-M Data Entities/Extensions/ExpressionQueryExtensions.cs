@@ -20,16 +20,8 @@ namespace OR_M_Data_Entities
         public static TSource First<TSource>(this IExpressionQuery<TSource> source)
         {
             TSource result;
+
             var resolvable = ((IExpressionQueryResolvable<TSource>) source);
-
-            // select all
-            resolvable.SelectAll();
-
-            // order by primary keys
-            resolvable.OrderByPrimaryKeys();
-
-            // resolve the foreign key joins
-            resolvable.ResolveForeignKeyJoins();
 
             // get the object
             using (var reader = resolvable.ExecuteReader()) result = reader.First();
@@ -189,27 +181,6 @@ namespace OR_M_Data_Entities
         public static long Min(this IExpressionQuery<long> source)
         {
             return _min(source);
-        }
-
-        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
-
-            return source;
-        }
-
-        public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
-
-            return source;
-        }
-
-        public static IExpressionQuery<TSource> IncludeUpTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            //((ExpressionQueryResolvable<TSource>)source).ResolveInclude(tableName);
-
-            return source;
         }
         #endregion
 
@@ -387,6 +358,29 @@ namespace OR_M_Data_Entities
             //return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
 
             return null;
+        }
+        #endregion
+
+        #region Include
+        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).Include(tableName);
+
+            return source;
+        }
+
+        public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).IncludeAll();
+
+            return source;
+        }
+
+        public static IExpressionQuery<TSource> IncludeTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).IncludeTo(tableName);
+
+            return source;
         }
         #endregion
 

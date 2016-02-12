@@ -94,9 +94,9 @@ namespace OR_M_Data_Entities.Data
 
             private readonly List<object> _internal;
 
-            private readonly ConfigurationOptions _configuration;
+            private readonly IConfigurationOptions _configuration;
 
-            public ReferenceMap(ConfigurationOptions configuration)
+            public ReferenceMap(IConfigurationOptions configuration)
             {
                 _internal = new List<object>();
                 _configuration = configuration;
@@ -147,7 +147,7 @@ namespace OR_M_Data_Entities.Data
                 return _internal.IndexOf(entity);
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association, ConfigurationOptions configuration)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration)
             {
                 _internal.Insert(index, new Reference(entity, _nextAlias(), configuration, association));
             }
@@ -237,7 +237,7 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, ConfigurationOptions configuration, ForeignKeyAssociation association = null) :
+            public Reference(object entity, string alias, IConfigurationOptions configuration, ForeignKeyAssociation association = null) :
                 this(new ModificationEntity(entity, configuration), alias, association)
             {
             }
@@ -280,7 +280,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, ConfigurationOptions configuration)
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration)
             {
                 var result = new ReferenceMap(configuration);
                 var useTransactions = configuration.UseTransactions;
@@ -388,7 +388,7 @@ namespace OR_M_Data_Entities.Data
         {
             #region Constructor
 
-            protected SqlExecutionPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            protected SqlExecutionPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
             {
                 Entity = entity;
                 Parameters = parameters;
@@ -403,7 +403,7 @@ namespace OR_M_Data_Entities.Data
 
             protected readonly List<SqlSecureQueryParameter> Parameters;
 
-            protected readonly ConfigurationOptions Configuration;
+            protected readonly IConfigurationOptions Configuration;
             #endregion
 
             #region Methods
@@ -432,7 +432,7 @@ namespace OR_M_Data_Entities.Data
             #region Constructor
 
 
-            protected SqlModificationBuilder(ISqlExecutionPlan plan, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
+            protected SqlModificationBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
                 : base(parameters)
             {
                 Entity = plan.Entity;
@@ -445,7 +445,7 @@ namespace OR_M_Data_Entities.Data
 
             protected readonly IModificationEntity Entity;
 
-            protected readonly ConfigurationOptions Configuration;
+            protected readonly IConfigurationOptions Configuration;
 
             #endregion
 

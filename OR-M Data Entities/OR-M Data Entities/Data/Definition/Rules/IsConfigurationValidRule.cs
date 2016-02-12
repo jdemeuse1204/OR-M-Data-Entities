@@ -15,9 +15,9 @@ namespace OR_M_Data_Entities.Data.Definition.Rules
 {
     public sealed class IsConfigurationValidRule : IRule
     {
-        private readonly ConfigurationOptions _configuration;
+        private readonly IConfigurationOptions _configuration;
 
-        public IsConfigurationValidRule(ConfigurationOptions configuration)
+        public IsConfigurationValidRule(IConfigurationOptions configuration)
         {
             _configuration = configuration;
         }

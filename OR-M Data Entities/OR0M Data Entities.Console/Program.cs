@@ -13,6 +13,8 @@ namespace OR0M_Data_Entities.Console
         public SqlContext()
             : base("sqlExpress")
         {
+            Configuration.IsLazyLoading = true;
+
             Configuration.UseTransactions = true;
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
@@ -70,7 +72,9 @@ namespace OR0M_Data_Entities.Console
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
             var s = DateTime.Now;
-            var sdgf = context.From<Contact>().First(w => w.ContactID == 100);
+            var sdgf = context.From<Contact>()
+                .IncludeAll()
+                .First(w => w.ContactID == 100);
             var e = DateTime.Now;
 
             System.Console.WriteLine((e-s).Milliseconds);

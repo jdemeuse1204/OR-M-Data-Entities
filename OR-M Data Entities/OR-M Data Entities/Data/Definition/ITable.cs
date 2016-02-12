@@ -25,6 +25,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string ClassName { get; }
 
+        string PlainTableName { get; }
+
         string ServerName { get; }
 
         string DatabaseName { get; }

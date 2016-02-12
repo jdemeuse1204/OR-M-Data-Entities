@@ -31,7 +31,7 @@ namespace OR_M_Data_Entities.Data
 
         protected PeekDataReader Reader { get; private set; }
 
-        protected ConfigurationOptions Configuration { get; private set; }
+        protected IConfigurationOptions Configuration { get; private set; }
 
         private SqlConnection _connection { get; set; }
 
@@ -209,6 +209,36 @@ namespace OR_M_Data_Entities.Data
             Connect();
         }
         #endregion
+
+        #region Configuration
+        private class ConfigurationOptions : IConfigurationOptions
+        {
+            public ConfigurationOptions(bool useTransactions, string defaultSchema)
+            {
+                IsLazyLoading = false;
+                UseTransactions = useTransactions;
+
+                ConcurrencyChecking = new ConcurrencyConfiguration
+                {
+                    ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue,
+                    IsOn = true
+                };
+
+                InsertKeys = new KeyConfiguration();
+                DefaultSchema = defaultSchema;
+            }
+
+            public bool IsLazyLoading { get; set; }
+
+            public bool UseTransactions { get; set; }
+
+            public ConcurrencyConfiguration ConcurrencyChecking { get; private set; }
+
+            public KeyConfiguration InsertKeys { get; private set; }
+
+            public string DefaultSchema { get; private set; }
+        }
+        #endregion
     }
 
     public abstract partial class DatabaseConnection
@@ -335,7 +365,7 @@ namespace OR_M_Data_Entities.Data
                        : _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
 
                        // if the payload has foreign keys, use the foreign key loader
-                       : _schematic.MappedTables.Any(w => w.IsAutoLoad) ? _getObjectFromReaderWithForeignKeys<T>()
+                       : _schematic.AreForeignKeysSelected() ? _getObjectFromReaderWithForeignKeys<T>()
 
                        // default if all are false
                        : _getObjectFromReader<T>();
@@ -422,9 +452,10 @@ namespace OR_M_Data_Entities.Data
                     _loadObjectWithForeignKeys(instance);
                 }
 
-                // Rows with a PK from the initial object are done loading.  Clear Schematics
+                // Rows with a PK from the initial object are done loading.  
+                // Clear Schematics, selected columns, and ordered columns
                 // clear is recursive and will clear all children
-                _schematic.DataLoadSchematic.ClearRowReadCache();
+                _schematic.Clear();
 
                 return instance;
             }
@@ -457,6 +488,10 @@ namespace OR_M_Data_Entities.Data
                 for (var i = 0; i < schematicsToScan.Count; i++)
                 {
                     var currentSchematic = schematicsToScan[i];
+
+                    // if the current table is not included in the selection we skip it
+                    if (!currentSchematic.MappedTable.IsIncluded) continue;
+
                     var compositeKeyArray = _getCompositKeyArray(currentSchematic);
                     var compositeKey = _getCompositKey(compositeKeyArray);
                     var schematicKey = new OSchematicKey(compositeKey, compositeKeyArray);
@@ -516,7 +551,8 @@ namespace OR_M_Data_Entities.Data
                                 .SetValue(foundInstanceForListSetValue, list);
                         }
 
-                        list.GetType().GetMethod("Add").Invoke(list, new[] { newInstance });
+                        // add object to list
+                        _add(list, newInstance);
 
                         // store references to the current instance so we can load the objects,
                         // otherwise we will have to search through the object and look for the instance
@@ -537,6 +573,11 @@ namespace OR_M_Data_Entities.Data
                     // otherwise we will have to search through the object and look for the instance
                     foreach (var child in currentSchematic.Children) child.ReferenceToCurrent = newInstance;
                 }
+            }
+
+            private void _add(object list, object valueToAdd)
+            {
+                list.GetType().GetMethod("Add").Invoke(list, new[] { valueToAdd });
             }
 
             private object _getInstance(int index, int originalCount, IDataLoadSchematic schematic, object parentInstance)

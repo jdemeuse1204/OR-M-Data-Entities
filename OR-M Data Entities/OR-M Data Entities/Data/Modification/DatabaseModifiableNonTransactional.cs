@@ -268,12 +268,12 @@ namespace OR_M_Data_Entities.Data
         #region Plans
         private class SqlInsertPlan : SqlExecutionPlan
         {
-            public SqlInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
@@ -286,12 +286,12 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlTryInsertPlan : SqlExecutionPlan
         {
-            public SqlTryInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertPlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
@@ -306,12 +306,12 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlTryInsertUpdatePlan : SqlExecutionPlan
         {
-            public SqlTryInsertUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
@@ -329,12 +329,12 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlUpdatePlan : SqlExecutionPlan
         {
-            public SqlUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlUpdatePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
@@ -347,12 +347,12 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlDeletePlan : SqlExecutionPlan
         {
-            public SqlDeletePlan(ModificationEntity entity, ConfigurationOptions configurationOptions)
+            public SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
                 : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlDeletePlan(ModificationEntity entity, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
+            protected SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
                 : base(entity, configurationOptions, sharedParameters)
             {
             }
@@ -375,7 +375,7 @@ namespace OR_M_Data_Entities.Data
 
             private string _where { get; set; }
 
-            public SqlExistsBuilder(ISqlExecutionPlan plan, ConfigurationOptions configurationOptions,
+            public SqlExistsBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions,
                 List<SqlSecureQueryParameter> parameters, SqlModificationBuilder exists,
                 SqlModificationBuilder notExists = null)
                 : base(plan, configurationOptions, parameters)
@@ -444,7 +444,7 @@ ELSE
         private class SqlInsertBuilder : SqlModificationBuilder
         {
             #region Constructor
-            public SqlInsertBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlInsertBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
 
@@ -529,7 +529,7 @@ ELSE
         {
             #region Constructor
 
-            public SqlUpdateBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlUpdateBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
             }
@@ -631,7 +631,7 @@ ELSE
         {
             #region Constructor
 
-            public SqlDeleteBuilder(ISqlExecutionPlan builder, ConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
+            public SqlDeleteBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(builder, configurationOptions, parameters)
             {
             }

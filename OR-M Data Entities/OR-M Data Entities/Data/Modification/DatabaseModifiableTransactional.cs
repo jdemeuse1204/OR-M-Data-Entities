@@ -63,9 +63,9 @@ namespace OR_M_Data_Entities.Data
 
             private const int SQL_CONCURRENCY_VIOLATION_ERROR_SEVERITY = 18;
 
-            private readonly ConfigurationOptions _configuration;
+            private readonly IConfigurationOptions _configuration;
 
-            public TransactionUpdateContainer(IModificationEntity entity, ConfigurationOptions configuration, string tableAlias)
+            public TransactionUpdateContainer(IModificationEntity entity, IConfigurationOptions configuration, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;
@@ -257,7 +257,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, ConfigurationOptions configuration)
+            public SqlTransactionInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, IConfigurationOptions configuration)
                 : base(entity, configuration, sharedParameters)
             {
                 Reference = reference;
@@ -273,7 +273,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionTryInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, ConfigurationOptions configuration)
+            public SqlTransactionTryInsertPlan(ModificationEntity entity, List<SqlSecureQueryParameter> sharedParameters, Reference reference, IConfigurationOptions configuration)
                 : base(entity, configuration, sharedParameters)
             {
                 Reference = reference;
@@ -291,7 +291,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionTryInsertUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+            public SqlTransactionTryInsertUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration)
                 : base(entity, configuration, parameters)
             {
                 Reference = reference;
@@ -313,7 +313,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+            public SqlTransactionUpdatePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration)
                 : base(entity, configuration, parameters)
             {
                 Reference = reference;
@@ -329,7 +329,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionDeletePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration) 
+            public SqlTransactionDeletePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration) 
                 : base(entity, configuration, parameters)
             {
                 Reference = reference;
@@ -457,7 +457,7 @@ IF @@TRANCOUNT > 0
         {
             private readonly Reference _reference;
 
-            public SqlTransactionDeleteBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration)
+            public SqlTransactionDeleteBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration)
                 : base(builder, configuration, parameters)
             {
                 _reference = reference;
@@ -482,7 +482,7 @@ IF @@TRANCOUNT > 0
 
             private readonly string _tableAliasOverride;
 
-            public SqlTransactionInsertBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
+            public SqlTransactionInsertBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration, string tableAliasOverride = null)
                 : base(builder, configuration, parameters)
             {
                 _reference = reference;
@@ -549,7 +549,7 @@ IF @@TRANCOUNT > 0
 
             private readonly string _tableAliasOverride;
 
-            public SqlTransactionUpdateBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, ConfigurationOptions configuration, string tableAliasOverride = null)
+            public SqlTransactionUpdateBuilder(ISqlExecutionPlan builder, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration, string tableAliasOverride = null)
                 : base(builder, configuration, parameters)
             {
                 _reference = reference;

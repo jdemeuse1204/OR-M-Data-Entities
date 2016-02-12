@@ -28,6 +28,12 @@ namespace OR_M_Data_Entities.Expressions
 
         DataReader<TSource> ExecuteReader();
 
+        void IncludeAll();
+
+        void IncludeTo(string tableName);
+
+        void Include(string tableName);
+
         void OrderByPrimaryKeys();
 
         void Disconnect();

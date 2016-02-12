@@ -16,6 +16,8 @@ namespace OR_M_Data_Entities.Data.Definition
     {
         HashSet<IDataLoadSchematic> Children { get; }
 
+        IDataLoadSchematic Parent { get; }
+
         Type ActualType { get; }
 
         string[] PrimaryKeyNames { get; }

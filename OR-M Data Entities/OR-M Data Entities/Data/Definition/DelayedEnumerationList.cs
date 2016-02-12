@@ -25,9 +25,9 @@ namespace OR_M_Data_Entities.Data.Definition
 
         protected readonly HashSet<T> Internal;
 
-        protected readonly ConfigurationOptions Configuration;
+        protected readonly IConfigurationOptions Configuration;
 
-        protected DelayedEnumerationCachedList(ITable table, ConfigurationOptions configuration, int count)
+        protected DelayedEnumerationCachedList(ITable table, IConfigurationOptions configuration, int count)
         {
             Internal = new HashSet<T>();
             ParentTable = table;

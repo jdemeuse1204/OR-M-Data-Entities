@@ -141,11 +141,11 @@ namespace OR_M_Data_Entities.Data
         {
             private readonly EntityStateTrackable _entityStateTrackable;
 
-            private readonly ConfigurationOptions _configuration;
+            private readonly IConfigurationOptions _configuration;
 
             private readonly IReadOnlyList<PropertyInfo> _columns;
 
-            public IdentityColumnUpdateRule(EntityStateTrackable entityStateTrackable, ConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
+            public IdentityColumnUpdateRule(EntityStateTrackable entityStateTrackable, IConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
             {
                 _entityStateTrackable = entityStateTrackable;
                 _configuration = configuration;
@@ -241,7 +241,7 @@ namespace OR_M_Data_Entities.Data
                 _internal = new Dictionary<Type, ITable>();
             }
 
-            public ITable Find(Type type, ConfigurationOptions configuration)
+            public ITable Find(Type type, IConfigurationOptions configuration)
             {
                 ITable table;
 
@@ -256,7 +256,7 @@ namespace OR_M_Data_Entities.Data
                 return table;
             }
 
-            public ITable Find<T>(ConfigurationOptions configuration)
+            public ITable Find<T>(IConfigurationOptions configuration)
             {
                 return Find(typeof(T), configuration);
             }
@@ -283,7 +283,7 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
         {
-            public AutoLoadRelationshipList(ITable table, int count, ConfigurationOptions configuration)
+            public AutoLoadRelationshipList(ITable table, int count, IConfigurationOptions configuration)
                 : base(table, configuration, count)
             {
 
@@ -365,7 +365,7 @@ namespace OR_M_Data_Entities.Data
         private class ColumnList : DelayedEnumerationCachedList<IColumn>
         {
             #region Constructor
-            public ColumnList(ITable table, ConfigurationOptions configuration, int count)
+            public ColumnList(ITable table, IConfigurationOptions configuration, int count)
                 : base(table, configuration, count)
             {
             }
@@ -470,7 +470,7 @@ namespace OR_M_Data_Entities.Data
         protected abstract class ReflectionCacheTable
         {
             #region Constructor
-            protected ReflectionCacheTable(Type type, ConfigurationOptions configuration)
+            protected ReflectionCacheTable(Type type, IConfigurationOptions configuration)
             {
                 // Make sure the table is setup correctly
                 RuleProcessor.ProcessRule<IsTableValidRule>(type);
@@ -699,13 +699,13 @@ namespace OR_M_Data_Entities.Data
         protected class Table : ReflectionCacheTable, ITable
         {
             #region Constructor
-            public Table(object entity, ConfigurationOptions configuration)
+            public Table(object entity, IConfigurationOptions configuration)
                 : this(entity.GetType(), configuration)
             {
 
             }
 
-            public Table(Type type, ConfigurationOptions configuration)
+            public Table(Type type, IConfigurationOptions configuration)
                 : base(type, configuration)
             {
                 ClassName = type.Name;
@@ -727,6 +727,8 @@ namespace OR_M_Data_Entities.Data
             public bool IsReadOnly { get { return ReadOnlyAttribute != null; } }
 
             public string Schema { get { return DefaultSchema; } }
+
+            public string PlainTableName { get { return ToString(TableNameFormat.Plain); } }
 
             public bool IsUsingLinkedServer { get { return LinkedServerAttribute != null; } }
 
@@ -864,7 +866,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public Entity(object entity, ConfigurationOptions configuration)
+            public Entity(object entity, IConfigurationOptions configuration)
                 : base(entity, configuration)
             {
                 if (entity == null) throw new ArgumentNullException("entity");
@@ -1034,12 +1036,12 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public ModificationEntity(object entity, ConfigurationOptions configuration)
+            public ModificationEntity(object entity, IConfigurationOptions configuration)
                 : this(entity, configuration, false)
             {
             }
 
-            protected ModificationEntity(object entity, ConfigurationOptions configuration, bool isDeleting)
+            protected ModificationEntity(object entity, IConfigurationOptions configuration, bool isDeleting)
                 : base(entity, configuration)
             {
                 // do not initialize when deleting because we will get unnecessary errors
@@ -1094,7 +1096,7 @@ namespace OR_M_Data_Entities.Data
                 return _getState(changes);
             }
 
-            public static bool IsValueInInsertArray(ConfigurationOptions configuration, object value)
+            public static bool IsValueInInsertArray(IConfigurationOptions configuration, object value)
             {
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (value.GetType().Name.ToUpper())
@@ -1130,7 +1132,7 @@ namespace OR_M_Data_Entities.Data
                     : entity == null && pristineEntity == null ? false : !entity.Equals(pristineEntity);
             }
 
-            private void _initialize(ConfigurationOptions configuration)
+            private void _initialize(IConfigurationOptions configuration)
             {
                 var primaryKeys = GetPrimaryKeys();
 
@@ -1200,7 +1202,7 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            private static bool _isValueInInsertArray(ConfigurationOptions configuration, object value)
+            private static bool _isValueInInsertArray(IConfigurationOptions configuration, object value)
             {
                 // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
                 switch (value.GetType().Name.ToUpper())
@@ -1290,7 +1292,7 @@ namespace OR_M_Data_Entities.Data
 
         protected class DeleteEntity : ModificationEntity
         {
-            public DeleteEntity(object entity, ConfigurationOptions configuration)
+            public DeleteEntity(object entity, IConfigurationOptions configuration)
                 : base(entity, configuration)
             {
                 ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();

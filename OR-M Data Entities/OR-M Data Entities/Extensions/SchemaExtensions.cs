@@ -38,24 +38,6 @@ namespace OR_M_Data_Entities
             return tableAttribute == null ? type.Name : tableAttribute.Name;
         }
 
-        public static string GetTableNameWithLinkedServer(this object entity)
-        {
-            return entity.GetType().GetTableNameWithLinkedServer();
-        }
-
-        public static string GetTableNameWithLinkedServer(this Type type)
-        {
-            // check for table name attribute
-            var tableAttribute = type.GetCustomAttribute<TableAttribute>();
-            var linkedserverattribute = type.GetCustomAttribute<LinkedServerAttribute>();
-
-            var tableName = tableAttribute == null ? type.Name : tableAttribute.Name;
-
-            return linkedserverattribute == null
-                ? tableName
-                : string.Format("{0}.[{1}]", linkedserverattribute.FormattedLinkedServerText, tableName);
-        }
-
         public static DbGenerationOption GetGenerationOption(this PropertyInfo column)
         {
             var dbGenerationColumn = column.GetCustomAttribute<DbGenerationOptionAttribute>();
@@ -67,16 +49,6 @@ namespace OR_M_Data_Entities
             var columnAttribute = column.GetCustomAttribute<ColumnAttribute>();
 
             return columnAttribute == null ? column.Name : columnAttribute.Name;
-        }
-
-        public static string GetColumnName(this IEnumerable<PropertyInfo> properties, string propertyName)
-        {
-            var property = properties.FirstOrDefault(w => w.Name == propertyName);
-
-            // property will be in list only if it has a custom attribute
-            if (property == null) return propertyName;
-            var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-            return columnAttribute == null ? propertyName : columnAttribute.Name;
         }
 
         public static List<PropertyInfo> GetPrimaryKeys(this object entity)
@@ -115,11 +87,6 @@ namespace OR_M_Data_Entities
             return entity.GetType().GetForeignKeys(viewId);
         }
 
-        public static ForeignKeyAttribute FindForeignKeyAttribute(this Type type, string propertyName)
-        {
-            return type.GetProperty(propertyName).GetCustomAttribute<ForeignKeyAttribute>();
-        }
-
         public static List<PropertyInfo> GetForeignKeys(this Type entityType, string viewId = null)
         {
             return string.IsNullOrWhiteSpace(viewId)
@@ -131,30 +98,9 @@ namespace OR_M_Data_Entities
                     && w.PropertyType.GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId)).ToList();
         }
 
-        public static List<ForeignKeyAttribute> GetForeignKeyAttributes(this Type entityType)
-        {
-            return entityType.GetProperties().Where(w =>
-               w.GetCustomAttribute<ForeignKeyAttribute>() != null).Select(w => w.GetCustomAttribute<ForeignKeyAttribute>()).ToList();
-        }
-
-        public static List<ForeignKeyAttribute> GetForeignKeyAttributes(this object entity)
-        {
-            return entity.GetType().GetForeignKeyAttributes();
-        }
-
-        public static List<ForeignKeyAttribute> GetForeignKeyAttributes<T>(this T entity)
-        {
-            return typeof(T).GetForeignKeyAttributes();
-        }
-
         public static bool HasForeignKeys(this Type entityType)
         {
             return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
-        }
-
-        public static bool HasForeignKeys(TypeInfo entityType)
-        {
-            return entityType.UnderlyingSystemType.HasForeignKeys();
         }
 
         public static bool HasForeignKeys(this object entity)
@@ -162,82 +108,11 @@ namespace OR_M_Data_Entities
             return entity.GetType().HasForeignKeys();
         }
 
-        public static bool IsTableReadOnly(this Type type)
-        {
-            return type.GetCustomAttribute<ReadOnlyAttribute>() != null;
-        }
-
-        public static bool IsTableReadOnly(this object entity)
-        {
-            return entity.GetType().IsTableReadOnly();
-        }
-
-        public static bool HasForeignListKeys(this object entity)
-        {
-            return entity.GetForeignKeys().Any(w => w.PropertyType.IsList());
-        }
-
-        public static bool HasForeignListKeys(this Type type)
-        {
-            return type.GetForeignKeys().Any(w => w.PropertyType.IsList());
-        }
-
-        public static bool HasForeignNonListKeys(this object entity)
-        {
-            return entity.GetForeignKeys().Any(w => !w.PropertyType.IsList());
-        }
-
-        public static bool HasForeignNonListKeys(this Type type)
-        {
-            return type.GetForeignKeys().Any(w => !w.PropertyType.IsList());
-        }
-
-        public static List<PropertyInfo> GetTableFields(this object entity)
-        {
-            return entity.GetType().GetTableFields();
-        }
-
-        public static List<PropertyInfo> GetTableFields(this Type entityType)
-        {
-            return entityType.GetProperties().Where(w => w.GetCustomAttribute<UnmappedAttribute>() == null && w.GetCustomAttribute<AutoLoadKeyAttribute>() == null).ToList();
-        }
-
         public static bool IsPartOfView(this Type tabletype, string viewId)
         {
             var viewAttribute = tabletype.GetCustomAttribute<ViewAttribute>();
 
             return viewAttribute != null && viewAttribute.ViewIds.Contains(viewId);
-        }
-
-        public static KeyValuePair<string, IEnumerable<string>> GetSelectAllFieldsAndTableName(this Type tableType)
-        {
-            var table = GetTableName(tableType);
-            var fields = GetTableFields(tableType).Select(w => w.GetCustomAttribute<ColumnAttribute>() != null ? w.GetCustomAttribute<ColumnAttribute>().Name : w.Name);
-
-            return new KeyValuePair<string, IEnumerable<string>>(table, fields);
-        }
-
-        public static bool IsPrimaryKey(this Type type, string columnName)
-        {
-            return columnName.ToUpper() == "ID" ||
-                   type.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
-        }
-
-        public static bool IsColumn(this PropertyInfo info)
-        {
-            var attributes = info.GetCustomAttributes();
-
-            var isNonSelectable = attributes.Any(w => w is NonSelectableAttribute);
-            var isPrimaryKey = attributes.Any(w => w is SearchablePrimaryKeyAttribute);
-            var hasAttributes = attributes != null && attributes.Any();
-
-            return (hasAttributes && (isPrimaryKey || !isNonSelectable)) || !hasAttributes;
-        }
-
-        public static bool HasPrimaryKeysOnly(this object entity)
-        {
-            var properties = entity.GetType().GetProperties();
-            return properties.Count(w => w.IsColumn()) == properties.Count(w => w.IsPrimaryKey());
         }
     }
 }

@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Configuration;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -19,10 +20,14 @@ namespace OR_M_Data_Entities.Data.Definition
 
         IDataLoadSchematic DataLoadSchematic { get; }
 
+        IConfigurationOptions ConfigurationOptions { get; }
+
         IMappedTable FindTable(Type type);
 
         IMappedTable FindTable(string tableKey);
 
         bool AreForeignKeysSelected();
+
+        void Clear();
     }
 }

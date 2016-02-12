@@ -58,12 +58,17 @@ namespace OR_M_Data_Entities.Data
                     typeof(T).Name, viewId));
             }
 
+
             var table = Tables.Find<T>(Configuration);
 
             // get the schematic
             var schematic = _schematicManager.Find(table, Configuration);
 
-            return new ExpressionQuery<T>(this, schematic, viewId);
+            var expressionQuery = new ExpressionQuery<T>(this, schematic, viewId);
+
+
+
+            return expressionQuery;
         }
 
         public T Find<T>(params object[] pks)
@@ -107,7 +112,7 @@ namespace OR_M_Data_Entities.Data
             // cache for all mapped tables
             private HashSet<IMappedTable> _mappedTables { get; set; }
 
-            public IQuerySchematic Find(ITable table, ConfigurationOptions configuration)
+            public IQuerySchematic Find(ITable table, IConfigurationOptions configuration)
             {
                 IQuerySchematic result;
 
@@ -124,15 +129,17 @@ namespace OR_M_Data_Entities.Data
             }
 
             // creates the schematic so we know how to load the object
-            private IQuerySchematic _createSchematic(ITable from, ConfigurationOptions configuration)
+            private IQuerySchematic _createSchematic(ITable from, IConfigurationOptions configuration)
             {
                 const string aliasString = "AkA{0}";
-                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain), false);
+
+                // base table is always included
+                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain), true);
                 var tables = new List<IMappedTable> { initMappedTable };
 
                 // create the schematic so the Data loader knows how to populate the object
                 // save the base object so we can search for children that were already processed
-                IDataLoadSchematic baseDataLoadSchematic = new DataLoadSchematic(from.Type, from.Type, initMappedTable, null);
+                IDataLoadSchematic baseDataLoadSchematic = new DataLoadSchematic(null, from.Type, from.Type, initMappedTable, null);
 
                 // set the current schematic
                 var currentDataLoadSchematic = baseDataLoadSchematic;
@@ -154,7 +161,12 @@ namespace OR_M_Data_Entities.Data
 
                         if (currentMappedtable == null)
                         {
-                            currentMappedtable = new MappedTable(Tables.Find(autoLoadRelationship.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration), nextAlias, autoLoadRelationship.AutoLoadPropertyColumn.PropertyName, true);
+                            var tableSchematic =
+                                Tables.Find(
+                                    autoLoadRelationship.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(),
+                                    configuration);
+
+                            currentMappedtable = new MappedTable(tableSchematic, nextAlias, autoLoadRelationship.AutoLoadPropertyColumn.PropertyName, !configuration.IsLazyLoading);
 
                             _mappedTables.Add(currentMappedtable);
                         }
@@ -174,7 +186,8 @@ namespace OR_M_Data_Entities.Data
                                 parentOfCurrent.Alias);
                         }
 
-                        currentDataLoadSchematic.Children.Add(new DataLoadSchematic(currentMappedtable.Table.Type,
+                        currentDataLoadSchematic.Children.Add(new DataLoadSchematic(currentDataLoadSchematic,
+                            currentMappedtable.Table.Type,
                             autoLoadRelationship.AutoLoadPropertyColumn.PropertyType,
                             currentMappedtable,
                             currentMappedtable.Key));
@@ -185,7 +198,7 @@ namespace OR_M_Data_Entities.Data
                     }
                 }
 
-                return new QuerySchematic(from.Type, tables, baseDataLoadSchematic);
+                return new QuerySchematic(from.Type, tables, baseDataLoadSchematic, configuration);
             }
 
             private IDataLoadSchematic _findDataLoadSchematic(IDataLoadSchematic beginningSchematic, IDataLoadSchematic currentSchematic,
@@ -207,7 +220,7 @@ namespace OR_M_Data_Entities.Data
                 for (var i = 0; i < schematicsToSearch.Count; i++)
                 {
                     var schematic = schematicsToSearch[i];
-                
+
                     // auto load key columns could technically have the same name, match on parent table too
                     if (schematic.PropertyName == parentJoinPropertyName && schematic.MappedTable.Alias == parentTableAlias) return schematic;
 
@@ -274,12 +287,15 @@ namespace OR_M_Data_Entities.Data
             /// </summary>
             private class QuerySchematic : IQuerySchematic
             {
-                public QuerySchematic(Type key, List<IMappedTable> mappedTables, IDataLoadSchematic dataLoadSchematic)
+                public QuerySchematic(Type key, List<IMappedTable> mappedTables, IDataLoadSchematic dataLoadSchematic, IConfigurationOptions configuration)
                 {
                     Key = key;
                     MappedTables = mappedTables;
                     DataLoadSchematic = dataLoadSchematic;
+                    ConfigurationOptions = configuration;
                 }
+
+                public IConfigurationOptions ConfigurationOptions { get; private set; }
 
                 public Type Key { get; private set; }
 
@@ -301,15 +317,21 @@ namespace OR_M_Data_Entities.Data
 
                 public bool AreForeignKeysSelected()
                 {
-                    var autoLoadTable = MappedTables.FirstOrDefault(w => w.IsAutoLoad);
+                    return DataLoadSchematic.Children != null && DataLoadSchematic.Children.Any();
+                }
 
-                    return autoLoadTable != null && autoLoadTable.SelectedColumns.Any();
+                public void Clear()
+                {
+                    foreach (var mappedTable in MappedTables) mappedTable.Clear();
+
+                    // recursive clear
+                    DataLoadSchematic.ClearRowReadCache();
                 }
             }
 
             private class DataLoadSchematic : IDataLoadSchematic
             {
-                public DataLoadSchematic(Type type, Type actualType, IMappedTable mappedTable, string propertyName)
+                public DataLoadSchematic(IDataLoadSchematic parent, Type type, Type actualType, IMappedTable mappedTable, string propertyName)
                 {
                     Type = type;
                     ActualType = actualType;
@@ -318,9 +340,11 @@ namespace OR_M_Data_Entities.Data
                     LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
                     Children = new HashSet<IDataLoadSchematic>();
                     MappedTable = mappedTable;
+                    Parent = parent;
                 }
 
                 public HashSet<IDataLoadSchematic> Children { get; private set; }
+                public IDataLoadSchematic Parent { get; private set; }
 
                 public Type ActualType { get; private set; }
 
@@ -402,8 +426,6 @@ namespace OR_M_Data_Entities.Data
 
                 public ITable Table { get; }
 
-                public bool IsAutoLoad { get; private set; }
-
                 public HashSet<ITableRelationship> Relationships { get; private set; }
 
                 public HashSet<ISelectedColumn> SelectedColumns { get; private set; }
@@ -412,7 +434,7 @@ namespace OR_M_Data_Entities.Data
 
                 public bool IsIncluded { get; private set; }
 
-                public MappedTable(ITable table, string alias, string key, bool isAutoLoad, bool isIncluded = true)
+                public MappedTable(ITable table, string alias, string key, bool isIncluded = true)
                 {
                     Key = key;
                     Alias = alias;
@@ -421,7 +443,6 @@ namespace OR_M_Data_Entities.Data
                     SelectedColumns = new HashSet<ISelectedColumn>();
                     OrderByColumns = new HashSet<ISelectedColumn>();
                     IsIncluded = isIncluded;
-                    IsAutoLoad = isAutoLoad;
                 }
 
                 public void Include()
@@ -437,6 +458,7 @@ namespace OR_M_Data_Entities.Data
                 public void Clear()
                 {
                     SelectedColumns = new HashSet<ISelectedColumn>();
+                    OrderByColumns = new HashSet<ISelectedColumn>();
                 }
 
                 private IColumn _find(string propertyName)
@@ -594,7 +616,111 @@ namespace OR_M_Data_Entities.Data
 
             public DataReader<T> ExecuteReader()
             {
+                // need to happen before read because of include statements
+
+                // select all if nothing was selected
+                if (string.IsNullOrEmpty(_columns)) SelectAll();
+
+                // only do below if object has foreign keys
+                if (_schematic.DataLoadSchematic.Children.Any())
+                {
+                    // order by primary keys, so we can select the data
+                    // back correctly from the data reader
+                    OrderByPrimaryKeys();
+
+                    // resolve the foreign key joins
+                    ResolveForeignKeyJoins();
+                }
+
                 return _context.ExecuteQuery<T>(Sql(), _parameters.ToList(), _schematic);
+            }
+
+            public void IncludeAll()
+            {
+                foreach (var mappedTable in _schematic.MappedTables) mappedTable.Include();
+            }
+
+            public void Include(string tableName)
+            {
+                IMappedTable mappedTable;
+                var actualTableName = _getActualTableName(tableName);
+
+                // if table names are the same search by FK matched column name
+                if (tableName.Contains("["))
+                {
+                    var attribute = _getTableAttributeName(tableName);
+
+                    mappedTable =
+                        _schematic.MappedTables.FirstOrDefault(
+                            w => w.Table.PlainTableName == actualTableName && w.Key == attribute);
+                }
+                else
+                {
+                    mappedTable = _schematic.MappedTables.FirstOrDefault(w => w.Table.PlainTableName == tableName);
+                }
+
+                if (mappedTable == null) throw new Exception(string.Format("Cannot find table  table name not found on Include. Table name - {0}", tableName));
+
+                mappedTable.Include();
+            }
+
+            public void IncludeTo(string tableName)
+            {
+                var actualTableName = _getActualTableName(tableName);
+                var attribute = _getTableAttributeName(tableName);
+                var searchList = new List<IDataLoadSchematic> { _schematic.DataLoadSchematic };
+
+                // find the reference then select backwards
+                for (var i = 0; i < searchList.Count; i++)
+                {
+                    var dataLoadSchematic = searchList[i];
+                    var foundMappedTable = _findDataLoadSchematic(dataLoadSchematic, actualTableName, attribute);
+
+                    if (foundMappedTable != null)
+                    {
+                        // include found item
+                        foundMappedTable.MappedTable.Include();
+
+                        var parent = foundMappedTable.Parent;
+
+                        while (parent != null)
+                        {
+                            parent.MappedTable.Include();
+
+                            parent = parent.Parent;
+                        }
+                        return;
+                    }
+
+                    searchList.AddRange(dataLoadSchematic.Children);
+                }
+
+                // should never hit this if table found
+                throw new Exception(string.Format("Table not found for Include.  Table Name - {0}", tableName));
+            }
+
+            private string _getActualTableName(string tableName)
+            {
+                if (!tableName.Contains("[")) return tableName;
+
+                var index = tableName.IndexOf("[", StringComparison.Ordinal);
+                return tableName.Substring(0, index);
+            }
+
+            private string _getTableAttributeName(string tableName)
+            {
+                if (!tableName.Contains("[")) return string.Empty;
+
+                var index = tableName.IndexOf("[", StringComparison.Ordinal);
+                return tableName.Substring(index + 1, tableName.Length - index - 2);
+            }
+
+            private IDataLoadSchematic _findDataLoadSchematic(IDataLoadSchematic schematic, string tableName, string attributeName)
+            {
+                return string.IsNullOrEmpty(attributeName)
+                    ? schematic.Children.FirstOrDefault(w => w.MappedTable.Table.PlainTableName == tableName)
+                    : schematic.Children.FirstOrDefault(
+                        w => w.MappedTable.Table.PlainTableName == tableName && w.MappedTable.Key == attributeName);
             }
 
             public void Disconnect()
@@ -1056,6 +1182,7 @@ namespace OR_M_Data_Entities.Data
 
         private class ExpressionJoinResolver : ExpressQueryResolverBase
         {
+            // needs to happen before reading
             public static string ResolveForeignKeyJoins(IQuerySchematic schematic)
             {
                 return schematic.MappedTables.Where(w => w.IsIncluded)

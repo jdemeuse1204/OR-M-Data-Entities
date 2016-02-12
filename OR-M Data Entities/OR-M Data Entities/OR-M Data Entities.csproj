@@ -46,7 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\ConcurrencyConfiguration.cs" />
-    <Compile Include="Configuration\ConfigurationOptions.cs" />
+    <Compile Include="Configuration\IConfigurationOptions.cs" />
     <Compile Include="Configuration\KeyConfiguration.cs" />
     <Compile Include="Data\DatabaseQuery.cs" />
     <Compile Include="Data\DatabaseSchematic.cs" />
@@ -109,7 +109,6 @@
     <Compile Include="Exceptions\SqlReferenceConstraintException.cs" />
     <Compile Include="Exceptions\SqlSaveException.cs" />
     <Compile Include="Exceptions\ViewException.cs" />
-    <Compile Include="Data\PeekDataReader.cs" />
     <Compile Include="DbSqlContext.cs" />
     <Compile Include="Expressions\IExpressionQuery.cs" />
     <Compile Include="Expressions\IExpressionQueryResolvable.cs" />

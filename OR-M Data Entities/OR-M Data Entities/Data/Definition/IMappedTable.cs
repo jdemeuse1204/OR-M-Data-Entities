@@ -19,8 +19,6 @@ namespace OR_M_Data_Entities.Data.Definition
 
         ITable Table { get; }
 
-        bool IsAutoLoad { get; }
-
         // all selected columns
         HashSet<ISelectedColumn> SelectedColumns { get; }
 
