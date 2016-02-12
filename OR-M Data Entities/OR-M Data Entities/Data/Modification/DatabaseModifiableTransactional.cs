@@ -623,9 +623,7 @@ IF @@TRANCOUNT > 0
             } while (Reader.NextResult()); // go to next result
 
             // close reader and connection
-            Connection.Close();
-            Reader.Close();
-            Reader.Dispose();
+            Disconnect();
 
             return result;
         } 
@@ -683,9 +681,7 @@ IF @@TRANCOUNT > 0
             } while (Reader.NextResult()); // go to next result
 
             // close reader and connection
-            Connection.Close();
-            Reader.Close();
-            Reader.Dispose();
+            Disconnect();
 
             // handle concurrency violations
             if (OnConcurrencyViolation == null) return;

@@ -58,10 +58,10 @@
     <Compile Include="Data\Definition\IMappedColumn.cs" />
     <Compile Include="Data\Definition\IMappedTable.cs" />
     <Compile Include="Data\Definition\IModificationEntity.cs" />
+    <Compile Include="Data\Definition\IPeekDataReader.cs" />
     <Compile Include="Data\Definition\IQuerySchematic.cs" />
     <Compile Include="Data\Definition\ITable.cs" />
     <Compile Include="Data\Definition\ITableRelationship.cs" />
-    <Compile Include="Data\Definition\JoinColumnPair.cs" />
     <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
     <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
     <Compile Include="Data\Definition\Rules\IsConfigurationValidRule.cs" />
@@ -98,7 +98,6 @@
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\DatabaseConnection.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
-    <Compile Include="Data\DatabaseReading.cs" />
     <Compile Include="Data\DatabaseFetching.cs" />
     <Compile Include="Data\DatabaseModifiable.cs" />
     <Compile Include="Data\DataReader.cs" />
@@ -117,7 +116,6 @@
     <Compile Include="Expressions\Resolution\ExpressionQueryResolver.cs" />
     <Compile Include="Extensions\ExpressionQueryExtensions.cs" />
     <Compile Include="Extensions\Extension.cs" />
-    <Compile Include="Extensions\SqlCommandExtensions.cs" />
     <Compile Include="Mapping\Base\AutoLoadKey.cs" />
     <Compile Include="Mapping\Base\NonSelectable.cs" />
     <Compile Include="Mapping\Base\SearchablePrimaryKey.cs" />

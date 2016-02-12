@@ -6,16 +6,12 @@
  * Copyright (c) 2014 James Demeuse
  */
 
-using System;
-using System.Collections.Generic;
 using System.Reflection;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
     public interface IEntity : ITable
     {
-        List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId);
-
         object GetPropertyValue(PropertyInfo property);
 
         object GetPropertyValue(string propertyName);

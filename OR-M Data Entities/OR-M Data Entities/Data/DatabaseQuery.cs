@@ -34,7 +34,6 @@ namespace OR_M_Data_Entities.Data
             : base(connectionStringOrName)
         {
             _schematicManager = new QuerySchematicManager();
-            OnDisposing += _dispose;
         }
         #endregion
 
@@ -83,9 +82,10 @@ namespace OR_M_Data_Entities.Data
 
         #region Methods
 
-        private void _dispose()
+        public override void Dispose()
         {
             _schematicManager = null;
+            base.Dispose();
         }
 
         #endregion
@@ -139,47 +139,62 @@ namespace OR_M_Data_Entities.Data
 
                 for (var i = 0; i < tables.Count; i++)
                 {
-                    var parentMappedTable = tables[i];
-                    var autoLoadProperties = parentMappedTable.Table.AutoLoadKeyRelationships;
+                    var currentMappedTable = tables[i];
+                    var autoLoadProperties = currentMappedTable.Table.AutoLoadKeyRelationships;
 
-                    if (i > 0 && autoLoadProperties.Any())
-                    {
-                        currentDataLoadSchematic = _findDataLoadSchematic(baseDataLoadSchematic, currentDataLoadSchematic, parentMappedTable.Table.Type, parentMappedTable.Key);
-                    }
+                    // tables cannot have the same alias, we are ok to match on alias only
+                    var parentOfCurrent = i == 0
+                        ? null
+                        : tables.FirstOrDefault(w => w.Alias == currentMappedTable.Alias);
 
-                    foreach (var property in autoLoadProperties)
+                    foreach (var autoLoadRelationship in autoLoadProperties)
                     {
                         var nextAlias = string.Format(aliasString, tables.Count);
-                        var currentMappedtable = _mappedTables.FirstOrDefault(w => w.Key == property.ParentColumn.PropertyName);
+                        var currentMappedtable = _mappedTables.FirstOrDefault(w => w.Key == autoLoadRelationship.ParentColumn.PropertyName);
 
                         if (currentMappedtable == null)
                         {
-                            currentMappedtable = new MappedTable(Tables.Find(property.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration), nextAlias, property.AutoLoadPropertyColumn.PropertyName, true);
+                            currentMappedtable = new MappedTable(Tables.Find(autoLoadRelationship.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(), configuration), nextAlias, autoLoadRelationship.AutoLoadPropertyColumn.PropertyName, true);
 
                             _mappedTables.Add(currentMappedtable);
                         }
 
+                        if (i > 0 && autoLoadProperties.Any())
+                        {
+                            if (parentOfCurrent == null)
+                            {
+                                throw new Exception(string.Format("Failed to find parent table when creating table read schematic.  Table - {0}", currentMappedTable.Table.DatabaseName));
+                            }
+
+                            currentDataLoadSchematic = _findDataLoadSchematic(
+                                baseDataLoadSchematic,
+                                currentDataLoadSchematic,
+                                autoLoadRelationship.ChildColumn.Table.Type,
+                                parentOfCurrent.Key,
+                                parentOfCurrent.Alias);
+                        }
+
                         currentDataLoadSchematic.Children.Add(new DataLoadSchematic(currentMappedtable.Table.Type,
-                            property.AutoLoadPropertyColumn.PropertyType,
+                            autoLoadRelationship.AutoLoadPropertyColumn.PropertyType,
                             currentMappedtable,
                             currentMappedtable.Key));
 
                         tables.Add(currentMappedtable);
 
-                        _processMappedTable(currentMappedtable, parentMappedTable, property.AutoLoadPropertyColumn);
+                        _processMappedTable(currentMappedtable, currentMappedTable, autoLoadRelationship.AutoLoadPropertyColumn);
                     }
                 }
 
-                return new QuerySchematic(from.Type, tables, currentDataLoadSchematic);
+                return new QuerySchematic(from.Type, tables, baseDataLoadSchematic);
             }
 
             private IDataLoadSchematic _findDataLoadSchematic(IDataLoadSchematic beginningSchematic, IDataLoadSchematic currentSchematic,
-                Type type, string parentJoinPropertyName)
+                Type childTableType, string parentJoinPropertyName, string parentTableAlias)
             {
                 var firstSearch =
                        currentSchematic.Children.FirstOrDefault(
                            w =>
-                               w.Type == type &&
+                               w.Type == childTableType &&
                                w.PropertyName == parentJoinPropertyName);
 
                 if (firstSearch != null) return firstSearch;
@@ -192,13 +207,14 @@ namespace OR_M_Data_Entities.Data
                 for (var i = 0; i < schematicsToSearch.Count; i++)
                 {
                     var schematic = schematicsToSearch[i];
-
-                    if (schematic.PropertyName == parentJoinPropertyName) return schematic;
+                
+                    // auto load key columns could technically have the same name, match on parent table too
+                    if (schematic.PropertyName == parentJoinPropertyName && schematic.MappedTable.Alias == parentTableAlias) return schematic;
 
                     schematicsToSearch.AddRange(schematic.Children);
                 }
 
-                throw new Exception(string.Format("Cannot find foreign key instance of by name.  NAME: {0}, TYPE: {1}", parentJoinPropertyName, type.Name));
+                throw new Exception(string.Format("Cannot find foreign key instance of by name.  NAME: {0}, TYPE: {1}", parentJoinPropertyName, childTableType.Name));
             }
 
             private void _processMappedTable(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column)
@@ -285,7 +301,9 @@ namespace OR_M_Data_Entities.Data
 
                 public bool AreForeignKeysSelected()
                 {
-                    throw new NotImplementedException();
+                    var autoLoadTable = MappedTables.FirstOrDefault(w => w.IsAutoLoad);
+
+                    return autoLoadTable != null && autoLoadTable.SelectedColumns.Any();
                 }
             }
 
@@ -441,13 +459,15 @@ namespace OR_M_Data_Entities.Data
 
                 public int SelectAll(int startingOrdinal)
                 {
-                    foreach (var column in Table.Columns.Where(w => w.IsSelectable))
+                    var selectableColumns = Table.Columns.Where(w => w.IsSelectable).ToList();
+
+                    foreach (var column in selectableColumns)
                     {
                         _addSelectColumn(column, startingOrdinal);
                         startingOrdinal++;
                     }
 
-                    return Table.Columns.Count();
+                    return selectableColumns.Count;
                 }
 
                 public void OrderByPrimaryKeys()
@@ -1042,7 +1062,7 @@ namespace OR_M_Data_Entities.Data
                     .Select(w => w.Relationships)
                     .Aggregate("",
                         (current1, table) =>
-                            table.Aggregate(current1, (current, relationship) =>  string.Concat(current,relationship.Sql,"\r")));
+                            table.Aggregate(current1, (current, relationship) => string.Concat(current, relationship.Sql, "\r")));
             }
         }
 

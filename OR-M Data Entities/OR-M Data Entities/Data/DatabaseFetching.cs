@@ -15,7 +15,7 @@ namespace OR_M_Data_Entities.Data
     /// <summary>
     /// All data reading methods in this class do not require a READ before data can be retreived
     /// </summary>
-    public abstract class DatabaseFetching : DatabaseReading
+    public abstract class DatabaseFetching : DatabaseQuery
     {
         #region Constructor
         protected DatabaseFetching(string connectionStringOrName)
@@ -42,16 +42,12 @@ namespace OR_M_Data_Entities.Data
                     keyContainer.Add(rec.GetName(i), rec.GetValue(i));
                 }
 
-                Connection.Close();
-                Reader.Close();
-                Reader.Dispose();
+                Disconnect();
 
                 return keyContainer;
             }
 
-            Connection.Close();
-            Reader.Close();
-            Reader.Dispose();
+            Disconnect();
 
             return new OutputContainer();
         }

@@ -9,13 +9,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Data
 {
 	public class DataReader<T> : IEnumerable, IDisposable
     {
         #region Properties and Fields
-        private readonly PeekDataReader _reader;
+        private readonly IPeekDataReader _reader;
 
         public bool HasRows 
         {
@@ -24,7 +25,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        public DataReader(PeekDataReader reader)
+        public DataReader(IPeekDataReader reader)
 		{
 			_reader = reader;
 		}

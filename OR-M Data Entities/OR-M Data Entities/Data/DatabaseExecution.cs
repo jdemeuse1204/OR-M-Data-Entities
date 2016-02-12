@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -31,76 +30,6 @@ namespace OR_M_Data_Entities.Data
             
         }
         #endregion
-
-        private void _addParameters(IEnumerable<SqlDbParameter> parameters)
-        {
-            foreach (var item in parameters)
-            {
-                Command.Parameters.Add(Command.CreateParameter()).ParameterName = item.Name;
-                Command.Parameters[item.Name].Value = item.Value;
-            }
-        }
-
-        protected void ExecuteReader(string sql)
-        {
-            ExecuteReader(sql, new List<SqlDbParameter>());
-        }
-
-        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
-        {
-            TryDisposeCloseReader();
-
-            Connect();
-
-            Command = new SqlCommand(sql, Connection);
-
-            _addParameters(parameters);
-
-            Reader = Command.ExecuteReaderWithPeeking(Connection, schematic);
-        }
-
-        /// <summary>
-        /// Execute the SqlBuilder on the database
-        /// </summary>
-        /// <param name="builder"></param>
-        protected void ExecuteReader(ISqlExecutionPlan builder)
-        {
-            TryDisposeCloseReader();
-
-            Connect();
-
-            Command = builder.BuildSqlCommand(Connection);
-
-            Reader = Command.ExecuteReaderWithPeeking(Connection);
-        }
-
-        /// <summary>
-        /// Execute the SqlBuilder on the database
-        /// </summary>
-        /// <param name="builder"></param>
-        protected void ExecuteReaderAsTransaction(ISqlExecutionPlan builder)
-        {
-            TryDisposeCloseReader();
-
-            Connect();
-
-            Command = builder.BuildSqlCommand(Connection);
-
-            Reader = Command.ExecuteReaderWithPeeking(Connection);
-        }
-
-        //protected void ExecuteReader(IExpressionQueryResolvable query)
-        //{
-        //    TryDisposeCloseReader();
-
-        //    Connect();
-
-        //    Command = new SqlCommand(query.Sql, Connection);
-
-        //    _addParameters(query.Parameters);
-
-        //    Reader = Command.ExecuteReaderWithPeeking(Connection, new SqlPayload(query));
-        //}
 
         #region Query Execution
         public DataReader<T> ExecuteQuery<T>(string sql)
@@ -130,23 +59,11 @@ namespace OR_M_Data_Entities.Data
         }
 
 
-        //public DataReader<T> ExecuteQuery<T>(IExpressionQuery<T> query)
-        //{
-        //    var resolvableQuery = (IExpressionQueryResolvable)query;
-
-        //    // execute query
-        //    resolvableQuery.ResolveExpression();
-
-        //    ExecuteReader(resolvableQuery);
-
-        //    return new DataReader<T>(Reader);
-        //}
-
         public void ExecuteQuery(string sql, List<SqlDbParameter> parameters)
         {
             ExecuteReader(sql, parameters);
 
-            Dispose();
+            Disconnect();
         }
 
         public void ExecuteQuery(string sql, params SqlDbParameter[] parameters)
@@ -201,7 +118,7 @@ namespace OR_M_Data_Entities.Data
 
             ExecuteQuery(package.Key, package.Value);
 
-            Dispose();
+            Disconnect();
         }
 
 
@@ -211,7 +128,7 @@ namespace OR_M_Data_Entities.Data
 
             ExecuteQuery(package.Key, package.Value);
 
-            Dispose();
+            Disconnect();
         }
 
         private void _executeScript(StoredScript script)
@@ -220,7 +137,7 @@ namespace OR_M_Data_Entities.Data
 
             ExecuteQuery(package.Key, package.Value);
 
-            Dispose();
+            Disconnect();
         }
 
         private KeyValuePair<string, List<SqlDbParameter>> _getCustomScriptParametersAndSql(CustomScript script)

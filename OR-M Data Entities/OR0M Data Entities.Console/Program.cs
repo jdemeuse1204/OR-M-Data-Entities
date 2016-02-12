@@ -69,7 +69,17 @@ namespace OR0M_Data_Entities.Console
 
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
+            var s = DateTime.Now;
             var sdgf = context.From<Contact>().First(w => w.ContactID == 100);
+            var e = DateTime.Now;
+
+            System.Console.WriteLine((e-s).Milliseconds);
+
+            if (sdgf != null)
+            {
+                sdgf.Appointments = null;
+            }
+
             var c1 = context.Find<Contact>(1);
 
             //c1.FirstName = "WINing!";

@@ -43,7 +43,6 @@ namespace OR_M_Data_Entities.Data
             : base(connectionStringOrName)
         {
             Tables = new TableCache();
-            OnDisposing += _dispose;
         }
 
         #endregion
@@ -218,15 +217,19 @@ namespace OR_M_Data_Entities.Data
             _tableScriptMappings.Add(new KeyValuePair<Type, Type>(typeof(T), typeof(TK)));
         }
 
-        private void _dispose()
+        public override void Dispose()
         {
             Tables = null;
             _tableScriptMappings = null;
+            base.Dispose();
         }
         #endregion
     }
 
-    // all helpers go in here
+    /// <summary>
+    /// Partial to hide actual implementation from user.  User does not need any of these
+    /// classes, they are only used in this class
+    /// </summary>
     public abstract partial class DatabaseSchematic
     {
         protected class TableCache
@@ -875,11 +878,6 @@ namespace OR_M_Data_Entities.Data
             {
                 return typeof(EntityStateTrackable).GetField("_pristineEntity",
                     BindingFlags.Instance | BindingFlags.NonPublic);
-            }
-
-            public List<JoinColumnPair> GetAllForeignKeysAndPseudoKeys(Guid expressionQueryId, string viewId)
-            {
-                throw new NotImplementedException();
             }
 
             public object GetPropertyValue(PropertyInfo property)
