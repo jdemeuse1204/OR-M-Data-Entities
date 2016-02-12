@@ -71,17 +71,15 @@ namespace OR0M_Data_Entities.Console
 
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
-            var s = DateTime.Now;
-            var sdgf = context.From<Contact>()
-                .IncludeAll()
-                .First(w => w.ContactID == 100);
-            var e = DateTime.Now;
-
-            System.Console.WriteLine((e-s).Milliseconds);
-
-            if (sdgf != null)
+            for (int i = 0; i < 20; i++)
             {
-                sdgf.Appointments = null;
+                var s = DateTime.Now;
+                var sdgf = context.From<Contact>()
+                    .IncludeAll()
+                    .First(w => w.ContactID == 100);
+                var e = DateTime.Now;
+
+                System.Console.WriteLine((e - s).Milliseconds);
             }
 
             var c1 = context.Find<Contact>(1);
