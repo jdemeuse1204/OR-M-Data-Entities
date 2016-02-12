@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using ORSigningPro.Common.Data;
@@ -15,39 +16,17 @@ namespace OR0M_Data_Entities.Console
     {
         static void Main(string[] args)
         {
-            var context = new ORSigningProContext();
+            var context = new DbSqlContext("sqlExpress");
 
-            var closing = context.From<MobileClosing>().ToList();
-
-            closing[0].CustomerName = "";
-
-            context.SaveChanges(closing);
-
-            if (closing != null)
+            for (int i = 0; i < 20; i++)
             {
-                
+                var s = DateTime.Now;
+                var sdgf = context.From<Contact>()
+                    .First(w => w.ContactID == 100);
+                var e = DateTime.Now;
+
+                System.Console.WriteLine((e - s).Milliseconds);
             }
-
-            var contacts = context.From<Contact>().ToList();
-
-            if (contacts != null)
-            {
-                
-            }
-
-            //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
-            //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
-            //if (test != null)
-            //{
-
-            //}
-
-            //foreach (var health in tests)
-            //{
-
-            //}
-
-            // after save, need to update the _tableOnLoad to match
 
             var items = context.From<Contact>();
 
