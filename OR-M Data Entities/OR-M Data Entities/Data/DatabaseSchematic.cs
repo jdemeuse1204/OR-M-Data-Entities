@@ -573,19 +573,11 @@ namespace OR_M_Data_Entities.Data
 
             private List<PropertyInfo> _allForeignAndPseudoKeys;
 
-            public List<PropertyInfo> GetAllForeignAndPseudoKeys(string viewId = null)
+            public List<PropertyInfo> GetAllForeignAndPseudoKeys()
             {
                 if (_allForeignAndPseudoKeys != null) return _allForeignAndPseudoKeys;
 
-                _allForeignAndPseudoKeys = string.IsNullOrWhiteSpace(viewId)
-                    ? AllProperties.Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null)
-                        .ToList()
-                    : AllProperties
-                        .Where(
-                            w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null &&
-                                 w.GetPropertyType().GetCustomAttribute<ViewAttribute>() != null &&
-                                 w.GetPropertyType().GetCustomAttribute<ViewAttribute>().ViewIds.Contains(viewId))
-                        .ToList();
+                _allForeignAndPseudoKeys = AllProperties.Where(w => w.GetCustomAttribute<AutoLoadKeyAttribute>() != null).ToList();
 
                 return _allForeignAndPseudoKeys;
             }

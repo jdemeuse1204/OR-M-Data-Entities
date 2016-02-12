@@ -61,7 +61,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         List<PropertyInfo> GetAllProperties();
 
-        List<PropertyInfo> GetAllForeignAndPseudoKeys(string viewId = null);
+        List<PropertyInfo> GetAllForeignAndPseudoKeys();
 
         string GetColumnName(string propertyName);
 
