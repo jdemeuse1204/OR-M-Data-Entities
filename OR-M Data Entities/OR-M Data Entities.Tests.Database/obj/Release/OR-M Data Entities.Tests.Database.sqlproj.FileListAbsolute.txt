@@ -5,3 +5,8 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\obj\Release\predeploy.sql
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\obj\Release\OR_M_Data_Entities.Tests.Database.dll
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\obj\Release\OR_M_Data_Entities.Tests.Database.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\bin\Release\OR-M Data Entities.Tests.Database.dacpac
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\obj\Release\OR_M_Data_Entities.Tests.Database.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\obj\Release\OR_M_Data_Entities.Tests.Database.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\bin\Release\OR_M_Data_Entities.Tests.Database.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database\bin\Release\OR_M_Data_Entities.Tests.Database.pdb

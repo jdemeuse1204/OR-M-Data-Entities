@@ -1,0 +1,78 @@
+﻿** Highlights
+     Tables that will be rebuilt
+       None
+     Clustered indexes that will be dropped
+       None
+     Clustered indexes that will be created
+       None
+     Possible data issues
+       None
+
+** User actions
+     Create
+       [dbo].[Address] (Table)
+       [dbo].[Agent] (Table)
+       [dbo].[Album] (Table)
+       [dbo].[Appointments] (Table)
+       [dbo].[Artist] (Table)
+       [dbo].[Car] (Table)
+       [dbo].[Child] (Table)
+       [dbo].[Computer] (Table)
+       [dbo].[Contacts] (Table)
+       [dbo].[Crust] (Table)
+       [dbo].[DeliveryMan] (Table)
+       [dbo].[History] (Table)
+       [dbo].[Linking] (Table)
+       [dbo].[Name] (Table)
+       [dbo].[Parent] (Table)
+       [dbo].[Person] (Table)
+       [dbo].[PhoneNumbers] (Table)
+       [dbo].[PhoneType] (Table)
+       [dbo].[Pizza] (Table)
+       [dbo].[Policy] (Table)
+       [dbo].[PolicyInfo] (Table)
+       [dbo].[PolicyType] (Table)
+       [dbo].[Processor] (Table)
+       [dbo].[RecordLabel] (Table)
+       [dbo].[SchemaChangeOne] (Table)
+       [dbo].[StateCode] (Table)
+       [dbo].[TestDbGenerationOptionNone] (Table)
+       [dbo].[TestDefaultInsert] (Table)
+       [dbo].[TestTryInsert] (Table)
+       [dbo].[TestUpdateWithKeyDbGenerationOptionNone] (Table)
+       [dbo].[Topping] (Table)
+       [dbo].[TryInsert] (Table)
+       [dbo].[TryInsertWithGeneration] (Table)
+       [dbo].[User] (Table)
+       [dbo].[ZipCode] (Table)
+       [dbo].[DF_Appointments_IsScheduled] (Default Constraint)
+       [dbo].[DF_Contacts_PhoneID] (Default Constraint)
+       [dbo].[DF_Contacts_CreatedByUserID] (Default Constraint)
+       [dbo].[DF_Contacts_EditedByUserID] (Default Constraint)
+       [dbo].[DF_Contacts_Test] (Default Constraint)
+       [dbo].[DF_Contacts_TestUnique] (Default Constraint)
+       [dbo].[DF_PhoneNumbers_PhoneTypeID] (Default Constraint)
+       [dbo].[DF_Pizza_ToppingId] (Default Constraint)
+       Default Constraint: unnamed constraint on [dbo].[TestDefaultInsert] (Default Constraint)
+       [dbo].[FK_Address_Appointments] (Foreign Key)
+       [dbo].[FK_Address_StateCode] (Foreign Key)
+       [dbo].[FK_Album_ArtistId] (Foreign Key)
+       [dbo].[FK_Appointments_Contacts] (Foreign Key)
+       [dbo].[FK_Contacts_Table_1] (Foreign Key)
+       [dbo].[FK_Artist_RecordLabelId] (Foreign Key)
+       [dbo].[FK_Artist_AgentId] (Foreign Key)
+       [dbo].[FK_Comuputer_ProcessorId] (Foreign Key)
+       [dbo].[FK_Contacts_PhoneNumbers] (Foreign Key)
+       [dbo].[FK_Crust_ToppingId] (Foreign Key)
+       [dbo].[FK_History_ComputerId] (Foreign Key)
+       [dbo].[FK_Name_Contacts] (Foreign Key)
+       [dbo].[FK_DeliveryMan_DeliveryManId] (Foreign Key)
+       [dbo].[FK_Pizza_CrustId] (Foreign Key)
+       [dbo].[FK_Topping_ToppingId] (Foreign Key)
+       [dbo].[FK_ZipCode_Address] (Foreign Key)
+       [dbo].[GetLastName] (Function)
+       [dbo].[GetLastName2] (Function)
+       [dbo].[GetFirstName] (Procedure)
+       [dbo].[UpdateFirstName] (Procedure)
+
+** Supporting actions

@@ -17,10 +17,10 @@ namespace OR_M_Data_Entities.Data.Definition
 
         EntityState State { get; }
 
-        IReadOnlyList<ModificationItem> Changes();
+        IReadOnlyList<IModificationItem> Changes();
 
-        IReadOnlyList<ModificationItem> Keys();
+        IReadOnlyList<IModificationItem> Keys();
 
-        IReadOnlyList<ModificationItem> All();
+        IReadOnlyList<IModificationItem> All();
     }
 }

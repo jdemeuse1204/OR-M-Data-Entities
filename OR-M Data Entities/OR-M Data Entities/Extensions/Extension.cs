@@ -141,21 +141,11 @@ namespace OR_M_Data_Entities
                 null);
         }
 
-        public static Type GetTypeListCheck(this object o)
+        public static Type GetUnderlyingType(this object o)
         {
             return o.IsList()
                 ? o.GetType().GetGenericArguments()[0]
                 : o.GetType();
-        }
-    }
-
-    public static class NumberExtensions
-    {
-        public static bool IsNumeric(this object o)
-        {
-            var result = 0L;
-
-            return long.TryParse(o.ToString(), out result);
         }
     }
 
@@ -165,10 +155,7 @@ namespace OR_M_Data_Entities
         {
             var pos = text.IndexOf(search, StringComparison.Ordinal);
 
-            if (pos < 0)
-            {
-                return text;
-            }
+            if (pos < 0) return text;
 
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }

@@ -120,7 +120,7 @@ namespace OR_M_Data_Entities.Data
                 var oneToManyParent = this[index];
                 var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
                 var oneToOneParentProperty = association.ChildType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
-                var oneToOneChildProperty = association.ParentType.GetPrimaryKeys()[0];
+                var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ParentType)[0];
 
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
@@ -137,7 +137,7 @@ namespace OR_M_Data_Entities.Data
                 var parent = this[oneToOneIndex];
                 var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
                 var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
-                var oneToOneChildProperty = association.ChildType.GetPrimaryKeys()[0];
+                var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ChildType)[0];
 
                 parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
@@ -178,9 +178,9 @@ namespace OR_M_Data_Entities.Data
             public Link(PropertyInfo parentProperty, PropertyInfo childProperty)
             {
                 ParentPropertyName = parentProperty.Name;
-                ParentColumnName = parentProperty.GetColumnName();
+                ParentColumnName = Table.GetColumnName(parentProperty);
                 ChildPropertyName = childProperty.Name;
-                ChildColumnName = childProperty.GetColumnName();
+                ChildColumnName = Table.GetColumnName(childProperty);
             }
 
             public readonly string ParentPropertyName;
@@ -301,7 +301,7 @@ namespace OR_M_Data_Entities.Data
                         {
                             case ReadOnlySaveOption.ThrowException:
                                 // Check for readonly attribute and see if we should throw an error
-                                throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.GetTableName()));
+                                throw new SqlSaveException(string.Format("Table Is ReadOnly.  Table: {0}.  Change ReadOnlySaveOption to Skip if you wish to skip this table and its foreign keys", tableInfo.PlainTableName));
                             case ReadOnlySaveOption.Skip:
                                 // skip children(foreign keys) if option is set 
                                 continue;
@@ -480,14 +480,14 @@ namespace OR_M_Data_Entities.Data
 
             public Type ParentType
             {
-                get { return Parent == null ? null : Parent.GetTypeListCheck(); }
+                get { return Parent == null ? null : Parent.GetUnderlyingType(); }
             }
 
             public object Value { get; private set; }
 
             public Type ChildType
             {
-                get { return Value == null ? null : Value.GetTypeListCheck(); }
+                get { return Value == null ? null : Value.GetUnderlyingType(); }
             }
         }
 
@@ -516,23 +516,33 @@ namespace OR_M_Data_Entities.Data
                 return string.Format("@DATA{0}", _parameters.Count);
             }
 
-            protected string AddParameter(ModificationItem item, object value)
+            protected string AddParameter(IModificationItem item, object value)
             {
                 return _addParameter(item, value, false);
             }
 
-            protected string AddPristineParameter(ModificationItem item, object value)
+            protected string AddPristineParameter(IModificationItem item, object value)
             {
                 return _addParameter(item, value, true);
             }
 
-            private string _addParameter(ModificationItem item, object value, bool addPristineParameter)
+            private string _addParameter(IModificationItem item, object value, bool addPristineParameter)
             {
                 var parameterKey = _getNextKey();
 
                 _parameters.Add(new SqlSecureQueryParameter
                 {
-                    Key = parameterKey, DbColumnName = addPristineParameter ? string.Format("Pristine{0}", item.DatabaseColumnName) : item.DatabaseColumnName, TableName = item.GetTableName(), ForeignKeyPropertyName = item.GetTableName(), Value = item.TranslateDataType ? new SqlSecureObject(value, item.DbTranslationType) : new SqlSecureObject(value)
+                    Key = parameterKey,
+                    DbColumnName =
+                        addPristineParameter
+                            ? string.Format("Pristine{0}", item.DatabaseColumnName)
+                            : item.DatabaseColumnName,
+                    TableName = item.ToString(),
+                    ForeignKeyPropertyName = item.GetTableName(),
+                    Value =
+                        item.TranslateDataType
+                            ? new SqlSecureObject(value, item.DbTranslationType)
+                            : new SqlSecureObject(value)
                 });
 
                 return parameterKey;

@@ -79,7 +79,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
-            public void AddField(ModificationItem item)
+            public void AddField(IModificationItem item)
             {
                 _fields = string.Concat(_fields, item.AsField(","));
             }
@@ -94,13 +94,13 @@ namespace OR_M_Data_Entities.Data
                 _declare = string.Concat(_declare, string.Format("DECLARE {0} as {1};\r", parameterKey, sqlDataType));
             }
 
-            public void AddOutput(ModificationItem item)
+            public void AddOutput(IModificationItem item)
             {
                 _output = string.Concat(_output, item.AsOutput(","));
                 _outputColumnsOnly = string.Concat(_outputColumnsOnly, item.AsFieldPropertyName(","));
             }
 
-            public void AddSet(ModificationItem item, out string key)
+            public void AddSet(IModificationItem item, out string key)
             {
                 key = string.Format("@{0}", item.PropertyName);
 
@@ -167,22 +167,22 @@ namespace OR_M_Data_Entities.Data
                 Output = string.Format("[INSERTED].[{0}]", keys.First().GetColumnName());
             }
 
-            public void AddOutput(ModificationItem item)
+            public void AddOutput(IModificationItem item)
             {
                 Output = string.Concat(Output, string.Format(",[INSERTED].[{0}]", item.DatabaseColumnName));
             }
 
-            public void AddUpdate(ModificationItem item, string parameterKey)
+            public void AddUpdate(IModificationItem item, string parameterKey)
             {
                 SetItems = string.Concat(SetItems, string.Format("[{0}] = {1},", item.DatabaseColumnName, parameterKey));
             }
 
-            public void AddWhere(ModificationItem item, string parameterKey)
+            public void AddWhere(IModificationItem item, string parameterKey)
             {
                 Where = string.Concat(Where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
             }
 
-            public void AddNullWhere(ModificationItem item)
+            public void AddNullWhere(IModificationItem item)
             {
                 Where = string.Concat(Where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
             }
@@ -218,7 +218,7 @@ namespace OR_M_Data_Entities.Data
                 : base(entity)
             {
                 Output = entity.GetPrimaryKeys()
-                    .Select(w => w.GetColumnName())
+                    .Select(w => Table.GetColumnName(w)
                     .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
                     .TrimEnd(',');
                 
@@ -226,12 +226,12 @@ namespace OR_M_Data_Entities.Data
                 Statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
             }
 
-            public void AddWhere(ModificationItem item, string parameterKey)
+            public void AddWhere(IModificationItem item, string parameterKey)
             {
                 Where = string.Concat(Where, string.Format("{0}[{1}] = {2}", _getWherePrefix(), item.DatabaseColumnName, parameterKey));
             }
 
-            public void AddNullWhere(ModificationItem item)
+            public void AddNullWhere(IModificationItem item)
             {
                 Where = string.Concat(Where, string.Format("{0}[{1}] IS NULL", _getWherePrefix(), item.DatabaseColumnName));
             }
@@ -383,7 +383,7 @@ namespace OR_M_Data_Entities.Data
                 _initialize(plan, exists, notExists);
             }
 
-            private void _addWhere(ModificationItem item, string parameterKey)
+            private void _addWhere(IModificationItem item, string parameterKey)
             {
                 var wherePrefix = string.IsNullOrEmpty(_where) ? string.Empty : " AND ";
                 _where = string.Concat(_where, string.Format("{0}[{1}] = {2}", wherePrefix, item.DatabaseColumnName, parameterKey));
@@ -458,7 +458,7 @@ ELSE
                 return new InsertContainer(Entity);
             }
 
-            protected virtual void AddDbGenerationOptionNone(ISqlContainer container, ModificationItem item)
+            protected virtual void AddDbGenerationOptionNone(ISqlContainer container, IModificationItem item)
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
@@ -475,7 +475,7 @@ ELSE
                 ((InsertContainer)container).AddOutput(item);
             }
 
-            protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
+            protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
             {
                 // key from the set method
                 string key;
@@ -487,7 +487,7 @@ ELSE
                 ((InsertContainer)container).AddOutput(item);
             }
 
-            protected virtual void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
+            protected virtual void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, IModificationItem item)
             {
                 ((InsertContainer)container).AddOutput(item);
             }
@@ -542,7 +542,7 @@ ELSE
                 return new UpdateContainer(Entity);
             }
 
-            protected virtual void AddUpdate(ISqlContainer container, ModificationItem item)
+            protected virtual void AddUpdate(ISqlContainer container, IModificationItem item)
             {
                 // These instances cannot be updated, we should read them back and insert the original value into the entity
                 if (item.Generation == DbGenerationOption.IdentitySpecification || item.DbTranslationType == SqlDbType.Timestamp)
@@ -559,7 +559,7 @@ ELSE
                 ((UpdateContainer)container).AddUpdate(item, parameter);
             }
 
-            protected virtual void AddWhere(ISqlContainer container, ModificationItem item)
+            protected virtual void AddWhere(ISqlContainer container, IModificationItem item)
             {
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);
@@ -644,7 +644,7 @@ ELSE
                 return new DeleteContainer(Entity);
             }
 
-            protected virtual void AddWhere(ISqlContainer container, ModificationItem item)
+            protected virtual void AddWhere(ISqlContainer container, IModificationItem item)
             {
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);

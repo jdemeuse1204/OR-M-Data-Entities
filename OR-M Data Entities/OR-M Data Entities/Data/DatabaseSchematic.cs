@@ -116,7 +116,7 @@ namespace OR_M_Data_Entities.Data
             public void Process()
             {
                 var primaryKeys = ReflectionCacheTable.GetPrimaryKeys(_entity.GetType());
-                var plainTableName = _entity.GetTableName();
+                var plainTableName = Table.GetTableName(_entity);
                 var entityType = _entity.GetType();
                 var linkedServerAttribute = entityType.GetCustomAttribute<LinkedServerAttribute>();
                 var schemaAttribute = entityType.GetCustomAttribute<SchemaAttribute>();
@@ -533,6 +533,13 @@ namespace OR_M_Data_Entities.Data
                 return _getPrimaryKeys(type.Name, type.GetProperties().ToList());
             }
 
+            public static List<PropertyInfo> GetPrimaryKeys(object entity)
+            {
+                var type = entity.GetUnderlyingType();
+
+                return GetPrimaryKeys(type);
+            }
+
             private static List<PropertyInfo> _getPrimaryKeys(string className, List<PropertyInfo> propertyInfos)
             {
                 var keyList = propertyInfos.Where(IsPrimaryKey).ToList();
@@ -683,7 +690,7 @@ namespace OR_M_Data_Entities.Data
 
             private void _setTableName()
             {
-                _tableNamePlain = Type.GetTableName();
+                _tableNamePlain = Table.GetTableName(Type);
             }
             #endregion
         }
@@ -761,6 +768,22 @@ namespace OR_M_Data_Entities.Data
                 return ReadOnlyAttribute == null ? null : (ReadOnlySaveOption?)ReadOnlyAttribute.ReadOnlySaveOption;
             }
 
+            public static string GetTableName(Type type)
+            {
+                var tableAttribute = type.GetCustomAttribute<TableAttribute>();
+
+                return tableAttribute == null ? type.Name : tableAttribute.Name;
+            }
+
+            public static string GetTableName(object entity)
+            {
+                var type = entity.GetUnderlyingType();
+
+                var tableAttribute = type.GetCustomAttribute<TableAttribute>();
+
+                return tableAttribute == null ? type.Name : tableAttribute.Name;
+            }
+
             public override string ToString()
             {
                 return ToString(TableNameFormat.SqlWithSchema);
@@ -784,7 +807,7 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsPrimaryKey(PropertyInfo property)
             {
-                var columnName = property.GetColumnName().ToUpper();
+                var columnName = GetColumnName(property).ToUpper();
 
                 return columnName == "ID" || property.GetCustomAttribute<KeyAttribute>() != null;
             }
@@ -792,6 +815,17 @@ namespace OR_M_Data_Entities.Data
             public bool IsForeignKey(PropertyInfo property)
             {
                 return property.GetCustomAttribute<ForeignKeyAttribute>() != null;
+            }
+
+            public static List<PropertyInfo> GetForeignKeys(Type type)
+            {
+                return type.GetProperties().Where(w =>
+                    w.GetCustomAttribute<ForeignKeyAttribute>() != null).ToList();
+            }
+
+            public static List<PropertyInfo> GetForeignKeys(object entity)
+            {
+                return GetForeignKeys(entity.GetUnderlyingType());
             }
 
             public bool IsPseudoKey(PropertyInfo property)
@@ -830,9 +864,13 @@ namespace OR_M_Data_Entities.Data
                 var property = properties.FirstOrDefault(w => w.Name == propertyName);
 
                 // property will be in list only if it has a custom attribute
-                if (property == null) return propertyName;
+                return property == null ? propertyName : GetColumnName(property);
+            }
+
+            public static string GetColumnName(PropertyInfo property)
+            {
                 var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
-                return columnAttribute == null ? propertyName : columnAttribute.Name;
+                return columnAttribute == null ? property.Name : columnAttribute.Name;
             }
 
             public static DbGenerationOption GetGenerationOption(PropertyInfo column)
@@ -960,7 +998,7 @@ namespace OR_M_Data_Entities.Data
                 if (parent == null) return;
 
                 var foreignKeyProperty =
-                    parent.GetForeignKeys()
+                    GetForeignKeys(parent)
                         .First(
                             w =>
                                 (w.PropertyType.IsList()
@@ -972,14 +1010,14 @@ namespace OR_M_Data_Entities.Data
 
                 if (foreignKeyProperty.PropertyType.IsList())
                 {
-                    var parentPrimaryKey = parent.GetPrimaryKeys().First();
+                    var parentPrimaryKey = GetPrimaryKeys(parent).First();
                     var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
 
                     _setPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
                 }
                 else
                 {
-                    var childPrimaryKey = child.GetPrimaryKeys().First();
+                    var childPrimaryKey = GetPrimaryKeys(child).First();
                     var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
 
                     _setPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
@@ -1289,6 +1327,105 @@ namespace OR_M_Data_Entities.Data
             {
                 ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
             }
+        }
+
+        public class ModificationItem : IModificationItem
+        {
+            #region Properties
+            public bool IsModified { get; private set; }
+
+            public string SqlDataTypeString { get; private set; }
+
+            public string PropertyDataType { get; private set; }
+
+            public string PropertyName { get; private set; }
+
+            public string DatabaseColumnName { get; private set; }
+
+            public SqlDbType DbTranslationType { get; private set; }
+
+            public bool IsPrimaryKey { get; private set; }
+
+            public DbGenerationOption Generation { get; private set; }
+
+            public bool TranslateDataType { get; private set; }
+
+            public bool NeedsAlias
+            {
+                get { return DatabaseColumnName != PropertyName; }
+            }
+            #endregion
+
+            #region Constructor
+
+            public ModificationItem(PropertyInfo property, bool isModified = true)
+            {
+                PropertyName = property.Name;
+                DatabaseColumnName = Table.GetColumnName(property);
+                IsPrimaryKey = property.IsPrimaryKey();
+                PropertyDataType = property.PropertyType.Name.ToUpper();
+                Generation = IsPrimaryKey
+                    ? property.GetGenerationOption()
+                    : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
+                        ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
+                        : DbGenerationOption.None;
+
+                // set in case entity tracking isnt on
+                IsModified = isModified;
+
+                // check for sql data translation, used mostly for datetime2 inserts and updates
+                var translation = property.GetCustomAttribute<DbTypeAttribute>();
+
+                if (translation != null)
+                {
+                    DbTranslationType = translation.Type;
+                    TranslateDataType = true;
+                }
+
+                // for auto generation
+                switch (property.PropertyType.Name.ToUpper())
+                {
+                    case "INT16":
+                        SqlDataTypeString = "smallint";
+                        break;
+                    case "INT64":
+                        SqlDataTypeString = "bigint";
+                        break;
+                    case "INT32":
+                        SqlDataTypeString = "int";
+                        break;
+                    case "GUID":
+                        SqlDataTypeString = "uniqueidentifier";
+                        break;
+                    case "STRING":
+                        SqlDataTypeString = "varchar(max)";
+                        break;
+                    case "DATETIME":
+                        SqlDataTypeString = "datetime";
+                        break;
+                }
+            }
+
+            #endregion
+
+            #region Methods
+
+            public string AsOutput(string appendToEnd)
+            {
+                return string.Format("[INSERTED].[{0}]{1}{2}", DatabaseColumnName,
+                    NeedsAlias ? string.Format(" as [{0}]", PropertyName) : string.Empty, appendToEnd);
+            }
+
+            public string AsField(string appendToEnd)
+            {
+                return string.Format("[{0}]{1}", DatabaseColumnName, appendToEnd);
+            }
+
+            public string AsFieldPropertyName(string appendToEnd)
+            {
+                return string.Format("[{0}]{1}", PropertyName, appendToEnd);
+            }
+            #endregion
         }
     }
 }

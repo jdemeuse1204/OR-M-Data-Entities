@@ -117,7 +117,7 @@ namespace OR_M_Data_Entities.Data
                 return new SqlPartStatement(sql, declare);
             }
 
-            public void AddTableVariable(ModificationItem item)
+            public void AddTableVariable(IModificationItem item)
             {
                 _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
@@ -129,13 +129,13 @@ namespace OR_M_Data_Entities.Data
 
             private readonly string _tableAlias;
 
-            public TransactionDeleteContainer(ModificationEntity entity, string tableAlias)
+            public TransactionDeleteContainer(IModificationItem entity, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;
             }
 
-            public void AddTableVariable(ModificationItem item)
+            public void AddTableVariable(IModificationItem item)
             {
                 _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
@@ -160,7 +160,7 @@ namespace OR_M_Data_Entities.Data
                 _tableAlias = tableAlias;
             }
 
-            public void AddTableVariable(ModificationItem item)
+            public void AddTableVariable(IModificationItem item)
             {
                 _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
@@ -463,7 +463,7 @@ IF @@TRANCOUNT > 0
                 _reference = reference;
             }
 
-            protected override void AddWhere(ISqlContainer container, ModificationItem item)
+            protected override void AddWhere(ISqlContainer container, IModificationItem item)
             {
                 ((TransactionDeleteContainer)container).AddTableVariable(item);
 
@@ -489,7 +489,7 @@ IF @@TRANCOUNT > 0
                 _tableAliasOverride = tableAliasOverride;
             }
 
-            private ReferenceNode _getReferenceNode(ModificationItem item)
+            private ReferenceNode _getReferenceNode(IModificationItem item)
             {
                 return _reference.References.FirstOrDefault(w => w.Link.ParentColumnName == item.DatabaseColumnName);
             }
@@ -500,7 +500,7 @@ IF @@TRANCOUNT > 0
                     string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
-            protected override void AddDbGenerationOptionNone(ISqlContainer container, ModificationItem item)
+            protected override void AddDbGenerationOptionNone(ISqlContainer container, IModificationItem item)
             {
                 if (item.DbTranslationType == SqlDbType.Timestamp)
                 {
@@ -527,14 +527,14 @@ IF @@TRANCOUNT > 0
                 ((TransactionInsertContainer)container).AddValue(data);
             }
 
-            protected override void AddDbGenerationOptionGenerate(ISqlContainer container, ModificationItem item)
+            protected override void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
             {
                 ((TransactionInsertContainer)container).AddTableVariable(item);
 
                 base.AddDbGenerationOptionGenerate(container, item);
             }
 
-            protected override void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, ModificationItem item)
+            protected override void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, IModificationItem item)
             {
                 ((TransactionInsertContainer)container).AddTableVariable(item);
 
@@ -562,7 +562,7 @@ IF @@TRANCOUNT > 0
                     string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
-            protected override void AddWhere(ISqlContainer container, ModificationItem item)
+            protected override void AddWhere(ISqlContainer container, IModificationItem item)
             {
                 // add the table variable, needed for concurrency checking
                 if (item.IsPrimaryKey) ((TransactionUpdateContainer)container).AddTableVariable(item);
