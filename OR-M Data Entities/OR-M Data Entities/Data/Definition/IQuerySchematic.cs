@@ -28,6 +28,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         bool AreForeignKeysSelected();
 
-        void Clear();
+        void ClearReadCache();
+
+        void Reset();
     }
 }

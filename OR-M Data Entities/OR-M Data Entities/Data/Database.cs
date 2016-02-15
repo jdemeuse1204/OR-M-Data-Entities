@@ -7,6 +7,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
@@ -23,13 +24,13 @@ using OR_M_Data_Entities.Mapping.Base;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract partial class DatabaseConnection : IDisposable
+    public abstract partial class Database : IDisposable
     {
         #region Properties
 
         protected string ConnectionString { get; private set; }
 
-        protected PeekDataReader Reader { get; private set; }
+        protected IPeekDataReader Reader { get; private set; }
 
         protected IConfigurationOptions Configuration { get; private set; }
 
@@ -39,7 +40,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Constructor
-        protected DatabaseConnection(string connectionStringOrName)
+        protected Database(string connectionStringOrName)
         {
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
@@ -163,7 +164,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Execution
-        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
+        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
             _preprocessExecution();
 
@@ -241,10 +242,9 @@ namespace OR_M_Data_Entities.Data
         #endregion
     }
 
-    public abstract partial class DatabaseConnection
+    public abstract partial class Database
     {
-        #region Peek Data Reader
-        public sealed class PeekDataReader : IPeekDataReader
+        private class PeekDataReader : IPeekDataReader
         {
             #region Fields
             private readonly IDataReader _wrappedReader;
@@ -455,7 +455,7 @@ namespace OR_M_Data_Entities.Data
                 // Rows with a PK from the initial object are done loading.  
                 // Clear Schematics, selected columns, and ordered columns
                 // clear is recursive and will clear all children
-                _schematic.Clear();
+                _schematic.ClearReadCache();
 
                 return instance;
             }
@@ -467,7 +467,7 @@ namespace OR_M_Data_Entities.Data
 
             private int[] _getCompositKeyArray(IDataLoadSchematic dataLoadSchematic)
             {
-                return dataLoadSchematic.MappedTable.SelectedColumns.Select(w => w.Ordinal).OrderBy(w => w).ToArray();
+                return dataLoadSchematic.MappedTable.SelectedColumns.Where(w => w.Column.IsPrimaryKey).Select(w => w.Ordinal).OrderBy(w => w).ToArray();
             }
 
             private void _loadObjectWithForeignKeys(object startingInstance)
@@ -824,6 +824,37 @@ namespace OR_M_Data_Entities.Data
             }
             #endregion
         }
-        #endregion
+
+        protected class ParameterCollection : IEnumerable<SqlDbParameter>
+        {
+            private readonly HashSet<SqlDbParameter> _internal;
+
+            public ParameterCollection()
+            {
+                _internal = new HashSet<SqlDbParameter>();
+            }
+
+            public void Add(object value, out string parameterKey)
+            {
+                parameterKey = string.Format("@DATA{0}", _internal.Count);
+
+                _internal.Add(new SqlDbParameter(parameterKey, value));
+            }
+
+            public void AddRange(ParameterCollection collection)
+            {
+                foreach (var parameter in collection) _internal.Add(parameter);
+            }
+
+            public IEnumerator<SqlDbParameter> GetEnumerator()
+            {
+                return _internal.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
     }
 }

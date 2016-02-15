@@ -14,6 +14,10 @@ using OR_M_Data_Entities.Expressions;
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
 {
+    /// <summary>
+    /// All methods that return IExpressionQuery<T> must to so, this way
+    /// the methods can be chained together
+    /// </summary>
     public static class ExpressionQueryExtensions
     {
         #region First
@@ -43,7 +47,7 @@ namespace OR_M_Data_Entities
             // get the object
             using (var reader = resolvable.ExecuteReader()) result = isFirstOrDefault ? reader.FirstOrDefault() : reader.First();
 
-            // clean disconnect from the server
+            // disconnect from the server
             resolvable.Disconnect();
 
             return result;
@@ -113,14 +117,14 @@ namespace OR_M_Data_Entities
         #region Functions
         public static IExpressionQuery<T> Distinct<T>(this IExpressionQuery<T> source)
         {
-            //((ExpressionQueryResolvable<T>)source).ResolveDistinct();
+            ((IExpressionQueryResolvable<T>)source).MakeDistinct();
 
             return source;
         }
 
         public static IExpressionQuery<T> Take<T>(this IExpressionQuery<T> source, int rows)
         {
-            //((ExpressionQueryResolvable<T>)source).ResolveTakeRows(rows);
+            ((IExpressionQueryResolvable<T>)source).Take(rows);
 
             return source;
         }
@@ -178,41 +182,6 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
-        #region Count
-        public static int Count<TSource>(this IExpressionQuery<TSource> source)
-        {
-            //public static int Count<TSource>(this IEnumerable<TSource> source);
-            //((ExpressionQueryResolvable<TSource>)source).ResolveCount();
-
-            //var resolvable = ((IExpressionQueryResolvable)source);
-            //int result;
-
-            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            //{
-            //    var peekDataReaderField = reader.GetType()
-            //        .GetField("_reader", BindingFlags.Instance | BindingFlags.NonPublic);
-            //    var peekDataReader = peekDataReaderField.GetValue(reader);
-
-            //    using (var dbReader = new DataReader<int>(peekDataReader as PeekDataReader))
-            //    {
-            //        result = dbReader.FirstOrDefault();
-            //    }
-            //}
-
-            //resolvable.DbContext.Dispose();
-
-            return 1;
-        }
-
-        public static int Count<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
-        {
-            source.Where(expression);
-
-            // execute sql, and grab data
-            return Count(source);
-        }
-        #endregion
-
         #region To List
         public static List<TSource> ToList<TSource>(this IExpressionQuery<TSource> source)
         {
@@ -223,7 +192,7 @@ namespace OR_M_Data_Entities
             // get the object
             using (var reader = resolvable.ExecuteReader()) result = reader.ToList();
 
-            // clean disconnect from the server
+            // disconnect from the server
             resolvable.Disconnect();
 
             return result;
@@ -234,6 +203,97 @@ namespace OR_M_Data_Entities
             source.Where(expression);
 
             return ToList(source);
+        }
+        #endregion
+
+        #region Any
+        public static bool Any<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            return Any(source);
+        }
+
+        public static bool Any<TSource>(this IExpressionQuery<TSource> source)
+        {
+            bool result;
+
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
+
+            // all we need to do is Select Top 1 1
+            resolvable.ResolveAny();
+
+            // get the object
+            using (var reader = resolvable.ExecuteReader()) result = reader.HasRows;
+
+            // disconnect from the server
+            resolvable.Disconnect();
+
+            return result;
+        }
+        #endregion
+
+        #region Where
+        public static IExpressionQuery<TSource> Where<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
+
+            return source;
+        }
+        #endregion
+
+        #region Include
+        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).Include(tableName);
+
+            return source;
+        }
+
+        public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).IncludeAll();
+
+            return source;
+        }
+
+        public static IExpressionQuery<TSource> IncludeTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        {
+            ((IExpressionQueryResolvable<TSource>)source).IncludeTo(tableName);
+
+            return source;
+        }
+        #endregion
+
+
+        // not done
+        #region Count
+        public static int Count<TSource>(this IExpressionQuery<TSource> source)
+        {
+            //todo test me
+
+            int result;
+
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
+
+            // tell resolvable to do a count
+            resolvable.ResolveCount();
+
+            // get the object
+            using (var reader = resolvable.ExecuteReader()) result = Convert.ToInt32(reader.FirstOrDefault());
+
+            // disconnect from the server
+            resolvable.Disconnect();
+
+            return result;
+        }
+
+        public static int Count<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            // execute sql, and grab data
+            return Count(source);
         }
         #endregion
 
@@ -279,43 +339,6 @@ namespace OR_M_Data_Entities
         //}
         #endregion
 
-        #region Any
-        public static bool Any<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
-        {
-            source.Where(expression);
-
-            return Any(source);
-        }
-
-        public static bool Any<TSource>(this IExpressionQuery<TSource> source)
-        {
-            // only take one, we only care if it exists or not
-            //source.Take(1);
-
-            //var resolvable = ((IExpressionQueryResolvable)source);
-
-            //bool result;
-
-            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            //{
-            //    result = reader.HasRows;
-            //}
-
-            //resolvable.DbContext.Dispose();
-
-            return false;
-        }
-        #endregion
-
-        #region Where
-        public static IExpressionQuery<TSource> Where<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
-        {
-            ((IExpressionQueryResolvable<TSource>)source).ResolveWhere(expression);
-
-            return source;
-        }
-        #endregion
-
         #region Joins
         public static IExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
             IExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
@@ -351,39 +374,16 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
-        #region Include
-        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            ((IExpressionQueryResolvable<TSource>)source).Include(tableName);
-
-            return source;
-        }
-
-        public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source)
-        {
-            ((IExpressionQueryResolvable<TSource>)source).IncludeAll();
-
-            return source;
-        }
-
-        public static IExpressionQuery<TSource> IncludeTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            ((IExpressionQueryResolvable<TSource>)source).IncludeTo(tableName);
-
-            return source;
-        }
-        #endregion
-
         private static T _max<T>(this IExpressionQuery<T> source)
         {
-            //((ExpressionQueryResolvable<T>)source).ResoveMax();
+            ((IExpressionQueryResolvable<T>)source).ResolveMax();
 
             return source.FirstOrDefault();
         }
 
         private static T _min<T>(this IExpressionQuery<T> source)
         {
-            //((ExpressionQueryResolvable<T>)source).ResoveMin();
+            ((IExpressionQueryResolvable<T>)source).ResolveMin();
 
             return source.FirstOrDefault();
         }

@@ -8,6 +8,7 @@
 
 using System;
 using System.Linq.Expressions;
+using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Expressions
@@ -17,6 +18,16 @@ namespace OR_M_Data_Entities.Expressions
         void ResolveWhere(Expression<Func<TSource, bool>> expression);
 
         void ResolveSelect<TResult>(Expression<Func<TSource, TResult>> selector);
+
+        void ResolveFind<TResult>(object[] pks, IConfigurationOptions configuration);
+
+        void ResolveMax();
+
+        void ResolveAny();
+
+        void ResolveCount();
+
+        void ResolveMin();
 
         void ResolveForeignKeyJoins();
 

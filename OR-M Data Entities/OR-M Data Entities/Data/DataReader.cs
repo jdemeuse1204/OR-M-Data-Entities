@@ -58,10 +58,7 @@ namespace OR_M_Data_Entities.Data
 	    {
 	        var result = new List<T>();
 
-	        while (_reader.Read())
-	        {
-                result.Add(_reader.ToObject<T>());
-	        }
+	        while (_reader.Read()) result.Add(_reader.ToObject<T>());
 
             Dispose();
 
@@ -70,10 +67,7 @@ namespace OR_M_Data_Entities.Data
 
 		public IEnumerator<T> GetEnumerator()
 		{
-			while (_reader.Read())
-			{
-                yield return _reader.ToObject<T>();
-			}
+			while (_reader.Read()) yield return _reader.ToObject<T>();
 
             // close when done enumerating
             Dispose();

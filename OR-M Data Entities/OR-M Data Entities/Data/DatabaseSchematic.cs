@@ -24,7 +24,7 @@ using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Data
 {
-    public abstract partial class DatabaseSchematic : DatabaseConnection
+    public abstract partial class DatabaseSchematic : Database
     {
         #region Properties
         protected static TableCache Tables { get; private set; }

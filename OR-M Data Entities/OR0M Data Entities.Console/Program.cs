@@ -20,6 +20,8 @@ namespace OR0M_Data_Entities.Console
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
+
+            OnSqlGeneration += sql => System.Console.Write(string.Format("{0}\r", sql));
         }
 
         private void OnOnConcurrencyViolation(object entity)
@@ -72,8 +74,10 @@ namespace OR0M_Data_Entities.Console
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
             var s = DateTime.Now;
+            var t = context.Find<Contact>(1);
+            var test = context.From<Contact>().IncludeAll().ToList();
             var sdgf = context.From<Contact>().IncludeAll().FirstOrDefault(w => w.ContactID == 1);
-            var test = context.From<Contact>().ToList();
+            var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
             var e = DateTime.Now;
 
             System.Console.WriteLine(sdgf);
