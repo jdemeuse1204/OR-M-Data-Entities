@@ -48,7 +48,25 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Rules
-        public sealed class TimeStampColumnUpdateRule : IRule
+        private sealed class PkValueNotNullRule : IRule
+        {
+            private readonly object _pkValue;
+
+            private readonly MemberInfo _key;
+
+            public PkValueNotNullRule(object pkValue, MemberInfo key)
+            {
+                _pkValue = pkValue;
+                _key = key;
+            }
+
+            public void Process()
+            {
+                if (_pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", ReflectionCacheTable.GetColumnName(_key)));
+            }
+        }
+
+        private sealed class TimeStampColumnUpdateRule : IRule
         {
             private readonly EntityStateTrackable _entityStateTrackable;
 
@@ -542,18 +560,11 @@ namespace OR_M_Data_Entities.Data
 
             private static List<PropertyInfo> _getPrimaryKeys(string className, List<PropertyInfo> propertyInfos)
             {
-                var keyList = propertyInfos.Where(IsPrimaryKey).ToList();
+                var keyList = propertyInfos.Where(IsColumnPrimaryKey).ToList();
 
                 if (keyList.Count != 0) return keyList;
 
                 throw new Exception(string.Format("Cannot find PrimaryKey(s) for type of {0}", className));
-            }
-
-            public static bool IsPrimaryKey(MemberInfo column)
-            {
-                return column.Name.ToUpper() == "ID"
-                    || column.GetCustomAttribute<KeyAttribute>() != null
-                    || GetColumnName(column).ToUpper() == "ID"; // remove this?
             }
             #endregion
 
@@ -596,7 +607,7 @@ namespace OR_M_Data_Entities.Data
 
             private static bool _hasPrimaryKeysOnly(IReadOnlyList<PropertyInfo> properties)
             {
-                return properties.Count(IsColumn) == properties.Count(IsPrimaryKey);
+                return properties.Count(IsColumn) == properties.Count(IsColumnPrimaryKey);
             }
             #endregion
 
@@ -617,6 +628,13 @@ namespace OR_M_Data_Entities.Data
 
                 return (attributes.Any(w => w is SearchablePrimaryKeyAttribute) || !attributes.Any(w => w is NonSelectableAttribute));
             }
+
+            public static bool IsColumnPrimaryKey(PropertyInfo property)
+            {
+                return property.Name.ToUpper() == "ID"
+                    || property.GetCustomAttribute<KeyAttribute>() != null
+                    || GetColumnName(property).ToUpper() == "ID";
+            }
             #endregion
 
             #region Non-Static Methods
@@ -627,6 +645,13 @@ namespace OR_M_Data_Entities.Data
                 _primaryKeys = _getPrimaryKeys(Type.Name, AllProperties);
 
                 return _primaryKeys;
+            }
+
+            public static List<string> GetPrimaryKeyNames(Type type)
+            {
+                var primaryKeys = GetPrimaryKeys(type);
+
+                return primaryKeys.Select(GetColumnName).ToList();
             }
 
             public List<PropertyInfo> GetAllColumns()
@@ -791,8 +816,11 @@ namespace OR_M_Data_Entities.Data
 
             public static bool IsPrimaryKey(Type type, string columnName)
             {
-                return columnName.ToUpper() == "ID" ||
-                       type.GetProperty(columnName).GetCustomAttribute<KeyAttribute>() != null;
+                var property = type.GetProperty(columnName);
+
+                if (property == null) throw new KeyNotFoundException(string.Format("Cannot find primary key. Table - {0} Key - {1}", type.Name, columnName));
+
+                return IsColumnPrimaryKey(property);
             }
 
             public bool IsPrimaryKey(string columnName)
@@ -800,16 +828,14 @@ namespace OR_M_Data_Entities.Data
                 return IsPrimaryKey(Type, columnName);
             }
 
+            public bool IsPrimaryKey(PropertyInfo property)
+            {
+                return IsColumnPrimaryKey(property);
+            }
+
             public bool IsSelectable(PropertyInfo property)
             {
                 return property.GetCustomAttribute<NonSelectableAttribute>() == null;
-            }
-
-            public bool IsPrimaryKey(PropertyInfo property)
-            {
-                var columnName = GetColumnName(property).ToUpper();
-
-                return columnName == "ID" || property.GetCustomAttribute<KeyAttribute>() != null;
             }
 
             public bool IsForeignKey(PropertyInfo property)
@@ -1060,7 +1086,7 @@ namespace OR_M_Data_Entities.Data
 
             public EntityState State { get; private set; }
 
-            protected IReadOnlyList<ModificationItem> ModificationItems { get; set; }
+            protected IReadOnlyList<IModificationItem> ModificationItems { get; set; }
 
             // table can have two foreign keys of the same time, this will tell them apart
             #endregion
@@ -1082,18 +1108,18 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
-            public IReadOnlyList<ModificationItem> Changes()
+            public IReadOnlyList<IModificationItem> Changes()
             {
                 // this is for updates and we should never update a PK
                 return ModificationItems.Where(w => w.IsModified && !w.IsPrimaryKey).ToList();
             }
 
-            public IReadOnlyList<ModificationItem> Keys()
+            public IReadOnlyList<IModificationItem> Keys()
             {
                 return ModificationItems.Where(w => w.IsPrimaryKey).ToList();
             }
 
-            public IReadOnlyList<ModificationItem> All()
+            public IReadOnlyList<IModificationItem> All()
             {
                 return ModificationItems;
             }
@@ -1114,7 +1140,7 @@ namespace OR_M_Data_Entities.Data
                 State = _getState(ModificationItems);
             }
 
-            private static EntityState _getState(IReadOnlyList<ModificationItem> changes)
+            private static EntityState _getState(IReadOnlyList<IModificationItem> changes)
             {
                 return changes.Any(w => w.IsModified) ? EntityState.Modified : EntityState.UnChanged;
             }
@@ -1146,7 +1172,7 @@ namespace OR_M_Data_Entities.Data
                 return false;
             }
 
-            private static IReadOnlyList<ModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
+            private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
             {
                 return (from item in allColumns
                         let current = _getCurrentObject(entityStateTrackable, item.Name)
@@ -1362,10 +1388,10 @@ namespace OR_M_Data_Entities.Data
             {
                 PropertyName = property.Name;
                 DatabaseColumnName = Table.GetColumnName(property);
-                IsPrimaryKey = property.IsPrimaryKey();
+                IsPrimaryKey = ReflectionCacheTable.IsColumnPrimaryKey(property);
                 PropertyDataType = property.PropertyType.Name.ToUpper();
                 Generation = IsPrimaryKey
-                    ? property.GetGenerationOption()
+                    ? Table.GetGenerationOption(property)
                     : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
                         ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
                         : DbGenerationOption.None;

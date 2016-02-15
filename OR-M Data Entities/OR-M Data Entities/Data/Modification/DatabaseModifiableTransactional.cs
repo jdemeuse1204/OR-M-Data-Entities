@@ -129,7 +129,7 @@ namespace OR_M_Data_Entities.Data
 
             private readonly string _tableAlias;
 
-            public TransactionDeleteContainer(IModificationItem entity, string tableAlias)
+            public TransactionDeleteContainer(IModificationEntity entity, string tableAlias)
                 : base(entity)
             {
                 _tableAlias = tableAlias;

@@ -162,9 +162,9 @@ namespace OR_M_Data_Entities.Data
 
                 var keys = entity.GetPrimaryKeys();
 
-                if (keys.Count == 0) throw new KeyNotFoundException(string.Format("Primary Key not found for table: {0}", entity.GetTableName()));
+                if (keys.Count == 0) throw new KeyNotFoundException(string.Format("Primary Key not found for table: {0}", entity.PlainTableName));
 
-                Output = string.Format("[INSERTED].[{0}]", keys.First().GetColumnName());
+                Output = string.Format("[INSERTED].[{0}]", Table.GetColumnName(keys.First()));
             }
 
             public void AddOutput(IModificationItem item)
@@ -218,10 +218,10 @@ namespace OR_M_Data_Entities.Data
                 : base(entity)
             {
                 Output = entity.GetPrimaryKeys()
-                    .Select(w => Table.GetColumnName(w)
-                    .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
-                    .TrimEnd(',');
-                
+                   .Select(Table.GetColumnName)
+                   .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
+                   .TrimEnd(',');
+
                 Where = string.Empty;
                 Statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
             }

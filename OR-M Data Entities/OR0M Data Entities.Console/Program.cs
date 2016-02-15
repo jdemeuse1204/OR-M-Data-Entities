@@ -72,20 +72,20 @@ namespace OR0M_Data_Entities.Console
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
             var s = DateTime.Now;
-            var sdgf = context.From<Contact>()
-                .IncludeTo("StateCode")
-                .First(w => w.ContactID == 100);
+            var sdgf = context.From<Contact>().IncludeAll().FirstOrDefault(w => w.ContactID == 1);
+            var test = context.From<Contact>().ToList();
+            var e = DateTime.Now;
+
+            System.Console.WriteLine(sdgf);
+
+            System.Console.WriteLine((e - s).Milliseconds);
+
+            var c1 = context.Find<Contact>(1);
 
             if (sdgf != null)
             {
                 sdgf.Appointments = new List<Appointment>();
             }
-
-            var e = DateTime.Now;
-
-            System.Console.WriteLine((e - s).Milliseconds);
-
-            var c1 = context.Find<Contact>(1);
 
             //c1.FirstName = "WINing!";
 
@@ -98,75 +98,77 @@ namespace OR0M_Data_Entities.Console
 
             //context.SaveChanges(xy);
 
-            //var x = new Contact
-            //{
-            //    CreatedBy = new User
-            //    {
-            //        Name = "James Demeuse"
-            //    },
-            //    EditedBy = new User
-            //    {
-            //        Name = "Different User"
-            //    },
-            //    FirstName = "Test",
-            //    LastName = "User",
-            //    Names = new List<Name>
-            //    {
-            //        new Name
-            //        {
-            //            Value = "Win!"
-            //        },
-            //        new Name
-            //        {
-            //            Value = "FTW!"
-            //        }
-            //    },
-            //    Number = new PhoneNumber
-            //    {
-            //        Phone = "555-555-5555",
-            //        PhoneType = new PhoneType
-            //        {
-            //            Type = "Cell"
-            //        }
-            //    },
-            //    Appointments = new List<Appointment>
-            //    {
-            //        new Appointment
-            //        {
-            //            Description = "Appointment 1",
-            //            IsScheduled = false,
-            //            Address = new List<Address>
-            //            {
-            //                new Address
-            //                {
-            //                    Addy = "1234 First Ave South",
-            //                    State = new StateCode
-            //                    {
-            //                        Value = "MN"
-            //                    },
-            //                    ZipCode = new List<Zip>
-            //                    {
-            //                        new Zip
-            //                        {
-            //                            Zip4 = "5412",
-            //                            Zip5 = "55555"
-            //                        },
-            //                        new Zip
-            //                        {
-            //                            Zip5 = "12345"
-            //                        }
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //};
+            var x = new Contact
+            {
+                CreatedBy = new User
+                {
+                    Name = "James Demeuse"
+                },
+                EditedBy = new User
+                {
+                    Name = "Different User"
+                },
+                FirstName = "Test",
+                LastName = "User",
+                Names = new List<Name>
+                {
+                    new Name
+                    {
+                        Value = "Win!"
+                    },
+                    new Name
+                    {
+                        Value = "FTW!"
+                    }
+                },
+                Number = new PhoneNumber
+                {
+                    Phone = "555-555-5555",
+                    PhoneType = new PhoneType
+                    {
+                        Type = "Cell"
+                    }
+                },
+                Appointments = new List<Appointment>
+                {
+                    new Appointment
+                    {
+                        Description = "Appointment 1",
+                        IsScheduled = false,
+                        Address = new List<Address>
+                        {
+                            new Address
+                            {
+                                Addy = "1234 First Ave South",
+                                State = new StateCode
+                                {
+                                    Value = "MN"
+                                },
+                                ZipCode = new List<Zip>
+                                {
+                                    new Zip
+                                    {
+                                        Zip4 = "5412",
+                                        Zip5 = "55555"
+                                    },
+                                    new Zip
+                                    {
+                                        Zip5 = "12345"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
 
-            var x = context.Find<Contact>(2077);
+            context.SaveChanges(x);
 
-            x.FirstName = "WINss";
+            //var x = context.Find<Contact>(2077);
 
-            context.Delete(x);
+            //x.FirstName = "WINss";
+
+            //context.Delete(x);
 
             //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
             //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
@@ -293,7 +295,6 @@ namespace OR0M_Data_Entities.Console
             public int Id { get; set; }
         }
 
-        [View("ContactOnly", "ContactAndPhone")]
         [Table("Contacts")]
         public class Contact : EntityStateTrackable, IReadScript<Contact>
         {
@@ -342,7 +343,6 @@ namespace OR0M_Data_Entities.Console
             public string Name { get; set; }
         }
 
-        [View("ContactAndPhone")]
         [Table("PhoneNumbers")]
         public class PhoneNumber : EntityStateTrackable
         {

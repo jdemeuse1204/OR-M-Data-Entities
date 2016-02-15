@@ -349,7 +349,7 @@ namespace OR_M_Data_Entities.Data
                             result.AddOneToManySaveReference(e, item);
 
                             // add any dependencies
-                            if (item.HasForeignKeys()) entities.AddRange(_getForeignKeys(item));
+                            if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
                         }
                     }
                     else
@@ -360,7 +360,7 @@ namespace OR_M_Data_Entities.Data
                         result.AddOneToOneSaveReference(e);
 
                         // add any dependencies
-                        if (e.Value.HasForeignKeys()) entities.AddRange(_getForeignKeys(e.Value));
+                        if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
                     }
                 }
 
@@ -374,7 +374,11 @@ namespace OR_M_Data_Entities.Data
 
         private static List<ForeignKeyAssociation> _getForeignKeys(object entity)
         {
-            return entity.GetForeignKeys().OrderBy(w => w.PropertyType.IsList()).Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w)).ToList();
+            return
+                Table.GetForeignKeys(entity)
+                    .OrderBy(w => w.PropertyType.IsList())
+                    .Select(w => new ForeignKeyAssociation(entity, w.GetValue(entity), w))
+                    .ToList();
         }
 
         #endregion
@@ -538,7 +542,7 @@ namespace OR_M_Data_Entities.Data
                             ? string.Format("Pristine{0}", item.DatabaseColumnName)
                             : item.DatabaseColumnName,
                     TableName = item.ToString(),
-                    ForeignKeyPropertyName = item.GetTableName(),
+                    ForeignKeyPropertyName = Table.GetTableName(item),
                     Value =
                         item.TranslateDataType
                             ? new SqlSecureObject(value, item.DbTranslationType)

@@ -19,17 +19,7 @@ namespace OR_M_Data_Entities
         #region First
         public static TSource First<TSource>(this IExpressionQuery<TSource> source)
         {
-            TSource result;
-
-            var resolvable = ((IExpressionQueryResolvable<TSource>) source);
-
-            // get the object
-            using (var reader = resolvable.ExecuteReader()) result = reader.First();
-
-            // clean disconnect from the server
-            resolvable.Disconnect();
-
-            return result;
+            return _first(source, false);
         }
 
         public static TSource First<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -41,18 +31,22 @@ namespace OR_M_Data_Entities
 
         public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source)
         {
-            //var resolvable = ((IExpressionQueryResolvable)source);
+            return _first(source, true);
+        }
 
-            //TSource result;
+        private static TSource _first<TSource>(this IExpressionQuery<TSource> source, bool isFirstOrDefault)
+        {
+            TSource result;
 
-            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            //{
-            //    result = reader.FirstOrDefault();
-            //}
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-            //resolvable.DbContext.Dispose();
+            // get the object
+            using (var reader = resolvable.ExecuteReader()) result = isFirstOrDefault ? reader.FirstOrDefault() : reader.First();
 
-            return default(TSource);
+            // clean disconnect from the server
+            resolvable.Disconnect();
+
+            return result;
         }
 
         public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -222,18 +216,17 @@ namespace OR_M_Data_Entities
         #region To List
         public static List<TSource> ToList<TSource>(this IExpressionQuery<TSource> source)
         {
-            //var resolvable = ((IExpressionQueryResolvable)source);
+            List<TSource> result;
 
-            //List<TSource> result;
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-            //using (var reader = resolvable.DbContext.ExecuteQuery(source))
-            //{
-            //    result = reader.ToList();
-            //}
+            // get the object
+            using (var reader = resolvable.ExecuteReader()) result = reader.ToList();
 
-            //resolvable.DbContext.Dispose();
+            // clean disconnect from the server
+            resolvable.Disconnect();
 
-            return new List<TSource>();
+            return result;
         }
 
         public static List<TSource> ToList<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
@@ -349,14 +342,11 @@ namespace OR_M_Data_Entities
         public static IExpressionQuery<TResult> Select<TSource, TResult>(this IExpressionQuery<TSource> source,
             Expression<Func<TSource, TResult>> selector)
         {
-            //var item = ExpressionQuerySelectResolver.Resolve(source, selector);
-            //if (item != null)
-            //{
-            //}
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
+            resolvable.ResolveSelect(selector);
 
-            //return ((ExpressionQueryResolvable<TSource>)source).ResolveSelect(selector, source);
-
+            // 
             return null;
         }
         #endregion
@@ -396,25 +386,6 @@ namespace OR_M_Data_Entities
             //((ExpressionQueryResolvable<T>)source).ResoveMin();
 
             return source.FirstOrDefault();
-        }
-
-        public static bool IsExpressionQuery(this MethodCallExpression expression)
-        {
-            return expression != null && (expression.Method.ReturnType.IsGenericType &&
-                                          expression.Method.ReturnType.GetGenericTypeDefinition()
-                                              .IsAssignableFrom(typeof(IExpressionQuery<>)));
-        }
-
-        public static bool IsExpressionQuery(this Type type)
-        {
-            return type.IsGenericType &&
-                   type.GetGenericTypeDefinition()
-                       .IsAssignableFrom(typeof(IExpressionQuery<>));
-        }
-
-        public static bool IsExpressionQuery(this object o)
-        {
-            return IsExpressionQuery(o.GetType());
         }
     }
 }

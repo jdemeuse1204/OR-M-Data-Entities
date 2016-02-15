@@ -50,27 +50,6 @@ namespace OR_M_Data_Entities.Data
             return new ExpressionQuery<T>(this, schematic);
         }
 
-        public IExpressionQuery<T> FromView<T>(string viewId)
-        {
-            if (!typeof(T).IsPartOfView(viewId))
-            {
-                throw new ViewException(string.Format("Type Of {0} Does not contain attribute for View - {1}",
-                    typeof(T).Name, viewId));
-            }
-
-
-            var table = Tables.Find<T>(Configuration);
-
-            // get the schematic
-            var schematic = _schematicManager.Find(table, Configuration);
-
-            var expressionQuery = new ExpressionQuery<T>(this, schematic, viewId);
-
-
-
-            return expressionQuery;
-        }
-
         public T Find<T>(params object[] pks)
         {
             var query = (ExpressionQuery<T>)From<T>();
@@ -336,7 +315,7 @@ namespace OR_M_Data_Entities.Data
                     Type = type;
                     ActualType = actualType;
                     PropertyName = propertyName;
-                    PrimaryKeyNames = type.GetPrimaryKeyNames();
+                    PrimaryKeyNames = ReflectionCacheTable.GetPrimaryKeyNames(type).ToArray();
                     LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
                     Children = new HashSet<IDataLoadSchematic>();
                     MappedTable = mappedTable;
@@ -560,6 +539,7 @@ namespace OR_M_Data_Entities.Data
 
             public ExpressionQuery(DatabaseExecution context, IQuerySchematic schematic, string viewId = null)
             {
+                _parameters = new List<SqlDbParameter>();
                 _context = context;
                 _viewId = viewId;
                 _schematic = schematic;
@@ -1039,7 +1019,7 @@ namespace OR_M_Data_Entities.Data
                             throw new Exception("Lambda subquery expression not found");
                         }
 
-                        var columnName = expression.Member.GetColumnName();
+                        var columnName = ReflectionCacheTable.GetColumnName(expression.Member);
                         var tableName = WhereUtilities.GetTableNameFromLambdaParameter(lambdaExpression.Body);
 
                         var c = Resolve(Schematic, Parameters, lambdaExpression.Body, true);
@@ -1185,11 +1165,13 @@ namespace OR_M_Data_Entities.Data
             // needs to happen before reading
             public static string ResolveForeignKeyJoins(IQuerySchematic schematic)
             {
-                return schematic.MappedTables.Where(w => w.IsIncluded)
-                    .Select(w => w.Relationships)
-                    .Aggregate("",
-                        (current1, table) =>
-                            table.Aggregate(current1, (current, relationship) => string.Concat(current, relationship.Sql, "\r")));
+                var includedTables = schematic.MappedTables.Where(w => w.IsIncluded).ToList();
+
+                return includedTables.Aggregate(string.Empty,
+                    (current1, includedTable) =>
+                        includedTable.Relationships.Where(w => w.ChildTable.IsIncluded)
+                            .Aggregate(current1,
+                                (current, relationship) => current + string.Format("{0}\r", relationship.Sql)));
             }
         }
 
@@ -1358,12 +1340,12 @@ namespace OR_M_Data_Entities.Data
 
                 if (left != null && left.Expression != null && left.Expression is ParameterExpression)
                 {
-                    return left.Expression.Type.GetTableName();
+                    return Table.GetTableName(left.Expression.Type);
                 }
 
                 if (right != null && right.Expression != null && right.Expression is ParameterExpression)
                 {
-                    return right.Expression.Type.GetTableName();
+                    return Table.GetTableName(right.Expression.Type);
                 }
                 return "";
             }
@@ -1617,7 +1599,7 @@ namespace OR_M_Data_Entities.Data
                 if (expression.Expression.NodeType == ExpressionType.Parameter)
                 {
                     alias = Schematic.FindTable(expression.Expression.Type).Alias;
-                    tableName = expression.Expression.Type.GetTableName();
+                    tableName = Table.GetTableName(expression.Expression.Type);
                 }
                 else
                 {

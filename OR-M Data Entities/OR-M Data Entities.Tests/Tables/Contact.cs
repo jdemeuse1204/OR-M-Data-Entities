@@ -6,7 +6,6 @@ using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables
 {
-    [View("ContactOnly", "ContactAndPhone")]
     [Table("Contacts")]
     public class Contact : EntityStateTrackable, IReadScript<Contact>
     {
