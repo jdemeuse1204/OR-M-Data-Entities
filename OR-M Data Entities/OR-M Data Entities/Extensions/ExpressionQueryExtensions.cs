@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
 
 // ReSharper disable once CheckNamespace
@@ -33,9 +34,37 @@ namespace OR_M_Data_Entities
             return First(source);
         }
 
+        public static TSource First<TSource>(this IOrderedExpressionQuery<TSource> source)
+        {
+            return First((IExpressionQuery<TSource>)source);
+        }
+
+        public static TSource First<TSource>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            return First((IExpressionQuery<TSource>)source, expression);
+        }
+
         public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source)
         {
             return _first(source, true);
+        }
+
+        public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            source.Where(expression);
+
+            // execute sql, and grab data
+            return FirstOrDefault(source);
+        }
+
+        public static TSource FirstOrDefault<TSource>(this IOrderedExpressionQuery<TSource> source)
+        {
+            return FirstOrDefault((IExpressionQuery<TSource>)source);
+        }
+
+        public static TSource FirstOrDefault<TSource>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            return FirstOrDefault((IExpressionQuery<TSource>)source, expression);
         }
 
         private static TSource _first<TSource>(this IExpressionQuery<TSource> source, bool isFirstOrDefault)
@@ -45,20 +74,42 @@ namespace OR_M_Data_Entities
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
             // get the object
-            using (var reader = resolvable.ExecuteReader()) result = isFirstOrDefault ? reader.FirstOrDefault() : reader.First();
+            using (var reader = resolvable.ExecuteReader<TSource>()) result = isFirstOrDefault ? reader.FirstOrDefault() : reader.First();
 
             // disconnect from the server
             resolvable.Disconnect();
 
             return result;
         }
+        #endregion
 
-        public static TSource FirstOrDefault<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        #region Functions
+        public static IExpressionQuery<T> Distinct<T>(this IExpressionQuery<T> source)
         {
-            source.Where(expression);
+            ((IExpressionQueryResolvable<T>)source).MakeDistinct();
 
-            // execute sql, and grab data
-            return FirstOrDefault(source);
+            return source;
+        }
+
+        public static IOrderedExpressionQuery<T> Distinct<T>(this IOrderedExpressionQuery<T> source)
+        {
+            ((IExpressionQueryResolvable<T>)source).MakeDistinct();
+
+            return source;
+        }
+
+        public static IExpressionQuery<T> Take<T>(this IExpressionQuery<T> source, int rows)
+        {
+            ((IExpressionQueryResolvable<T>)source).Take(rows);
+
+            return source;
+        }
+
+        public static IOrderedExpressionQuery<T> Take<T>(this IOrderedExpressionQuery<T> source, int rows)
+        {
+            ((IExpressionQueryResolvable<T>)source).Take(rows);
+
+            return source;
         }
         #endregion
 
@@ -112,21 +163,56 @@ namespace OR_M_Data_Entities
         {
             return _max(source);
         }
-        #endregion
 
-        #region Functions
-        public static IExpressionQuery<T> Distinct<T>(this IExpressionQuery<T> source)
+
+        public static decimal? Max(this IOrderedExpressionQuery<decimal?> source)
         {
-            ((IExpressionQueryResolvable<T>)source).MakeDistinct();
-
-            return source;
+            return _max(source);
         }
 
-        public static IExpressionQuery<T> Take<T>(this IExpressionQuery<T> source, int rows)
+        public static decimal Max(this IOrderedExpressionQuery<decimal> source)
         {
-            ((IExpressionQueryResolvable<T>)source).Take(rows);
+            return _max(source);
+        }
 
-            return source;
+        public static double? Max(this IOrderedExpressionQuery<double?> source)
+        {
+            return _max(source);
+        }
+
+        public static double Max(this IOrderedExpressionQuery<double> source)
+        {
+            return _max(source);
+        }
+
+        public static float? Max(this IOrderedExpressionQuery<float?> source)
+        {
+            return _max(source);
+        }
+
+        public static float Max(this IOrderedExpressionQuery<float> source)
+        {
+            return _max(source);
+        }
+
+        public static int? Max(this IOrderedExpressionQuery<int?> source)
+        {
+            return _max(source);
+        }
+
+        public static int Max(this IOrderedExpressionQuery<int> source)
+        {
+            return _max(source);
+        }
+
+        public static long? Max(this IOrderedExpressionQuery<long?> source)
+        {
+            return _max(source);
+        }
+
+        public static long Max(this IOrderedExpressionQuery<long> source)
+        {
+            return _max(source);
         }
         #endregion
 
@@ -180,6 +266,83 @@ namespace OR_M_Data_Entities
         {
             return _min(source);
         }
+
+
+        public static decimal? Min(this IOrderedExpressionQuery<decimal?> source)
+        {
+            return _min(source);
+        }
+
+        public static decimal Min(this IOrderedExpressionQuery<decimal> source)
+        {
+            return _min(source);
+        }
+
+        public static double? Min(this IOrderedExpressionQuery<double?> source)
+        {
+            return _min(source);
+        }
+
+        public static double Min(this IOrderedExpressionQuery<double> source)
+        {
+            return _min(source);
+        }
+
+        public static float? Min(this IOrderedExpressionQuery<float?> source)
+        {
+            return _min(source);
+        }
+
+        public static float Min(this IOrderedExpressionQuery<float> source)
+        {
+            return _min(source);
+        }
+
+        public static int? Min(this IOrderedExpressionQuery<int?> source)
+        {
+            return _min(source);
+        }
+
+        public static int Min(this IOrderedExpressionQuery<int> source)
+        {
+            return _min(source);
+        }
+
+        public static long? Min(this IOrderedExpressionQuery<long?> source)
+        {
+            return _min(source);
+        }
+
+        public static long Min(this IOrderedExpressionQuery<long> source)
+        {
+            return _min(source);
+        }
+        #endregion
+
+        #region Min/Max
+        private static T _max<T>(this IExpressionQuery<T> source)
+        {
+            ((IExpressionQueryResolvable<T>)source).ResolveMax();
+
+            return source.FirstOrDefault();
+        }
+
+        private static T _max<T>(this IOrderedExpressionQuery<T> source)
+        {
+            return _max((IExpressionQuery<T>) source);
+        }
+
+        private static T _min<T>(this IExpressionQuery<T> source)
+        {
+            ((IExpressionQueryResolvable<T>)source).ResolveMin();
+
+            return source.FirstOrDefault();
+        }
+
+        private static T _min<T>(this IOrderedExpressionQuery<T> source)
+        {
+            return _min((IExpressionQuery<T>)source);
+        }
         #endregion
 
         #region To List
@@ -190,7 +353,7 @@ namespace OR_M_Data_Entities
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
             // get the object
-            using (var reader = resolvable.ExecuteReader()) result = reader.ToList();
+            using (var reader = resolvable.ExecuteReader<TSource>()) result = reader.ToList();
 
             // disconnect from the server
             resolvable.Disconnect();
@@ -203,6 +366,16 @@ namespace OR_M_Data_Entities
             source.Where(expression);
 
             return ToList(source);
+        }
+
+        public static List<TSource> ToList<TSource>(this IOrderedExpressionQuery<TSource> source)
+        {
+            return ToList((IExpressionQuery<TSource>) source);
+        }
+
+        public static List<TSource> ToList<TSource>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            return ToList((IExpressionQuery<TSource>)source, expression);
         }
         #endregion
 
@@ -224,12 +397,22 @@ namespace OR_M_Data_Entities
             resolvable.ResolveAny();
 
             // get the object
-            using (var reader = resolvable.ExecuteReader()) result = reader.HasRows;
+            using (var reader = resolvable.ExecuteReader<TSource>()) result = reader.HasRows;
 
             // disconnect from the server
             resolvable.Disconnect();
 
             return result;
+        }
+
+        public static bool Any<TSource>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
+        {
+            return Any((IExpressionQuery<TSource>)source, expression);
+        }
+
+        public static bool Any<TSource>(this IOrderedExpressionQuery<TSource> source)
+        {
+            return Any((IExpressionQuery<TSource>)source);
         }
         #endregion
 
@@ -265,13 +448,9 @@ namespace OR_M_Data_Entities
         }
         #endregion
 
-
-        // not done
         #region Count
         public static int Count<TSource>(this IExpressionQuery<TSource> source)
         {
-            //todo test me
-
             int result;
 
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
@@ -280,7 +459,7 @@ namespace OR_M_Data_Entities
             resolvable.ResolveCount();
 
             // get the object
-            using (var reader = resolvable.ExecuteReader()) result = Convert.ToInt32(reader.FirstOrDefault());
+            using (var reader = resolvable.ExecuteReader<int>()) result = reader.FirstOrDefault();
 
             // disconnect from the server
             resolvable.Disconnect();
@@ -298,46 +477,65 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Order By
-        //public static OrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this IExpressionQuery<TSource> source,
-        //    Expression<Func<TSource, TKey>> keySelector)
-        //{
-        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+        public static IOrderedExpressionQuery<TSource> OrderBy<TSource, TKey>(this IExpressionQuery<TSource> source, Expression<Func<TSource, TKey>> keySelector)
+        {
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
+            // make sure foreign keys are not selected
+            _foreignKeyCheck(resolvable);
 
-        //    return null;
-        //}
+            resolvable.ResolveOrderBy(keySelector);
 
-        //public static OrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this IExpressionQuery<TSource> source,
-        //    Expression<Func<TSource, TKey>> keySelector)
-        //{
-        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+            return (IOrderedExpressionQuery<TSource>)source;
+        }
 
-        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
+        public static IOrderedExpressionQuery<TSource> OrderByDescending<TSource, TKey>(this IExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-        //    return null;
-        //}
+            // make sure foreign keys are not selected
+            _foreignKeyCheck(resolvable);
 
-        //public static OrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
-        //    Expression<Func<TSource, TKey>> keySelector)
-        //{
-        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+            resolvable.ResolveOrderByDescending(keySelector);
 
-        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderBy(keySelector);
+            return (IOrderedExpressionQuery<TSource>)source;
+        }
 
-        //    return null;
-        //}
+        public static IOrderedExpressionQuery<TSource> ThenBy<TSource, TKey>(this IOrderedExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-        //public static OrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this OrderedExpressionQuery<TSource> source,
-        //    Expression<Func<TSource, TKey>> keySelector)
-        //{
-        //    //if (source.HasForeignKeys) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.");
+            // make sure foreign keys are not selected
+            _foreignKeyCheck(resolvable);
 
-        //    //return ((ExpressionQueryResolvable<TSource>)source).ResolveOrderByDescending(keySelector);
+            resolvable.ResolveOrderBy(keySelector);
 
-        //    return null;
-        //}
+            return source;
+        }
+
+        public static IOrderedExpressionQuery<TSource> ThenByDescending<TSource, TKey>(this IOrderedExpressionQuery<TSource> source,
+            Expression<Func<TSource, TKey>> keySelector)
+        {
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
+
+            // make sure foreign keys are not selected
+            _foreignKeyCheck(resolvable);
+
+            resolvable.ResolveOrderByDescending(keySelector);
+
+            return source;
+        }
+
+        private static void _foreignKeyCheck<T>(IExpressionQueryResolvable<T> source)
+        {
+            if (source.AreForeignKeysSelected()) throw new OrderByException("Cannot Order Expression Query that has foreign keys.  Consider returning the results then ordering.  If Lazy loading do not inculde any foreign keys.");
+        }
         #endregion
+
+
+        // not done
 
         #region Joins
         public static IExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
@@ -362,30 +560,22 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Select
-        public static IExpressionQuery<TResult> Select<TSource, TResult>(this IExpressionQuery<TSource> source,
-            Expression<Func<TSource, TResult>> selector)
+        public static IExpressionQuery<TResult> Select<TSource, TResult>(this IExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector)
         {
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-            resolvable.ResolveSelect(selector);
+            return resolvable.ResolveSelect(source, selector);
+        }
 
-            // 
-            return null;
+        public static IOrderedExpressionQuery<TResult> Select<TSource, TResult>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector)
+        {
+            var resolvable = ((IExpressionQueryResolvable<TSource>)source);
+
+            return resolvable.ResolveSelect(source, selector);
         }
         #endregion
 
-        private static T _max<T>(this IExpressionQuery<T> source)
-        {
-            ((IExpressionQueryResolvable<T>)source).ResolveMax();
 
-            return source.FirstOrDefault();
-        }
 
-        private static T _min<T>(this IExpressionQuery<T> source)
-        {
-            ((IExpressionQueryResolvable<T>)source).ResolveMin();
-
-            return source.FirstOrDefault();
-        }
     }
 }

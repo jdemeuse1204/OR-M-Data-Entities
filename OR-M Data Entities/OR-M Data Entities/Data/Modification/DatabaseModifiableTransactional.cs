@@ -693,7 +693,7 @@ IF @@TRANCOUNT > 0
             }
         }
 
-        private bool _saveChangesUsingTransactions<T>(T entity) where T : class
+        private IPersistResult _saveChangesUsingTransactions<T>(T entity) where T : class
         {
             var saves = new List<UpdateType>();
             var parent = new ModificationEntity(entity, Configuration);
@@ -760,7 +760,7 @@ IF @@TRANCOUNT > 0
             return saves.Any(w => w != UpdateType.Skip);
         }
 
-        private bool _deleteUsingTransactions<T>(T entity)
+        private IPersistResult _deleteUsingTransactions<T>(T entity)
             where T : class
         {
             var parent = new DeleteEntity(entity, Configuration);

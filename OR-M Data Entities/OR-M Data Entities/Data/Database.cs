@@ -14,6 +14,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
@@ -364,6 +365,9 @@ namespace OR_M_Data_Entities.Data
                        // if the payload is null, load by column names
                        : _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
 
+                       // check to see if we are overriding the default return type
+                       : _schematic.ReturnOverride != null ? _getObjectFromReturnOverride<T>(_schematic)
+
                        // if the payload has foreign keys, use the foreign key loader
                        : _schematic.AreForeignKeysSelected() ? _getObjectFromReaderWithForeignKeys<T>()
 
@@ -383,6 +387,21 @@ namespace OR_M_Data_Entities.Data
                 DatabaseSchematic.TrySetPristineEntity(instance);
 
                 return instance;
+            }
+
+            private T _getObjectFromReturnOverride<T>(IQuerySchematic schematic)
+            {
+                var instance = Activator.CreateInstance<T>();
+                var memberInitExpression = schematic.ReturnOverride as MemberInitExpression;
+
+                if (memberInitExpression != null) _loadObjectFromMemberInitExpression(instance, memberInitExpression);
+
+                return instance;
+            }
+
+            private void _loadObjectFromMemberInitExpression(object instance, MemberInitExpression expression)
+            {
+                
             }
 
             private bool _loadObjectFromSchematic(object instance, IDataLoadSchematic schematic)

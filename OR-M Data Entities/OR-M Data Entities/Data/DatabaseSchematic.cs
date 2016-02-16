@@ -248,7 +248,7 @@ namespace OR_M_Data_Entities.Data
     /// Partial to hide actual implementation from user.  User does not need any of these
     /// classes, they are only used in this class
     /// </summary>
-    public abstract partial class DatabaseSchematic
+    public abstract partial class DatabaseSchematic 
     {
         protected class TableCache
         {

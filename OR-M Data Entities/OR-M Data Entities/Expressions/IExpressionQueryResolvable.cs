@@ -15,11 +15,19 @@ namespace OR_M_Data_Entities.Expressions
 {
     public interface IExpressionQueryResolvable<TSource>
     {
+        bool AreForeignKeysSelected();
+
         void ResolveWhere(Expression<Func<TSource, bool>> expression);
 
-        void ResolveSelect<TResult>(Expression<Func<TSource, TResult>> selector);
+        IExpressionQuery<TResult> ResolveSelect<TResult>(IExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
+
+        IOrderedExpressionQuery<TResult> ResolveSelect<TResult>(IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
 
         void ResolveFind<TResult>(object[] pks, IConfigurationOptions configuration);
+
+        void ResolveOrderBy<TKey>(Expression<Func<TSource, TKey>> keySelector);
+
+        void ResolveOrderByDescending<TKey>(Expression<Func<TSource, TKey>> keySelector);
 
         void ResolveMax();
 
@@ -37,7 +45,7 @@ namespace OR_M_Data_Entities.Expressions
 
         void Take(int count);
 
-        DataReader<TSource> ExecuteReader();
+        DataReader<T> ExecuteReader<T>();
 
         void IncludeAll();
 

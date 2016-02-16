@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using OR_M_Data_Entities.Configuration;
 
 namespace OR_M_Data_Entities.Data.Definition
@@ -15,6 +16,8 @@ namespace OR_M_Data_Entities.Data.Definition
     public interface IQuerySchematic
     {
         Type Key { get; }
+
+        Expression ReturnOverride { get; }
 
         List<IMappedTable> MappedTables { get; }
 
@@ -28,8 +31,12 @@ namespace OR_M_Data_Entities.Data.Definition
 
         bool AreForeignKeysSelected();
 
+        void InitializeSelect(bool isLazyLoading);
+
         void ClearReadCache();
 
         void Reset();
+
+        void SetReturnOverride(Expression expression);
     }
 }

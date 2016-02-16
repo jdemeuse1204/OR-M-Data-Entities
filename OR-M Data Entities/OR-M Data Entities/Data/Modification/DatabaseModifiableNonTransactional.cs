@@ -687,7 +687,7 @@ ELSE
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <returns></returns>
-        private bool _saveChanges<T>(T entity)
+        private IPersistResult _saveChanges<T>(T entity)
             where T : class
         {
             try
@@ -793,7 +793,7 @@ ELSE
             }
         }
 
-        private bool _delete<T>(T entity) 
+        private IPersistResult _delete<T>(T entity) 
             where T : class
         {
             var saves = new List<UpdateType>();

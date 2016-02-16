@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Xml;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Definition.Rules;
@@ -60,7 +61,7 @@ namespace OR_M_Data_Entities.Data
 
         #region Save Methods
 
-        public virtual bool SaveChanges<T>(T entity)
+        public virtual IPersistResult SaveChanges<T>(T entity)
             where T : class
         {
             // check the configuration first, make sure its setup correctly
@@ -72,7 +73,7 @@ namespace OR_M_Data_Entities.Data
 
         #region Delete Methods
 
-        public virtual bool Delete<T>(T entity) where T : class
+        public virtual IPersistResult Delete<T>(T entity) where T : class
         {
             // check the configuration first, make sure its setup correctly
             RuleProcessor.ProcessRule<IsConfigurationValidRule>(Configuration);
@@ -384,6 +385,32 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region shared
+
+        private class SaveResult : IPersistResult
+        {
+            public SaveResult(XmlDocument resultsXml, List<ITableChangeResult> results)
+            {
+                ResultsXml = resultsXml;
+                Results = results;
+            }
+
+            public XmlDocument ResultsXml { get; }
+
+            public IReadOnlyList<ITableChangeResult> Results { get; }
+        }
+
+        private class TableChangeResult : ITableChangeResult
+        {
+            public TableChangeResult(UpdateType action, Type table)
+            {
+                Action = action;
+                Table = table;
+            }
+
+            public UpdateType Action { get; }
+
+            public Type Table { get; }
+        }
 
         /// <summary>
         /// Provides us a way to get the execution plan for an entity
