@@ -74,8 +74,10 @@ namespace OR_M_Data_Entities.Data
 
             public override SqlPartStatement Split()
             {
-                Output = string.Concat(Output, string.Format(" INTO @{0}", _tableAlias));
-                //
+                var outputStatement = string.Concat(Output.TrimEnd(','), string.Format(" INTO @{0}", _tableAlias));
+                var columns =  Output.Replace("[INSERTED].", "");
+                var selectBackStatement = string.Format("\rSELECT TOP 1 {0} FROM @{1}", columns.TrimEnd(','), _tableAlias);
+
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
                 var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3};",
 
@@ -83,7 +85,7 @@ namespace OR_M_Data_Entities.Data
 
                     SetItems.TrimEnd(','),
 
-                    Output,
+                    outputStatement,
 
                     Where.TrimEnd(','));
 
@@ -95,7 +97,7 @@ namespace OR_M_Data_Entities.Data
 
                         sql = string.Concat(sql,
                             string.Format(
-                                "\rIF (NOT(EXISTS(SELECT TOP 1 1 FROM @{0})))\r\tBEGIN\r\t\tRAISERROR('{1}', {2}, {3})\r\tEND",
+                                "\rIF (NOT(EXISTS(SELECT TOP 1 1 FROM @{0})))\r\tBEGIN\r\t\tRAISERROR('{1}', {2}, {3})\r\tEND\r\nELSE\r\tBEGIN\r\t\t{4}\r\tEND",
 
                                 _tableAlias,
 
@@ -103,12 +105,14 @@ namespace OR_M_Data_Entities.Data
 
                                 SQL_CONCURRENCY_VIOLATION_ERROR_SEVERITY,
 
-                                SQL_CONCURRENCY_VIOLATION_ERROR_STATE));
+                                SQL_CONCURRENCY_VIOLATION_ERROR_STATE,
+                                
+                                selectBackStatement));
                     }
                     else
                     {
                         // just need to make sure rows exists for concurrency checking
-                        sql = string.Concat(sql, string.Format("\rSELECT TOP 1 1 FROM @{0}", _tableAlias));
+                        sql = string.Concat(sql, selectBackStatement);
                     }
                 }
 
@@ -329,7 +333,7 @@ namespace OR_M_Data_Entities.Data
         {
             public Reference Reference { get; private set; }
 
-            public SqlTransactionDeletePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration) 
+            public SqlTransactionDeletePlan(ModificationEntity entity, List<SqlSecureQueryParameter> parameters, Reference reference, IConfigurationOptions configuration)
                 : base(entity, configuration, parameters)
             {
                 Reference = reference;
@@ -502,11 +506,7 @@ IF @@TRANCOUNT > 0
 
             protected override void AddDbGenerationOptionNone(ISqlContainer container, IModificationItem item)
             {
-                if (item.DbTranslationType == SqlDbType.Timestamp)
-                {
-                    ((TransactionInsertContainer)container).AddOutput(item);
-                    return;
-                }
+                if (item.DbTranslationType == SqlDbType.Timestamp) return;
 
                 ((TransactionInsertContainer)container).AddField(item);
 
@@ -527,18 +527,11 @@ IF @@TRANCOUNT > 0
                 ((TransactionInsertContainer)container).AddValue(data);
             }
 
-            protected override void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
+            protected override void AddOutput(ISqlContainer container, IModificationItem item)
             {
                 ((TransactionInsertContainer)container).AddTableVariable(item);
 
-                base.AddDbGenerationOptionGenerate(container, item);
-            }
-
-            protected override void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, IModificationItem item)
-            {
-                ((TransactionInsertContainer)container).AddTableVariable(item);
-
-                base.AddDbGenerationOptionIdentityAndDefault(container, item);
+                base.AddOutput(container, item);
             }
         }
 
@@ -562,12 +555,11 @@ IF @@TRANCOUNT > 0
                     string.IsNullOrEmpty(_tableAliasOverride) ? _reference.Alias : _tableAliasOverride);
             }
 
-            protected override void AddWhere(ISqlContainer container, IModificationItem item)
+            protected override void AddOutput(ISqlContainer container, IModificationItem item)
             {
-                // add the table variable, needed for concurrency checking
-                if (item.IsPrimaryKey) ((TransactionUpdateContainer)container).AddTableVariable(item);
+                ((TransactionUpdateContainer)container).AddTableVariable(item);
 
-                base.AddWhere(container, item);
+                base.AddOutput(container, item);
             }
         }
 
@@ -575,11 +567,11 @@ IF @@TRANCOUNT > 0
 
         #region Methods
 
-        private int _getNextReferenceIndex(int currentIndex, IReadOnlyList<UpdateType> saves)
+        private int _getNextReferenceIndex(int currentIndex, IReadOnlyList<UpdateType> actions)
         {
-            for (var i = 0; i < saves.Count; i++)
+            for (var i = 0; i < actions.Count; i++)
             {
-                var save = saves[i];
+                var save = actions[i];
 
                 if (i > currentIndex && save != UpdateType.Skip) return i;
             }
@@ -587,48 +579,45 @@ IF @@TRANCOUNT > 0
             return -1;
         }
 
-        private List<UpdateType> _getActionsTaken(ReferenceMap referenceMap)
+        private void _getActionsTaken(ReferenceMap referenceMap, IReadOnlyList<UpdateType> actions)
         {
-            var currentSaveIndex = -1;// nothing
+            var currentSaveIndex = -1;
             var concurrencyViolations = new List<object>();
-            var index = 0;
-            var result = new List<UpdateType>();
 
             // loads the data that was deleted
             do
             {
+                // get the save index 
+                currentSaveIndex = _getNextReferenceIndex(currentSaveIndex, actions);
+
                 // reference map and result sets are in the same order
-                var reference = referenceMap[index];
+                var reference = referenceMap[currentSaveIndex];
 
-                if (!Reader.HasRows)
+                if (Reader.HasRows) continue;
+
+                // check to see if there was a concurrency violation.  Other enum cases will be handled in different area
+                if (reference.Entity.UpdateType == UpdateType.Update &&
+                    Configuration.ConcurrencyChecking.IsOn &&
+                    Configuration.ConcurrencyChecking.ViolationRule == ConcurrencyViolationRule.UseHandler)
                 {
-                    // check to see if there was a concurrency violation.  Other enum cases will be handled in different area
-                    if (reference.Entity.UpdateType == UpdateType.Update &&
-                        Configuration.ConcurrencyChecking.IsOn &&
-                        Configuration.ConcurrencyChecking.ViolationRule == ConcurrencyViolationRule.UseHandler)
-                    {
-                        // connection is still open here, handle the concurrency violation later
-                        // if there is a concurrency violation do not load anytihng
-                        concurrencyViolations.Add(reference.Entity.Value);
-                    }
-
-                    // no rows?  Continue
-                    index++;
-                    result.Add(UpdateType.RowNotFound);
-                    continue;
+                    // connection is still open here, handle the concurrency violation later
+                    // if there is a concurrency violation do not load anytihng
+                    concurrencyViolations.Add(reference.Entity.Value);
                 }
 
-                index++;
-                result.Add(UpdateType.TransactionalDelete);
             } while (Reader.NextResult()); // go to next result
 
             // close reader and connection
             Disconnect();
 
-            return result;
-        } 
+            // handle concurrency violations
+            if (OnConcurrencyViolation == null) return;
 
-        private void _loadObjectFromMultipleActiveResults(ReferenceMap referenceMap, IReadOnlyList<UpdateType> saves)
+            // handle here so the connection is not left open
+            foreach (var violation in concurrencyViolations) OnConcurrencyViolation(violation);
+        }
+
+        private void _loadObjectFromMultipleActiveResults(ReferenceMap referenceMap, IReadOnlyList<UpdateType> actions, ChangeManager changeManager)
         {
             var currentSaveIndex = -1;// nothing
             var concurrencyViolations = new List<object>();
@@ -637,7 +626,7 @@ IF @@TRANCOUNT > 0
             do
             {
                 // get the save index 
-                currentSaveIndex = _getNextReferenceIndex(currentSaveIndex, saves);
+                currentSaveIndex = _getNextReferenceIndex(currentSaveIndex, actions);
 
                 // reference map and result sets are in the same order
                 var reference = referenceMap[currentSaveIndex];
@@ -661,14 +650,19 @@ IF @@TRANCOUNT > 0
                 // Process all elements in the current result set
                 while (Reader.Read())
                 {
-                    var keyContainer = new OutputContainer();
-                    var rec = (IDataRecord)Reader;
+                    var dataRecord = (IDataRecord)Reader;
 
-                    for (var j = 0; j < rec.FieldCount; j++)
+                    for (var j = 0; j < dataRecord.FieldCount; j++)
                     {
-                        keyContainer.Add(rec.GetName(j), rec.GetValue(j));
+                        var databaseColumnName = dataRecord.GetName(j);
+                        var oldValue = _getPropertyValue(databaseColumnName, reference.Entity);
+                        var dbValue = dataRecord.GetValue(j);
 
-                        reference.Entity.SetPropertyValue(rec.GetName(j), rec.GetValue(j));
+                        var newValue = dbValue is DBNull ? null : dbValue;
+
+                        if (ObjectComparison.HasChanged(oldValue, newValue)) changeManager.AddChange(databaseColumnName, reference.Entity.PlainTableName, oldValue, newValue);
+
+                        reference.Entity.SetPropertyValue(databaseColumnName, dbValue);
 
                         // set any fk's
                         if (reference.Parent == null) continue;
@@ -687,16 +681,14 @@ IF @@TRANCOUNT > 0
             if (OnConcurrencyViolation == null) return;
 
             // handle here so the connection is not left open
-            foreach (var violation in concurrencyViolations)
-            {
-                OnConcurrencyViolation(violation);
-            }
+            foreach (var violation in concurrencyViolations) OnConcurrencyViolation(violation);
         }
 
         private IPersistResult _saveChangesUsingTransactions<T>(T entity) where T : class
         {
-            var saves = new List<UpdateType>();
+            var actions = new List<UpdateType>();
             var parent = new ModificationEntity(entity, Configuration);
+            var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
@@ -708,9 +700,12 @@ IF @@TRANCOUNT > 0
                 var reference = referenceMap[i];
 
                 // add the save to the list so we can tell the user what the save action did
-                saves.Add(reference.Entity.UpdateType);
+                actions.Add(reference.Entity.UpdateType);
 
                 if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
+
+                // add the table to the change manager
+                changeManager.AddTable(reference.Entity.PlainTableName, reference.Entity.UpdateType);
 
                 // Get the correct execution plan
                 switch (reference.Entity.UpdateType)
@@ -737,12 +732,12 @@ IF @@TRANCOUNT > 0
             if (OnSaving != null) OnSaving(entity);
 
             // execute the sql.  make sure all the saves are not skips
-            if (!(saves.All(w => w == UpdateType.Skip)))
+            if (!(actions.All(w => w == UpdateType.Skip)))
             {
                 ExecuteReader(plan);
 
-                // load back the data from the save into the model
-                _loadObjectFromMultipleActiveResults(referenceMap, saves);
+                // load back the data from the save into the model and set what has changed
+                _loadObjectFromMultipleActiveResults(referenceMap, actions, changeManager);
 
                 // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
                 // Object needs to be loaded with the data from the database first
@@ -757,18 +752,21 @@ IF @@TRANCOUNT > 0
 
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 
-            return saves.Any(w => w != UpdateType.Skip);
+            // get our persist result from compiling the change manager
+            return changeManager.Compile();
         }
 
         private IPersistResult _deleteUsingTransactions<T>(T entity)
             where T : class
         {
+            var actions = new List<UpdateType>();
             var parent = new DeleteEntity(entity, Configuration);
 
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);
+            var changeManager = new ChangeManager();
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();
@@ -776,6 +774,11 @@ IF @@TRANCOUNT > 0
             for (var i = 0; i < referenceMap.Count; i++)
             {
                 var reference = referenceMap[i];
+
+                actions.Add(UpdateType.Delete);
+
+                // add action to the change manager
+                changeManager.AddTable(reference.Entity.PlainTableName, UpdateType.Delete);
 
                 if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
 
@@ -788,21 +791,11 @@ IF @@TRANCOUNT > 0
             ExecuteReader(builder);
 
             // check to see if the rows were deleted or not
-            var saves = _getActionsTaken(referenceMap);
-
-            // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
-            // Object needs to be loaded with the data from the database first
-            for (var i = 0; i < referenceMap.Count; i++)
-            {
-                var reference = referenceMap[i];
-
-                // set the pristine state only if entity tracking is on
-                if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
-            }
+            _getActionsTaken(referenceMap, actions);     
 
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 
-            return saves.Any(w => w == UpdateType.TransactionalDelete);
+            return changeManager.Compile();
         }
 
         #endregion

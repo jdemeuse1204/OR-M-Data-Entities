@@ -8,5 +8,7 @@ namespace OR_M_Data_Entities.Data.Modification
         XmlDocument ResultsXml { get; }
 
         IReadOnlyList<ITableChangeResult> Results { get; }
+
+        bool WereChangesPersisted { get; }
     }
 }

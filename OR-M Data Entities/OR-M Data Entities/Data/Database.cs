@@ -28,6 +28,9 @@ namespace OR_M_Data_Entities.Data
     public abstract partial class Database : IDisposable
     {
         #region Properties
+        protected delegate void OnSqlGenerated(string sql);
+
+        protected static event OnSqlGenerated OnSqlGeneration;
 
         protected string ConnectionString { get; private set; }
 
@@ -157,6 +160,7 @@ namespace OR_M_Data_Entities.Data
             // clean up the command, connection and reader
             Disconnect();
 
+            OnSqlGeneration = null;
             Configuration = null;
             ConnectionString = null;
         }
@@ -170,6 +174,9 @@ namespace OR_M_Data_Entities.Data
             _preprocessExecution();
 
             _command = new SqlCommand(sql, _connection);
+
+            // for use to return the sql that is generated
+            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText);
 
             _addParameters(parameters);
 
@@ -186,11 +193,14 @@ namespace OR_M_Data_Entities.Data
             ExecuteReader(sql, parameters, null);
         }
 
-        protected void ExecuteReader(ISqlExecutionPlan builder)
+        protected void ExecuteReader(ISqlExecutionPlan plan)
         {
             _preprocessExecution();
 
-            _command = builder.BuildSqlCommand(_connection);
+            _command = plan.BuildSqlCommand(_connection);
+
+            // for use to return the sql that is generated
+            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText);
 
             Reader = new PeekDataReader(_command, _connection);
         }
@@ -873,6 +883,22 @@ namespace OR_M_Data_Entities.Data
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return GetEnumerator();
+            }
+        }
+
+        protected static class ObjectComparison
+        {
+            /// <summary>
+            /// When comparing pristine, valueOne should be pristine value
+            /// </summary>
+            /// <param name="valueOne"></param>
+            /// <param name="valueTwo"></param>
+            /// <returns></returns>
+            public static bool HasChanged(object valueOne, object valueTwo)
+            {
+                return ((valueTwo == null && valueOne != null) || (valueTwo != null && valueOne == null))
+                        ? valueTwo != valueOne
+                        : valueTwo == null && valueOne == null ? false : !valueTwo.Equals(valueOne);
             }
         }
     }

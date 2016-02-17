@@ -885,6 +885,17 @@ namespace OR_M_Data_Entities.Data
                 return GetColumnName(AllProperties, propertyName);
             }
 
+            public PropertyInfo GetProperty(string databaseColumnName)
+            {
+                var firstCheck =
+                    AllProperties.FirstOrDefault(
+                        w =>
+                            w.GetCustomAttribute<ColumnAttribute>() != null &&
+                            w.GetCustomAttribute<ColumnAttribute>().Name == databaseColumnName);
+
+                return firstCheck ?? AllProperties.FirstOrDefault(w => w.Name == databaseColumnName);
+            }
+
             public static string GetColumnName(List<PropertyInfo> properties, string propertyName)
             {
                 var property = properties.FirstOrDefault(w => w.Name == propertyName);
@@ -1177,15 +1188,8 @@ namespace OR_M_Data_Entities.Data
                 return (from item in allColumns
                         let current = _getCurrentObject(entityStateTrackable, item.Name)
                         let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
-                        let hasChanged = _hasChanged(pristineEntity, current)
+                        let hasChanged = ObjectComparison.HasChanged(pristineEntity, current)
                         select new ModificationItem(item, hasChanged)).ToList();
-            }
-
-            private static bool _hasChanged(object pristineEntity, object entity)
-            {
-                return ((entity == null && pristineEntity != null) || (entity != null && pristineEntity == null))
-                    ? entity != pristineEntity
-                    : entity == null && pristineEntity == null ? false : !entity.Equals(pristineEntity);
             }
 
             private void _initialize(IConfigurationOptions configuration)
@@ -1285,7 +1289,7 @@ namespace OR_M_Data_Entities.Data
                 var pristineEntity = _getPristineProperty(entity, propertyName);
                 var current = _getCurrentObject(entity, propertyName);
 
-                return _hasChanged(pristineEntity, current);
+                return ObjectComparison.HasChanged(pristineEntity, current);
             }
 
             private static object _getCurrentObject(EntityStateTrackable entity, string propertyName)

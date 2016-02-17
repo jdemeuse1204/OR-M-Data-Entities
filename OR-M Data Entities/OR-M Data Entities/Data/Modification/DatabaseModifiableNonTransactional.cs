@@ -163,13 +163,11 @@ namespace OR_M_Data_Entities.Data
                 var keys = entity.GetPrimaryKeys();
 
                 if (keys.Count == 0) throw new KeyNotFoundException(string.Format("Primary Key not found for table: {0}", entity.PlainTableName));
-
-                Output = string.Format("[INSERTED].[{0}]", Table.GetColumnName(keys.First()));
             }
 
             public void AddOutput(IModificationItem item)
             {
-                Output = string.Concat(Output, string.Format(",[INSERTED].[{0}]", item.DatabaseColumnName));
+                Output = string.Concat(Output, string.Format("[INSERTED].[{0}],", item.DatabaseColumnName));
             }
 
             public void AddUpdate(IModificationItem item, string parameterKey)
@@ -200,7 +198,7 @@ namespace OR_M_Data_Entities.Data
             public virtual SqlPartStatement Split()
             {
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
-                var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3}", Statement, SetItems.TrimEnd(','), Output, Where.TrimEnd(','));
+                var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3}", Statement, SetItems.TrimEnd(','), Output.TrimEnd(','), Where.TrimEnd(','));
                 
                 return new SqlPartStatement(sql);
             }
@@ -460,11 +458,7 @@ ELSE
 
             protected virtual void AddDbGenerationOptionNone(ISqlContainer container, IModificationItem item)
             {
-                if (item.DbTranslationType == SqlDbType.Timestamp)
-                {
-                    ((InsertContainer)container).AddOutput(item);
-                    return;
-                }
+                if (item.DbTranslationType == SqlDbType.Timestamp) return;
 
                 // parameter key
                 var value = Entity.GetPropertyValue(item.PropertyName);
@@ -472,7 +466,6 @@ ELSE
 
                 ((InsertContainer)container).AddField(item);
                 ((InsertContainer)container).AddValue(data);
-                ((InsertContainer)container).AddOutput(item);
             }
 
             protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
@@ -484,10 +477,9 @@ ELSE
                 ((InsertContainer)container).AddField(item);
                 ((InsertContainer)container).AddValue(key);
                 ((InsertContainer)container).AddDeclare(key, item.SqlDataTypeString);
-                ((InsertContainer)container).AddOutput(item);
             }
 
-            protected virtual void AddDbGenerationOptionIdentityAndDefault(ISqlContainer container, IModificationItem item)
+            protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
             {
                 ((InsertContainer)container).AddOutput(item);
             }
@@ -503,6 +495,9 @@ ELSE
                 {
                     var item = items[i];
 
+                    // we want to select back the whole inserted object
+                    AddOutput(container, item);
+
                     //  NOTE:  Alias any Identity specification and generate columns with their property
                     // name not db column name so we can set the property when we return the values back.
                     switch (item.Generation)
@@ -513,10 +508,12 @@ ELSE
                         case DbGenerationOption.Generate:
                             AddDbGenerationOptionGenerate(container, item);
                             break;
-                        case DbGenerationOption.DbDefault:
-                        case DbGenerationOption.IdentitySpecification:
-                            AddDbGenerationOptionIdentityAndDefault(container, item);
-                            break;
+                        // These will get added by default, because
+                        // we select back the whole object
+                        //case DbGenerationOption.DbDefault:
+                        //case DbGenerationOption.IdentitySpecification:
+                        default:
+                            continue;
                     }
                 }
 
@@ -545,13 +542,7 @@ ELSE
             protected virtual void AddUpdate(ISqlContainer container, IModificationItem item)
             {
                 // These instances cannot be updated, we should read them back and insert the original value into the entity
-                if (item.Generation == DbGenerationOption.IdentitySpecification || item.DbTranslationType == SqlDbType.Timestamp)
-                {
-                    // select back the real value in case the user tried to update it.  Need 
-                    // to load back the generated column
-                    ((UpdateContainer)container).AddOutput(item);
-                    return;
-                }
+                if (item.Generation == DbGenerationOption.IdentitySpecification || item.DbTranslationType == SqlDbType.Timestamp) return;
 
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);
@@ -568,9 +559,14 @@ ELSE
                 ((UpdateContainer)container).AddWhere(item, parameter);
             }
 
+            protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
+            {
+                ((UpdateContainer)container).AddOutput(item);
+            }
+
             public override ISqlContainer BuildContainer()
             {
-                var items = Entity.Changes();
+                var items = Entity.All();
                 var container = (UpdateContainer)NewContainer();
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
@@ -580,7 +576,22 @@ ELSE
                 {
                     var item = items[i];
 
+                    if (item.IsPrimaryKey)
+                    {
+                        AddWhere(container, item);
+                        continue;
+                    }
+
+                    // select back the whole object, someone else might
+                    // have updated a different field than what the user 
+                    // is updating
+                    AddOutput(container, item);
+
+                    if (!item.IsModified) continue;
+
+                    // set the item to be updated
                     AddUpdate(container, item);
+
 
                     // check to see if concurrency checking is on
                     if (!Configuration.ConcurrencyChecking.IsOn) continue;
@@ -588,8 +599,7 @@ ELSE
                     // cannot concurrency check if entity state tracking is not on 
                     // because we do not know what the user has and has not changed. If entity state tracking is on and the 
                     // pristine entity is null then we have a try insert update, make sure to skip the concurrency check
-                    if (!Entity.IsEntityStateTrackingOn || 
-                        item.Generation == DbGenerationOption.IdentitySpecification ||
+                    if (!Entity.IsEntityStateTrackingOn || item.Generation == DbGenerationOption.IdentitySpecification ||
                         (Entity.IsEntityStateTrackingOn && Entity.IsPristineEntityNull()))
                     {
                         continue;
@@ -609,17 +619,6 @@ ELSE
 
                     // property is null, make a different check
                     container.AddNullWhere(item);
-                }
-
-                // keys are not part of changes so we need to grab them
-                var primaryKeys = Entity.Keys();
-
-                // add where statement
-                for (var i = 0; i < primaryKeys.Count; i++)
-                {
-                    var key = primaryKeys[i];
-
-                    AddWhere(container, key);
                 }
 
                 return container;
@@ -692,8 +691,8 @@ ELSE
         {
             try
             {
-                var saves = new List<UpdateType>();
                 var parent = new ModificationEntity(entity, Configuration);
+                var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
                 var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
@@ -703,10 +702,10 @@ ELSE
                     var reference = referenceMap[i];
                     ISqlExecutionPlan plan;
 
-                    // add the save to the list so we can tell the user what the save action did
-                    saves.Add(reference.Entity.UpdateType);
-
                     if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
+
+                    // add table and update type
+                    changeManager.AddTable(reference.Entity.PlainTableName, reference.Entity.UpdateType);
 
                     // Get the correct execution plan
                     switch (reference.Entity.UpdateType)
@@ -741,7 +740,11 @@ ELSE
                     ExecuteReader(plan);
 
                     // get output and clean up connections
-                    var keyContainer = GetOutput();
+                    var keyContainer = GetOutput(reference.Entity, changeManager);
+
+                    // make sure data was inserted, if not set the object back on the update manager.
+                    // might be a sql server error
+                    if (keyContainer.Count == 0) changeManager.ChangeUpdateType(reference.Entity.PlainTableName, UpdateType.Skip);
 
                     // check for concurrency violation
                     var hasConcurrencyViolation = reference.Entity.UpdateType == UpdateType.Update &&
@@ -784,7 +787,7 @@ ELSE
                     if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, reference.Entity.UpdateType);
                 }
 
-                return saves.Any(w => w != UpdateType.Skip);
+                return changeManager.Compile();
             }
             catch (MaxLengthException ex)
             {
@@ -796,8 +799,8 @@ ELSE
         private IPersistResult _delete<T>(T entity) 
             where T : class
         {
-            var saves = new List<UpdateType>();
             var parent = new DeleteEntity(entity, Configuration);
+            var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
@@ -819,11 +822,13 @@ ELSE
                 ExecuteReader(builder);
 
                 // we return the deleted id's to check and see if anything was deleted
-                var keyContainer = GetOutput();
-                var actionTaken = keyContainer.Count > 0 ? UpdateType.Delete : UpdateType.RowNotFound;
+                var actionTaken = Reader.HasRows ? UpdateType.Delete : UpdateType.RowNotFound;
 
-                // add the save to the list so we can tell the user what the save action did
-                saves.Add(actionTaken);
+                // clean up connection
+                Disconnect();
+
+                // add result to change manager
+                changeManager.AddTable(reference.Entity.PlainTableName, actionTaken);
 
                 // set the pristine state only if entity tracking is on
                 if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
@@ -831,7 +836,7 @@ ELSE
                 if (OnAfterSave != null) OnAfterSave(reference.Entity.Value, actionTaken);
             }
 
-            return saves.Any(w => w == UpdateType.Delete);
+            return changeManager.Compile();
         }
         #endregion
     }

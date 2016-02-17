@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Xml;
+using System.Xml.Schema;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
@@ -21,10 +22,10 @@ namespace OR0M_Data_Entities.Console
             Configuration.UseTransactions = true;
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
-
+            
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
-            OnSqlGeneration +=OnOnSqlGeneration;
+            OnSqlGeneration += OnOnSqlGeneration;
         }
 
         private void OnOnSqlGeneration(string sql)
@@ -65,76 +66,11 @@ namespace OR0M_Data_Entities.Console
             return false;
         }
 
-        private class ChangeManager
-        {
-            private readonly XmlDocument _doc;
-
-            public ChangeManager()
-            {
-                _doc = new XmlDocument();
-                var xmlDeclaration = _doc.CreateXmlDeclaration("1.0", "UTF-8", null);
-                var root = _doc.DocumentElement;
-                _doc.InsertBefore(xmlDeclaration, root);
-            }
-
-
-        }
+        
 
         private static void Main(string[] args)
         {
-            var doc = new XmlDocument();
-
-            //(1) the xml declaration is recommended, but not mandatory
-            var xmlDeclaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
-            var root = doc.DocumentElement;
-            doc.InsertBefore(xmlDeclaration, root);
-
-            //(2) string.Empty makes cleaner code
-            var element1 = doc.CreateElement(string.Empty, "procedure", string.Empty);
-            doc.AppendChild(element1);
-
-            var table = doc.CreateElement(string.Empty, "table", string.Empty);
-
-            var attr1 = doc.CreateAttribute("name");
-            attr1.InnerText = "win";
-            table.SetAttributeNode(attr1);
-
-            var attr2 = doc.CreateAttribute("action");
-            attr2.InnerText = "change";
-            table.SetAttributeNode(attr2);
-
-            var attr3 = doc.CreateAttribute("total");
-            attr3.InnerText = "20";
-            table.SetAttributeNode(attr3);
-
-            element1.AppendChild(table);
-
-            var changes = doc.CreateElement(string.Empty, "changes", string.Empty);
-            table.AppendChild(changes);
-
-            var column = doc.CreateElement(string.Empty, "column", string.Empty);
-
-            var attribute = doc.CreateAttribute("name");
-            attribute.InnerText = "win";
-            column.SetAttributeNode(attribute);
-
-            changes.AppendChild(column);
-
-            var oldValue = doc.CreateElement(string.Empty, "old", string.Empty);
-            var o = doc.CreateTextNode("other text");
-            oldValue.AppendChild(o);
-            column.AppendChild(oldValue);
-
-            var newValue = doc.CreateElement(string.Empty, "new", string.Empty);
-            var n = doc.CreateTextNode("new text");
-            newValue.AppendChild(n);
-            column.AppendChild(newValue);
-
-            doc.Save("C:\\users\\jdemeuse\\desktop\\document.xml");
-
             var context = new SqlContext();
-            var ids = new[] { 1 };
-            var tests = new List<int> { 1 };
             //context.From<Contact>()
             //    .Where(w => w.ContactID == 1)
             //    .Select(w => new Test
@@ -150,19 +86,29 @@ namespace OR0M_Data_Entities.Console
 
             //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
+            var sdfsdf = context.From<Contact>().FirstOrDefault(w => w.ContactID == 1);
+
+            sdfsdf.FirstName = "WINNNNNNNNN";
+
+            context.SaveChanges(sdfsdf);
+
             var s = DateTime.Now;
-            var q = context.From<Contact>().Select(w => new Contact
-            {
-                ContactID = w.ContactID
-            }).FirstOrDefault();
+
             var t = context.Find<Contact>(1);
+            var e = DateTime.Now;
+
+            System.Console.WriteLine((e - s).Milliseconds);
+
+            t.FirstName = "Different";
+
+            context.SaveChanges(t);
             
             var sdsdfgf = context.From<Contact>().OrderByDescending(w => w.ContactID).Select(w => w.ContactID);
             
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
-            var e = DateTime.Now;
+            
 
             System.Console.WriteLine(sdgf);
 
@@ -282,21 +228,10 @@ namespace OR0M_Data_Entities.Console
                 }
             }
 
-
-            for (var i = 0; i < 100; i++)
+            var q = context.From<Contact>().Select(w => new Contact
             {
-                var v = context.ExecuteScript<Contact>(new SS1
-                {
-                    Id = 1
-                }).ToList();
-            }
-
-            var c = context.Find<Contact>(1);
-
-            if (c != null)
-            {
-
-            }
+                ContactID = w.ContactID
+            }).FirstOrDefault();
 
         }
 

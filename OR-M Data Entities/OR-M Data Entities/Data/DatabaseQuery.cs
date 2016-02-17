@@ -26,10 +26,6 @@ namespace OR_M_Data_Entities.Data
         #region Properties and Fields
         private static QuerySchematicManager _schematicManager { get; set; }
 
-        protected delegate void OnSqlGenerated(string sql);
-
-        protected static event OnSqlGenerated OnSqlGeneration;
-
         #endregion
 
         #region Constructor
@@ -83,7 +79,6 @@ namespace OR_M_Data_Entities.Data
 
         public override void Dispose()
         {
-            OnSqlGeneration = null;
             _schematicManager = null;
             base.Dispose();
         }
@@ -757,12 +752,7 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 // generate out sql statement
-                var sql = Sql();
-
-                // for use to return the sql that is generated
-                if (OnSqlGeneration != null) OnSqlGeneration(sql);
-
-                return _context.ExecuteQuery<TSource>(sql, _parameters.ToList(), _schematic);
+                return _context.ExecuteQuery<TSource>(Sql(), _parameters.ToList(), _schematic);
             }
 
             public void IncludeAll()
@@ -918,11 +908,9 @@ namespace OR_M_Data_Entities.Data
 
             public IEnumerator<T> GetEnumerator()
             {
-                //foreach (var item in _context.ExecuteQuery(this)) yield return item;
+                foreach (var item in ExecuteReader<T>()) yield return item;
 
-                //_context.Dispose();
-
-                return null;
+                _context.Dispose();
             }
 
             IEnumerator IEnumerable.GetEnumerator()

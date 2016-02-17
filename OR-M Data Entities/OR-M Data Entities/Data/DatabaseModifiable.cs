@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
@@ -28,25 +29,25 @@ namespace OR_M_Data_Entities.Data
     /// <summary>
     /// This class uses DataFetching functions to Save, Delete
     /// </summary>
-    public abstract partial class DatabaseModifiable : DatabaseFetching
+    public abstract partial class DatabaseModifiable : DatabaseQuery
     {
         #region Events And Delegates
 
-        public delegate void OnBeforeSaveHandler(object entity, UpdateType updateType);
+        protected delegate void OnBeforeSaveHandler(object entity, UpdateType updateType);
 
-        public event OnBeforeSaveHandler OnBeforeSave;
+        protected event OnBeforeSaveHandler OnBeforeSave;
 
-        public delegate void OnAfterSaveHandler(object entity, UpdateType actualUpdateType);
+        protected delegate void OnAfterSaveHandler(object entity, UpdateType actualUpdateType);
 
-        public event OnAfterSaveHandler OnAfterSave;
+        protected event OnAfterSaveHandler OnAfterSave;
 
-        public delegate void OnSavingHandler(object entity);
+        protected delegate void OnSavingHandler(object entity);
 
-        public event OnSavingHandler OnSaving;
+        protected event OnSavingHandler OnSaving;
 
-        public delegate void OnConcurrencyViolated(object entity);
+        protected delegate void OnConcurrencyViolated(object entity);
 
-        public event OnConcurrencyViolated OnConcurrencyViolation;
+        protected event OnConcurrencyViolated OnConcurrencyViolation;
 
         #endregion
 
@@ -295,6 +296,23 @@ namespace OR_M_Data_Entities.Data
                     var foreignKeyIsList = e.Property == null ? false : e.Property.IsList();
                     var tableType = e.Property == null ? e.Value.GetType() : e.Property.GetPropertyType();
                     var tableInfo = new Table(tableType, configuration);
+                     
+                    // this is ok as long as the parent is not an insert
+                    if (e.Value == null)
+                    {
+                        if (e.Parent == null) throw new SqlSaveException("Cannot save a null object");
+
+                        var modifcationEntity = new ModificationEntity(e.Parent, configuration);
+
+                        if (modifcationEntity.UpdateType == UpdateType.Insert ||
+                            modifcationEntity.UpdateType == UpdateType.TryInsert ||
+                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate)
+                        {
+                            throw new SqlSaveException(string.Format("Foreign Key violation.  {0} cannot be null", Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
+                        }
+
+                        continue;
+                    }
 
                     if (tableInfo.IsReadOnly)
                     {
@@ -372,6 +390,63 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Methods
+        /// <summary>
+        /// Used with insert statements only, gets the value if the id's that were inserted
+        /// </summary>
+        /// <returns></returns>
+        private OutputContainer GetOutput(ModificationEntity entity, ChangeManager changeManager)
+        {
+            if (Reader.HasRows)
+            {
+                Reader.Read();
+                var keyContainer = new OutputContainer();
+                var dataRecord = (IDataRecord)Reader;
+
+                for (var i = 0; i < dataRecord.FieldCount; i++)
+                {
+                    var databaseColumnName = dataRecord.GetName(i);
+                    var oldValue = _getPropertyValue(databaseColumnName, entity);
+                    var dbValue = dataRecord.GetValue(i);
+                    var newValue = dbValue is DBNull ? null : dbValue;
+
+                    if (ObjectComparison.HasChanged(oldValue, newValue)) changeManager.AddChange(databaseColumnName, entity.PlainTableName, oldValue, newValue);
+
+                    keyContainer.Add(databaseColumnName, newValue);
+                }
+
+                // set the keys on the change manager
+                foreach (var key in entity.Keys())
+                {
+                    var value = entity.GetPropertyValue(key.PropertyName);
+
+                    changeManager.AddKey(key.DatabaseColumnName, entity.PlainTableName, value);
+                }
+
+                // clean up the database connection
+                Disconnect();
+
+                return keyContainer;
+            }
+
+            // clean up the database connection
+            Disconnect();
+
+            return new OutputContainer();
+        }
+
+        private object _getPropertyValue(string databaseColumnName, ModificationEntity entity)
+        {
+            var property = entity.GetProperty(databaseColumnName);
+
+            if (entity.UpdateType == UpdateType.Insert ||
+                entity.UpdateType == UpdateType.TryInsert ||
+                entity.UpdateType == UpdateType.TryInsertUpdate)
+            {
+                return entity.GetPropertyValue(property);
+            }
+
+            return entity.GetPristineEntityPropertyValue(property.Name);
+        }
 
         private static List<ForeignKeyAssociation> _getForeignKeys(object entity)
         {
@@ -385,32 +460,6 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region shared
-
-        private class SaveResult : IPersistResult
-        {
-            public SaveResult(XmlDocument resultsXml, List<ITableChangeResult> results)
-            {
-                ResultsXml = resultsXml;
-                Results = results;
-            }
-
-            public XmlDocument ResultsXml { get; }
-
-            public IReadOnlyList<ITableChangeResult> Results { get; }
-        }
-
-        private class TableChangeResult : ITableChangeResult
-        {
-            public TableChangeResult(UpdateType action, Type table)
-            {
-                Action = action;
-                Table = table;
-            }
-
-            public UpdateType Action { get; }
-
-            public Type Table { get; }
-        }
 
         /// <summary>
         /// Provides us a way to get the execution plan for an entity
@@ -595,6 +644,244 @@ namespace OR_M_Data_Entities.Data
 
             #endregion
         }
+
+        // helps return data from insertions
+        private class OutputContainer : IEnumerable<KeyValuePair<string, object>>
+        {
+            #region Constructor
+            public OutputContainer()
+            {
+                _container = new Dictionary<string, object>();
+            }
+            #endregion
+
+            #region Properties
+            private Dictionary<string, object> _container { get; set; }
+
+            public int Count { get { return _container == null ? 0 : _container.Count; } }
+            #endregion
+
+            #region Methods
+            public void Add(string columnName, object value)
+            {
+                _container.Add(columnName, value);
+            }
+
+            public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
+            {
+                return _container.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+            #endregion
+        }
+
+        #region Change Management
+        private class ChangeManager
+        {
+            private readonly XmlDocument _doc;
+            private readonly Dictionary<string, ChangeContainer> _tableChangeResultsXml;
+            private readonly List<ITableChangeResult> _tableChangeResults;
+            private readonly XmlElement _root;
+
+            public ChangeManager()
+            {
+                _doc = new XmlDocument();
+                _tableChangeResultsXml = new Dictionary<string, ChangeContainer>();
+                _tableChangeResults = new List<ITableChangeResult>();
+
+                var xmlDeclaration = _doc.CreateXmlDeclaration("1.0", "UTF-8", null);
+                var root = _doc.DocumentElement;
+                _doc.InsertBefore(xmlDeclaration, root);
+
+                _root = _doc.CreateElement(string.Empty, "procedure", string.Empty);
+            }
+
+            private ChangeContainer _findChangeContainer(string tableName)
+            {
+                ChangeContainer container;
+
+                _tableChangeResultsXml.TryGetValue(tableName, out container);
+
+                if (container == null) throw new Exception(string.Format("Table not found for Xml change document creation.  Table Name- {0}", tableName));
+
+                return container;
+            }
+
+            public void AddChange(string columnName, string tableName, object oldValue, object newValue)
+            {
+                var container =_findChangeContainer(tableName);
+
+                // create column element
+                var columnElement = _doc.CreateElement(string.Empty, "column", string.Empty);
+
+                // add name attribute to column
+                var nameAttribute = _doc.CreateAttribute("name");
+                nameAttribute.InnerText = columnName;
+                columnElement.SetAttributeNode(nameAttribute);
+
+                // add old value node
+                var oldValueElement = _doc.CreateElement(string.Empty, "old", string.Empty);
+                var oldValueNode = _doc.CreateTextNode(oldValue == null ? "NULL" : oldValue.ToString());
+                oldValueElement.AppendChild(oldValueNode);
+                columnElement.AppendChild(oldValueElement);
+
+                // add new value node
+                var newValueElement = _doc.CreateElement(string.Empty, "new", string.Empty);
+                var newValueNode = _doc.CreateTextNode(newValue == null ? "NULL" : newValue.ToString());
+                newValueElement.AppendChild(newValueNode);
+                columnElement.AppendChild(newValueElement);
+
+                container.Columns.AppendChild(columnElement);
+                container.AddChange();
+            }
+
+            public void AddKey(string columnName, string tableName, object value)
+            {
+                var container = _findChangeContainer(tableName);
+
+                // create column element
+                var columnElement = _doc.CreateElement(string.Empty, "column", string.Empty);
+
+                // add name attribute to column
+                var nameAttribute = _doc.CreateAttribute("name");
+                nameAttribute.InnerText = columnName;
+                columnElement.SetAttributeNode(nameAttribute);
+
+                // set value of the key
+                var oldValueElement = _doc.CreateElement(string.Empty, "value", string.Empty);
+                var oldValueNode = _doc.CreateTextNode(value.ToString());
+                oldValueElement.AppendChild(oldValueNode);
+                columnElement.AppendChild(oldValueElement);
+
+                container.Keys.AppendChild(columnElement);
+            }
+
+            public void AddTable(string tableName, UpdateType updateType)
+            {
+                if (_tableChangeResultsXml.ContainsKey(tableName)) return;
+
+                var change = new ChangeContainer(_doc);
+                var tableElement = _doc.CreateElement(string.Empty, "table", string.Empty);
+
+                var nameAttribute = _doc.CreateAttribute("name");
+                nameAttribute.InnerText = tableName;
+
+                tableElement.SetAttributeNode(nameAttribute);
+
+                change.SetTableElement(tableElement);
+
+                // set the action taken on the table
+                var actionAttribute = _doc.CreateAttribute("action");
+                actionAttribute.InnerText = updateType.ToString();
+                tableElement.SetAttributeNode(actionAttribute);
+
+                _tableChangeResultsXml.Add(tableName, change);
+                _tableChangeResults.Add(new TableChangeResult(updateType, tableName));
+            }
+
+            public void ChangeUpdateType(string tableName, UpdateType updateType)
+            {
+                var tableChangeResult = _tableChangeResults.FirstOrDefault(w => w.TableName == tableName);
+
+                if (tableChangeResult == null) throw new Exception(string.Format("Could not find change result for table {0}", tableName));
+
+                tableChangeResult.ChangeAction(updateType);
+            }
+
+            public IPersistResult Compile()
+            {
+                // compile the changes
+                foreach (var change in _tableChangeResultsXml) change.Value.Finalize(_doc, _root);
+
+                _doc.AppendChild(_root);
+
+                _doc.Save("C:\\users\\jdemeuse\\desktop\\document.xml");
+
+                return new SaveResult(_doc, _tableChangeResults);
+            }
+
+            #region helpers
+            private class ChangeContainer
+            {
+                public ChangeContainer(XmlDocument doc)
+                {
+                    Count = 0;
+                    TableElement = null;
+
+                    Columns = doc.CreateElement(string.Empty, "columns", string.Empty);
+                    Keys = doc.CreateElement(string.Empty, "keys", string.Empty);
+                }
+
+                public int Count { get; private set; }
+
+                public XmlElement TableElement { get; private set; }
+
+                public XmlElement Columns { get; private set; }
+
+                public XmlElement Keys { get; private set; }
+
+                public void AddChange()
+                {
+                    Count++;
+                }
+
+                public void SetTableElement(XmlElement element)
+                {
+                    TableElement = element;
+                }
+
+                public void Finalize(XmlDocument doc, XmlElement root)
+                {
+                    var totalAttribute = doc.CreateAttribute("total");
+                    totalAttribute.InnerText = Count.ToString();
+                    TableElement.SetAttributeNode(totalAttribute);
+
+                    TableElement.AppendChild(Columns);
+                    TableElement.AppendChild(Keys);
+
+                    root.AppendChild(TableElement);
+                }
+            }
+
+            private class SaveResult : IPersistResult
+            {
+                public SaveResult(XmlDocument resultsXml, List<ITableChangeResult> results)
+                {
+                    ResultsXml = resultsXml;
+                    Results = results;
+                }
+
+                public XmlDocument ResultsXml { get; private set; }
+
+                public IReadOnlyList<ITableChangeResult> Results { get; private set; }
+
+                public bool WereChangesPersisted { get { return Results.Any(w => w.Action != UpdateType.Skip); } }
+            }
+
+            private class TableChangeResult : ITableChangeResult
+            {
+                public TableChangeResult(UpdateType action, string tableName)
+                {
+                    Action = action;
+                    TableName = tableName;
+                }
+
+                public UpdateType Action { get; private set; }
+
+                public string TableName { get; private set; }
+
+                public void ChangeAction(UpdateType action)
+                {
+                    Action = action;
+                }
+            }
+            #endregion
+        }
+        #endregion
 
         #endregion
     }

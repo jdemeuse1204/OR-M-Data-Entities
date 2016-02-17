@@ -100,7 +100,6 @@
     <Compile Include="Data\Transform\DbFunctions.cs" />
     <Compile Include="Data\Database.cs" />
     <Compile Include="Data\Definition\DatabaseOperations.cs" />
-    <Compile Include="Data\DatabaseFetching.cs" />
     <Compile Include="Data\DatabaseModifiable.cs" />
     <Compile Include="Data\DataReader.cs" />
     <Compile Include="Enumeration\OrderType.cs" />
