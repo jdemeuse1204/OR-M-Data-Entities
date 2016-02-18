@@ -41,11 +41,15 @@ namespace OR_M_Data_Entities.Data
         private SqlConnection _connection { get; set; }
 
         private SqlCommand _command { get; set; }
+
+        private bool _configurationCheckPerformed { get; set; }
         #endregion
 
         #region Constructor
         protected Database(string connectionStringOrName)
         {
+            _configurationCheckPerformed = false;
+
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
                 ConnectionString = connectionStringOrName;
@@ -216,6 +220,8 @@ namespace OR_M_Data_Entities.Data
 
         private void _preprocessExecution()
         {
+            _checkConfiguration();
+
             TryDisposeCloseReader();
 
             Connect();
@@ -223,6 +229,29 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Configuration
+
+        /// <summary>
+        /// ensures the ConfigurationOptions are valid
+        /// </summary>
+        private void _checkConfiguration()
+        {
+            if (_configurationCheckPerformed) return;
+
+            const string errorMessage = "Keys not configured correctly, must have at at least one key for option: {0}";
+
+            var insertKeyProperties = Configuration.InsertKeys.GetType().GetProperties().ToList();
+
+            foreach (var insertKeyProperty in from insertKeyProperty in insertKeyProperties
+                let value = insertKeyProperty.GetValue(Configuration.InsertKeys)
+                where value == null || ((ICollection) value).Count == 0
+                select insertKeyProperty)
+            {
+                throw new Exception(string.Format(errorMessage, insertKeyProperty.Name));
+            }
+
+            _configurationCheckPerformed = true;
+        }
+
         private class ConfigurationOptions : IConfigurationOptions
         {
             public ConfigurationOptions(bool useTransactions, string defaultSchema)

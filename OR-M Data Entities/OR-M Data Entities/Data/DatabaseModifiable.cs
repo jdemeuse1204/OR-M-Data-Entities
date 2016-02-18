@@ -16,8 +16,6 @@ using System.Reflection;
 using System.Xml;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Rules;
-using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -65,9 +63,6 @@ namespace OR_M_Data_Entities.Data
         public virtual IPersistResult SaveChanges<T>(T entity)
             where T : class
         {
-            // check the configuration first, make sure its setup correctly
-            RuleProcessor.ProcessRule<IsConfigurationValidRule>(Configuration);
-
             return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
         }
         #endregion
@@ -76,9 +71,6 @@ namespace OR_M_Data_Entities.Data
 
         public virtual IPersistResult Delete<T>(T entity) where T : class
         {
-            // check the configuration first, make sure its setup correctly
-            RuleProcessor.ProcessRule<IsConfigurationValidRule>(Configuration);
-
             return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
         }
 

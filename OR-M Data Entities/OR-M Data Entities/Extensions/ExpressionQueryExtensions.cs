@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
@@ -442,9 +443,14 @@ namespace OR_M_Data_Entities
 
         public static IExpressionQuery<TSource> IncludeTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
         {
-            ((IExpressionQueryResolvable<TSource>)source).IncludeTo(tableName);
+            source.AsResolvable().IncludeTo(tableName);
 
             return source;
+        }
+
+        private static IExpressionQueryResolvable<T> AsResolvable<T>(this IExpressionQuery<T> source)
+        {
+            return ((IExpressionQueryResolvable<T>) source);
         }
         #endregion
 

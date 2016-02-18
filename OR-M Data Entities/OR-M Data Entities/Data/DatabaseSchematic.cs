@@ -13,8 +13,6 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Definition.Rules;
-using OR_M_Data_Entities.Data.Definition.Rules.Base;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
@@ -45,176 +43,6 @@ namespace OR_M_Data_Entities.Data
             Tables = new TableCache();
         }
 
-        #endregion
-
-        #region Rules
-        private sealed class PkValueNotNullRule : IRule
-        {
-            private readonly object _pkValue;
-
-            private readonly MemberInfo _key;
-
-            public PkValueNotNullRule(object pkValue, MemberInfo key)
-            {
-                _pkValue = pkValue;
-                _key = key;
-            }
-
-            public void Process()
-            {
-                if (_pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", ReflectionCacheTable.GetColumnName(_key)));
-            }
-        }
-
-        private sealed class TimeStampColumnUpdateRule : IRule
-        {
-            private readonly EntityStateTrackable _entityStateTrackable;
-
-            private readonly IReadOnlyList<PropertyInfo> _columns;
-
-            public TimeStampColumnUpdateRule(EntityStateTrackable entityStateTrackable, IReadOnlyList<PropertyInfo> columns)
-            {
-                _entityStateTrackable = entityStateTrackable;
-                _columns = columns;
-            }
-
-            public void Process()
-            {
-                // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
-                if (_entityStateTrackable == null) return;
-
-                List<string> errorColumns;
-
-                var allTimestampColumns = _columns.Where(
-                    w =>
-                        w.GetCustomAttribute<DbTypeAttribute>() != null &&
-                        w.GetCustomAttribute<DbTypeAttribute>().Type ==
-                        SqlDbType.Timestamp).ToList();
-
-                if (allTimestampColumns.Count == 0) return;
-
-                // entity state tracking is on, check to see if the identity column has been updated
-                if (ModificationEntity.GetPristineEntity(_entityStateTrackable) == null)
-                {
-                    // any identity columns should be zero/null or whatever the insert value is
-                    errorColumns = (from column in allTimestampColumns
-                                    let value = column.GetValue(_entityStateTrackable)
-                                    let hasError = value != null
-                                    where hasError
-                                    select column.Name).ToList();
-                }
-                else
-                {
-                    // can only check when entity state tracking is on
-                    // only can get here when updating, try insert, or try insert update
-                    errorColumns =
-                        allTimestampColumns.Where(column => ModificationEntity.HasColumnChanged(_entityStateTrackable, column.Name))
-                            .Select(w => w.Name)
-                            .ToList();
-                }
-
-                if (!errorColumns.Any()) return;
-
-                const string error = "Cannot update value of TIMESTAMP column.  Column: {0}\r\r";
-                var message = errorColumns.Aggregate(string.Empty, (current, item) => string.Concat(current, string.Format(error, item)));
-
-                throw new SqlSaveException(message);
-            }
-        }
-
-        private class IsEntityValidRule : IRule
-        {
-            private readonly object _entity;
-
-            public IsEntityValidRule(object entity)
-            {
-                _entity = entity;
-            }
-
-            public void Process()
-            {
-                var primaryKeys = ReflectionCacheTable.GetPrimaryKeys(_entity.GetType());
-                var plainTableName = Table.GetTableName(_entity);
-                var entityType = _entity.GetType();
-                var linkedServerAttribute = entityType.GetCustomAttribute<LinkedServerAttribute>();
-                var schemaAttribute = entityType.GetCustomAttribute<SchemaAttribute>();
-
-                if (primaryKeys.Count == 0)
-                {
-                    throw new InvalidTableException(string.Format("{0} must have at least one Primary Key defined", plainTableName));
-                }
-
-                if (linkedServerAttribute != null && schemaAttribute != null)
-                {
-                    throw new Exception(
-                        string.Format(
-                            "Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other",
-                            entityType.Name));
-                }
-            }
-        }
-
-        // make sure the user is not trying to update an IDENTITY column, these cannot be updated
-        private sealed class IdentityColumnUpdateRule : IRule
-        {
-            private readonly EntityStateTrackable _entityStateTrackable;
-
-            private readonly IConfigurationOptions _configuration;
-
-            private readonly IReadOnlyList<PropertyInfo> _columns;
-
-            public IdentityColumnUpdateRule(EntityStateTrackable entityStateTrackable, IConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
-            {
-                _entityStateTrackable = entityStateTrackable;
-                _configuration = configuration;
-                _columns = columns;
-            }
-
-            public void Process()
-            {
-                // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
-                if (_entityStateTrackable == null) return;
-
-                List<string> errorColumns;
-
-                var allIdentityColumns = _columns.Where(
-                    w =>
-                        w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
-                        w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
-                        DbGenerationOption.IdentitySpecification).ToList();
-
-                if (allIdentityColumns.Count == 0) return;
-
-                // entity state tracking is on, check to see if the identity column has been updated
-                if (ModificationEntity.GetPristineEntity(_entityStateTrackable) == null)
-                {
-                    // any identity columns should be zero/null or whatever the insert value is
-                    errorColumns = (from column in allIdentityColumns
-                                    let value = column.GetValue(_entityStateTrackable)
-                                    let hasError = !ModificationEntity.IsValueInInsertArray(_configuration, value)
-                                    where hasError
-                                    select column.Name).ToList();
-                }
-                else
-                {
-                    // can only check when entity state tracking is on
-                    // only can get here when updating, try insert, or try insert update
-                    errorColumns =
-                        allIdentityColumns.Where(
-                            column => ModificationEntity.HasColumnChanged(_entityStateTrackable, column.Name))
-                            .Select(w => w.Name)
-                            .ToList();
-                }
-
-                if (!errorColumns.Any()) return;
-
-                const string error = "Cannot update value of IDENTITY column.  Column: {0}\r\r";
-                var message = errorColumns.Aggregate(string.Empty,
-                    (current, item) => string.Concat(current, string.Format(error, item)));
-
-                throw new SqlSaveException(message);
-            }
-        }
         #endregion
 
         #region Methods
@@ -348,16 +176,15 @@ namespace OR_M_Data_Entities.Data
                     return column.IsForeignKey
                         ? childTable.Columns.FirstOrDefault(
                             w =>
-                                w.PropertyName ==
-                                column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
+                                string.Equals(w.PropertyName, column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName, StringComparison.CurrentCultureIgnoreCase))
                         : childTable.Columns.FirstOrDefault(
-                            w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                            w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
                 }
 
                 return column.IsForeignKey
                     ? childTable.Columns.FirstOrDefault(w => w.IsPrimaryKey)
                     : childTable.Columns.FirstOrDefault(
-                        w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                        w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
             }
 
             private IColumn _getParentColumn(IColumn column)
@@ -367,7 +194,7 @@ namespace OR_M_Data_Entities.Data
                     return column.IsForeignKey
                         ? column.Table.Columns.FirstOrDefault(w => w.IsPrimaryKey)
                         : column.Table.Columns.FirstOrDefault(
-                            w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                            w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
                 }
 
                 return column.IsForeignKey
@@ -376,7 +203,7 @@ namespace OR_M_Data_Entities.Data
                             w.PropertyName ==
                             column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
                     : column.Table.Columns.FirstOrDefault(
-                        w => w.PropertyName == w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName);
+                        w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
             }
         }
 
@@ -490,8 +317,16 @@ namespace OR_M_Data_Entities.Data
             #region Constructor
             protected ReflectionCacheTable(Type type, IConfigurationOptions configuration)
             {
-                // Make sure the table is setup correctly
-                RuleProcessor.ProcessRule<IsTableValidRule>(type);
+                var linkedServerAttribute = type.GetCustomAttribute<LinkedServerAttribute>();
+                var schemaAttribute = type.GetCustomAttribute<SchemaAttribute>();
+
+                if (linkedServerAttribute != null && schemaAttribute != null)
+                {
+                    throw new InvalidTableException(
+                        string.Format(
+                            "Class {0} cannot have LinkedServerAttribute and SchemaAttribute, use one or the other",
+                            type.Name));
+                }
 
                 AllProperties = type.GetProperties().ToList();
                 AllColumns = AllProperties.Where(IsColumn).ToList();
@@ -1163,33 +998,161 @@ namespace OR_M_Data_Entities.Data
                 return _getState(changes);
             }
 
-            public static bool IsValueInInsertArray(IConfigurationOptions configuration, object value)
+            public static bool IsKeyInInsertArray(IConfigurationOptions configuration, object value)
             {
-                // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
-                switch (value.GetType().Name.ToUpper())
+                var translation = SqlDbTypeTranslator.Translate(value.GetType());
+
+                switch (translation.ResolvedType)
                 {
                     case "INT16":
                         return configuration.InsertKeys.Int16.Contains(Convert.ToInt16(value));
                     case "INT32":
-                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt32(value));
+                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt16(value));
                     case "INT64":
-                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt64(value));
+                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt16(value));
                     case "GUID":
-                        return configuration.InsertKeys.Guid.Contains((Guid)value);
+                        return configuration.InsertKeys.Guid.Contains(Guid.Parse(value.ToString()));
                     case "STRING":
                         return configuration.InsertKeys.String.Contains(value.ToString());
+                    case "DATETIME":
+                        return configuration.InsertKeys.DateTime.Contains(Convert.ToDateTime(value));
+                    case "BOOLEAN":
+                        return configuration.InsertKeys.Boolean.Contains(Convert.ToBoolean(value));
+                    case "DATETIMEOFFSET":
+                        return configuration.InsertKeys.DateTimeOffest.Contains(DateTimeOffset.Parse(value.ToString()));
+                    case "DECIMAL":
+                        return configuration.InsertKeys.Decimal.Contains(Convert.ToDecimal(value));
+                    case "DOUBLE":
+                        return configuration.InsertKeys.Double.Contains(Convert.ToDouble(value));
+                    case "SINGLE":
+                        return configuration.InsertKeys.Single.Contains(Convert.ToSingle(value));
+                    case "TIMESPAN":
+                        return configuration.InsertKeys.TimeSpan.Contains(TimeSpan.Parse(value.ToString()));
+                    case "BYTE":
+                        return configuration.InsertKeys.Byte.Contains(byte.Parse(value.ToString()));
+                    case "BYTE[]":
+                        return configuration.InsertKeys.ByteArray.Contains((byte[])value);
+                    case "CHAR[]":
+                        return configuration.InsertKeys.CharArray.Contains((char[])value);
+                    default:
+                        throw new Exception(string.Format("Type of {0} not allowed as primary key.", translation.ResolvedType));
                 }
-
-                return false;
             }
 
             private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
             {
-                return (from item in allColumns
-                        let current = _getCurrentObject(entityStateTrackable, item.Name)
-                        let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
-                        let hasChanged = ObjectComparison.HasChanged(pristineEntity, current)
-                        select new ModificationItem(item, hasChanged)).ToList();
+                return (from item in allColumns let current = _getCurrentObject(entityStateTrackable, item.Name) let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name) let hasChanged = ObjectComparison.HasChanged(pristineEntity, current) select new ModificationItem(item, hasChanged)).ToList();
+            }
+
+            private void _checkMaxLengthViolations(object entity, Type type)
+            {
+                var properties =
+                    type.GetProperties()
+                        .Where(
+                            w => w.GetCustomAttribute<MaxLengthAttribute>() != null && w.PropertyType == typeof (string))
+                        .ToList();
+
+                foreach (var property in properties)
+                {
+                    var value = (string) property.GetValue(entity);
+                    var maxLengthAttribute = property.GetCustomAttribute<MaxLengthAttribute>();
+
+                    if (value == null || value.Length <= maxLengthAttribute.Length) continue;
+
+                    if (maxLengthAttribute.ViolationType == MaxLengthViolationType.Truncate)
+                    {
+                        entity.SetPropertyInfoValue(property, value.Substring(0, maxLengthAttribute.Length));
+                        continue;
+                    }
+
+                    throw new MaxLengthException(string.Format("Max Length violated on column: {0}", property.Name));
+                }
+            }
+
+            private void _checkTimeStampInsertions(object entity, IReadOnlyList<PropertyInfo> columns)
+            {
+                var allTimestampColumns = columns.Where(
+                    w =>
+                        w.GetCustomAttribute<DbTypeAttribute>() != null &&
+                        w.GetCustomAttribute<DbTypeAttribute>().Type ==
+                        SqlDbType.Timestamp).ToList();
+
+                if (allTimestampColumns.Count == 0) return;
+
+                var errorColumns = (from column in allTimestampColumns
+                    let value = column.GetValue(entity)
+                    let hasError = value != null
+                    where hasError
+                    select column.Name).ToList();
+
+                if (!errorColumns.Any()) return;
+
+                const string error = "Cannot insert a value into TIMESTAMP column.  Column: {0}\r\r";
+                var message = errorColumns.Aggregate(string.Empty,
+                    (current, item) => string.Concat(current, string.Format(error, item)));
+
+                throw new SqlSaveException(message);
+            }
+
+            private void _isEntityValid(object entity)
+            {
+                var primaryKeys = GetPrimaryKeys(entity.GetType());
+                var plainTableName = GetTableName(entity);
+
+                if (primaryKeys.Count == 0)
+                {
+                    throw new InvalidTableException(string.Format("{0} must have at least one Primary Key defined", plainTableName));
+                }
+            }
+
+            private void _checkForIdentityColumnUpdates(EntityStateTrackable entityStateTrackable, IConfigurationOptions configuration, IReadOnlyList<PropertyInfo> columns)
+            {
+                // cannot check if entity state trackable is null (entity state tracking is off) or if the pristine entity is null (insert)
+                if (entityStateTrackable == null) return;
+
+                List<string> errorColumns;
+
+                var allIdentityColumns = columns.Where(
+                    w =>
+                        w.GetCustomAttribute<DbGenerationOptionAttribute>() != null &&
+                        w.GetCustomAttribute<DbGenerationOptionAttribute>().Option ==
+                        DbGenerationOption.IdentitySpecification).ToList();
+
+                if (allIdentityColumns.Count == 0) return;
+
+                // entity state tracking is on, check to see if the identity column has been updated
+                if (GetPristineEntity(entityStateTrackable) == null)
+                {
+                    // any identity columns should be zero/null or whatever the insert value is
+                    errorColumns = (from column in allIdentityColumns
+                                    let value = column.GetValue(entityStateTrackable)
+                                    let hasError = !IsKeyInInsertArray(configuration, value)
+                                    where hasError
+                                    select column.Name).ToList();
+                }
+                else
+                {
+                    // can only check when entity state tracking is on
+                    // only can get here when updating, try insert, or try insert update
+                    errorColumns =
+                        allIdentityColumns.Where(
+                            column => HasColumnChanged(entityStateTrackable, column.Name))
+                            .Select(w => w.Name)
+                            .ToList();
+                }
+
+                if (!errorColumns.Any()) return;
+
+                const string error = "Cannot update value of IDENTITY column.  Column: {0}\r\r";
+                var message = errorColumns.Aggregate(string.Empty,
+                    (current, item) => string.Concat(current, string.Format(error, item)));
+
+                throw new SqlSaveException(message);
+            }
+
+            private void _checkPkNotNull(object pkValue, MemberInfo key)
+            {
+                if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", ReflectionCacheTable.GetColumnName(key)));
             }
 
             private void _initialize(IConfigurationOptions configuration)
@@ -1197,7 +1160,7 @@ namespace OR_M_Data_Entities.Data
                 var primaryKeys = GetPrimaryKeys();
 
                 // make sure the table is valid
-                RuleProcessor.ProcessRule<IsEntityValidRule>(Value);
+                _isEntityValid(Value);
 
                 var hasPrimaryKeysOnly = HasPrimaryKeysOnly();
                 var areAnyPkGenerationOptionsNone = false;
@@ -1211,7 +1174,7 @@ namespace OR_M_Data_Entities.Data
                 if (State == EntityState.UnChanged) return;
 
                 // validate all max length attributes
-                RuleProcessor.ProcessRule<MaxLengthViolationRule>(Value, Type);
+                _checkMaxLengthViolations(Value, Type);
 
                 UpdateType = UpdateType.Insert;
 
@@ -1222,10 +1185,11 @@ namespace OR_M_Data_Entities.Data
                     var pkValue = key.GetValue(Value);
                     var generationOption = GetGenerationOption(key);
 
-                    RuleProcessor.ProcessRule<PkValueNotNullRule>(pkValue, key);
+                    // make sure the primary key is not null
+                    _checkPkNotNull(pkValue, key);
 
                     // check to see if we are updating or not
-                    var isUpdating = !IsValueInInsertArray(configuration, pkValue);
+                    var isUpdating = !IsKeyInInsertArray(configuration, pkValue);
 
                     if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
 
@@ -1234,31 +1198,26 @@ namespace OR_M_Data_Entities.Data
                     {
                         if (generationOption != DbGenerationOption.None)
                         {
-                            RuleProcessor.ProcessRule<TimeStampColumnInsertRule>(Value, AllColumns);
+                            _checkTimeStampInsertions(Value, AllColumns);
                             continue;
                         }
 
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
-                        throw new SqlSaveException(string.Format(
-                            "Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}",
-                            key.Name,
-                            ToString(TableNameFormat.Plain)));
+                        throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
                     }
 
                     // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
                     // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
                     // if so we need to perform an update, otherwise we perform an insert
-                    UpdateType = hasPrimaryKeysOnly
-                        ? UpdateType.TryInsert
-                        : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
+                    UpdateType = hasPrimaryKeysOnly ? UpdateType.TryInsert : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
 
                     if (UpdateType != UpdateType.Update && UpdateType != UpdateType.TryInsertUpdate) continue;
 
                     // make sure identity columns were not updated
-                    RuleProcessor.ProcessRule<IdentityColumnUpdateRule>(EntityTrackable, configuration, AllColumns);
+                    _checkForIdentityColumnUpdates(EntityTrackable, configuration, AllColumns);
 
                     // make sure time stamps were not updated if any
-                    RuleProcessor.ProcessRule<TimeStampColumnUpdateRule>(EntityTrackable, AllColumns);
+                    _checkTimeStampInsertions(Value, AllColumns);
                 }
             }
 
@@ -1281,8 +1240,7 @@ namespace OR_M_Data_Entities.Data
             {
                 var tableOnLoad = GetPristineEntity(entity);
 
-                return tableOnLoad == null
-                    ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
+                return tableOnLoad == null ? new object() // need to make sure the current doesnt equal the current if the pristine entity is null
                     : tableOnLoad.GetType().GetProperty(propertyName).GetValue(tableOnLoad);
             }
 
@@ -1308,9 +1266,11 @@ namespace OR_M_Data_Entities.Data
 
                 field.SetValue(instance, EntityCloner.Clone(instance));
             }
+
             #endregion
 
             #region helpers
+
             private static class EntityCloner
             {
                 public static object Clone(object table)
@@ -1327,13 +1287,13 @@ namespace OR_M_Data_Entities.Data
                     return instance;
                 }
             }
+
             #endregion
         }
 
         protected class DeleteEntity : ModificationEntity
         {
-            public DeleteEntity(object entity, IConfigurationOptions configuration)
-                : base(entity, configuration)
+            public DeleteEntity(object entity, IConfigurationOptions configuration) : base(entity, configuration)
             {
                 ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
             }
@@ -1343,23 +1303,27 @@ namespace OR_M_Data_Entities.Data
         {
             public string SqlDbTypeString { get; private set; }
 
+            public string ResolvedType { get; private set; }
+
             public SqlDbType SqlDbType { get; private set; }
 
-            public SqlDbTypeResult(string sqlDbTypeString, SqlDbType sqlDbType)
+            public SqlDbTypeResult(string sqlDbTypeString, string resolvedType, SqlDbType sqlDbType)
             {
                 SqlDbType = sqlDbType;
+                ResolvedType = resolvedType;
                 SqlDbTypeString = sqlDbTypeString;
             }
         }
 
-        private static class SqlDbTypeTranslator 
+        private static class SqlDbTypeTranslator
         {
             /// sqldbtype, string name,
             public static SqlDbTypeResult Translate(Type type, string precision = null)
             {
                 var sqlDbType = SqlDbType.VarChar;
+                var resolvedType = type.GetUnderlyingType().Name.ToUpper();
 
-                switch (type.GetUnderlyingType().Name.ToUpper())
+                switch (resolvedType)
                 {
                     case "INT16":
                         sqlDbType = SqlDbType.SmallInt;
@@ -1414,7 +1378,7 @@ namespace OR_M_Data_Entities.Data
                         break;
                 }
 
-                return new SqlDbTypeResult(TranslateSqlDbType(sqlDbType, precision), sqlDbType);
+                return new SqlDbTypeResult(TranslateSqlDbType(sqlDbType, precision), resolvedType, sqlDbType);
             }
 
             public static string TranslateSqlDbType(SqlDbType sqlDbType, string precision = null)
@@ -1511,7 +1475,7 @@ namespace OR_M_Data_Entities.Data
 
                 var maxLengthAttribute = property.GetCustomAttribute<MaxLengthAttribute>();
 
-                MaxLength = maxLengthAttribute != null ? (int?)maxLengthAttribute.Length : null;
+                MaxLength = maxLengthAttribute != null ? (int?) maxLengthAttribute.Length : null;
 
                 // set in case entity tracking isnt on
                 IsModified = isModified;

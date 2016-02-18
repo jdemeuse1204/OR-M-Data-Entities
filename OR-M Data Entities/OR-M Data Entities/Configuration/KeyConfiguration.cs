@@ -49,7 +49,6 @@ namespace OR_M_Data_Entities.Configuration
             Int64 = new long[] { 0 };
             Guid = new[] { System.Guid.Empty};
             String = new[] {string.Empty};
-
             DateTime = new[] { System.DateTime.MinValue };
             Boolean = new[] { false };
             DateTimeOffest = new[] { DateTimeOffset.MinValue };
@@ -58,8 +57,7 @@ namespace OR_M_Data_Entities.Configuration
             Single = new[] { 0f };
             TimeSpan = new[] { System.TimeSpan.MinValue };
             Byte = new[] { System.Byte.MinValue,  };
-
-            CharArray = new[] {  };
+            CharArray = new[] { new char[] { }  };
             ByteArray = new[] {new byte[] {1, 1}};
         }
     }

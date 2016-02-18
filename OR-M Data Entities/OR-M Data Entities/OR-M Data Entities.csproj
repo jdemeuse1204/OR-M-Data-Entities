@@ -32,7 +32,7 @@
     </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>false</SignAssembly>
+    <SignAssembly>true</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -65,12 +65,6 @@
     <Compile Include="Data\Definition\IQuerySchematic.cs" />
     <Compile Include="Data\Definition\ITable.cs" />
     <Compile Include="Data\Definition\ITableRelationship.cs" />
-    <Compile Include="Data\Definition\Rules\Base\IRule.cs" />
-    <Compile Include="Data\Definition\Rules\Base\RuleProcessor.cs" />
-    <Compile Include="Data\Definition\Rules\IsConfigurationValidRule.cs" />
-    <Compile Include="Data\Definition\Rules\IsTableValidRule.cs" />
-    <Compile Include="Data\Definition\Rules\MaxLengthViolationRule.cs" />
-    <Compile Include="Data\Definition\Rules\TimeStampColumnInsertRule.cs" />
     <Compile Include="Data\Modification\DatabaseModifiableTransactional.cs" />
     <Compile Include="Data\Modification\IModificationItem.cs" />
     <Compile Include="Data\Modification\ISqlContainer.cs" />

@@ -23,7 +23,7 @@ namespace OR0M_Data_Entities.Console
             Configuration.UseTransactions = true;
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
-            
+
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
             OnSqlGeneration += OnOnSqlGeneration;
@@ -67,7 +67,7 @@ namespace OR0M_Data_Entities.Console
             return false;
         }
 
-        
+
 
         private static void Main(string[] args)
         {
@@ -85,9 +85,8 @@ namespace OR0M_Data_Entities.Console
             //        }
             //    });
 
-            //context.From<Contact>()
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
-            var sdfsdf = context.From<Contact>().FirstOrDefault(w => w.ContactID == 1);
+            var sdfsdf = context.From<Contact>().IncludeTo("Appointments").FirstOrDefault(w => w.ContactID == 1);
 
             sdfsdf.FirstName = "James";
 
@@ -103,13 +102,13 @@ namespace OR0M_Data_Entities.Console
             t.FirstName = "Different";
 
             context.SaveChanges(t);
-            
+
             var sdsdfgf = context.From<Contact>().OrderByDescending(w => w.ContactID).Select(w => w.ContactID);
-            
+
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
-            
+
 
             System.Console.WriteLine(sdgf);
 

@@ -757,7 +757,23 @@ namespace OR_M_Data_Entities.Data
 
             public void IncludeAll()
             {
-                foreach (var mappedTable in _schematic.MappedTables) mappedTable.Include();
+                var nextOrdinal = _getNextOrdinal();
+                var mappedTables = _schematic.MappedTables.Where(w => !w.IsIncluded).ToList();
+
+                // also need to select the columns
+                foreach (var mappedTable in mappedTables)
+                {
+                    nextOrdinal += mappedTable.SelectAll(nextOrdinal);
+                    mappedTable.Include();
+                }
+            }
+
+            private int _getNextOrdinal()
+            {
+                return
+                    _schematic.MappedTables.Where(w => w.SelectedColumns.Any())
+                        .Select(w => w.SelectedColumns.Select(x => x.Ordinal).Max())
+                        .Max() + 1;
             }
 
             public void Include(string tableName)
@@ -789,6 +805,7 @@ namespace OR_M_Data_Entities.Data
                 var actualTableName = _getActualTableName(tableName);
                 var attribute = _getTableAttributeName(tableName);
                 var searchList = new List<IDataLoadSchematic> { _schematic.DataLoadSchematic };
+                var nextOrdinal = _getNextOrdinal();
 
                 // find the reference then select backwards
                 for (var i = 0; i < searchList.Count; i++)
@@ -799,12 +816,16 @@ namespace OR_M_Data_Entities.Data
                     if (foundMappedTable != null)
                     {
                         // include found item
+                        if (!foundMappedTable.MappedTable.IsIncluded) nextOrdinal += foundMappedTable.MappedTable.SelectAll(nextOrdinal);
+
                         foundMappedTable.MappedTable.Include();
 
                         var parent = foundMappedTable.Parent;
 
                         while (parent != null)
                         {
+                            if (!parent.MappedTable.IsIncluded) nextOrdinal += parent.MappedTable.SelectAll(nextOrdinal);
+
                             parent.MappedTable.Include();
 
                             parent = parent.Parent;
@@ -1443,7 +1464,8 @@ namespace OR_M_Data_Entities.Data
 
             public static string ResolveSelectAll(IQuerySchematic schematic)
             {
-                var result = schematic.MappedTables.Where(w => w.IsIncluded)
+                var result = schematic.MappedTables.Where(w => w.IsIncluded && w.SelectedColumns.Any())
+                    .OrderBy(w => w.SelectedColumns.First().Ordinal)
                     .Aggregate(string.Empty,
                         (current1, mappedTable) =>
                             string.Concat(current1,
