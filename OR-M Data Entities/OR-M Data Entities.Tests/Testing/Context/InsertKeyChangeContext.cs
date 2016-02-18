@@ -8,8 +8,8 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
             : base("sqlExpress")
         {
             Configuration.UseTransactions = false;
-            Configuration.InsertKeys.Int = new[] {-1};
-            Configuration.InsertKeys.UniqueIdentifier = new[] { Guid.Empty };
+            Configuration.InsertKeys.Int16 = new[] {-1};
+            Configuration.InsertKeys.Guid = new[] { Guid.Empty };
         }
     }
 }

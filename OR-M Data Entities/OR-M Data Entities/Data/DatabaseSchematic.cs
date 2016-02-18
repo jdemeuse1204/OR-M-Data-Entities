@@ -1169,13 +1169,13 @@ namespace OR_M_Data_Entities.Data
                 switch (value.GetType().Name.ToUpper())
                 {
                     case "INT16":
-                        return configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(value));
+                        return configuration.InsertKeys.Int16.Contains(Convert.ToInt16(value));
                     case "INT32":
-                        return configuration.InsertKeys.Int.Contains(Convert.ToInt32(value));
+                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt32(value));
                     case "INT64":
-                        return configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(value));
+                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt64(value));
                     case "GUID":
-                        return configuration.InsertKeys.UniqueIdentifier.Contains((Guid)value);
+                        return configuration.InsertKeys.Guid.Contains((Guid)value);
                     case "STRING":
                         return configuration.InsertKeys.String.Contains(value.ToString());
                 }
@@ -1225,7 +1225,7 @@ namespace OR_M_Data_Entities.Data
                     RuleProcessor.ProcessRule<PkValueNotNullRule>(pkValue, key);
 
                     // check to see if we are updating or not
-                    var isUpdating = !_isValueInInsertArray(configuration, pkValue);
+                    var isUpdating = !IsValueInInsertArray(configuration, pkValue);
 
                     if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
 
@@ -1260,26 +1260,6 @@ namespace OR_M_Data_Entities.Data
                     // make sure time stamps were not updated if any
                     RuleProcessor.ProcessRule<TimeStampColumnUpdateRule>(EntityTrackable, AllColumns);
                 }
-            }
-
-            private static bool _isValueInInsertArray(IConfigurationOptions configuration, object value)
-            {
-                // SET CONFIGURATION FOR ZERO/NOT UPDATED VALUES
-                switch (value.GetType().Name.ToUpper())
-                {
-                    case "INT16":
-                        return configuration.InsertKeys.SmallInt.Contains(Convert.ToInt16(value));
-                    case "INT32":
-                        return configuration.InsertKeys.Int.Contains(Convert.ToInt32(value));
-                    case "INT64":
-                        return configuration.InsertKeys.BigInt.Contains(Convert.ToInt64(value));
-                    case "GUID":
-                        return configuration.InsertKeys.UniqueIdentifier.Contains((Guid)value);
-                    case "STRING":
-                        return configuration.InsertKeys.String.Contains(value.ToString());
-                }
-
-                return false;
             }
 
             public static bool HasColumnChanged(EntityStateTrackable entity, string propertyName)
@@ -1359,9 +1339,139 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
+        private class SqlDbTypeResult
+        {
+            public string SqlDbTypeString { get; private set; }
+
+            public SqlDbType SqlDbType { get; private set; }
+
+            public SqlDbTypeResult(string sqlDbTypeString, SqlDbType sqlDbType)
+            {
+                SqlDbType = sqlDbType;
+                SqlDbTypeString = sqlDbTypeString;
+            }
+        }
+
+        private static class SqlDbTypeTranslator 
+        {
+            /// sqldbtype, string name,
+            public static SqlDbTypeResult Translate(Type type, string precision = null)
+            {
+                var sqlDbType = SqlDbType.VarChar;
+
+                switch (type.GetUnderlyingType().Name.ToUpper())
+                {
+                    case "INT16":
+                        sqlDbType = SqlDbType.SmallInt;
+                        break;
+                    case "INT32":
+                        sqlDbType = SqlDbType.Int;
+                        break;
+                    case "INT64":
+                        sqlDbType = SqlDbType.BigInt;
+                        break;
+                    case "GUID":
+                        sqlDbType = SqlDbType.UniqueIdentifier;
+                        break;
+                    case "STRING":
+                        sqlDbType = SqlDbType.VarChar;
+                        break;
+                    case "DATETIME":
+                        sqlDbType = SqlDbType.DateTime;
+                        break;
+                    case "BOOLEAN":
+                        sqlDbType = SqlDbType.Bit;
+                        break;
+                    case "DATETIMEOFFSET":
+                        sqlDbType = SqlDbType.DateTimeOffset;
+                        break;
+                    case "DECIMAL":
+                        sqlDbType = SqlDbType.Decimal;
+                        break;
+                    case "DOUBLE":
+                        sqlDbType = SqlDbType.Float;
+                        break;
+                    case "SINGLE":
+                        sqlDbType = SqlDbType.Real;
+                        break;
+                    case "OBJECT":
+                        sqlDbType = SqlDbType.Variant;
+                        break;
+                    case "TIMESPAN":
+                        sqlDbType = SqlDbType.Time;
+                        break;
+                    case "BYTE":
+                        sqlDbType = SqlDbType.TinyInt;
+                        break;
+                    case "XML":
+                        sqlDbType = SqlDbType.Xml;
+                        break;
+                    case "BYTE[]":
+                        sqlDbType = SqlDbType.VarBinary;
+                        break;
+                    case "CHAR[]":
+                        sqlDbType = SqlDbType.Text;
+                        break;
+                }
+
+                return new SqlDbTypeResult(TranslateSqlDbType(sqlDbType, precision), sqlDbType);
+            }
+
+            public static string TranslateSqlDbType(SqlDbType sqlDbType, string precision = null)
+            {
+                switch (sqlDbType)
+                {
+                    case SqlDbType.Variant:
+                        return "sql_variant";
+
+                    case SqlDbType.Decimal:
+                        return string.Format("{0}({1})", sqlDbType, precision ?? "18,6");
+
+                    case SqlDbType.Date:
+                    case SqlDbType.Xml:
+                    case SqlDbType.TinyInt:
+                    case SqlDbType.Text:
+                    case SqlDbType.Timestamp:
+                    case SqlDbType.SmallDateTime:
+                    case SqlDbType.SmallInt:
+                    case SqlDbType.SmallMoney:
+                    case SqlDbType.UniqueIdentifier:
+                    case SqlDbType.Real:
+                    case SqlDbType.NText:
+                    case SqlDbType.Image:
+                    case SqlDbType.Money:
+                    case SqlDbType.Int:
+                    case SqlDbType.Float:
+                    case SqlDbType.DateTime:
+                    case SqlDbType.Bit:
+                    case SqlDbType.BigInt:
+                        return sqlDbType.ToString();
+
+                    case SqlDbType.DateTimeOffset:
+                    case SqlDbType.DateTime2:
+                    case SqlDbType.Time:
+                        return string.Format("{0}({1})", sqlDbType, precision ?? "7");
+
+                    case SqlDbType.NChar:
+                    case SqlDbType.Binary:
+                    case SqlDbType.Char:
+                        return string.Format("{0}({1})", sqlDbType, precision ?? "8000");
+
+                    case SqlDbType.VarChar:
+                    case SqlDbType.NVarChar:
+                    case SqlDbType.VarBinary:
+                        return string.Format("{0}({1})", sqlDbType, precision ?? "MAX");
+
+                    default:
+                        throw new ArgumentOutOfRangeException(sqlDbType.ToString());
+                }
+            }
+        }
+
         public class ModificationItem : IModificationItem
         {
             #region Properties
+
             public bool IsModified { get; private set; }
 
             public string SqlDataTypeString { get; private set; }
@@ -1380,10 +1490,13 @@ namespace OR_M_Data_Entities.Data
 
             public bool TranslateDataType { get; private set; }
 
+            public int? MaxLength { get; private set; }
+
             public bool NeedsAlias
             {
                 get { return DatabaseColumnName != PropertyName; }
             }
+
             #endregion
 
             #region Constructor
@@ -1394,11 +1507,11 @@ namespace OR_M_Data_Entities.Data
                 DatabaseColumnName = Table.GetColumnName(property);
                 IsPrimaryKey = ReflectionCacheTable.IsColumnPrimaryKey(property);
                 PropertyDataType = property.PropertyType.Name.ToUpper();
-                Generation = IsPrimaryKey
-                    ? Table.GetGenerationOption(property)
-                    : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null
-                        ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option
-                        : DbGenerationOption.None;
+                Generation = IsPrimaryKey ? Table.GetGenerationOption(property) : property.GetCustomAttribute<DbGenerationOptionAttribute>() != null ? property.GetCustomAttribute<DbGenerationOptionAttribute>().Option : DbGenerationOption.None;
+
+                var maxLengthAttribute = property.GetCustomAttribute<MaxLengthAttribute>();
+
+                MaxLength = maxLengthAttribute != null ? (int?)maxLengthAttribute.Length : null;
 
                 // set in case entity tracking isnt on
                 IsModified = isModified;
@@ -1409,31 +1522,14 @@ namespace OR_M_Data_Entities.Data
                 if (translation != null)
                 {
                     DbTranslationType = translation.Type;
+                    SqlDataTypeString = SqlDbTypeTranslator.TranslateSqlDbType(translation.Type, MaxLength != null ? MaxLength.Value.ToString() : translation.Precision);
                     TranslateDataType = true;
+                    return;
                 }
 
-                // for auto generation
-                switch (property.PropertyType.Name.ToUpper())
-                {
-                    case "INT16":
-                        SqlDataTypeString = "smallint";
-                        break;
-                    case "INT64":
-                        SqlDataTypeString = "bigint";
-                        break;
-                    case "INT32":
-                        SqlDataTypeString = "int";
-                        break;
-                    case "GUID":
-                        SqlDataTypeString = "uniqueidentifier";
-                        break;
-                    case "STRING":
-                        SqlDataTypeString = "varchar(max)";
-                        break;
-                    case "DATETIME":
-                        SqlDataTypeString = "datetime";
-                        break;
-                }
+                var translationResult = SqlDbTypeTranslator.Translate(property.PropertyType, MaxLength != null ? MaxLength.Value.ToString() : null);
+                DbTranslationType = translationResult.SqlDbType;
+                SqlDataTypeString = translationResult.SqlDbTypeString;
             }
 
             #endregion
@@ -1442,8 +1538,7 @@ namespace OR_M_Data_Entities.Data
 
             public string AsOutput(string appendToEnd)
             {
-                return string.Format("[INSERTED].[{0}]{1}{2}", DatabaseColumnName,
-                    NeedsAlias ? string.Format(" as [{0}]", PropertyName) : string.Empty, appendToEnd);
+                return string.Format("[INSERTED].[{0}]{1}{2}", DatabaseColumnName, NeedsAlias ? string.Format(" as [{0}]", PropertyName) : string.Empty, appendToEnd);
             }
 
             public string AsField(string appendToEnd)
@@ -1455,6 +1550,7 @@ namespace OR_M_Data_Entities.Data
             {
                 return string.Format("[{0}]{1}", PropertyName, appendToEnd);
             }
+
             #endregion
         }
     }

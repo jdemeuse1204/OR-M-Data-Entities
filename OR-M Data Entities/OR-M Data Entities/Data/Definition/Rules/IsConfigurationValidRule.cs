@@ -26,12 +26,12 @@ namespace OR_M_Data_Entities.Data.Definition.Rules
         {
             const string errorMessage = "Keys not configured correctly, must have at at least one key for option: {0}";
 
-            if (_configuration.InsertKeys.Int == null || !_configuration.InsertKeys.Int.Any())
+            if (_configuration.InsertKeys.Int16 == null || !_configuration.InsertKeys.Int16.Any())
             {
                 throw new Exception(string.Format(errorMessage, "Integer"));
             }
 
-            if (_configuration.InsertKeys.UniqueIdentifier == null || !_configuration.InsertKeys.UniqueIdentifier.Any())
+            if (_configuration.InsertKeys.Guid == null || !_configuration.InsertKeys.Guid.Any())
             {
                 throw new Exception(string.Format(errorMessage, "UniqueIdentifier"));
             }

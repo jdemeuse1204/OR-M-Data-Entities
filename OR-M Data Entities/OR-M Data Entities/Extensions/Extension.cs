@@ -32,13 +32,6 @@ namespace OR_M_Data_Entities
                 ? propertyInfo.PropertyType.GetGenericArguments()[0]
                 : propertyInfo.PropertyType;
         }
-
-        public static Type GetUnderlyingType(this Type type)
-        {
-            return type.IsList()
-                ? type.GetGenericArguments()[0]
-                : type;
-        }
     }
 
     public static class TypeExtensions
@@ -143,9 +136,14 @@ namespace OR_M_Data_Entities
 
         public static Type GetUnderlyingType(this object o)
         {
-            return o.IsList()
-                ? o.GetType().GetGenericArguments()[0]
-                : o.GetType();
+            return GetUnderlyingType(o.GetType());
+        }
+
+        public static Type GetUnderlyingType(this Type type)
+        {
+            return type.IsList() || type.IsNullable()
+                ? type.GetGenericArguments()[0]
+                : type;
         }
     }
 

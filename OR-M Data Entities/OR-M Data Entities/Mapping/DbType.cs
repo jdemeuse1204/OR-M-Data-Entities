@@ -17,11 +17,15 @@ namespace OR_M_Data_Entities.Mapping
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class DbTypeAttribute : Attribute
 	{
-        public DbTypeAttribute(SqlDbType type) 
+        public DbTypeAttribute(SqlDbType type, string precision = null) 
 		{
 			Type = type;
+            Precision = precision;
+
 		}
 
 		public SqlDbType Type { get; set; }
+
+        public string Precision { get; set; }
 	}
 }

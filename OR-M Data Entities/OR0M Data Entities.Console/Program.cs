@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.IO;
 using System.Xml;
 using System.Xml.Schema;
@@ -88,7 +89,7 @@ namespace OR0M_Data_Entities.Console
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
             var sdfsdf = context.From<Contact>().FirstOrDefault(w => w.ContactID == 1);
 
-            sdfsdf.FirstName = "WINNNNNNNNN";
+            sdfsdf.FirstName = "James";
 
             context.SaveChanges(sdfsdf);
 
@@ -335,6 +336,7 @@ namespace OR0M_Data_Entities.Console
             [MaxLength(25)]
             public string FirstName { get; set; }
 
+            [DbType(SqlDbType.VarChar, "100")]
             public string LastName { get; set; }
 
             public int? PhoneID { get; set; }
