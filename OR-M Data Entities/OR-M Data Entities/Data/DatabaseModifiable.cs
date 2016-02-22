@@ -60,10 +60,22 @@ namespace OR_M_Data_Entities.Data
 
         #region Save Methods
 
-        public virtual IPersistResult SaveChanges<T>(T entity)
-            where T : class
+        public virtual IPersistResult SaveChanges<T>(T entity) where T : class
         {
             return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
+        }
+
+        public virtual List<IPersistResult> SaveChanges<T>(List<T> entities) where T : class
+        {
+            return
+                entities.Select(
+                    entity => Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity))
+                    .ToList();
+        }
+
+        public virtual List<IPersistResult> SaveChanges<T>(IEnumerable<T> entities) where T : class
+        {
+            return SaveChanges(entities.ToList());
         }
         #endregion
 
@@ -74,6 +86,18 @@ namespace OR_M_Data_Entities.Data
             return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
         }
 
+        public virtual List<IPersistResult> Delete<T>(List<T> entities) where T : class
+        {
+            return
+                entities.Select(
+                    entity => Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity))
+                    .ToList();
+        }
+
+        public virtual List<IPersistResult> Delete<T>(IEnumerable<T> entities) where T : class
+        {
+            return Delete(entities.ToList());
+        }
         #endregion
 
         #region Reference Mapping
@@ -101,11 +125,11 @@ namespace OR_M_Data_Entities.Data
                 _internal.Add(new Reference(entity, _nextAlias()));
             }
 
-            public void AddOneToManySaveReference(ForeignKeyAssociation association, object value)
+            public void AddOneToManySaveReference(ForeignKeyAssociation association, object value, bool isDeleting = false)
             {
                 var parentIndex = _indexOf(association.Parent);
 
-                _insert(parentIndex + 1, value, association, _configuration);
+                _insert(parentIndex + 1, value, association, _configuration, isDeleting);
 
                 // add the references
                 var index = _indexOf(value);
@@ -119,11 +143,11 @@ namespace OR_M_Data_Entities.Data
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneSaveReference(ForeignKeyAssociation association)
+            public void AddOneToOneSaveReference(ForeignKeyAssociation association, bool isDeleting = false)
             {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
-                _insert(oneToOneParentIndex, association.Value, association, _configuration);
+                _insert(oneToOneParentIndex, association.Value, association, _configuration, isDeleting);
 
                 var oneToOneIndex = _indexOf(association.Parent);
                 var childIndex = _indexOf(association.Value);
@@ -141,9 +165,9 @@ namespace OR_M_Data_Entities.Data
                 return _internal.IndexOf(entity);
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, bool isDeleting)
             {
-                _internal.Insert(index, new Reference(entity, _nextAlias(), configuration, association));
+                _internal.Insert(index, new Reference(entity, _nextAlias(), configuration, association, isDeleting));
             }
 
             private string _nextAlias()
@@ -231,8 +255,8 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, IConfigurationOptions configuration, ForeignKeyAssociation association = null) :
-                this(new ModificationEntity(entity, configuration), alias, association)
+            public Reference(object entity, string alias, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
+                this(new ModificationEntity(entity, configuration, isDeleting), alias, association)
             {
             }
 
@@ -274,7 +298,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration)
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, bool isDeleting)
             {
                 var result = new ReferenceMap(configuration);
                 var useTransactions = configuration.UseTransactions;
@@ -292,13 +316,22 @@ namespace OR_M_Data_Entities.Data
                     // this is ok as long as the parent is not an insert
                     if (e.Value == null)
                     {
+                        // check to see if nulls are allowed.  Are allowed on a list and nullable one to one FK
+                        if (foreignKeyIsList) continue;
+
+                        var columnName = e.Property.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
+                        var isNullable = e.Parent.GetType().GetProperty(columnName).PropertyType.IsNullable();
+
+                        // we can skip the foreign key if its nullable and one to one
+                        if (isNullable) continue;
+
                         if (e.Parent == null) throw new SqlSaveException("Cannot save a null object");
 
                         var modifcationEntity = new ModificationEntity(e.Parent, configuration);
 
-                        if (modifcationEntity.UpdateType == UpdateType.Insert ||
+                        if (!useTransactions && (modifcationEntity.UpdateType == UpdateType.Insert ||
                             modifcationEntity.UpdateType == UpdateType.TryInsert ||
-                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate)
+                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate))
                         {
                             throw new SqlSaveException(string.Format("Foreign Key violation.  {0} cannot be null", Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
                         }
@@ -330,34 +363,15 @@ namespace OR_M_Data_Entities.Data
                     // skip lookup tables only when its not the parent
                     if (tableInfo.IsLookupTable) continue;
 
-                    if (e.Value == null)
-                    {
-                        if (foreignKeyIsList) continue;
-
-                        var columnName = e.Property.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
-                        var isNullable = e.Parent.GetType().GetProperty(columnName).PropertyType.IsNullable();
-
-                        // we can skip the foreign key if its nullable and one to one
-                        if (isNullable) continue;
-
-                        if (!useTransactions)
-                        {
-                            // database will take care of this if MARS is enabled
-                            // list can be one-many or one-none.  We assume the key to the primary table is in this table therefore the base table can still be saved while
-                            // maintaining the relationship
-                            throw new SqlSaveException(string.Format("Foreign Key Has No Value - Foreign Key Property Name: {0}.  If the ForeignKey is nullable, make the ID nullable in the POCO to save", e.GetType().Name));
-                        }
-                    }
-
                     // doesnt have dependencies
                     if (foreignKeyIsList)
                     {
                         // e.Value can not be null, above code will catch it
-                        foreach (var item in (e.Value as ICollection))
+                        foreach (var item in (ICollection)e.Value)
                         {
                             // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                             // the value property
-                            result.AddOneToManySaveReference(e, item);
+                            result.AddOneToManySaveReference(e, item, isDeleting);
 
                             // add any dependencies
                             if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
@@ -368,7 +382,7 @@ namespace OR_M_Data_Entities.Data
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
-                        result.AddOneToOneSaveReference(e);
+                        result.AddOneToOneSaveReference(e, isDeleting);
 
                         // add any dependencies
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
@@ -449,9 +463,45 @@ namespace OR_M_Data_Entities.Data
                     .ToList();
         }
 
+        public override void Dispose()
+        {
+            OnBeforeSave = null;
+            OnAfterSave = null;
+            OnSaving = null;
+            OnConcurrencyViolation = null;
+
+            base.Dispose();
+        }
+
         #endregion
 
         #region shared
+        private class SqlPartStatement : ISqlPartStatement
+        {
+            public SqlPartStatement(string sql, string declare = null, string set = null)
+            {
+                Sql = sql;
+                Declare = declare;
+                Set = set;
+            }
+
+            public string Sql { get; private set; }
+
+            public string Declare { get; private set; }
+
+            public string Set { get; private set; }
+
+            public override string ToString()
+            {
+                return string.Format("{0}{1}{2}",
+
+                    string.IsNullOrWhiteSpace(Declare) ? string.Empty : string.Format("{0} \r\r", Declare),
+
+                    string.IsNullOrWhiteSpace(Set) ? string.Empty : string.Format("{0} \r\r", Set),
+
+                    Sql);
+            }
+        }
 
         /// <summary>
         /// Provides us a way to get the execution plan for an entity

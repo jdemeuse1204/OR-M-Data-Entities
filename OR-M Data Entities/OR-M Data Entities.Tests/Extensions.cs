@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
+using OR_M_Data_Entities.Data;
 
 namespace OR_M_Data_Entities.Tests
 {
@@ -8,7 +9,7 @@ namespace OR_M_Data_Entities.Tests
     {
         public static ConnectionState GetConnectionState(this DbSqlContext context)
         {
-            var connectionProperty = context.GetType().GetProperty("Connection", BindingFlags.Instance | BindingFlags.NonPublic);
+            var connectionProperty = typeof(Database).GetProperty("_connection", BindingFlags.Instance | BindingFlags.NonPublic);
             return ((SqlConnection)connectionProperty.GetValue(context)).State;
         }
     }

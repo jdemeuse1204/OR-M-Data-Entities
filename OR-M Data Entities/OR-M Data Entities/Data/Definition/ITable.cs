@@ -43,6 +43,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string ToString(TableNameFormat format);
 
+        PropertyInfo GetProperty(string columnName);
+
         bool IsPrimaryKey(string columnName);
 
         bool IsPrimaryKey(PropertyInfo property);
@@ -64,6 +66,8 @@ namespace OR_M_Data_Entities.Data.Definition
         List<PropertyInfo> GetAllForeignAndPseudoKeys();
 
         string GetColumnName(string propertyName);
+
+        IColumn GetColumn(string propertyName);
 
         ReadOnlySaveOption? GetReadOnlySaveOption();
 

@@ -30,7 +30,7 @@ namespace OR_M_Data_Entities.Data
         #region Properties
         protected delegate void OnSqlGenerated(string sql);
 
-        protected static event OnSqlGenerated OnSqlGeneration;
+        protected event OnSqlGenerated OnSqlGeneration;
 
         protected string ConnectionString { get; private set; }
 
@@ -101,10 +101,13 @@ namespace OR_M_Data_Entities.Data
                     return;
                 case ConnectionState.Connecting:
                     throw new Exception(string.Format(errorMessage,"Connecting to database"));
+
                 case ConnectionState.Executing:
                     throw new Exception(string.Format(errorMessage, "Executing Query"));
+
                 case ConnectionState.Fetching:
                     throw new Exception(string.Format(errorMessage, "Fetching Data"));
+
                 case ConnectionState.Open:
                     return;
             }
@@ -167,8 +170,12 @@ namespace OR_M_Data_Entities.Data
             OnSqlGeneration = null;
             Configuration = null;
             ConnectionString = null;
-        }
+            Reader = null;
 
+            _connection = null;
+            _command = null;
+            _configurationCheckPerformed = false;
+        }
 
         #endregion
 
@@ -489,10 +496,10 @@ namespace OR_M_Data_Entities.Data
                 var beginningSchematic = _schematic.DataLoadSchematic;
 
                 // get beginning composite key array
-                var compositeKeyArray = _getCompositKeyArray(beginningSchematic);
+                var compositeKeyArray = _getCompositKeyOrdinals(beginningSchematic);
 
                 // grab the starting composite key
-                var compositeKey = _getCompositKey(compositeKeyArray);
+                var compositeKey = _compositeKeyValue(compositeKeyArray);
 
                 // load the instance
                 _loadObjectFromSchematic(instance, _schematic.DataLoadSchematic);
@@ -505,10 +512,7 @@ namespace OR_M_Data_Entities.Data
 
                 // Loop through the dataset and fill our object.  Check to see if the next PK is the same as the starting PK
                 // if it is then we need to stop and return our object
-                while (Peek() && compositeKey.Equals(_getCompositKey(compositeKeyArray)) && Read())
-                {
-                    _loadObjectWithForeignKeys(instance);
-                }
+                while (Peek() && _compareKey(compositeKey, compositeKeyArray) && Read()) _loadObjectWithForeignKeys(instance);
 
                 // Rows with a PK from the initial object are done loading.  
                 // Clear Schematics, selected columns, and ordered columns
@@ -518,12 +522,20 @@ namespace OR_M_Data_Entities.Data
                 return instance;
             }
 
-            private long _getCompositKey(int[] compositeKeyArray)
+            private bool _compareKey(string key, int[] otherKeyOrdinals)
             {
-                return compositeKeyArray.Sum(w => this[w].GetHashCode());
+                var otherKey = _compositeKeyValue(otherKeyOrdinals);
+
+                return key.Equals(otherKey);
             }
 
-            private int[] _getCompositKeyArray(IDataLoadSchematic dataLoadSchematic)
+            // build the composite key as a string not an integer.  If a database has very large PK's this would fail
+            private string _compositeKeyValue(int[] keyOrdinals)
+            {
+                return keyOrdinals.Aggregate(string.Empty, (current, keyOrdinal) => string.Concat(current, this[keyOrdinal].GetHashCode()));
+            }
+
+            private int[] _getCompositKeyOrdinals(IDataLoadSchematic dataLoadSchematic)
             {
                 return dataLoadSchematic.MappedTable.SelectedColumns.Where(w => w.Column.IsPrimaryKey).Select(w => w.Ordinal).OrderBy(w => w).ToArray();
             }
@@ -550,8 +562,8 @@ namespace OR_M_Data_Entities.Data
                     // if the current table is not included in the selection we skip it
                     if (!currentSchematic.MappedTable.IsIncluded) continue;
 
-                    var compositeKeyArray = _getCompositKeyArray(currentSchematic);
-                    var compositeKey = _getCompositKey(compositeKeyArray);
+                    var compositeKeyArray = _getCompositKeyOrdinals(currentSchematic);
+                    var compositeKey = _compositeKeyValue(compositeKeyArray);
                     var schematicKey = new OSchematicKey(compositeKey, compositeKeyArray);
 
                     // if ReferenceToCurrent is null then its from the parent and we need to check the composite key.  If its not from the 

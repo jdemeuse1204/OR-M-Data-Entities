@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Diagnostics
@@ -26,7 +27,7 @@ namespace OR_M_Data_Entities.Diagnostics
                     linkedServerAttribute.DatabaseName);
         }
 
-        public static string GetSql<T>(this ExpressionQuery<T> query)
+        public static string GetSql<T>(this IExpressionQuery<T> query)
         {
             var resolvableQuery = (IExpressionQueryResolvable)query;
 

@@ -23,7 +23,7 @@ namespace OR_M_Data_Entities.Data
 {
     public abstract class DatabaseQuery : DatabaseExecution
     {
-        #region Properties and Fields
+        #region Properties
         private static QuerySchematicManager _schematicManager { get; set; }
 
         #endregion
@@ -80,6 +80,7 @@ namespace OR_M_Data_Entities.Data
         public override void Dispose()
         {
             _schematicManager = null;
+
             base.Dispose();
         }
 
@@ -133,7 +134,7 @@ namespace OR_M_Data_Entities.Data
                 const string aliasString = "AkA{0}";
 
                 // base table is always included
-                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain), true);
+                var initMappedTable = new MappedTable(from, string.Format(aliasString, 0), from.ToString(TableNameFormat.Plain), false, true);
                 var tables = new List<IMappedTable> { initMappedTable };
 
                 // create the schematic so the Data loader knows how to populate the object
@@ -147,7 +148,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     var currentMappedTable = tables[i];
                     var autoLoadProperties = currentMappedTable.Table.AutoLoadKeyRelationships;
-
+                    
                     // tables cannot have the same alias, we are ok to match on alias only
                     var parentOfCurrent = i == 0
                         ? null
@@ -165,7 +166,10 @@ namespace OR_M_Data_Entities.Data
                                     autoLoadRelationship.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(),
                                     configuration);
 
-                            currentMappedtable = new MappedTable(tableSchematic, nextAlias, autoLoadRelationship.AutoLoadPropertyColumn.PropertyName, !configuration.IsLazyLoading);
+                            currentMappedtable = new MappedTable(tableSchematic, nextAlias,
+                                autoLoadRelationship.AutoLoadPropertyColumn.PropertyName,
+                                autoLoadRelationship.IsNullableOrListJoin || (parentOfCurrent != null && parentOfCurrent.IsNullableOrListJoin),
+                                !configuration.IsLazyLoading);
 
                             _mappedTables.Add(currentMappedtable);
                         }
@@ -233,8 +237,29 @@ namespace OR_M_Data_Entities.Data
             {
                 string sql;
                 TableRelationship relationship;
+                var isOneToMany = false;
 
-                if (column.IsList || column.IsNullable)
+                // if the parent join is a left join then the rest have to be left
+                // joins because if there is no data in the child the whole query will fail
+                if (currentMappedTable.IsNullableOrListJoin || column.IsList)
+                {
+                    isOneToMany = true;
+                }
+                else if (column.IsForeignKey || column.IsPseudoKey)
+                {
+                    var fkAttribute = column.GetCustomAttribute<ForeignKeyAttribute>();
+                    var pskAttribute = column.GetCustomAttribute<PseudoKeyAttribute>();
+                    var lookupColumnName = fkAttribute != null
+                        ? fkAttribute.ForeignKeyColumnName
+                        : pskAttribute.ParentTableColumnName;
+                    var autoLoadColumn = parentTable.Table.GetColumn(lookupColumnName);
+
+                    if (autoLoadColumn == null) throw new Exception(string.Format("Cannot find AutoLoad Key.  Property Name: {0}", lookupColumnName));
+
+                    isOneToMany = autoLoadColumn.IsNullable;
+                }
+
+                if (isOneToMany)
                 {
                     sql = _getRelationshipSql(currentMappedTable, parentTable, column, RelationshipType.OneToMany);
                     relationship = new TableRelationship(RelationshipType.OneToMany, currentMappedTable, sql);
@@ -250,6 +275,7 @@ namespace OR_M_Data_Entities.Data
             private string _getRelationshipSql(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column,
                 RelationshipType relationshipType)
             {
+                string columnName;
                 const string sql = "{0} JOIN {1} ON {2} = {3}";
                 const string tableColumn = "[{0}].[{1}]";
                 var alias = string.Format("{0} AS [{1}]", currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema),
@@ -260,24 +286,43 @@ namespace OR_M_Data_Entities.Data
                 switch (relationshipType)
                 {
                     case RelationshipType.OneToOne:
-                        var oneToOneParent = string.Format(tableColumn, parentTable.Alias,
-                            fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName);
+                        
+                        // column might be renamed, grab the correct name of the column
+                        columnName = _getAutoLoadChildDatabaseColumnName(parentTable, fkAttribute, pskAttribute.ParentTableColumnName);
+
+                        var oneToOneParent = string.Format(tableColumn, parentTable.Alias, columnName);
                         // pk in parent
                         var oneToOneChild = string.Format(tableColumn, currentMappedTable.Alias,
                             currentMappedTable.Table.GetPrimaryKeyName(0)); // fk attribute in child
 
                         return string.Format(sql, "INNER", alias, oneToOneChild, oneToOneParent);
                     case RelationshipType.OneToMany:
+
+                        // column might be renamed, grab the correct name of the column
+                        columnName = _getAutoLoadChildDatabaseColumnName(currentMappedTable, fkAttribute, pskAttribute.ChildTableColumnName);
+
                         var oneToManyParent = string.Format(tableColumn, parentTable.Alias,
                             parentTable.Table.GetPrimaryKeyName(0)); // pk in parent
-                        var oneToManyChild = string.Format(tableColumn, currentMappedTable.Alias,
-                            fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskAttribute.ChildTableColumnName);
+                        var oneToManyChild = string.Format(tableColumn, currentMappedTable.Alias, columnName);
                         // fk attribute in parent... in other table
 
                         return string.Format(sql, "LEFT", alias, oneToManyChild, oneToManyParent);
                     default:
                         throw new ArgumentOutOfRangeException("relationshipType");
                 }
+            }
+
+            private string _getAutoLoadChildDatabaseColumnName(IMappedTable table, ForeignKeyAttribute fkAttribute, string pskColumnName)
+            {
+                // grab the column name off of the parent table
+                var columnName = table.Table.GetColumnName(fkAttribute != null ? fkAttribute.ForeignKeyColumnName : pskColumnName);
+
+                if (string.IsNullOrEmpty(columnName))
+                {
+                    throw new Exception(string.Format("Foreign Key property name must match property name not the column attribute name.  Foreign Key Attribute: {0}", fkAttribute.ForeignKeyColumnName));
+                }
+
+                return columnName;
             }
 
             #region helpers
@@ -460,9 +505,9 @@ namespace OR_M_Data_Entities.Data
                     Ordinal = ordinal;
                 }
 
-                public IColumn Column { get; }
+                public IColumn Column { get; private set; }
 
-                public int Ordinal { get; }
+                public int Ordinal { get; private set; }
             }
 
             private class MappedTable : IMappedTable
@@ -471,7 +516,7 @@ namespace OR_M_Data_Entities.Data
 
                 public string Key { get; private set; } // either table name or FK/PSK property name
 
-                public ITable Table { get; }
+                public ITable Table { get; private set; }
 
                 public HashSet<ITableRelationship> Relationships { get; private set; }
 
@@ -481,7 +526,9 @@ namespace OR_M_Data_Entities.Data
 
                 public bool IsIncluded { get; private set; }
 
-                public MappedTable(ITable table, string alias, string key, bool isIncluded = true)
+                public bool IsNullableOrListJoin { get; private set; }
+
+                public MappedTable(ITable table, string alias, string key, bool isNullableOrListJoin, bool isIncluded)
                 {
                     Key = key;
                     Alias = alias;
@@ -490,6 +537,7 @@ namespace OR_M_Data_Entities.Data
                     SelectedColumns = new HashSet<ISelectedColumn>();
                     OrderByColumns = new HashSet<ISelectedColumn>();
                     IsIncluded = isIncluded;
+                    IsNullableOrListJoin = isNullableOrListJoin;
                 }
 
                 public void Include()
@@ -633,6 +681,11 @@ namespace OR_M_Data_Entities.Data
             public bool AreForeignKeysSelected()
             {
                 return _schematic.AreForeignKeysSelected();
+            }
+
+            public bool HasForeignKeys()
+            {
+                return _schematic.DataLoadSchematic.Children != null && _schematic.DataLoadSchematic.Children.Any();
             }
 
             public void ResolveWhere(Expression<Func<T, bool>> expression)
@@ -939,6 +992,29 @@ namespace OR_M_Data_Entities.Data
                 return GetEnumerator();
             }
 
+            public IExpressionQuery<TResult> ResolveJoin<TOuter, TInner, TKey, TResult>(
+                IExpressionQuery<TOuter> outer, IExpressionQuery<TInner> inner,
+                Expression<Func<TOuter, TKey>> outerKeySelector, 
+                Expression<Func<TInner, TKey>> innerKeySelector,
+                Expression<Func<TOuter, TInner, TResult>> resultSelector, 
+                JoinType joinType)
+            {
+                // combine schematics before sending them in
+                _join = string.Concat(_join, ExpressionQueryJoinResolver.Resolve(outer,
+                    inner,
+                    outerKeySelector,
+                    innerKeySelector,
+                    resultSelector,
+                    joinType, 
+                    _schematic));
+
+                var selectResolution = ExpressionQuerySelectResolver.Resolve(resultSelector,_schematic);
+
+                _columns = selectResolution.Sql;
+
+                return ExpressionQuerySelectResolver.ChangeExpressionQueryGenericType<TOuter, TResult>(outer);
+            }
+
             #endregion
         }
 
@@ -959,7 +1035,6 @@ namespace OR_M_Data_Entities.Data
                 Expression expressionQuery, bool isSubQuery = false)
             {
                 Parameters = parameters;
-                Order = new Queue<KeyValuePair<string, Expression>>();
                 Schematic = schematic;
                 Sql = string.Empty;
                 IsSubQuery = isSubQuery;
@@ -972,7 +1047,6 @@ namespace OR_M_Data_Entities.Data
             public static LambdaToSqlResolution ResolveFind(IMappedTable table, object[] pks)
             {
                 Parameters = new ParameterCollection();
-                Order = new Queue<KeyValuePair<string, Expression>>();
                 Sql = string.Empty;
 
                 // keys will be returned in order they are in the poco
@@ -1361,6 +1435,25 @@ namespace OR_M_Data_Entities.Data
                             .Aggregate(current1,
                                 (current, relationship) => current + string.Format("{0}\r", relationship.Sql)));
             }
+
+            public static string Resolve<TOuter, TInner, TKey, TResult>(
+            IExpressionQuery<TOuter> outer,
+            IExpressionQuery<TInner> inner,
+            Expression<Func<TOuter, TKey>> outerKeySelector,
+            Expression<Func<TInner, TKey>> innerKeySelector,
+            Expression<Func<TOuter, TInner, TResult>> resultSelector,
+            JoinType joinType,
+            IQuerySchematic schematic)
+            {
+                Schematic = schematic;
+
+                const string join = "{0} JOIN {1} ON {2}\r";
+                var joinString = joinType.ToString().ToUpper();
+                var innerKeySelectorString = LoadColumnAndTableName(innerKeySelector.Body as dynamic);
+                var outerKeySelectorString = LoadColumnAndTableName(outerKeySelector.Body as dynamic);
+
+                return string.Format(join, joinString, innerKeySelectorString.GetTableAndColumnName(true), outerKeySelectorString.GetTableAndColumnName(true));
+            }
         }
 
         private class ExpressionQueryOrderByResolver : ExpressionQuerySelectResolver
@@ -1414,19 +1507,18 @@ namespace OR_M_Data_Entities.Data
 
             public static SelectResolutionContainer Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
             {
-                return Resolve(new ParameterCollection(), expressionQuery, schematic);
+                return Resolve(schematic, expressionQuery.Body);
             }
 
-            public static SelectResolutionContainer Resolve<TSource, TResult>(ParameterCollection parameters, Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic)
+            public static SelectResolutionContainer Resolve<TOuter, TInner, TResult>(Expression<Func<TOuter, TInner, TResult>> expressionQuery, IQuerySchematic schematic)
             {
-                return Resolve(schematic, parameters, expressionQuery.Body);
+                return Resolve(schematic, expressionQuery.Body);
             }
 
-            public static SelectResolutionContainer Resolve(IQuerySchematic schematic, ParameterCollection parameters,
-                Expression expressionQuery, bool isSubQuery = false)
+            //Expression<Func<TOuter, TInner, TResult>>
+            public static SelectResolutionContainer Resolve(IQuerySchematic schematic, Expression expressionQuery, bool isSubQuery = false)
             {
-                Parameters = parameters;
-                Order = new Queue<KeyValuePair<string, Expression>>();
+                Parameters = new ParameterCollection();
                 Schematic = schematic;
                 Sql = expressionQuery.ToString();
                 IsSubQuery = isSubQuery;
@@ -1501,6 +1593,32 @@ namespace OR_M_Data_Entities.Data
 
                     sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
                 }
+
+                Sql = Sql.Replace(expression.ToString(), sql);
+
+                ReturnObject = expression;
+            }
+
+            private static void _evaluate(ParameterExpression expression)
+            {
+                var sql = string.Empty;
+
+                // comes from select.  We should do a select * from the parameter
+                var table = Schematic.FindTable(expression.Type);
+
+                // exclude all mapped tables
+                foreach (var mappedTable in Schematic.MappedTables)
+                {
+                    mappedTable.Clear();
+                    mappedTable.Exclude();
+                }
+
+                // include only the selected table
+                table.Include();
+                table.SelectAll(0);
+
+                // select all
+                sql = ResolveSelectAll(Schematic);
 
                 Sql = Sql.Replace(expression.ToString(), sql);
 
@@ -1632,7 +1750,7 @@ namespace OR_M_Data_Entities.Data
                 var memberExpression = expression as MemberExpression;
 
                 // could be something like Guid.Empty, DateTime.Now
-                if (memberExpression != null) return memberExpression.Member.DeclaringType == memberExpression.Type;
+                if (memberExpression != null) return memberExpression.Member.DeclaringType == memberExpression.Type || memberExpression.NodeType == ExpressionType.MemberAccess;
 
                 return false;
             }
@@ -1675,8 +1793,6 @@ namespace OR_M_Data_Entities.Data
             protected static bool IsSubQuery { get; set; }
 
             protected static ParameterCollection Parameters { get; set; }
-
-            protected static Queue<KeyValuePair<string, Expression>> Order;
 
             protected static IQuerySchematic Schematic { get; set; }
 

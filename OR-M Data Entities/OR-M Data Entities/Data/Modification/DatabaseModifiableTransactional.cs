@@ -45,7 +45,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public SqlPartStatement Split()
+            public ISqlPartStatement Split()
             {
                 return new SqlPartStatement(_sql, _declare, _set);
             }
@@ -72,7 +72,7 @@ namespace OR_M_Data_Entities.Data
                 _configuration = configuration;
             }
 
-            public override SqlPartStatement Split()
+            public override ISqlPartStatement Split()
             {
                 var outputStatement = string.Concat(Output.TrimEnd(','), string.Format(" INTO @{0}", _tableAlias));
                 var columns =  Output.Replace("[INSERTED].", "");
@@ -144,7 +144,7 @@ namespace OR_M_Data_Entities.Data
                 _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
 
-            public override SqlPartStatement Split()
+            public override ISqlPartStatement Split()
             {
                 var sql = string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
 
@@ -169,7 +169,7 @@ namespace OR_M_Data_Entities.Data
                 _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
             }
 
-            public override SqlPartStatement Split()
+            public override ISqlPartStatement Split()
             {
                 // try insert does not need to select anything back, either it succeeded or didnt.
                 var selectBackStatement = !string.IsNullOrEmpty(_outputColumnsOnly)
@@ -691,7 +691,7 @@ IF @@TRANCOUNT > 0
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, false);
             var parameters = new List<SqlSecureQueryParameter>();
             var plan = new SqlTransactionPlan(referenceMap, parameters);
 
@@ -760,10 +760,10 @@ IF @@TRANCOUNT > 0
             where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new DeleteEntity(entity, Configuration);
+            var parent = new ModificationEntity(entity, Configuration);
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, true);
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);
             var changeManager = new ChangeManager();

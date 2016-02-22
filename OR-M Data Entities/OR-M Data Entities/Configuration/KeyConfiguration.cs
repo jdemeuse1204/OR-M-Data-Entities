@@ -56,7 +56,7 @@ namespace OR_M_Data_Entities.Configuration
             Double = new[] { 0d };
             Single = new[] { 0f };
             TimeSpan = new[] { System.TimeSpan.MinValue };
-            Byte = new[] { System.Byte.MinValue,  };
+            Byte = new[] { byte.MinValue,  };
             CharArray = new[] { new char[] { }  };
             ByteArray = new[] {new byte[] {1, 1}};
         }

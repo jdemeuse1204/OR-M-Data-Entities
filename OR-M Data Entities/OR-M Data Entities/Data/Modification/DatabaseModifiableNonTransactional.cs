@@ -43,7 +43,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public SqlPartStatement Split()
+            public ISqlPartStatement Split()
             {
                 return new SqlPartStatement(_sql);
             }
@@ -124,7 +124,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public virtual SqlPartStatement Split()
+            public virtual ISqlPartStatement Split()
             {
                 var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})",
                     SqlFormattedTableName,
@@ -195,7 +195,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public virtual SqlPartStatement Split()
+            public virtual ISqlPartStatement Split()
             {
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
                 var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3}", Statement, SetItems.TrimEnd(','), Output.TrimEnd(','), Where.TrimEnd(','));
@@ -244,7 +244,7 @@ namespace OR_M_Data_Entities.Data
                 return Split().ToString();
             }
 
-            public virtual SqlPartStatement Split()
+            public virtual ISqlPartStatement Split()
             {
                 var sql = string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
 
@@ -695,7 +695,7 @@ ELSE
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
-                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, false);
 
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
@@ -799,11 +799,11 @@ ELSE
         private IPersistResult _delete<T>(T entity) 
             where T : class
         {
-            var parent = new DeleteEntity(entity, Configuration);
+            var parent = new ModificationEntity(entity, Configuration);
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, true);
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();

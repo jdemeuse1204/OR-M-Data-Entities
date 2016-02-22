@@ -27,7 +27,6 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var name = concurrencyExceptionContext.Find<Name>(id);
                 name.Value = "James";
                 concurrencyExceptionContext.SaveChanges(name);
-                concurrencyExceptionContext.OnConcurrencyViolation += _handle; // make sure it was not fired
 
                 // start the test
 
@@ -39,13 +38,12 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 name.Value = "New Name";
                 concurrencyExceptionContext.SaveChanges(name);
 
-                return _was_Test_C_3_handlerFired == false;// make sure it was not fired
+                return true;
             }
             catch (Exception ex)
             {
                 return ex is DBConcurrencyException;
             }
-
         }
 
         public static bool Test_2()
@@ -61,7 +59,6 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var name = concurrencyContinueContext.Find<Name>(id);
                 name.Value = "James";
                 concurrencyContinueContext.SaveChanges(name);
-                concurrencyContinueContext.OnConcurrencyViolation += _handle; // make sure it was not fired
 
                 // start the test
 
@@ -73,7 +70,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 name.Value = "New Name";
                 concurrencyContinueContext.SaveChanges(name);
 
-                return _was_Test_C_3_handlerFired == false;
+                return true;
             }
             catch (Exception)
             {
@@ -92,7 +89,6 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var id = 3;
 
                 _was_Test_C_3_handlerFired = false;
-                concurrencyHandleContext.OnConcurrencyViolation += _handle;
 
                 var name = concurrencyHandleContext.Find<Name>(id);
                 name.Value = "James";
@@ -108,11 +104,11 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 name.Value = "New Name";
                 concurrencyHandleContext.SaveChanges(name);
 
-                return _was_Test_C_3_handlerFired;
+                return false;
             }
             catch (Exception ex)
             {
-                return false;
+                return true;
             }
         }
     }

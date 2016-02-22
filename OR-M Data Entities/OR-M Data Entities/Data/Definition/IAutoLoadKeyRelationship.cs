@@ -17,5 +17,7 @@ namespace OR_M_Data_Entities.Data.Definition
         IColumn AutoLoadPropertyColumn { get; }
 
         JoinType JoinType { get; }
+
+        bool IsNullableOrListJoin { get; }
     }
 }

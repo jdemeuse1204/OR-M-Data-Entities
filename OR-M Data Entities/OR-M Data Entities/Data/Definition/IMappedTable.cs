@@ -19,6 +19,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         ITable Table { get; }
 
+        bool IsNullableOrListJoin { get; }
+
         // all selected columns
         HashSet<ISelectedColumn> SelectedColumns { get; }
 

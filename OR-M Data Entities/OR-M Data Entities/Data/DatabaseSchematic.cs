@@ -110,12 +110,13 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadKeyRelationship : IAutoLoadKeyRelationship
         {
-            public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn, IColumn autoLoadPropertyColumn, JoinType joinType)
+            public AutoLoadKeyRelationship(IColumn parentColumn, IColumn childColumn, IColumn autoLoadPropertyColumn, JoinType joinType, bool isNullableOrListJoin)
             {
                 ParentColumn = parentColumn;
                 ChildColumn = childColumn;
                 AutoLoadPropertyColumn = autoLoadPropertyColumn;
                 JoinType = joinType;
+                IsNullableOrListJoin = isNullableOrListJoin;
             }
 
             public IColumn ChildColumn { get; private set; }
@@ -125,6 +126,8 @@ namespace OR_M_Data_Entities.Data
             public JoinType JoinType { get; private set; }
 
             public IColumn AutoLoadPropertyColumn { get; private set; }
+
+            public bool IsNullableOrListJoin { get; private set; }
         }
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
@@ -158,13 +161,41 @@ namespace OR_M_Data_Entities.Data
 
             private AutoLoadKeyRelationship _getRelationship(IColumn column)
             {
-                var joinType = column.IsList || column.IsNullable ? JoinType.Left : JoinType.Inner;
+                var isNullable = column.IsNullable;
+
+                if (!column.IsList)
+                {
+                    // need to make sure parent is not a nullable FK or list,
+                    // we cannot inner join is this case
+
+                    if (column.IsForeignKey)
+                    {
+                        var columnName = column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName;
+                        var property = column.Table.GetProperty(columnName);
+
+                        if (property == null) throw new Exception(string.Format("Property not found. Property Name: {0}", columnName));
+
+                        isNullable = property.PropertyType.IsNullable();
+                    }
+
+                    if (column.IsPseudoKey)
+                    {
+                        var columnName = column.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName;
+                        var property = column.Table.GetProperty(columnName);
+
+                        if (property == null) throw new Exception(string.Format("Property not found. Property Name: {0}", columnName));
+
+                        isNullable = property.PropertyType.IsNullable();
+                    }
+                }
+
+                var joinType = column.IsList || isNullable ? JoinType.Left : JoinType.Inner;
                 var childColumn = _getChildColumn(column);
                 var parentColumn = _getParentColumn(column);
 
                 if (childColumn == null) throw new KeyNotFoundException(string.Format("Cannot find {0}.  Key Name - {1}", column.IsForeignKey ? "Foreign Key" : "Pseudo Key", column.PropertyName));
 
-                return new AutoLoadKeyRelationship(parentColumn, childColumn, column, joinType);
+                return new AutoLoadKeyRelationship(parentColumn, childColumn, column, joinType, column.IsList || isNullable);
             }
 
             private IColumn _getChildColumn(IColumn column)
@@ -623,6 +654,12 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
+
+            public IColumn GetColumn(string propertyName)
+            {
+                return Columns.FirstOrDefault(w => w.PropertyName == propertyName);
+            }
+
             public ReadOnlySaveOption? GetReadOnlySaveOption()
             {
                 return ReadOnlyAttribute == null ? null : (ReadOnlySaveOption?)ReadOnlyAttribute.ReadOnlySaveOption;
@@ -943,10 +980,10 @@ namespace OR_M_Data_Entities.Data
             {
             }
 
-            protected ModificationEntity(object entity, IConfigurationOptions configuration, bool isDeleting)
+            public ModificationEntity(object entity, IConfigurationOptions configuration, bool isDeleting)
                 : base(entity, configuration)
             {
-                // do not initialize when deleting because we will get unnecessary errors
+                // do not build the entity if deleting
                 if (isDeleting) return;
 
                 _initialize(configuration);
@@ -960,9 +997,11 @@ namespace OR_M_Data_Entities.Data
                 return ModificationItems.Where(w => w.IsModified && !w.IsPrimaryKey).ToList();
             }
 
+            // get the keys from AllProperties.  If we are deleting,
+            // all the modification items will be empty
             public IReadOnlyList<IModificationItem> Keys()
             {
-                return ModificationItems.Where(w => w.IsPrimaryKey).ToList();
+                return AllProperties.Where(IsPrimaryKey).Select(w => new ModificationItem(w)).ToList();
             }
 
             public IReadOnlyList<IModificationItem> All()
@@ -1041,7 +1080,11 @@ namespace OR_M_Data_Entities.Data
 
             private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
             {
-                return (from item in allColumns let current = _getCurrentObject(entityStateTrackable, item.Name) let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name) let hasChanged = ObjectComparison.HasChanged(pristineEntity, current) select new ModificationItem(item, hasChanged)).ToList();
+                return (from item in allColumns
+                    let current = _getCurrentObject(entityStateTrackable, item.Name)
+                    let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
+                    let hasChanged = ObjectComparison.HasChanged(pristineEntity, current)
+                    select new ModificationItem(item, hasChanged)).ToList();
             }
 
             private void _checkMaxLengthViolations(object entity, Type type)
@@ -1289,14 +1332,6 @@ namespace OR_M_Data_Entities.Data
             }
 
             #endregion
-        }
-
-        protected class DeleteEntity : ModificationEntity
-        {
-            public DeleteEntity(object entity, IConfigurationOptions configuration) : base(entity, configuration)
-            {
-                ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
-            }
         }
 
         private class SqlDbTypeResult

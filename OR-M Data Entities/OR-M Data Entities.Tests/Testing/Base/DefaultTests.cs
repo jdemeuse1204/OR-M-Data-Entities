@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
+using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Tests.Scripts;
 using OR_M_Data_Entities.Tests.Tables;
@@ -325,8 +327,47 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
         public static bool Test_21(DbSqlContext ctx)
         {
-            // TODO open area
-            return true;
+            // test dispose to make sure our context disposes correctly
+            var person = ctx.Find<Person>(2);
+
+            ctx.Dispose();
+
+            // DatabaseSchematic
+            // Protected Properties: Tables
+            // Private Properties: _tableScriptMappings
+
+            // Database
+            // Protected Properties:  ConnectionString, Reader, Configuration
+            // Protected Fields:  OnSqlGeneration
+            // Private Properties: _connection, _command, _configurationCheckPerformed (= false)
+
+            // DatabaseQuery
+            // Private Properties:  _schematicManager
+
+            // DatabaseModifiable
+            // Protected Fields:  OnBeforeSave, OnAfterSave, OnSaving, OnConcurrencyViolation
+
+            var Tables = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "Tables") == null;
+            var _tableScriptMappings = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "_tableScriptMappings") == null;
+
+            var ConnectionString = _getPropertyValue(ctx, "ConnectionString") == null;
+            var Reader = _getPropertyValue(ctx, "Reader") == null;
+            var Configuration = _getPropertyValue(ctx, "Configuration") == null;
+            var OnSqlGeneration = _getEventValue(ctx, "OnSqlGeneration") == null;
+            var _connection = _getPropertyValue(ctx, typeof(Database), "_connection") == null;
+            var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
+            var _configurationCheckPerformed = (bool)_getPropertyValue(ctx, typeof(Database), "_configurationCheckPerformed") == false;
+
+            var _schematicManager = _getStaticPropertyValue(ctx, typeof(DatabaseQuery), "_schematicManager") == null;
+
+            var OnBeforeSave = _getEventValue(ctx, "OnBeforeSave") == null;
+            var OnAfterSave = _getEventValue(ctx, "OnAfterSave") == null;
+            var OnSaving = _getEventValue(ctx, "OnSaving") == null;
+            var OnConcurrencyViolation = _getEventValue(ctx, "OnConcurrencyViolation") == null;
+
+            return Tables && _tableScriptMappings && ConnectionString && Reader && Configuration && OnSqlGeneration &&
+                   _connection && _command && _configurationCheckPerformed && _schematicManager && OnBeforeSave &&
+                   OnAfterSave && OnSaving && OnConcurrencyViolation;
         }
 
         public static bool Test_22(DbSqlContext ctx)
@@ -370,7 +411,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 return (test1 && test2 && test3 && test4);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
@@ -445,7 +486,6 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             }
             catch (Exception ex)
             {
-                Console.Write(ex.Message);
                 return false;
             }
         }
@@ -1468,6 +1508,41 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             return result;
         }
 
+        private static object _getPropertyValue(object entity, string propertyName)
+        {
+            var property = entity.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+            return property.GetValue(entity);
+        }
+
+        private static object _getStaticPropertyValue(object entity, Type baseType, string propertyName)
+        {
+            var property = baseType.GetProperty(propertyName, BindingFlags.Static | BindingFlags.NonPublic);
+
+            return property.GetValue(entity);
+        }
+
+        private static object _getEventValue(object entity, string propertyName)
+        {
+            var e = entity.GetType().GetEvent(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+            return e.GetRaiseMethod();
+        }
+
+
+        private static object _getFieldValue(object entity, string propertyName)
+        {
+            var field = entity.GetType().GetField(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+            return field.GetValue(entity);
+        }
+
+        private static object _getPropertyValue(object entity, Type type, string propertyName)
+        {
+            var property = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+            return property.GetValue(entity);
+        }
         #endregion
     }
 }

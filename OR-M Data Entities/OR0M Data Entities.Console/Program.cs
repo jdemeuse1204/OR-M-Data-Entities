@@ -72,6 +72,12 @@ namespace OR0M_Data_Entities.Console
         private static void Main(string[] args)
         {
             var context = new SqlContext();
+
+            //var sedfsdf = context.From<Zip>()
+            //    .InnerJoin(context.From<StateCode>(),
+            //        contact => contact.ID,
+            //        appointment => appointment.ID,
+            //        (contact, appointment) => appointment).FirstOrDefault();
             //context.From<Contact>()
             //    .Where(w => w.ContactID == 1)
             //    .Select(w => new Test
@@ -86,14 +92,13 @@ namespace OR0M_Data_Entities.Console
             //    });
 
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
-            var sdfsdf = context.From<Contact>().IncludeTo("Appointments").FirstOrDefault(w => w.ContactID == 1);
+            //var sdfsdf = context.From<Contact>().IncludeTo("Appointments").FirstOrDefault(w => w.ContactID == 1);
 
-            sdfsdf.FirstName = "James";
+           // sdfsdf.FirstName = "James";
 
-            context.SaveChanges(sdfsdf);
+            //context.SaveChanges(sdfsdf);
 
             var s = DateTime.Now;
-
             var t = context.Find<Contact>(1);
             var e = DateTime.Now;
 

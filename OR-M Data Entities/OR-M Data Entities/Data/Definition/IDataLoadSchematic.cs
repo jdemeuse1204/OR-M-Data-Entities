@@ -63,13 +63,13 @@ namespace OR_M_Data_Entities.Data.Definition
 
     public class OSchematicKey : IEquatable<OSchematicKey>
     {
-        public OSchematicKey(long compositeKey, int[] ordinals)
+        public OSchematicKey(string compositeKey, int[] ordinals)
         {
             CompositeKey = compositeKey;
             OrdinalCompositeHashCode = ordinals.Aggregate(0, (current, next) => current + next.GetHashCode());
         }
 
-        public long CompositeKey { get; private set; }
+        public string CompositeKey { get; private set; }
 
         public int OrdinalCompositeHashCode { get; private set; }
 

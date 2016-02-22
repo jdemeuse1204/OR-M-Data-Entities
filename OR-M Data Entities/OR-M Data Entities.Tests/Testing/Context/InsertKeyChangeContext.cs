@@ -8,7 +8,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
             : base("sqlExpress")
         {
             Configuration.UseTransactions = false;
-            Configuration.InsertKeys.Int16 = new[] {-1};
+            Configuration.InsertKeys.Int16 = new short[] {-1};
             Configuration.InsertKeys.Guid = new[] { Guid.Empty };
         }
     }

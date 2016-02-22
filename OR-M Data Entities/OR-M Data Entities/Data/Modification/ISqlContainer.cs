@@ -12,6 +12,6 @@ namespace OR_M_Data_Entities.Data.Modification
     {
         string Resolve();
 
-        SqlPartStatement Split();
+        ISqlPartStatement Split();
     }
 }

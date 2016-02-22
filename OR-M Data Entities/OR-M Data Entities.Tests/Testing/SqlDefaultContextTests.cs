@@ -132,7 +132,7 @@ namespace OR_M_Data_Entities.Tests.Testing
         [TestMethod]
         public void Test_Default_21()
         {
-            Assert.IsTrue(DefaultTests.Test_21(_ctx));
+            Assert.IsTrue(DefaultTests.Test_21(new DefaultContext()));
         }
 
         [TestMethod]

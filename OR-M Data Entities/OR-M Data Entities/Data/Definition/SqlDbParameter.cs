@@ -7,7 +7,6 @@
  */
 
 using OR_M_Data_Entities.Data.Secure;
-using OR_M_Data_Entities.Data.Transform;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -15,7 +14,6 @@ namespace OR_M_Data_Entities.Data.Definition
     {
         public SqlDbParameter()
         {
-            Transform = new TransformContainer();
         }
 
         public SqlDbParameter(string name, object value)
@@ -33,7 +31,5 @@ namespace OR_M_Data_Entities.Data.Definition
         public string Name { get; set; }
 
         public object Value { get; set; }
-
-        public TransformContainer Transform { get; set; }
     }
 }
