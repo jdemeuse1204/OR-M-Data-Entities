@@ -372,7 +372,17 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
         public static bool Test_22(DbSqlContext ctx)
         {
-            // TODO open area
+            try
+            {
+                var names = new List<string> {"James","Megan"};
+                var test = ctx.From<Contact>().Where(w => names.Contains(w.FirstName)).Count(w => w.ContactID == 10);
+            }
+            catch (Exception)
+            {
+                
+                throw;
+            }
+            
             return true;
         }
 
@@ -993,7 +1003,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 ctx.SaveChanges(item);
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
@@ -1145,6 +1155,8 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
             ctx.SaveChanges(item);
 
+            item = ctx.Find<TestUpdateNewSchema>(item.Id);
+
             item.Name = "NEW NAME!";
 
             ctx.SaveChanges(item);
@@ -1159,10 +1171,11 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             try
             {
                 // previous issue
-                var test = ctx.From<Contact>().Where(w => w.FirstName.Contains("Win")).Count(w => w.ContactID == 10);
-                return true;
+                var count = ctx.From<Contact>().Where(w => w.FirstName.Contains("James")).Count(w => w.LastName.Contains("Use"));
+
+                return count > 0;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }

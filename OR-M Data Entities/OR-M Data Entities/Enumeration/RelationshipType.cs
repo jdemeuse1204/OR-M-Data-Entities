@@ -12,6 +12,7 @@ namespace OR_M_Data_Entities
     public enum RelationshipType
     {
         OneToOne,
+        OneToOneLeftJoin,
         OneToMany,
         Parent
     }

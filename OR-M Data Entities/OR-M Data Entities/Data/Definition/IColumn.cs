@@ -35,5 +35,7 @@ namespace OR_M_Data_Entities.Data.Definition
         T GetCustomAttribute<T>() where T : Attribute;
 
         string ToString(string tableAlias, string postAppendString = "");
+
+        bool IsAutoLoadKeyNullableOrList();
     }
 }

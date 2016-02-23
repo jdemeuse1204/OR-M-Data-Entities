@@ -206,16 +206,21 @@ namespace OR_M_Data_Entities.Data
                 {
                     return column.IsForeignKey
                         ? childTable.Columns.FirstOrDefault(
-                            w =>
-                                string.Equals(w.PropertyName, column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName, StringComparison.CurrentCultureIgnoreCase))
+                            w => string.Equals(w.PropertyName,
+                                     column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName,
+                                     StringComparison.CurrentCultureIgnoreCase))
                         : childTable.Columns.FirstOrDefault(
-                            w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
+                            w => string.Equals(w.PropertyName,
+                                    column.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName,
+                                    StringComparison.CurrentCultureIgnoreCase));
                 }
 
                 return column.IsForeignKey
                     ? childTable.Columns.FirstOrDefault(w => w.IsPrimaryKey)
                     : childTable.Columns.FirstOrDefault(
-                        w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
+                        w => string.Equals(w.PropertyName,
+                                column.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName,
+                                StringComparison.CurrentCultureIgnoreCase));
             }
 
             private IColumn _getParentColumn(IColumn column)
@@ -225,7 +230,10 @@ namespace OR_M_Data_Entities.Data
                     return column.IsForeignKey
                         ? column.Table.Columns.FirstOrDefault(w => w.IsPrimaryKey)
                         : column.Table.Columns.FirstOrDefault(
-                            w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
+                            w =>
+                                string.Equals(w.PropertyName,
+                                    column.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName,
+                                    StringComparison.CurrentCultureIgnoreCase));
                 }
 
                 return column.IsForeignKey
@@ -234,7 +242,10 @@ namespace OR_M_Data_Entities.Data
                             w.PropertyName ==
                             column.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName)
                     : column.Table.Columns.FirstOrDefault(
-                        w => string.Equals(w.PropertyName, w.GetCustomAttribute<PseudoKeyAttribute>().ChildTableColumnName, StringComparison.CurrentCultureIgnoreCase));
+                        w =>
+                            string.Equals(w.PropertyName,
+                                column.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName,
+                                StringComparison.CurrentCultureIgnoreCase));
             }
         }
 
@@ -340,6 +351,44 @@ namespace OR_M_Data_Entities.Data
             {
                 return string.Format("[{0}].[{1}]{2}", tableAlias, DatabaseColumnName, string.IsNullOrEmpty(postAppendString) ? string.Empty : postAppendString);
             }
+
+            public bool IsAutoLoadKeyNullableOrList()
+            {
+                // one to many
+                if (IsList) return true;
+
+                // one to one
+                if (IsForeignKey)
+                {
+                    var fkAttribute = GetCustomAttribute<ForeignKeyAttribute>();
+
+                    // attribute not found, should not happen
+                    if (fkAttribute == null) return false;
+
+                    var autoLoadColumn = Table.GetColumn(fkAttribute.ForeignKeyColumnName);
+
+                    if (autoLoadColumn == null) throw new Exception(string.Format("Cannot find Foreign Key.  Property Name: {0}", fkAttribute.ForeignKeyColumnName));
+
+                    return autoLoadColumn.IsNullable;
+                }
+
+                if (IsPseudoKey)
+                {
+                    var pskAttribute = GetCustomAttribute<PseudoKeyAttribute>();
+
+                    // attribute not found, should not happen
+                    if (pskAttribute == null) return false;
+
+                    var autoLoadColumn = Table.GetColumn(pskAttribute.ParentTableColumnName);
+
+                    if (autoLoadColumn == null) throw new Exception(string.Format("Cannot find Pseudo Key.  Property Name: {0}", pskAttribute.ParentTableColumnName));
+
+                    return autoLoadColumn.IsNullable;
+                }
+
+                return false;
+            }
+
             #endregion
         }
 
@@ -369,7 +418,7 @@ namespace OR_M_Data_Entities.Data
                 ReadOnlyAttribute = type.GetCustomAttribute<ReadOnlyAttribute>();
                 LookupTableAttribute = type.GetCustomAttribute<LookupTableAttribute>();
 
-                DefaultSchema = configuration.DefaultSchema;
+                _configurationDefaultSchema = configuration.DefaultSchema;
             }
             #endregion
 
@@ -402,11 +451,11 @@ namespace OR_M_Data_Entities.Data
 
             private string _tableNameSqlWithSchemaTrimStartAndEnd;
 
+            private readonly string _configurationDefaultSchema;
 
             private List<PropertyInfo> _primaryKeys;
 
-
-            public readonly string DefaultSchema;
+            private string _schema;
 
             #endregion
 
@@ -532,6 +581,18 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Other Methods
+
+            public string Schema()
+            {
+                if (!string.IsNullOrEmpty(_schema)) return _schema;
+
+                _schema = LinkedServerAttribute == null
+                    ? SchemaAttribute == null ? _configurationDefaultSchema : SchemaAttribute.SchemaName
+                    : LinkedServerAttribute.SchemaName;
+
+                return _schema;
+            }
+
             public string ToString(TableNameFormat format)
             {
                 switch (format)
@@ -575,7 +636,7 @@ namespace OR_M_Data_Entities.Data
 
                 _tableNameSqlWithSchema = string.Concat(linkedServerText,
                     string.Format(LinkedServerAttribute == null ? "[{0}].[{1}]" : "{0}.[{1}]",
-                        LinkedServerAttribute == null ? DefaultSchema : string.Empty,
+                        LinkedServerAttribute == null ? Schema() : string.Empty,
                         ToString(TableNameFormat.Plain)));
             }
 
@@ -616,8 +677,6 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsReadOnly { get { return ReadOnlyAttribute != null; } }
 
-            public string Schema { get { return DefaultSchema; } }
-
             public string PlainTableName { get { return ToString(TableNameFormat.Plain); } }
 
             public bool IsUsingLinkedServer { get { return LinkedServerAttribute != null; } }
@@ -639,16 +698,6 @@ namespace OR_M_Data_Entities.Data
             public DelayedEnumerationCachedList<IColumn> Columns { get; private set; }
 
             public DelayedEnumerationCachedList<IAutoLoadKeyRelationship> AutoLoadKeyRelationships { get; private set; }
-
-            public string SchemaName
-            {
-                get
-                {
-                    return LinkedServerAttribute == null
-                        ? SchemaAttribute == null ? DefaultSchema : SchemaAttribute.SchemaName
-                        : LinkedServerAttribute.SchemaName;
-                }
-            }
 
             public bool IsEntityStateTrackingOn { get; private set; }
             #endregion
@@ -858,6 +907,19 @@ namespace OR_M_Data_Entities.Data
                 return property.GetValue(pristineEntity);
             }
 
+            public object TryGetPristineEntityPropertyValue(string propertyName)
+            {
+                if (!IsEntityStateTrackingOn) return null;
+
+                var pristineEntity = _getPristineEntity();
+
+                var property = pristineEntity.GetType().GetProperty(propertyName);
+
+                if (property == null) throw new Exception(string.Format("Cannot find property name: {0}.  Search failed in pristine entity", propertyName));
+
+                return property.GetValue(pristineEntity);
+            }
+
             public void SetPropertyValue(string propertyName, object value)
             {
                 _setPropertyValue(Value, propertyName, value);
@@ -1046,9 +1108,9 @@ namespace OR_M_Data_Entities.Data
                     case "INT16":
                         return configuration.InsertKeys.Int16.Contains(Convert.ToInt16(value));
                     case "INT32":
-                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt16(value));
+                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt32(value));
                     case "INT64":
-                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt16(value));
+                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt64(value));
                     case "GUID":
                         return configuration.InsertKeys.Guid.Contains(Guid.Parse(value.ToString()));
                     case "STRING":

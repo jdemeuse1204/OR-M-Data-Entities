@@ -451,7 +451,7 @@ namespace OR_M_Data_Entities.Data
                 return entity.GetPropertyValue(property);
             }
 
-            return entity.GetPristineEntityPropertyValue(property.Name);
+            return entity.TryGetPristineEntityPropertyValue(property.Name);
         }
 
         private static List<ForeignKeyAssociation> _getForeignKeys(object entity)

@@ -31,10 +31,6 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string DatabaseName { get; }
 
-        string SchemaName { get; }
-
-        string Schema { get; }
-
         bool IsEntityStateTrackingOn { get; }
 
         DelayedEnumerationCachedList<IColumn> Columns { get; }
@@ -42,6 +38,8 @@ namespace OR_M_Data_Entities.Data.Definition
         DelayedEnumerationCachedList<IAutoLoadKeyRelationship> AutoLoadKeyRelationships { get; }
 
         string ToString(TableNameFormat format);
+
+        string Schema();
 
         PropertyInfo GetProperty(string columnName);
 
