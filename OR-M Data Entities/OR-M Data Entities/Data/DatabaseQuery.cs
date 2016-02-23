@@ -13,6 +13,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
@@ -777,7 +778,7 @@ namespace OR_M_Data_Entities.Data
 
             private string _resolveOrderBy()
             {
-                return _count ? string.Empty : _orderBy.TrimEnd(',');
+                return _count ? string.Empty : _orderBy != null ? _orderBy.TrimEnd(',') : string.Empty;
             }
 
             private string _resolveJoin()
@@ -787,7 +788,10 @@ namespace OR_M_Data_Entities.Data
 
             private string _resolveWhere()
             {
-                return string.Format("{0}\r", _where);
+                if (string.IsNullOrEmpty(_where)) return string.Empty;
+
+                // make sure ending is correct
+                return _where.EndsWith("\r") ? _where : string.Format("{0}\r", _where);
             }
 
             private string _resolveFrom(IMappedTable fromTable)
@@ -800,9 +804,9 @@ namespace OR_M_Data_Entities.Data
                 // when we get here only one column will be selected for min or max, the code does not
                 // allow for more.  So we can just wrap the column in a min/max function
                 return _min
-                    ? string.Format("\tMIN({0})", _columns)
+                    ? string.Format("\tMIN({0})\r\n", _columns.Replace("\r","").Replace("\n","").Replace("\t",""))
                     : _max
-                        ? string.Format("\tMAX({0})", _columns)
+                        ? string.Format("\tMAX({0})\r\n", _columns.Replace("\r", "").Replace("\n", "").Replace("\t", ""))
                         : _exists ? string.Empty : _count ? "\tCOUNT(*)\r" : string.Format("{0}\r", _columns);
             }
 
@@ -1329,7 +1333,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     var leftTableAndColumnname = _getTableAliasAndColumnName(expression, schematic);
 
-                    left = leftTableAndColumnname.GetTableAndColumnName(schematic);
+                    left = leftTableAndColumnname.GetTableAndColumnName();
 
                     expressionQuerySql.AddParameter(GetValue(expression), out right);
 
@@ -1343,19 +1347,19 @@ namespace OR_M_Data_Entities.Data
                 {
                     // first = Select Top 1 X From Y Where X
                     left = _getSqlFromLambdaMethod(expression.Left as dynamic, expressionQuerySql, schematic);
-                    right = LoadColumnAndTableName(expression.Right as dynamic, schematic).GetTableAndColumnName(schematic);
+                    right = LoadColumnAndTableName(expression.Right as dynamic, schematic).GetTableAndColumnName();
                 }
 
                 if (isRightLambdaMethod)
                 {
                     right = _getSqlFromLambdaMethod(expression.Right as dynamic, expressionQuerySql, schematic);
-                    left = LoadColumnAndTableName(expression.Left as dynamic, schematic).GetTableAndColumnName(schematic);
+                    left = LoadColumnAndTableName(expression.Left as dynamic, schematic).GetTableAndColumnName();
                 }
 
                 if (!isLeftLambdaMethod && !isRightLambdaMethod)
                 {
-                    right = LoadColumnAndTableName(expression.Right as dynamic, schematic).GetTableAndColumnName(schematic);
-                    left = LoadColumnAndTableName(expression.Left as dynamic, schematic).GetTableAndColumnName(schematic);
+                    right = LoadColumnAndTableName(expression.Right as dynamic, schematic).GetTableAndColumnName();
+                    left = LoadColumnAndTableName(expression.Left as dynamic, schematic).GetTableAndColumnName();
                 }
 
                 return string.Format("({0} {1} {2})", left, comparison, right);
@@ -1429,7 +1433,7 @@ namespace OR_M_Data_Entities.Data
 
                 expressionQuerySql.AddParameter(GetValue(expression), out parameter);
 
-                var result = string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(schematic),
+                var result = string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
 
                 return isNotExpressionType ? string.Format("(NOT{0})", result) : result;
@@ -1447,7 +1451,7 @@ namespace OR_M_Data_Entities.Data
 
                 expressionQuerySql.AddParameter(value, out parameter);
 
-                return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(schematic),
+                return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
             }
 
@@ -1464,7 +1468,7 @@ namespace OR_M_Data_Entities.Data
 
                 expressionQuerySql.AddParameter(string.Format(isStartsWith ? "{0}%" : "%{0}", value), out parameter);
 
-                return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(schematic),
+                return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
             }
 
@@ -1485,7 +1489,7 @@ namespace OR_M_Data_Entities.Data
                     string containsParameter;
                     expressionQuerySql.AddParameter(string.Format("%{0}%", value), out containsParameter);
 
-                    return string.Format("{0} {1} {2}", aliasAndColumnName.GetTableAndColumnName(schematic), comparison, containsParameter);
+                    return string.Format("{0} {1} {2}", aliasAndColumnName.GetTableAndColumnName(), comparison, containsParameter);
                 }
 
                 var inString = string.Empty;
@@ -1498,7 +1502,7 @@ namespace OR_M_Data_Entities.Data
                     inString = string.Concat(inString, string.Format("{0},", inParameter));
                 }
 
-                return string.Format("({0} {1})", aliasAndColumnName.GetTableAndColumnName(schematic),
+                return string.Format("({0} {1})", aliasAndColumnName.GetTableAndColumnName(),
                     string.Format(comparison, inString.TrimEnd(',')));
             }
 
@@ -1573,8 +1577,8 @@ namespace OR_M_Data_Entities.Data
                 var outerKeySelectorString = LoadColumnAndTableName(outerKeySelector.Body as dynamic, schematic);
 
                 expressionQuerySql.AddJoin(string.Format(join, joinString,
-                    innerKeySelectorString.GetTableAndColumnName(schematic),
-                    outerKeySelectorString.GetTableAndColumnName(schematic)));
+                    innerKeySelectorString.GetTableAndColumnName(),
+                    outerKeySelectorString.GetTableAndColumnName()));
             }
         }
 
@@ -1600,7 +1604,7 @@ namespace OR_M_Data_Entities.Data
 
                 _makeSureTableIsInQuery(schematic, tableAndColumnName);
 
-                var sql = string.Format("{0} ASC,", tableAndColumnName.GetTableAndColumnName(schematic));
+                var sql = string.Format("{0} ASC,", tableAndColumnName.GetTableAndColumnName());
 
                 expressionQuerySql.AddOrderBy(sql);
             }
@@ -1611,7 +1615,7 @@ namespace OR_M_Data_Entities.Data
 
                 _makeSureTableIsInQuery(schematic, tableAndColumnName);
 
-                var sql = string.Format("{0} DESC,", tableAndColumnName.GetTableAndColumnName(schematic));
+                var sql = string.Format("{0} DESC,", tableAndColumnName.GetTableAndColumnName());
 
                 expressionQuerySql.AddOrderBy(sql);
             }
@@ -1657,25 +1661,55 @@ namespace OR_M_Data_Entities.Data
 
             public static IExpressionQuery<TResultType> ChangeExpressionQueryGenericType<TSourceType, TResultType>(IExpressionQuery<TSourceType> source)
             {
-                var properties = source.GetType().GetProperties(BindingFlags.Instance | BindingFlags.NonPublic);
-                var fields = source.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+                const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.NonPublic;
+                var fields = source.GetType().GetFields(bindingFlags);
 
                 var schematic = fields.First(w => w.Name == "_schematic").GetValue(source);
                 var context = fields.First(w => w.Name == "_context").GetValue(source);
+                var expressionQuerySql = fields.First(w => w.Name == "_expressionQuerySql").GetValue(source);
 
                 var instance = (IExpressionQuery<TResultType>)Activator.CreateInstance(typeof(ExpressionQuery<TResultType>), context, schematic);
 
-                // clone propertyies
-                foreach (var property in properties)
-                {
-                    var value = property.GetValue(source);
+                // set the expression query sql
+                var expressionQuerySqlField = instance.GetType().GetField("_expressionQuerySql", bindingFlags);
 
-                    instance.GetType()
-                        .GetProperty(property.Name, BindingFlags.Instance | BindingFlags.NonPublic)
-                        .SetValue(instance, value);
+                if (expressionQuerySqlField == null)
+                {
+                    throw new Exception("Critical error occurred cloning Expression Query.  See Inner Exception",
+                        new Exception("_expressionQuerySql field was null"));
                 }
 
+                expressionQuerySqlField.SetValue(instance, expressionQuerySql);
+
                 return instance;
+            }
+
+            private static object _getPropertyValue(object entity, string propertyName)
+            {
+                var property = entity.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+                return property.GetValue(entity);
+            }
+
+            private static object _getStaticPropertyValue(object entity, Type baseType, string propertyName)
+            {
+                var property = baseType.GetProperty(propertyName, BindingFlags.Static | BindingFlags.NonPublic);
+
+                return property.GetValue(entity);
+            }
+
+            private static object _getEventValue(object entity, string propertyName)
+            {
+                var e = entity.GetType().GetEvent(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+                return e.GetRaiseMethod();
+            }
+
+            private static object _getPropertyValue(object entity, Type type, string propertyName)
+            {
+                var property = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
+
+                return property.GetValue(entity);
             }
 
             public static void ResolveSelectAll(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
@@ -1716,7 +1750,7 @@ namespace OR_M_Data_Entities.Data
                     var member = expression.Members[i];
 
                     var tableAndColumnName = LoadColumnAndTableName((dynamic)argument, schematic);
-                    var tableAndColmnNameSql = SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, schematic, member.Name);
+                    var tableAndColmnNameSql = SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, member.Name);
 
                     sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
                 }
@@ -1751,7 +1785,7 @@ namespace OR_M_Data_Entities.Data
             private static string _evaluate(MemberExpression expression, IQuerySchematic schematic)
             {
                 var tableAndColumnName = LoadColumnAndTableName(expression, schematic);
-                var tableAndColumnNameSql = tableAndColumnName.GetTableAndColumnName(schematic);
+                var tableAndColumnNameSql = tableAndColumnName.GetTableAndColumnName();
 
                 var sql = expression.ToString();
 
@@ -1782,7 +1816,7 @@ namespace OR_M_Data_Entities.Data
 
                             var tableAndColumnName = LoadColumnAndTableName((dynamic)assignment.Expression, schematic);
                             var tableAndColmnNameSql =
-                                SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, schematic, assignment.Member.Name);
+                                SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, assignment.Member.Name);
 
                             sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
                             break;
@@ -1905,9 +1939,9 @@ namespace OR_M_Data_Entities.Data
                 return string.Format("{0}{1}{2}", "\t", tableAndColumnName, "\r\n");
             }
 
-            public static string GetTableAndColumnNameWithAlias(TableColumnContainer container, IQuerySchematic schematic, string alias)
+            public static string GetTableAndColumnNameWithAlias(TableColumnContainer container, string alias)
             {
-                return string.Format("{0} AS [{1}],", container.GetTableAndColumnName(schematic), alias);
+                return string.Format("{0} AS [{1}],", container.GetTableAndColumnName(), alias);
             }
         }
 
@@ -2123,11 +2157,9 @@ namespace OR_M_Data_Entities.Data
                 Alias = alias;
             }
 
-            public string GetTableAndColumnName(IQuerySchematic schematic)
+            public string GetTableAndColumnName()
             {
-                return schematic.AreForeignKeysSelected()
-                    ? string.Format("[{0}].[{1}]", Alias, ColumnName)
-                    : string.Format("[{0}].[{1}]", TableName, ColumnName);
+                return string.Format("[{0}].[{1}]", Alias, ColumnName);
             }
         }
         #endregion

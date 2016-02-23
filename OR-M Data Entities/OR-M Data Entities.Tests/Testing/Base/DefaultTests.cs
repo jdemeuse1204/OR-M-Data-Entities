@@ -156,7 +156,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
@@ -1303,7 +1303,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
