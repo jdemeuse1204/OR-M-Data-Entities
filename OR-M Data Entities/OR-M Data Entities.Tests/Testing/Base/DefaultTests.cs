@@ -113,16 +113,16 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
         public static bool Test_10(DbSqlContext ctx)
         {
             // Test inner join
-            var policies = _addPolicyWithPolicyInfo(ctx);
+            var id = ctx.From<PolicyInfo>().Select(w => w.Id).Max();
 
             var policy = ctx.From<Policy>()
                 .InnerJoin(
                     ctx.From<PolicyInfo>(),
                     p => p.PolicyInfoId,
                     pi => pi.Id,
-                    (p, pi) => p).FirstOrDefault(w => w.Id == policies.Key.Id);
+                    (p, pi) => p).FirstOrDefault(w => w.Id == id);
 
-            return policy.Id == policies.Key.Id;
+            return policy.Id == id;
         }
 
         public static bool Test_11(DbSqlContext ctx)
@@ -352,7 +352,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
             var ConnectionString = _getPropertyValue(ctx, "ConnectionString") == null;
             var Reader = _getPropertyValue(ctx, "Reader") == null;
-            var Configuration = _getPropertyValue(ctx, "Configuration") == null;
+            var Configuration = _getStaticPropertyValue(ctx, typeof(Database), "Configuration") == null;
             var OnSqlGeneration = _getEventValue(ctx, "OnSqlGeneration") == null;
             var _connection = _getPropertyValue(ctx, typeof(Database), "_connection") == null;
             var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
@@ -399,7 +399,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 return (test1 && test2 && test3);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return false;
             }
@@ -1301,7 +1301,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 ctx.SaveChanges(history);
 
-                return true;
+                return history.Description == "Changed";
             }
             catch (Exception ex)
             {
@@ -1313,13 +1313,37 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
         {
             try
             {
-                // Should get errors when we try an update a timestamp
+                // Should get errors when we try to set a value in
+                // a timestamp column with an insert
                 var history = new History
                 {
                     Description = "Winning",
                     ComputerId = 2,
                     CreateDate =   new byte[] {0,0,0,0,68,30}
                 };
+
+                ctx.SaveChanges(history);
+
+                return false;
+            }
+            catch (SqlSaveException)
+            {
+                return true;
+            }
+        }
+
+        public static bool Test_71(DbSqlContext ctx)
+        {
+            try
+            {
+                var id = ctx.From<History>().Select(w => w.Id).Max();
+
+                // Should get errors when we try to set a value in
+                // a timestamp column with an update when entity state
+                // tracking is on
+                var history = ctx.Find<HistoryEntityStateTrackingOn>(id);
+
+                history.CreateDate = new byte[] {0, 0, 0, 0, 68, 30};
 
                 ctx.SaveChanges(history);
 

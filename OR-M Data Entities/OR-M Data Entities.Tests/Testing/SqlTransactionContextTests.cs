@@ -429,5 +429,11 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(DefaultTests.Test_70(_ctx));
         }
+
+        [TestMethod]
+        public void Test_Transaction_71()
+        {
+            Assert.IsTrue(DefaultTests.Test_71(_ctx));
+        }
     }
 }

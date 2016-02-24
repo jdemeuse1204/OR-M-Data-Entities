@@ -1,4 +1,6 @@
-﻿namespace OR_M_Data_Entities.Tests.Testing.Context
+﻿using OR_M_Data_Entities.Tests.Testing.Base;
+
+namespace OR_M_Data_Entities.Tests.Testing.Context
 {
     public class DefaultContext : DbSqlContext
     {
@@ -7,6 +9,7 @@
         {
             Configuration.UseTransactions = false;
             Configuration.ConcurrencyChecking.IsOn = false;
+            OnSqlGeneration += ContextMembers.OnOnSqlGeneration;
         }
     }
 }

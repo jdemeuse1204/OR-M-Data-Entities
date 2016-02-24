@@ -72,6 +72,7 @@
     <Compile Include="Tables\Crust.cs" />
     <Compile Include="Tables\DeliveryMan.cs" />
     <Compile Include="Tables\History.cs" />
+    <Compile Include="Tables\HistoryEntityStateTrackingOn.cs" />
     <Compile Include="Tables\Linking.cs" />
     <Compile Include="Tables\Name.cs" />
     <Compile Include="Tables\Person.cs" />
@@ -98,6 +99,7 @@
     <Compile Include="Tables\User.cs" />
     <Compile Include="Tables\Zip.cs" />
     <Compile Include="Testing\Base\ConcurrencyTests.cs" />
+    <Compile Include="Testing\Base\ContextMembers.cs" />
     <Compile Include="Testing\Base\DefaultTests.cs" />
     <Compile Include="Testing\Base\LazyLoadTests.cs" />
     <Compile Include="Testing\Base\OtherTests.cs" />

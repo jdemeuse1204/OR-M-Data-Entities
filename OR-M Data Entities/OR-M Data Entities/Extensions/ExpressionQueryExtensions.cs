@@ -531,7 +531,9 @@ namespace OR_M_Data_Entities
 
         #region Joins
         public static IExpressionQuery<TResult> InnerJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
-            IExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            IExpressionQuery<TInner> inner,
+            Expression<Func<TOuter, TKey>> outerKeySelector, 
+            Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
             _foreignKeysJoinCheck(outer.AsResolvable());
@@ -540,7 +542,9 @@ namespace OR_M_Data_Entities
         }
 
         public static IExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
-            IExpressionQuery<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector,
+            IExpressionQuery<TInner> inner, 
+            Expression<Func<TOuter, TKey>> outerKeySelector, 
+            Expression<Func<TInner, TKey>> innerKeySelector,
             Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
             _foreignKeysJoinCheck(outer.AsResolvable());

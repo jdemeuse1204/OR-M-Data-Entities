@@ -29,6 +29,10 @@ namespace OR_M_Data_Entities.Data.Definition
 
         IMappedTable FindTable(string tableKey);
 
+        bool HasTable(Type type);
+
+        bool HasTable(string tableKey);
+
         bool AreForeignKeysSelected();
 
         void InitializeSelect(bool isLazyLoading);

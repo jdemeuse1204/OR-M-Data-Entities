@@ -13,7 +13,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Exceptions;
@@ -127,6 +126,34 @@ namespace OR_M_Data_Entities.Data
                 result.Reset();
 
                 return result;
+            }
+
+            /// <summary>
+            /// Never used with foreign keys
+            /// </summary>
+            /// <param name="types"></param>
+            /// <param name="configuration"></param>
+            /// <returns></returns>
+            public IQuerySchematic CreateTemporarySchematic(List<Type> types, IConfigurationOptions configuration, Type selectedType)
+            {
+                const string aliasString = "AkA{0}";
+                var index = 0;
+                var mappedTables = new List<IMappedTable>();
+                var from = types.First();
+
+                foreach (var currentMappedtable in from type in types
+                                                   let nextAlias = string.Format(aliasString, index)
+                                                   let tableSchematic = Tables.Find(type, configuration)
+                                                   select new MappedTable(tableSchematic, nextAlias, nextAlias, false, true))
+                {
+                    mappedTables.Add(currentMappedtable);
+
+                    index++;
+                }
+
+                var dataLoadSchematic = new DataLoadSchematic(null, selectedType, selectedType, mappedTables.First(), null);
+
+                return new QuerySchematic(from, mappedTables, dataLoadSchematic, configuration);
             }
 
             // creates the schematic so we know how to load the object
@@ -356,6 +383,16 @@ namespace OR_M_Data_Entities.Data
                 public IMappedTable FindTable(string tableKey)
                 {
                     return MappedTables.FirstOrDefault(w => w.Key == tableKey);
+                }
+
+                public bool HasTable(Type type)
+                {
+                    return MappedTables.Any(w => w.Table.Type == type);
+                }
+
+                public bool HasTable(string tableKey)
+                {
+                    return MappedTables.Any(w => w.Key == tableKey);
                 }
 
                 public bool AreForeignKeysSelected()
@@ -705,7 +742,7 @@ namespace OR_M_Data_Entities.Data
 
                 var finalStatement = statement.StartsWith("(") ? statement : string.Format("({0})", statement);
 
-                _where = string.Concat(_where,string.Format(string.IsNullOrEmpty(_where) ? "WHERE {0}\r" : "\tAND {0}\r", finalStatement));
+                _where = string.Concat(_where, string.Format(string.IsNullOrEmpty(_where) ? "WHERE {0}\r" : "\tAND {0}\r", finalStatement));
             }
 
             public void SetWhere(string statement)
@@ -804,7 +841,7 @@ namespace OR_M_Data_Entities.Data
                 // when we get here only one column will be selected for min or max, the code does not
                 // allow for more.  So we can just wrap the column in a min/max function
                 return _min
-                    ? string.Format("\tMIN({0})\r\n", _columns.Replace("\r","").Replace("\n","").Replace("\t",""))
+                    ? string.Format("\tMIN({0})\r\n", _columns.Replace("\r", "").Replace("\n", "").Replace("\t", ""))
                     : _max
                         ? string.Format("\tMAX({0})\r\n", _columns.Replace("\r", "").Replace("\n", "").Replace("\t", ""))
                         : _exists ? string.Empty : _count ? "\tCOUNT(*)\r" : string.Format("{0}\r", _columns);
@@ -828,9 +865,9 @@ namespace OR_M_Data_Entities.Data
             #region Properties and Fields
             private readonly DatabaseExecution _context;
 
-            private readonly IQuerySchematic _schematic;
-
             private readonly ExpressionQuerySqlResolutionContainer _expressionQuerySql;
+
+            private readonly IQuerySchematic _schematic;
             #endregion
 
             #region Constructor
@@ -846,6 +883,8 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
+
+
 
             public bool AreForeignKeysSelected()
             {
@@ -946,7 +985,6 @@ namespace OR_M_Data_Entities.Data
             public DataReader<TSource> ExecuteReader<TSource>()
             {
                 // need to happen before read because of include statements
-
                 // select all if nothing was selected
                 if (!_expressionQuerySql.AreColumnsSelected()) SelectAll();
 
@@ -1080,30 +1118,24 @@ namespace OR_M_Data_Entities.Data
                         w => w.MappedTable.Table.PlainTableName == tableName && w.MappedTable.Key == attributeName);
             }
 
-            
-            #endregion
-
-            #region Enumeration
-
-            public IEnumerator<T> GetEnumerator()
-            {
-                foreach (var item in ExecuteReader<T>()) yield return item;
-
-                _context.Dispose();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
-
             public IExpressionQuery<TResult> ResolveJoin<TOuter, TInner, TKey, TResult>(
-                IExpressionQuery<TOuter> outer, IExpressionQuery<TInner> inner,
+                IExpressionQuery<TOuter> outer,
+                IExpressionQuery<TInner> inner,
                 Expression<Func<TOuter, TKey>> outerKeySelector,
                 Expression<Func<TInner, TKey>> innerKeySelector,
                 Expression<Func<TOuter, TInner, TResult>> resultSelector,
                 JoinType joinType)
             {
+                // make sure the current schematic has the inner type, if not make
+                // a temporary schematic
+                if (!_schematic.HasTable(typeof (TInner)))
+                {
+                    var types = new List<Type> {typeof (TOuter), typeof (TInner)};
+
+                    // change the selected schematic
+                    ChangeSchematic(_schematicManager.CreateTemporarySchematic(types, Configuration, typeof (TOuter)));
+                }
+
                 // combine schematics before sending them in
                 ExpressionQueryJoinResolver.Resolve(outer,
                     inner,
@@ -1119,6 +1151,30 @@ namespace OR_M_Data_Entities.Data
                 return ExpressionQuerySelectResolver.ChangeExpressionQueryGenericType<TOuter, TResult>(outer);
             }
 
+            // change query schematic with reflection.  it should never be changed except for special circumstances
+            private void ChangeSchematic(IQuerySchematic schematic)
+            {
+                var field = GetType().GetField("_schematic", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                if (field == null) throw new Exception("Cannot find query schematic");
+
+                field.SetValue(this, schematic);
+            }
+            #endregion
+
+            #region Enumeration
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                foreach (var item in ExecuteReader<T>()) yield return item;
+
+                _context.Dispose();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
             #endregion
         }
 
@@ -1571,12 +1627,16 @@ namespace OR_M_Data_Entities.Data
             ExpressionQuerySqlResolutionContainer expressionQuerySql,
             IQuerySchematic schematic)
             {
-                const string join = "{0} JOIN {1} ON {2}\r";
+                const string join = "{0} JOIN {1} AS [{2}] ON {3} = {4}\r";
                 var joinString = joinType.ToString().ToUpper();
                 var innerKeySelectorString = LoadColumnAndTableName(innerKeySelector.Body as dynamic, schematic);
                 var outerKeySelectorString = LoadColumnAndTableName(outerKeySelector.Body as dynamic, schematic);
+                var table = schematic.FindTable(typeof(TInner));
 
-                expressionQuerySql.AddJoin(string.Format(join, joinString,
+                expressionQuerySql.AddJoin(string.Format(join, 
+                    joinString,
+                    table.Table.ToString(TableNameFormat.SqlWithSchema),
+                    table.Alias,
                     innerKeySelectorString.GetTableAndColumnName(),
                     outerKeySelectorString.GetTableAndColumnName()));
             }
@@ -1654,7 +1714,11 @@ namespace OR_M_Data_Entities.Data
 
                 var columns = _evaluate(expression as dynamic, schematic);
 
-                columns = string.Format("{0}\r\n", columns.TrimEnd('\n').TrimEnd('\r').TrimEnd(','));
+                // only format the columns if they are not empty
+                if (!string.IsNullOrEmpty(columns))
+                {
+                    columns = string.Format("{0}\r\n", columns.TrimEnd('\n').TrimEnd('\r').TrimEnd(','));
+                }
 
                 expressionQuerySql.SetColumns(columns);
             }
@@ -1764,7 +1828,7 @@ namespace OR_M_Data_Entities.Data
 
             private static string _evaluate(ParameterExpression expression, IQuerySchematic schematic)
             {
-                // comes from select.  We should do a select * from the parameter
+                // comes from select.  We should do a select * from the parameter that is being passed in
                 var table = schematic.FindTable(expression.Type);
 
                 // exclude all mapped tables

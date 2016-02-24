@@ -36,7 +36,7 @@ namespace OR_M_Data_Entities.Data
 
         protected IPeekDataReader Reader { get; private set; }
 
-        protected IConfigurationOptions Configuration { get; private set; }
+        protected static IConfigurationOptions Configuration { get; private set; }
 
         private SqlConnection _connection { get; set; }
 
@@ -244,6 +244,13 @@ namespace OR_M_Data_Entities.Data
         {
             if (_configurationCheckPerformed) return;
 
+            // make sure transactions are only used when MARS is enabled
+            if (Configuration.UseTransactions && !_isMARSEnabled(ConnectionString))
+            {
+                throw new Exception("Configuration invalid.  Can only use transactions when MARS (Multiple Active Result Sets) is enabled.");
+            }
+
+            // check key configuration
             const string errorMessage = "Keys not configured correctly, must have at at least one key for option: {0}";
 
             var insertKeyProperties = Configuration.InsertKeys.GetType().GetProperties().ToList();

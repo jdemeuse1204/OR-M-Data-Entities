@@ -1063,7 +1063,7 @@ namespace OR_M_Data_Entities.Data
             // all the modification items will be empty
             public IReadOnlyList<IModificationItem> Keys()
             {
-                return AllProperties.Where(IsPrimaryKey).Select(w => new ModificationItem(w)).ToList();
+                return AllProperties.Where(IsPrimaryKey).Select(w => new ModificationItem(w, Type)).ToList();
             }
 
             public IReadOnlyList<IModificationItem> All()
@@ -1075,14 +1075,15 @@ namespace OR_M_Data_Entities.Data
             {
                 if (!IsEntityStateTrackingOn)
                 {
-                    // mark everything has changed so it will be updated
-                    ModificationItems = AllColumns.Select(w => new ModificationItem(w)).ToList();
+                    // mark everything has changed so it will be updated.  Skip time stamps,
+                    // they are db generated and should not be inserted or updated
+                    ModificationItems = AllColumns.Select(w => new ModificationItem(w, Type)).ToList();
+
                     State = EntityState.Modified;
                     return;
                 }
-                // if _pristineEntity == null then that means a new instance was created and it is an insert
 
-                ModificationItems = _getChanges(EntityTrackable, AllColumns);
+                ModificationItems = _getChanges(EntityTrackable, Type, AllColumns);
 
                 State = _getState(ModificationItems);
             }
@@ -1094,7 +1095,7 @@ namespace OR_M_Data_Entities.Data
 
             public static EntityState GetState(EntityStateTrackable entityStateTrackable)
             {
-                var changes = _getChanges(entityStateTrackable, GetAllColumns(entityStateTrackable));
+                var changes = _getChanges(entityStateTrackable, null, GetAllColumns(entityStateTrackable));
 
                 return _getState(changes);
             }
@@ -1140,13 +1141,14 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, List<PropertyInfo> allColumns)
+            private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, Type parentTableType, List<PropertyInfo> allColumns)
             {
+                var index = 0
                 return (from item in allColumns
                     let current = _getCurrentObject(entityStateTrackable, item.Name)
                     let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
                     let hasChanged = ObjectComparison.HasChanged(pristineEntity, current)
-                    select new ModificationItem(item, hasChanged)).ToList();
+                    select new ModificationItem(item, parentTableType, hasChanged)).ToList();
             }
 
             private void _checkMaxLengthViolations(object entity, Type type)
@@ -1172,31 +1174,6 @@ namespace OR_M_Data_Entities.Data
 
                     throw new MaxLengthException(string.Format("Max Length violated on column: {0}", property.Name));
                 }
-            }
-
-            private void _checkTimeStampInsertions(object entity, IReadOnlyList<PropertyInfo> columns)
-            {
-                var allTimestampColumns = columns.Where(
-                    w =>
-                        w.GetCustomAttribute<DbTypeAttribute>() != null &&
-                        w.GetCustomAttribute<DbTypeAttribute>().Type ==
-                        SqlDbType.Timestamp).ToList();
-
-                if (allTimestampColumns.Count == 0) return;
-
-                var errorColumns = (from column in allTimestampColumns
-                    let value = column.GetValue(entity)
-                    let hasError = value != null
-                    where hasError
-                    select column.Name).ToList();
-
-                if (!errorColumns.Any()) return;
-
-                const string error = "Cannot insert a value into TIMESTAMP column.  Column: {0}\r\r";
-                var message = errorColumns.Aggregate(string.Empty,
-                    (current, item) => string.Concat(current, string.Format(error, item)));
-
-                throw new SqlSaveException(message);
             }
 
             private void _isEntityValid(object entity)
@@ -1301,11 +1278,7 @@ namespace OR_M_Data_Entities.Data
                     // break because we are already updating, do not want to set to false
                     if (!isUpdating)
                     {
-                        if (generationOption != DbGenerationOption.None)
-                        {
-                            _checkTimeStampInsertions(Value, AllColumns);
-                            continue;
-                        }
+                        if (generationOption != DbGenerationOption.None) continue;
 
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
                         throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
@@ -1320,9 +1293,35 @@ namespace OR_M_Data_Entities.Data
 
                     // make sure identity columns were not updated
                     _checkForIdentityColumnUpdates(EntityTrackable, configuration, AllColumns);
+                }
 
-                    // make sure time stamps were not updated if any
-                    _checkTimeStampInsertions(Value, AllColumns);
+                // make sure timestamps are not updated.
+                // Process here because we need to know the update type
+                _validateTimestamps();
+            }
+
+            private void _validateTimestamps()
+            {
+                var timeStamps = ModificationItems.Where(w => w.DbTranslationType == SqlDbType.Timestamp).ToList();
+
+                // check to see if timestamp has changed
+                foreach (var item in timeStamps)
+                {
+                    var value = GetProperty(item.DatabaseColumnName).GetValue(Value);
+
+                    // cannot have a value in timestamp column when inserting
+                    if (value != null && 
+                        (UpdateType == UpdateType.Insert || UpdateType == UpdateType.TryInsert || UpdateType == UpdateType.TryInsertUpdate))
+                    {
+                        throw new SqlSaveException(string.Format("Cannot insert value into Timestamp column.  Column Name - {0}", item.DatabaseColumnName));
+                    }
+
+                    if (IsEntityStateTrackingOn && 
+                        (UpdateType == UpdateType.Update || UpdateType == UpdateType.TryInsertUpdate) && 
+                        HasColumnChanged(EntityTrackable, item.PropertyName))
+                    {
+                        throw new SqlSaveException(string.Format("Cannot update value in Timestamp column.  Column Name - {0}", item.DatabaseColumnName));
+                    }
                 }
             }
 
@@ -1558,12 +1557,18 @@ namespace OR_M_Data_Entities.Data
                 get { return DatabaseColumnName != PropertyName; }
             }
 
+            private readonly string _uniqueKey;
             #endregion
 
             #region Constructor
 
-            public ModificationItem(PropertyInfo property, bool isModified = true)
+            public ModificationItem(PropertyInfo property, string uniqueKey, bool isModified = true)
             {
+                // each column needs a unqiue key so we can created a variable if needed for it.
+                // when using transactions is it possible for a property to be in the query 
+                // twice, we need to avoid this
+                _uniqueKey = uniqueKey;
+
                 PropertyName = property.Name;
                 DatabaseColumnName = Table.GetColumnName(property);
                 IsPrimaryKey = ReflectionCacheTable.IsColumnPrimaryKey(property);
@@ -1596,6 +1601,10 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
+            public string GetTableAlias()
+            {
+                return _uniqueKey;
+            }
 
             public string AsOutput(string appendToEnd)
             {

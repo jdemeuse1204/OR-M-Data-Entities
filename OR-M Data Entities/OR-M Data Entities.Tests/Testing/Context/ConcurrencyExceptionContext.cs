@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using OR_M_Data_Entities.Tests.Testing.Base;
 
 namespace OR_M_Data_Entities.Tests.Testing.Context
 {
@@ -12,6 +13,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.ThrowException;
             OnConcurrencyViolation += OnOnConcurrencyViolation;
+            OnSqlGeneration += ContextMembers.OnOnSqlGeneration;
         }
 
         private void OnOnConcurrencyViolation(object entity)

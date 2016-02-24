@@ -21,6 +21,8 @@ namespace OR_M_Data_Entities.Data.Modification
 
         DbGenerationOption Generation { get; }
 
+        string GetTableAlias();
+
         bool TranslateDataType { get; }
 
         bool NeedsAlias { get; }
