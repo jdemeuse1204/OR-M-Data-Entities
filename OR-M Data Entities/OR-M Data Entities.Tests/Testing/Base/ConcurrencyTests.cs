@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using OR_M_Data_Entities.Tests.Tables;
+using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn;
 using OR_M_Data_Entities.Tests.Testing.Context;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
@@ -25,7 +26,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var id = 3;
 
                 var name = concurrencyExceptionContext.Find<Name>(id);
-                name.Value = "James";
+                name.Value = "New Name";
                 concurrencyExceptionContext.SaveChanges(name);
 
                 // start the test
@@ -35,10 +36,11 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 n.Value = "Megan";
                 ctx.SaveChanges(n);
 
-                name.Value = "New Name";
+                // try to update
+                name.Value = "Other Name";
                 concurrencyExceptionContext.SaveChanges(name);
 
-                return true;
+                return false;
             }
             catch (Exception ex)
             {
@@ -57,17 +59,18 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var id = 3;
 
                 var name = concurrencyContinueContext.Find<Name>(id);
-                name.Value = "James";
+                name.Value = "New Name";
                 concurrencyContinueContext.SaveChanges(name);
 
                 // start the test
 
-                // perform update before concurrencyContinueContext
+                // perform update before concurrencyExceptionContext
                 var n = ctx.Find<Name>(id);
                 n.Value = "Megan";
                 ctx.SaveChanges(n);
 
-                name.Value = "New Name";
+                // try to update
+                name.Value = "Other Name";
                 concurrencyContinueContext.SaveChanges(name);
 
                 return true;
@@ -88,10 +91,8 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var ctx = new DefaultContext();
                 var id = 3;
 
-                _was_Test_C_3_handlerFired = false;
-
                 var name = concurrencyHandleContext.Find<Name>(id);
-                name.Value = "James";
+                name.Value = "New Name";
                 concurrencyHandleContext.SaveChanges(name);
 
                 // start the test
@@ -101,14 +102,15 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 n.Value = "Megan";
                 ctx.SaveChanges(n);
 
-                name.Value = "New Name";
+                // try to update
+                name.Value = "Other Name";
                 concurrencyHandleContext.SaveChanges(name);
 
                 return false;
             }
             catch (Exception ex)
             {
-                return true;
+                return ex is NotImplementedException;
             }
         }
     }

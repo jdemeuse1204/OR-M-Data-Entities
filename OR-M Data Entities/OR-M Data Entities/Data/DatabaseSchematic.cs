@@ -961,7 +961,13 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 //use the converter to get the correct value
-                property.SetValue(entity, propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType), null);
+                // convert our value to Int32 for enums because,
+                // if we have a nullable Enum it will be a string
+                property.SetValue(entity,
+                    propertyType.IsEnum
+                        ? Enum.ToObject(propertyType, Convert.ToInt32(value))
+                        : Convert.ChangeType(value, propertyType),
+                    null);
             }
 
             public static void SetPropertyValue(object parent, object child, string propertyNameToSet)
@@ -1034,17 +1040,20 @@ namespace OR_M_Data_Entities.Data
             protected IReadOnlyList<IModificationItem> ModificationItems { get; set; }
 
             // table can have two foreign keys of the same time, this will tell them apart
+            private readonly string _uniqueKey;
             #endregion
 
             #region Constructor
-            public ModificationEntity(object entity, IConfigurationOptions configuration)
-                : this(entity, configuration, false)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration)
+                : this(entity, uniqueKey, configuration, false)
             {
             }
 
-            public ModificationEntity(object entity, IConfigurationOptions configuration, bool isDeleting)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, bool isDeleting)
                 : base(entity, configuration)
             {
+                _uniqueKey = uniqueKey;
+
                 // do not build the entity if deleting
                 if (isDeleting) return;
 
@@ -1063,7 +1072,7 @@ namespace OR_M_Data_Entities.Data
             // all the modification items will be empty
             public IReadOnlyList<IModificationItem> Keys()
             {
-                return AllProperties.Where(IsPrimaryKey).Select(w => new ModificationItem(w, Type)).ToList();
+                return AllProperties.Where(IsPrimaryKey).Select(w => new ModificationItem(w, _uniqueKey)).ToList();
             }
 
             public IReadOnlyList<IModificationItem> All()
@@ -1077,13 +1086,13 @@ namespace OR_M_Data_Entities.Data
                 {
                     // mark everything has changed so it will be updated.  Skip time stamps,
                     // they are db generated and should not be inserted or updated
-                    ModificationItems = AllColumns.Select(w => new ModificationItem(w, Type)).ToList();
+                    ModificationItems = AllColumns.Select(w => new ModificationItem(w, _uniqueKey)).ToList();
 
                     State = EntityState.Modified;
                     return;
                 }
 
-                ModificationItems = _getChanges(EntityTrackable, Type, AllColumns);
+                ModificationItems = _getChanges(EntityTrackable, _uniqueKey, AllColumns);
 
                 State = _getState(ModificationItems);
             }
@@ -1095,60 +1104,66 @@ namespace OR_M_Data_Entities.Data
 
             public static EntityState GetState(EntityStateTrackable entityStateTrackable)
             {
-                var changes = _getChanges(entityStateTrackable, null, GetAllColumns(entityStateTrackable));
+                var changes = _getChanges(entityStateTrackable, string.Empty, GetAllColumns(entityStateTrackable));
 
                 return _getState(changes);
             }
 
             public static bool IsKeyInInsertArray(IConfigurationOptions configuration, object value)
             {
-                var translation = SqlDbTypeTranslator.Translate(value.GetType());
-
-                switch (translation.ResolvedType)
+                try
                 {
-                    case "INT16":
-                        return configuration.InsertKeys.Int16.Contains(Convert.ToInt16(value));
-                    case "INT32":
-                        return configuration.InsertKeys.Int32.Contains(Convert.ToInt32(value));
-                    case "INT64":
-                        return configuration.InsertKeys.Int64.Contains(Convert.ToInt64(value));
-                    case "GUID":
-                        return configuration.InsertKeys.Guid.Contains(Guid.Parse(value.ToString()));
-                    case "STRING":
-                        return configuration.InsertKeys.String.Contains(value.ToString());
-                    case "DATETIME":
-                        return configuration.InsertKeys.DateTime.Contains(Convert.ToDateTime(value));
-                    case "BOOLEAN":
-                        return configuration.InsertKeys.Boolean.Contains(Convert.ToBoolean(value));
-                    case "DATETIMEOFFSET":
-                        return configuration.InsertKeys.DateTimeOffest.Contains(DateTimeOffset.Parse(value.ToString()));
-                    case "DECIMAL":
-                        return configuration.InsertKeys.Decimal.Contains(Convert.ToDecimal(value));
-                    case "DOUBLE":
-                        return configuration.InsertKeys.Double.Contains(Convert.ToDouble(value));
-                    case "SINGLE":
-                        return configuration.InsertKeys.Single.Contains(Convert.ToSingle(value));
-                    case "TIMESPAN":
-                        return configuration.InsertKeys.TimeSpan.Contains(TimeSpan.Parse(value.ToString()));
-                    case "BYTE":
-                        return configuration.InsertKeys.Byte.Contains(byte.Parse(value.ToString()));
-                    case "BYTE[]":
-                        return configuration.InsertKeys.ByteArray.Contains((byte[])value);
-                    case "CHAR[]":
-                        return configuration.InsertKeys.CharArray.Contains((char[])value);
-                    default:
-                        throw new Exception(string.Format("Type of {0} not allowed as primary key.", translation.ResolvedType));
+                    var translation = SqlDbTypeTranslator.Translate(value.GetType());
+
+                    switch (translation.ResolvedType)
+                    {
+                        case "INT16":
+                            return configuration.InsertKeys.Int16.Contains(Convert.ToInt16(value));
+                        case "INT32":
+                            return configuration.InsertKeys.Int32.Contains(Convert.ToInt32(value));
+                        case "INT64":
+                            return configuration.InsertKeys.Int64.Contains(Convert.ToInt64(value));
+                        case "GUID":
+                            return configuration.InsertKeys.Guid.Contains(Guid.Parse(value.ToString()));
+                        case "STRING":
+                            return configuration.InsertKeys.String.Contains(value.ToString());
+                        case "DATETIME":
+                            return configuration.InsertKeys.DateTime.Contains(Convert.ToDateTime(value));
+                        case "BOOLEAN":
+                            return configuration.InsertKeys.Boolean.Contains(Convert.ToBoolean(value));
+                        case "DATETIMEOFFSET":
+                            return configuration.InsertKeys.DateTimeOffest.Contains(DateTimeOffset.Parse(value.ToString()));
+                        case "DECIMAL":
+                            return configuration.InsertKeys.Decimal.Contains(Convert.ToDecimal(value));
+                        case "DOUBLE":
+                            return configuration.InsertKeys.Double.Contains(Convert.ToDouble(value));
+                        case "SINGLE":
+                            return configuration.InsertKeys.Single.Contains(Convert.ToSingle(value));
+                        case "TIMESPAN":
+                            return configuration.InsertKeys.TimeSpan.Contains(TimeSpan.Parse(value.ToString()));
+                        case "BYTE":
+                            return configuration.InsertKeys.Byte.Contains(byte.Parse(value.ToString()));
+                        case "BYTE[]":
+                            return configuration.InsertKeys.ByteArray.Contains((byte[])value);
+                        case "CHAR[]":
+                            return configuration.InsertKeys.CharArray.Contains((char[])value);
+                        default:
+                            throw new Exception(string.Format("Type of {0} not allowed as primary key.", translation.ResolvedType));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Error checking for insert value on Primary Key, see inner exception", ex);
                 }
             }
 
-            private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, Type parentTableType, List<PropertyInfo> allColumns)
+            private static IReadOnlyList<IModificationItem> _getChanges(EntityStateTrackable entityStateTrackable, string uniqueKey, List<PropertyInfo> allColumns)
             {
-                var index = 0
                 return (from item in allColumns
                     let current = _getCurrentObject(entityStateTrackable, item.Name)
                     let pristineEntity = _getPristineProperty(entityStateTrackable, item.Name)
                     let hasChanged = ObjectComparison.HasChanged(pristineEntity, current)
-                    select new ModificationItem(item, parentTableType, hasChanged)).ToList();
+                    select new ModificationItem(item, uniqueKey, hasChanged)).ToList();
             }
 
             private void _checkMaxLengthViolations(object entity, Type type)
@@ -1557,17 +1572,19 @@ namespace OR_M_Data_Entities.Data
                 get { return DatabaseColumnName != PropertyName; }
             }
 
-            private readonly string _uniqueKey;
+            private readonly string _uniqueParentKey;
+
+            private string _uniqueKey;
             #endregion
 
             #region Constructor
 
-            public ModificationItem(PropertyInfo property, string uniqueKey, bool isModified = true)
+            public ModificationItem(PropertyInfo property, string uniqueParentKey, bool isModified = true)
             {
                 // each column needs a unqiue key so we can created a variable if needed for it.
                 // when using transactions is it possible for a property to be in the query 
                 // twice, we need to avoid this
-                _uniqueKey = uniqueKey;
+                _uniqueParentKey = uniqueParentKey;
 
                 PropertyName = property.Name;
                 DatabaseColumnName = Table.GetColumnName(property);
@@ -1601,8 +1618,12 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Methods
-            public string GetTableAlias()
+            public string GetUniqueKey()
             {
+                if (!string.IsNullOrEmpty(_uniqueKey)) return _uniqueKey;
+
+                _uniqueKey = string.Format("{0}{1}", _uniqueParentKey, PropertyName);
+
                 return _uniqueKey;
             }
 

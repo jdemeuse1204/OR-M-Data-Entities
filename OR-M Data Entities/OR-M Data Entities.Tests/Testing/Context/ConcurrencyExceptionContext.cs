@@ -12,13 +12,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
             Configuration.UseTransactions = false;
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.ThrowException;
-            OnConcurrencyViolation += OnOnConcurrencyViolation;
             OnSqlGeneration += ContextMembers.OnOnSqlGeneration;
-        }
-
-        private void OnOnConcurrencyViolation(object entity)
-        {
-            throw new DBConcurrencyException();
         }
     }
 }

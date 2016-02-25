@@ -1,0 +1,18 @@
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Test.mdf
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Test_log.ldf
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.exe.config
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.exe
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Tests.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Tests.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.xml
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.xml
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csprojResolveAssemblyReference.cache
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.exe
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.pdb

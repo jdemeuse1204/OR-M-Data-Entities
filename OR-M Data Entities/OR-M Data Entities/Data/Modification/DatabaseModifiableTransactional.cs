@@ -123,7 +123,7 @@ namespace OR_M_Data_Entities.Data
 
             public void AddTableVariable(IModificationItem item)
             {
-                _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
+                _tableVariables = InsertTableVariable(item, _tableVariables);
             }
         }
 
@@ -166,7 +166,7 @@ namespace OR_M_Data_Entities.Data
 
             public void AddTableVariable(IModificationItem item)
             {
-                _tableVariables = string.Concat(_tableVariables, string.Format("{0} {1},", item.PropertyName, item.SqlDataTypeString));
+                _tableVariables = InsertTableVariable(item, _tableVariables);
             }
 
             public override ISqlPartStatement Split()
@@ -566,7 +566,6 @@ IF @@TRANCOUNT > 0
         #endregion
 
         #region Methods
-
         private int _getNextReferenceIndex(int currentIndex, IReadOnlyList<UpdateType> actions)
         {
             for (var i = 0; i < actions.Count; i++)
@@ -687,7 +686,7 @@ IF @@TRANCOUNT > 0
         private IPersistResult _saveChangesUsingTransactions<T>(T entity) where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, Configuration);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration);
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
@@ -737,6 +736,7 @@ IF @@TRANCOUNT > 0
                 ExecuteReader(plan);
 
                 // load back the data from the save into the model and set what has changed
+                // also disconnects connection
                 _loadObjectFromMultipleActiveResults(referenceMap, actions, changeManager);
 
                 // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
@@ -760,7 +760,7 @@ IF @@TRANCOUNT > 0
             where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, Configuration);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration);
 
             // get all items to save and get them in order
             var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, true);
@@ -791,6 +791,7 @@ IF @@TRANCOUNT > 0
             ExecuteReader(builder);
 
             // check to see if the rows were deleted or not
+            // also disconnects connection
             _getActionsTaken(referenceMap, actions);     
 
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);

@@ -31,6 +31,7 @@ namespace OR0M_Data_Entities.Console
 
         private void OnOnSqlGeneration(string sql)
         {
+            return;
             using (var writetext = File.AppendText("C:\\users\\jdemeuse\\desktop\\OR-M Sql.txt"))
             {
                 writetext.WriteLine(sql);

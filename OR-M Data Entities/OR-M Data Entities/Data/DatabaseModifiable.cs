@@ -256,7 +256,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             public Reference(object entity, string alias, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
-                this(new ModificationEntity(entity, configuration, isDeleting), alias, association)
+                this(new ModificationEntity(entity, alias, configuration, isDeleting), alias, association)
             {
             }
 
@@ -301,7 +301,6 @@ namespace OR_M_Data_Entities.Data
             public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, bool isDeleting)
             {
                 var result = new ReferenceMap(configuration);
-                var useTransactions = configuration.UseTransactions;
                 var entities = _getForeignKeys(entity.Value);
 
                 entities.Insert(0, new ForeignKeyAssociation(null, entity.Value, null));
@@ -327,11 +326,12 @@ namespace OR_M_Data_Entities.Data
 
                         if (e.Parent == null) throw new SqlSaveException("Cannot save a null object");
 
-                        var modifcationEntity = new ModificationEntity(e.Parent, configuration);
+                        // check the update type of the parent
+                        var modifcationEntity = new ModificationEntity(e.Parent, columnName, configuration);
 
-                        if (!useTransactions && (modifcationEntity.UpdateType == UpdateType.Insert ||
+                        if (modifcationEntity.UpdateType == UpdateType.Insert ||
                             modifcationEntity.UpdateType == UpdateType.TryInsert ||
-                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate))
+                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate)
                         {
                             throw new SqlSaveException(string.Format("Foreign Key violation.  {0} cannot be null", Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
                         }

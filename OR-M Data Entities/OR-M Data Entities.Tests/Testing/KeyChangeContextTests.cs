@@ -14,5 +14,11 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(OtherTests.Test_1(_ctx));
         }
+
+        [TestMethod]
+        public void Test_2()
+        {
+            Assert.IsTrue(OtherTests.Test_2(_ctx));
+        }
     }
 }

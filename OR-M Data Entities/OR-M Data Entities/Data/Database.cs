@@ -36,7 +36,7 @@ namespace OR_M_Data_Entities.Data
 
         protected IPeekDataReader Reader { get; private set; }
 
-        protected static IConfigurationOptions Configuration { get; private set; }
+        protected IConfigurationOptions Configuration { get; private set; }
 
         private SqlConnection _connection { get; set; }
 
@@ -182,6 +182,8 @@ namespace OR_M_Data_Entities.Data
         #region Execution
         protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
+            var s = DateTime.Now;
+
             _preprocessExecution();
 
             _command = new SqlCommand(sql, _connection);
@@ -192,6 +194,9 @@ namespace OR_M_Data_Entities.Data
             _addParameters(parameters);
 
             Reader = new PeekDataReader(_command, _connection, schematic);
+
+            var e = DateTime.Now;
+            Console.WriteLine(string.Format("Execution: {0}", (e - s).Milliseconds));
         }
 
         protected void ExecuteReader(string sql)
@@ -316,7 +321,7 @@ namespace OR_M_Data_Entities.Data
 
             public bool HasRows { get; private set; }
 
-            public int FieldCount { get; private set; }
+            public int FieldCount { get { return _wrappedReader == null ? 0 : _wrappedReader.FieldCount; } }
 
             public bool WasPeeked { get; private set; }
 
@@ -357,7 +362,6 @@ namespace OR_M_Data_Entities.Data
 
                     _wrappedReader = wrappedReader;
                     HasRows = wrappedReader.HasRows;
-                    FieldCount = wrappedReader.FieldCount;
 
                     _schematic = schematic;
 

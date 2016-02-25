@@ -50,7 +50,33 @@ namespace OR_M_Data_Entities.Data
             // initialize the selected columns
             schematic.InitializeSelect(Configuration.IsLazyLoading);
 
-            return new ExpressionQuery<T>(this, schematic);
+            return new ExpressionQuery<T>(this, schematic, Configuration);
+        }
+
+        /// <summary>
+        /// checks to see if the entity exists by 
+        /// looking at the pks in the table
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        protected bool Exists<T>(T entity)
+        {
+            var table = Tables.Find<T>(Configuration);
+
+            // get the schematic
+            var schematic = _schematicManager.FindAndReset(table, Configuration);
+
+            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration);
+
+            // initialize the selected columns, we tell it false always for find so the whole object will be returned
+            // Find does not have options to include or exclude tables
+            schematic.InitializeSelect(false);
+
+            // resolve the pks for the where statement
+            expressionQuery.ResolveExists(entity);
+
+            return ((IExpressionQuery<T>)expressionQuery).Any();
         }
 
         public T Find<T>(params object[] pks)
@@ -61,7 +87,7 @@ namespace OR_M_Data_Entities.Data
             // get the schematic
             var schematic = _schematicManager.FindAndReset(table, Configuration);
 
-            var expressionQuery = new ExpressionQuery<T>(this, schematic);
+            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration);
 
             // initialize the selected columns, we tell it false always for find so the whole object will be returned
             // Find does not have options to include or exclude tables
@@ -868,24 +894,24 @@ namespace OR_M_Data_Entities.Data
             private readonly ExpressionQuerySqlResolutionContainer _expressionQuerySql;
 
             private readonly IQuerySchematic _schematic;
+
+            private readonly IConfigurationOptions _configuration;
             #endregion
 
             #region Constructor
 
-            public ExpressionQuery(DatabaseExecution context, IQuerySchematic schematic)
+            public ExpressionQuery(DatabaseExecution context, IQuerySchematic schematic, IConfigurationOptions configuration)
             {
                 _expressionQuerySql = new ExpressionQuerySqlResolutionContainer();
 
                 _context = context;
                 _schematic = schematic;
+                _configuration = configuration;
             }
 
             #endregion
 
             #region Methods
-
-
-
             public bool AreForeignKeysSelected()
             {
                 return _schematic.AreForeignKeysSelected();
@@ -918,6 +944,19 @@ namespace OR_M_Data_Entities.Data
             public void ResolveFind<TResult>(object[] pks, IConfigurationOptions configuration)
             {
                 var table = _schematic.FindTable(typeof(TResult));
+
+                ExpressionQueryWhereResolver.ResolveFind(table, _expressionQuerySql, pks);
+            }
+
+            public void ResolveExists<TResult>(TResult entity)
+            {
+                // mark as exists so we do a select top 1 1
+                _expressionQuerySql.MarkAsExistsStatement();
+
+                var table = _schematic.FindTable(typeof(TResult));
+
+                var keys = table.Table.GetPrimaryKeys();
+                var pks = keys.Select(key => key.GetValue(entity)).ToArray();
 
                 ExpressionQueryWhereResolver.ResolveFind(table, _expressionQuerySql, pks);
             }
@@ -1133,7 +1172,7 @@ namespace OR_M_Data_Entities.Data
                     var types = new List<Type> {typeof (TOuter), typeof (TInner)};
 
                     // change the selected schematic
-                    ChangeSchematic(_schematicManager.CreateTemporarySchematic(types, Configuration, typeof (TOuter)));
+                    ChangeSchematic(_schematicManager.CreateTemporarySchematic(types, _configuration, typeof (TOuter)));
                 }
 
                 // combine schematics before sending them in
@@ -1730,9 +1769,10 @@ namespace OR_M_Data_Entities.Data
 
                 var schematic = fields.First(w => w.Name == "_schematic").GetValue(source);
                 var context = fields.First(w => w.Name == "_context").GetValue(source);
+                var configurartion = fields.First(w => w.Name == "_configuration").GetValue(source);
                 var expressionQuerySql = fields.First(w => w.Name == "_expressionQuerySql").GetValue(source);
-
-                var instance = (IExpressionQuery<TResultType>)Activator.CreateInstance(typeof(ExpressionQuery<TResultType>), context, schematic);
+                
+                var instance = (IExpressionQuery<TResultType>)Activator.CreateInstance(typeof(ExpressionQuery<TResultType>), context, schematic, configurartion);
 
                 // set the expression query sql
                 var expressionQuerySqlField = instance.GetType().GetField("_expressionQuerySql", bindingFlags);

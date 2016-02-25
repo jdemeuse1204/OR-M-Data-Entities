@@ -1,4 +1,5 @@
 ﻿using OR_M_Data_Entities.Tests.Tables;
+using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
 {

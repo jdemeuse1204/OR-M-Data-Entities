@@ -1,5 +1,6 @@
 ﻿using System;
 using OR_M_Data_Entities.Tests.Tables;
+using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff;
 using OR_M_Data_Entities.Tests.Testing.Context;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
@@ -31,6 +32,26 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 ctx.SaveChanges(policy);
 
                 return policy.Id != -1;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_2(InsertKeyChangeContext ctx)
+        {
+            try
+            {
+                var item = new StringKeyTest
+                {
+                    Id = "COOL",
+                    Value = "JAMES!"
+                };
+
+                ctx.SaveChanges(item);
+
+                return item.Id == "COOL";
             }
             catch (Exception)
             {

@@ -1,4 +1,5 @@
-﻿using OR_M_Data_Entities.Tests.Testing.Base;
+﻿using System;
+using OR_M_Data_Entities.Tests.Testing.Base;
 
 namespace OR_M_Data_Entities.Tests.Testing.Context
 {
@@ -11,6 +12,12 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
             Configuration.ConcurrencyChecking.IsOn = true;
             Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.UseHandler;
             OnSqlGeneration += ContextMembers.OnOnSqlGeneration;
+            OnConcurrencyViolation += OnOnConcurrencyViolation;
+        }
+
+        private void OnOnConcurrencyViolation(object entity)
+        {
+            throw new NotImplementedException();
         }
     }
 }

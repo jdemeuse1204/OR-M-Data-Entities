@@ -1,0 +1,1 @@
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Diagnostics\obj\Debug\OR-M Data Entities.Diagnostics.csprojResolveAssemblyReference.cache

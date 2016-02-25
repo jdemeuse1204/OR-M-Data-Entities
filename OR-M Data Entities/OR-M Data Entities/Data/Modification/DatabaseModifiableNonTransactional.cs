@@ -100,22 +100,62 @@ namespace OR_M_Data_Entities.Data
                 _outputColumnsOnly = string.Concat(_outputColumnsOnly, item.AsFieldPropertyName(","));
             }
 
-            public void AddSet(IModificationItem item, out string key)
+            public void AddSetGenerationItem(IModificationItem item, out string key)
             {
-                key = string.Format("@{0}", item.PropertyName);
+                // make sure we can generate the key they are specifying
+                key = string.Format("@{0}", item.GetUniqueKey());
 
-                // make our set statement
-                if (item.SqlDataTypeString.ToUpper() == "UNIQUEIDENTIFIER")
+                switch (item.DbTranslationType)
                 {
-                    // GUID
-                    _set = string.Concat(_set, string.Format("SET {0} = NEWID();\r", key));
-                }
-                else
-                {
-                    // NUMERIC
-                    _set = string.Concat(_set,
-                        string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);\r", key,
-                            item.DatabaseColumnName, SqlFormattedTableName));
+                    case SqlDbType.SmallMoney:
+                    case SqlDbType.TinyInt:
+                    case SqlDbType.SmallInt:
+                    case SqlDbType.Real:
+                    case SqlDbType.Money:
+                    case SqlDbType.Int:
+                    case SqlDbType.BigInt:
+                    case SqlDbType.Float:
+                    case SqlDbType.Decimal:
+                        _set = string.Concat(_set, string.Format("SET {0} = (Select ISNULL(MAX([{1}]),0) + 1 From [{2}]);\r", key, item.DatabaseColumnName, SqlFormattedTableName));
+                        break;
+
+                    case SqlDbType.Time:
+                    case SqlDbType.Date:
+                    case SqlDbType.VarBinary:
+                    case SqlDbType.VarChar:
+                    case SqlDbType.Variant:
+                    case SqlDbType.Xml:
+                    case SqlDbType.Udt:
+                    case SqlDbType.Text:
+                    case SqlDbType.Timestamp:
+                    case SqlDbType.SmallDateTime:
+                    case SqlDbType.Structured:
+                    case SqlDbType.NChar:
+                    case SqlDbType.NText:
+                    case SqlDbType.NVarChar:
+                    case SqlDbType.Image:
+                    case SqlDbType.Char:
+                    case SqlDbType.Bit:
+                    case SqlDbType.Binary:
+                        throw new Exception(string.Format("Cannot generate Primary Key for type of {0}. Column Name - {1}", item.DbTranslationType, item.PropertyName));
+
+                    case SqlDbType.DateTime:
+                        break;
+                    
+                    case SqlDbType.UniqueIdentifier:
+                        _set = string.Concat(_set, string.Format("SET {0} = NEWID();\r", key));
+                        break;
+
+                    case SqlDbType.DateTime2:
+                        _set = string.Concat(_set, string.Format("SET {0} = '{1}';\r", key, DateTime.Now));
+                        break;
+
+                    case SqlDbType.DateTimeOffset:
+                        _set = string.Concat(_set, string.Format("SET {0} = '{1}';\r", key, DateTimeOffset.Now));
+                        break;
+
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
 
@@ -126,11 +166,7 @@ namespace OR_M_Data_Entities.Data
 
             public virtual ISqlPartStatement Split()
             {
-                var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})",
-                    SqlFormattedTableName,
-                    _fields.TrimEnd(','),
-                    _output.TrimEnd(','),
-                    _values.TrimEnd(',')
+                var sql = string.Format("INSERT INTO [{0}] ({1}) OUTPUT {2} VALUES ({3})", SqlFormattedTableName, _fields.TrimEnd(','), _output.TrimEnd(','), _values.TrimEnd(',')
 
                     // we want to select everything back from the database in case the model relies on db generation for some fields.
                     // this way we can load the data back into the model.  Works perfect for things like time stamps and auto generation
@@ -153,8 +189,7 @@ namespace OR_M_Data_Entities.Data
 
             protected string Output { get; set; }
 
-            public UpdateContainer(IModificationEntity entity)
-                : base(entity)
+            public UpdateContainer(IModificationEntity entity) : base(entity)
             {
                 SetItems = string.Empty;
                 Where = string.Empty;
@@ -199,7 +234,7 @@ namespace OR_M_Data_Entities.Data
             {
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
                 var sql = string.Format("{0} SET {1} OUTPUT {2} WHERE {3}", Statement, SetItems.TrimEnd(','), Output.TrimEnd(','), Where.TrimEnd(','));
-                
+
                 return new SqlPartStatement(sql);
             }
         }
@@ -212,13 +247,9 @@ namespace OR_M_Data_Entities.Data
 
             protected readonly string Statement;
 
-            public DeleteContainer(IModificationEntity entity)
-                : base(entity)
+            public DeleteContainer(IModificationEntity entity) : base(entity)
             {
-                Output = entity.GetPrimaryKeys()
-                   .Select(Table.GetColumnName)
-                   .Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1)))
-                   .TrimEnd(',');
+                Output = entity.GetPrimaryKeys().Select(Table.GetColumnName).Aggregate("OUTPUT ", (s, s1) => string.Concat(s, string.Format("[DELETED].[{0}],", s1))).TrimEnd(',');
 
                 Where = string.Empty;
                 Statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
@@ -260,19 +291,28 @@ namespace OR_M_Data_Entities.Data
             }
 
             protected readonly string SqlFormattedTableName;
+
+            protected string InsertTableVariable(IModificationItem item, string tableVariables)
+            {
+                // cannot insert a timestamp into a table variable.  A timestamp is a binary.  Convert the timestamp to a 
+                // varbinary so we can insert it into the table variable and read it back
+                var sqlDataTypeString = item.DbTranslationType == SqlDbType.Timestamp ? string.Format("{0}(MAX)", SqlDbType.VarBinary) : item.SqlDataTypeString;
+
+                return string.Concat(tableVariables, string.Format("{0} {1},", item.PropertyName, sqlDataTypeString));
+            }
         }
+
         #endregion
 
         #region Plans
+
         private class SqlInsertPlan : SqlExecutionPlan
         {
-            public SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
-                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
-                : base(entity, configurationOptions, sharedParameters)
+            protected SqlInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -284,13 +324,11 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlTryInsertPlan : SqlExecutionPlan
         {
-            public SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
-                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
-                : base(entity, configurationOptions, sharedParameters)
+            protected SqlTryInsertPlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -304,13 +342,11 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlTryInsertUpdatePlan : SqlExecutionPlan
         {
-            public SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
-                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
-                : base(entity, configurationOptions, sharedParameters)
+            protected SqlTryInsertUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -327,13 +363,11 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlUpdatePlan : SqlExecutionPlan
         {
-            public SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
-                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
-                : base(entity, configurationOptions, sharedParameters)
+            protected SqlUpdatePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -345,13 +379,11 @@ namespace OR_M_Data_Entities.Data
 
         private class SqlDeletePlan : SqlExecutionPlan
         {
-            public SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
-                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters)
-                : base(entity, configurationOptions, sharedParameters)
+            protected SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -360,9 +392,11 @@ namespace OR_M_Data_Entities.Data
                 return new SqlDeleteBuilder(this, Configuration, Parameters);
             }
         }
+
         #endregion
 
         #region Builders
+
         private class SqlExistsBuilder : SqlModificationBuilder
         {
             private SqlModificationBuilder _exists { get; set; }
@@ -373,10 +407,7 @@ namespace OR_M_Data_Entities.Data
 
             private string _where { get; set; }
 
-            public SqlExistsBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions,
-                List<SqlSecureQueryParameter> parameters, SqlModificationBuilder exists,
-                SqlModificationBuilder notExists = null)
-                : base(plan, configurationOptions, parameters)
+            public SqlExistsBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters, SqlModificationBuilder exists, SqlModificationBuilder notExists = null) : base(plan, configurationOptions, parameters)
             {
                 _initialize(plan, exists, notExists);
             }
@@ -411,14 +442,7 @@ namespace OR_M_Data_Entities.Data
                 _existsStatement = string.Format(@"IF (NOT(EXISTS(SELECT TOP 1 1 FROM [{0}] WHERE {1}))) 
     BEGIN
         {{0}}
-    END {2}",
-plan.Entity.ToString(TableNameFormat.SqlWithSchemaTrimStartAndEnd),
-
-_where,
-
-notExists == null ?
-string.Empty :
-@"
+    END {2}", plan.Entity.ToString(TableNameFormat.SqlWithSchemaTrimStartAndEnd), _where, notExists == null ? string.Empty : @"
 ELSE
     BEGIN 
         {1} 
@@ -428,9 +452,7 @@ ELSE
             // not used
             protected override ISqlContainer NewContainer()
             {
-                return _notExists != null
-                    ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql()))
-                    : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
+                return _notExists != null ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql())) : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
             }
 
             public override ISqlContainer BuildContainer()
@@ -442,11 +464,11 @@ ELSE
         private class SqlInsertBuilder : SqlModificationBuilder
         {
             #region Constructor
-            public SqlInsertBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
-                : base(builder, configurationOptions, parameters)
-            {
 
+            public SqlInsertBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) : base(builder, configurationOptions, parameters)
+            {
             }
+
             #endregion
 
             #region Methods
@@ -466,8 +488,8 @@ ELSE
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var data = AddParameter(item, value);
 
-                ((InsertContainer)container).AddField(item);
-                ((InsertContainer)container).AddValue(data);
+                ((InsertContainer) container).AddField(item);
+                ((InsertContainer) container).AddValue(data);
             }
 
             protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
@@ -475,15 +497,15 @@ ELSE
                 // key from the set method
                 string key;
 
-                ((InsertContainer)container).AddSet(item, out key);
-                ((InsertContainer)container).AddField(item);
-                ((InsertContainer)container).AddValue(key);
-                ((InsertContainer)container).AddDeclare(key, item.SqlDataTypeString);
+                ((InsertContainer) container).AddSetGenerationItem(item, out key);
+                ((InsertContainer) container).AddField(item);
+                ((InsertContainer) container).AddValue(key);
+                ((InsertContainer) container).AddDeclare(key, item.SqlDataTypeString);
             }
 
             protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
             {
-                ((InsertContainer)container).AddOutput(item);
+                ((InsertContainer) container).AddOutput(item);
             }
 
             public override ISqlContainer BuildContainer()
@@ -521,6 +543,7 @@ ELSE
 
                 return container;
             }
+
             #endregion
         }
 
@@ -528,10 +551,10 @@ ELSE
         {
             #region Constructor
 
-            public SqlUpdateBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
-                : base(builder, configurationOptions, parameters)
+            public SqlUpdateBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) : base(builder, configurationOptions, parameters)
             {
             }
+
             #endregion
 
             #region Methods
@@ -549,7 +572,7 @@ ELSE
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);
 
-                ((UpdateContainer)container).AddUpdate(item, parameter);
+                ((UpdateContainer) container).AddUpdate(item, parameter);
             }
 
             protected virtual void AddWhere(ISqlContainer container, IModificationItem item)
@@ -558,18 +581,18 @@ ELSE
                 var parameter = AddParameter(item, value);
 
                 // PK cannot be null here
-                ((UpdateContainer)container).AddWhere(item, parameter);
+                ((UpdateContainer) container).AddWhere(item, parameter);
             }
 
             protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
             {
-                ((UpdateContainer)container).AddOutput(item);
+                ((UpdateContainer) container).AddOutput(item);
             }
 
             public override ISqlContainer BuildContainer()
             {
                 var items = Entity.All();
-                var container = (UpdateContainer)NewContainer();
+                var container = (UpdateContainer) NewContainer();
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
                 if (items.Count == 0) throw new SqlSaveException("No items to update, query analyzer failed");
@@ -601,8 +624,7 @@ ELSE
                     // cannot concurrency check if entity state tracking is not on 
                     // because we do not know what the user has and has not changed. If entity state tracking is on and the 
                     // pristine entity is null then we have a try insert update, make sure to skip the concurrency check
-                    if (!Entity.IsEntityStateTrackingOn || item.Generation == DbGenerationOption.IdentitySpecification ||
-                        (Entity.IsEntityStateTrackingOn && Entity.IsPristineEntityNull()))
+                    if (!Entity.IsEntityStateTrackingOn || item.Generation == DbGenerationOption.IdentitySpecification || (Entity.IsEntityStateTrackingOn && Entity.IsPristineEntityNull()))
                     {
                         continue;
                     }
@@ -625,6 +647,7 @@ ELSE
 
                 return container;
             }
+
             #endregion
         }
 
@@ -632,10 +655,10 @@ ELSE
         {
             #region Constructor
 
-            public SqlDeleteBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
-                : base(builder, configurationOptions, parameters)
+            public SqlDeleteBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) : base(builder, configurationOptions, parameters)
             {
             }
+
             #endregion
 
             #region Methods
@@ -653,16 +676,16 @@ ELSE
                 // PK can be null here
                 if (value == null)
                 {
-                    ((DeleteContainer)container).AddNullWhere(item);
+                    ((DeleteContainer) container).AddNullWhere(item);
                     return;
                 }
 
-                ((DeleteContainer)container).AddWhere(item, parameter);
+                ((DeleteContainer) container).AddWhere(item, parameter);
             }
 
             public override ISqlContainer BuildContainer()
             {
-                var container = (DeleteContainer)NewContainer();
+                var container = (DeleteContainer) NewContainer();
 
                 // keys are not part of changes so we need to grab them
                 var primaryKeys = Entity.Keys();
@@ -677,23 +700,25 @@ ELSE
 
                 return container;
             }
+
             #endregion
         }
+
         #endregion
 
         #region Methods
+
         /// <summary>
         /// returns true if anything was modified and false if no changes were made
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="entity"></param>
         /// <returns></returns>
-        private IPersistResult _saveChanges<T>(T entity)
-            where T : class
+        private IPersistResult _saveChanges<T>(T entity) where T : class
         {
             try
             {
-                var parent = new ModificationEntity(entity, Configuration);
+                var parent = new ModificationEntity(entity, string.Empty, Configuration);
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
@@ -749,13 +774,17 @@ ELSE
                     if (keyContainer.Count == 0) changeManager.ChangeUpdateType(reference.Entity.PlainTableName, UpdateType.Skip);
 
                     // check for concurrency violation
-                    var hasConcurrencyViolation = reference.Entity.UpdateType == UpdateType.Update &&
-                                                  keyContainer.Count == 0 &&
-                                                  Configuration.ConcurrencyChecking.IsOn;
+                    var hasConcurrencyViolation = false;
+                    var isConcurrencyViolationCandidate = reference.Entity.UpdateType == UpdateType.Update && keyContainer.Count == 0 && Configuration.ConcurrencyChecking.IsOn;
 
+                    // if we are a candidate, we need to make sure the record exists.
+                    // if no record exists then there is no violation.
                     // processing for concurrency violation
-                    if (hasConcurrencyViolation)
+                    if (isConcurrencyViolationCandidate && Exists(entity))
                     {
+                        // mark the violation
+                        hasConcurrencyViolation = true;
+
                         // violation occurred, choose what to do
                         switch (Configuration.ConcurrencyChecking.ViolationRule)
                         {
@@ -766,7 +795,7 @@ ELSE
                             case ConcurrencyViolationRule.UseHandler:
                                 if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity.Value);
                                 break;
-                        }   
+                        }
                     }
 
                     // put updated values into entity
@@ -798,10 +827,9 @@ ELSE
             }
         }
 
-        private IPersistResult _delete<T>(T entity) 
-            where T : class
+        private IPersistResult _delete<T>(T entity) where T : class
         {
-            var parent = new ModificationEntity(entity, Configuration);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration);
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
@@ -840,6 +868,7 @@ ELSE
 
             return changeManager.Compile();
         }
+
         #endregion
     }
 }
