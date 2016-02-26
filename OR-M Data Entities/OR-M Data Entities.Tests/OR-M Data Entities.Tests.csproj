@@ -132,6 +132,8 @@
     <Compile Include="Tables\EntityStateTrackableOn\TryInsertUpdateWithGeneration.cs" />
     <Compile Include="Tables\EntityStateTrackableOn\User.cs" />
     <Compile Include="Tables\EntityStateTrackableOn\Zip.cs" />
+    <Compile Include="Tables\Other\Policy_READONLY.cs" />
+    <Compile Include="Tables\Other\PolicyInfo_READONLY.cs" />
     <Compile Include="Testing\Base\ConcurrencyTests.cs" />
     <Compile Include="Testing\Base\ContextMembers.cs" />
     <Compile Include="Testing\Base\DefaultTests.cs" />
@@ -150,6 +152,7 @@
     <Compile Include="Testing\SqlConcurrencyGeneralContextTests.cs" />
     <Compile Include="Testing\SqlConcurrencyHandleContextTests.cs" />
     <Compile Include="Testing\SqlDefaultContextTests.cs" />
+    <Compile Include="Testing\SqlLazyLoadTests.cs" />
     <Compile Include="Testing\SqlTransactionContextTests.cs" />
   </ItemGroup>
   <ItemGroup>

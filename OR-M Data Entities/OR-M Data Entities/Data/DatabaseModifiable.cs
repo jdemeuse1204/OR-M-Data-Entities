@@ -125,11 +125,11 @@ namespace OR_M_Data_Entities.Data
                 _internal.Add(new Reference(entity, _nextAlias()));
             }
 
-            public void AddOneToManySaveReference(ForeignKeyAssociation association, object value, bool isDeleting = false)
+            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableCache tableCache, object value, bool isDeleting = false)
             {
                 var parentIndex = _indexOf(association.Parent);
 
-                _insert(parentIndex + 1, value, association, _configuration, isDeleting);
+                _insert(parentIndex + 1, value, association, _configuration, tableCache, isDeleting);
 
                 // add the references
                 var index = _indexOf(value);
@@ -143,11 +143,11 @@ namespace OR_M_Data_Entities.Data
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneSaveReference(ForeignKeyAssociation association, bool isDeleting = false)
+            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableCache tableCache, bool isDeleting = false)
             {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
-                _insert(oneToOneParentIndex, association.Value, association, _configuration, isDeleting);
+                _insert(oneToOneParentIndex, association.Value, association, _configuration, tableCache, isDeleting);
 
                 var oneToOneIndex = _indexOf(association.Parent);
                 var childIndex = _indexOf(association.Value);
@@ -165,9 +165,9 @@ namespace OR_M_Data_Entities.Data
                 return _internal.IndexOf(entity);
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, bool isDeleting)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
             {
-                _internal.Insert(index, new Reference(entity, _nextAlias(), configuration, association, isDeleting));
+                _internal.Insert(index, new Reference(entity, _nextAlias(), tableCache, configuration, association, isDeleting));
             }
 
             private string _nextAlias()
@@ -255,8 +255,8 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
-                this(new ModificationEntity(entity, alias, configuration, isDeleting), alias, association)
+            public Reference(object entity, string alias, TableCache tableCache, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
+                this(new ModificationEntity(entity, alias, configuration, tableCache, isDeleting), alias, association)
             {
             }
 
@@ -298,7 +298,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, bool isDeleting)
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
             {
                 var result = new ReferenceMap(configuration);
                 var entities = _getForeignKeys(entity.Value);
@@ -310,7 +310,7 @@ namespace OR_M_Data_Entities.Data
                     var e = entities[i];
                     var foreignKeyIsList = e.Property == null ? false : e.Property.IsList();
                     var tableType = e.Property == null ? e.Value.GetType() : e.Property.GetPropertyType();
-                    var tableInfo = new Table(tableType, configuration);
+                    var tableInfo = new Table(tableType, configuration, tableCache);
                      
                     // this is ok as long as the parent is not an insert
                     if (e.Value == null)
@@ -327,7 +327,7 @@ namespace OR_M_Data_Entities.Data
                         if (e.Parent == null) throw new SqlSaveException("Cannot save a null object");
 
                         // check the update type of the parent
-                        var modifcationEntity = new ModificationEntity(e.Parent, columnName, configuration);
+                        var modifcationEntity = new ModificationEntity(e.Parent, columnName, configuration, tableCache);
 
                         if (modifcationEntity.UpdateType == UpdateType.Insert ||
                             modifcationEntity.UpdateType == UpdateType.TryInsert ||
@@ -371,7 +371,7 @@ namespace OR_M_Data_Entities.Data
                         {
                             // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                             // the value property
-                            result.AddOneToManySaveReference(e, item, isDeleting);
+                            result.AddOneToManySaveReference(e, tableCache, item, isDeleting);
 
                             // add any dependencies
                             if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
@@ -382,7 +382,7 @@ namespace OR_M_Data_Entities.Data
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
-                        result.AddOneToOneSaveReference(e, isDeleting);
+                        result.AddOneToOneSaveReference(e, tableCache, isDeleting);
 
                         // add any dependencies
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
@@ -538,7 +538,7 @@ namespace OR_M_Data_Entities.Data
                 var package = GetBuilder();
 
                 // generate the sql command
-                var command = new SqlCommand(package.GetSql(), connection);
+                var command = new SqlCommand(CleanSqlCommandText(package.GetSql()), connection);
 
                 // insert the parameters
                 package.InsertParameters(command);

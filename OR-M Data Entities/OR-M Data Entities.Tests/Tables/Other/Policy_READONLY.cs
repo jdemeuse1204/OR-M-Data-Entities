@@ -4,7 +4,9 @@ using OR_M_Data_Entities.Tracking;
 
 namespace OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn
 {
-    public class Policy : EntityStateTrackable
+    [ReadOnly(ReadOnlySaveOption.ThrowException)]
+    [Table("Policy")]
+    public class Policy_READONLY : EntityStateTrackable
     {
         [Column("PolicyID")]
         public int Id { get; set; }

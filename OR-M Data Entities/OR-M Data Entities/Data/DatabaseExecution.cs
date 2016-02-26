@@ -18,6 +18,7 @@ using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts.Base;
+using System.Collections;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -32,30 +33,30 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Query Execution
-        public DataReader<T> ExecuteQuery<T>(string sql)
+        public IDataTranslator<T> ExecuteQuery<T>(string sql)
         {
             ExecuteReader(sql);
 
-            return new DataReader<T>(Reader);
+            return new DataTranslator<T>(Reader);
         }
 
-        public DataReader<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
+        public IDataTranslator<T> ExecuteQuery<T>(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic = null)
         {
             ExecuteReader(sql, parameters, schematic);
 
-            return new DataReader<T>(Reader);
+            return new DataTranslator<T>(Reader);
         }
 
-        public DataReader<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)
+        public IDataTranslator<T> ExecuteQuery<T>(string sql, params SqlDbParameter[] parameters)
         {
             return ExecuteQuery<T>(sql, parameters.ToList());
         }
 
-        public DataReader<T> ExecuteQuery<T>(ISqlExecutionPlan builder)
+        public IDataTranslator<T> ExecuteQuery<T>(ISqlExecutionPlan builder)
         {
             ExecuteReader(builder);
 
-            return new DataReader<T>(Reader);
+            return new DataTranslator<T>(Reader);
         }
 
 
@@ -73,7 +74,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Stored Procedures And Functions
-        public DataReader<T> ExecuteScript<T>(IReadScript<T> script)
+        public IDataTranslator<T> ExecuteScript<T>(IReadScript<T> script)
         {
             return _executeScript<T>(script as dynamic);
         }
@@ -83,7 +84,7 @@ namespace OR_M_Data_Entities.Data
             _executeScript(script as dynamic);
         }
 
-        private DataReader<T> _executeScript<T>(StoredProcedure<T> script)
+        private IDataTranslator<T> _executeScript<T>(StoredProcedure<T> script)
         {
             var package = _getStoredProcedureParametersAndSql(script);
 
@@ -91,21 +92,21 @@ namespace OR_M_Data_Entities.Data
         }
 
 
-        private DataReader<T> _executeScript<T>(CustomScript<T> script)
+        private IDataTranslator<T> _executeScript<T>(CustomScript<T> script)
         {
             var package = _getCustomScriptParametersAndSql(script);
 
             return ExecuteQuery<T>(package.Key, package.Value);
         }
 
-        private DataReader<T> _executeScript<T>(StoredScript<T> script)
+        private IDataTranslator<T> _executeScript<T>(StoredScript<T> script)
         {
             var package = _getStoredScriptParametersAndSql(script);
 
             return ExecuteQuery<T>(package.Key, package.Value);
         }
 
-        private DataReader<T> _executeScript<T>(ScalarFunction<T> script)
+        private IDataTranslator<T> _executeScript<T>(ScalarFunction<T> script)
         {
             var package = _getStoredProcedureParametersAndSql(script);
 
@@ -264,6 +265,81 @@ namespace OR_M_Data_Entities.Data
             return result;
         }
 
+        #endregion
+
+        #region Data Translator
+        private class DataTranslator<T> : IDataTranslator<T>
+        {
+            #region Properties and Fields
+            private readonly IPeekDataReader _reader;
+
+            public bool HasRows
+            {
+                get { return _reader.HasRows; }
+            }
+            #endregion
+
+            #region Constructor
+            public DataTranslator(IPeekDataReader reader)
+            {
+                _reader = reader;
+            }
+            #endregion
+
+            #region Methods
+            public T FirstOrDefault()
+            {
+                _reader.Read();
+
+                var result = _reader.ToObjectDefault<T>();
+
+                Dispose();
+
+                return result;
+            }
+
+            public T First()
+            {
+                _reader.Read();
+
+                var result = _reader.ToObject<T>();
+
+                Dispose();
+
+                return result;
+            }
+
+            public List<T> ToList()
+            {
+                var result = new List<T>();
+
+                while (_reader.Read()) result.Add(_reader.ToObject<T>());
+
+                Dispose();
+
+                return result;
+            }
+
+            public IEnumerator<T> GetEnumerator()
+            {
+                while (_reader.Read()) yield return _reader.ToObject<T>();
+
+                // close when done enumerating
+                Dispose();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+
+            public void Dispose()
+            {
+                _reader.Close();
+                _reader.Dispose();
+            }
+            #endregion
+        }
         #endregion
     }
 }

@@ -20,8 +20,10 @@ namespace OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff
 
         public DateTime CreatedDate { get; set; }
 
+        [MaxLength(10, MaxLengthViolationType.Error)]
         public string FeeOwnerName { get; set; }
 
+        [MaxLength(10)]
         public string InsuredName { get; set; }
 
         public decimal? PolicyAmount { get; set; }

@@ -25,9 +25,9 @@ namespace OR_M_Data_Entities.Data
     public abstract partial class DatabaseSchematic : Database
     {
         #region Properties
-        protected static TableCache Tables { get; private set; }
+        protected TableCache Tables { get; private set; }
 
-        private static List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
+        private List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
         protected IEnumerable<KeyValuePair<Type, Type>> TableScriptMappings
         {
@@ -95,7 +95,7 @@ namespace OR_M_Data_Entities.Data
 
                 if (table != null) return table;
 
-                table = new Table(type, configuration);
+                table = new Table(type, configuration, this);
 
                 _internal.Add(type, table);
 
@@ -132,10 +132,12 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
         {
-            public AutoLoadRelationshipList(ITable table, int count, IConfigurationOptions configuration)
+            private readonly TableCache _tableCache;
+
+            public AutoLoadRelationshipList(ITable table, IConfigurationOptions configuration, TableCache cache, int count)
                 : base(table, configuration, count)
             {
-
+                _tableCache = cache;
             }
 
             public override IEnumerator<IAutoLoadKeyRelationship> GetEnumerator()
@@ -200,7 +202,7 @@ namespace OR_M_Data_Entities.Data
 
             private IColumn _getChildColumn(IColumn column)
             {
-                var childTable = Tables.Find(column.PropertyType.GetUnderlyingType(), Configuration);
+                var childTable = _tableCache.Find(column.PropertyType.GetUnderlyingType(), Configuration);
 
                 if (column.IsList)
                 {
@@ -650,13 +652,13 @@ namespace OR_M_Data_Entities.Data
         protected class Table : ReflectionCacheTable, ITable
         {
             #region Constructor
-            public Table(object entity, IConfigurationOptions configuration)
-                : this(entity.GetType(), configuration)
+            public Table(object entity, IConfigurationOptions configuration, TableCache tableCache)
+                : this(entity.GetType(), configuration, tableCache)
             {
 
             }
 
-            public Table(Type type, IConfigurationOptions configuration)
+            public Table(Type type, IConfigurationOptions configuration, TableCache tableCache)
                 : base(type, configuration)
             {
                 ClassName = type.Name;
@@ -669,7 +671,7 @@ namespace OR_M_Data_Entities.Data
                 // needed for the cached list
                 var autoLoadColumnCount = GetAllForeignAndPseudoKeys();
 
-                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this, autoLoadColumnCount.Count, configuration);
+                AutoLoadKeyRelationships = new AutoLoadRelationshipList(this, configuration, tableCache, autoLoadColumnCount.Count);
             }
             #endregion
 
@@ -854,8 +856,8 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public Entity(object entity, IConfigurationOptions configuration)
-                : base(entity, configuration)
+            public Entity(object entity, IConfigurationOptions configuration, TableCache tableCache)
+                : base(entity, configuration, tableCache)
             {
                 if (entity == null) throw new ArgumentNullException("entity");
 
@@ -1044,13 +1046,13 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration)
-                : this(entity, uniqueKey, configuration, false)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableCache tableCache)
+                : this(entity, uniqueKey, configuration, tableCache, false)
             {
             }
 
-            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, bool isDeleting)
-                : base(entity, configuration)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
+                : base(entity, configuration, tableCache)
             {
                 _uniqueKey = uniqueKey;
 
@@ -1249,7 +1251,7 @@ namespace OR_M_Data_Entities.Data
 
             private void _checkPkNotNull(object pkValue, MemberInfo key)
             {
-                if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", ReflectionCacheTable.GetColumnName(key)));
+                if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", GetColumnName(key)));
             }
 
             private void _initialize(IConfigurationOptions configuration)

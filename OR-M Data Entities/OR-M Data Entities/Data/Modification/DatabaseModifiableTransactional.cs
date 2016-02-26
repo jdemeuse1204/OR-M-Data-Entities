@@ -75,7 +75,7 @@ namespace OR_M_Data_Entities.Data
             public override ISqlPartStatement Split()
             {
                 var outputStatement = string.Concat(Output.TrimEnd(','), string.Format(" INTO @{0}", _tableAlias));
-                var columns =  Output.Replace("[INSERTED].", "");
+                var columns =  Output.Replace("[INSERTED].", string.Empty);
                 var selectBackStatement = string.Format("\rSELECT TOP 1 {0} FROM @{1}", columns.TrimEnd(','), _tableAlias);
 
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
@@ -246,7 +246,7 @@ namespace OR_M_Data_Entities.Data
                 var package = GetBuilder();
 
                 // generate the sql command
-                var command = new SqlCommand(package.GetSql(), connection);
+                var command = new SqlCommand(CleanSqlCommandText(package.GetSql()), connection);
 
                 // insert the parameters
                 package.InsertParameters(command);
@@ -686,11 +686,11 @@ IF @@TRANCOUNT > 0
         private IPersistResult _saveChangesUsingTransactions<T>(T entity) where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, string.Empty, Configuration);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, false);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, false);
             var parameters = new List<SqlSecureQueryParameter>();
             var plan = new SqlTransactionPlan(referenceMap, parameters);
 
@@ -760,10 +760,10 @@ IF @@TRANCOUNT > 0
             where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, string.Empty, Configuration);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, true);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, true);
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);
             var changeManager = new ChangeManager();

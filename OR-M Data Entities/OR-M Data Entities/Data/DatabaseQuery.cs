@@ -24,7 +24,8 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseQuery : DatabaseExecution
     {
         #region Properties
-        private static QuerySchematicManager _schematicManager { get; set; }
+
+        private readonly QuerySchematicManager _schematicManager;
 
         #endregion
 
@@ -101,17 +102,6 @@ namespace OR_M_Data_Entities.Data
 
         #endregion
 
-        #region Methods
-
-        public override void Dispose()
-        {
-            _schematicManager = null;
-
-            base.Dispose();
-        }
-
-        #endregion
-
         #region helpers
 
         // manages the schematics for all queries
@@ -155,7 +145,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             /// <summary>
-            /// Never used with foreign keys
+            /// Never used with foreign keys, only used when joining
             /// </summary>
             /// <param name="types"></param>
             /// <param name="configuration"></param>
@@ -867,9 +857,9 @@ namespace OR_M_Data_Entities.Data
                 // when we get here only one column will be selected for min or max, the code does not
                 // allow for more.  So we can just wrap the column in a min/max function
                 return _min
-                    ? string.Format("\tMIN({0})\r\n", _columns.Replace("\r", "").Replace("\n", "").Replace("\t", ""))
+                    ? string.Format("\tMIN({0})\r\n", _columns.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", string.Empty))
                     : _max
-                        ? string.Format("\tMAX({0})\r\n", _columns.Replace("\r", "").Replace("\n", "").Replace("\t", ""))
+                        ? string.Format("\tMAX({0})\r\n", _columns.Replace("\r", string.Empty).Replace("\n", string.Empty).Replace("\t", string.Empty))
                         : _exists ? string.Empty : _count ? "\tCOUNT(*)\r" : string.Format("{0}\r", _columns);
             }
 
@@ -1021,7 +1011,7 @@ namespace OR_M_Data_Entities.Data
                 return _expressionQuerySql.Sql();
             }
 
-            public DataReader<TSource> ExecuteReader<TSource>()
+            public IDataTranslator<TSource> ExecuteReader<TSource>()
             {
                 // need to happen before read because of include statements
                 // select all if nothing was selected
@@ -1172,7 +1162,7 @@ namespace OR_M_Data_Entities.Data
                     var types = new List<Type> {typeof (TOuter), typeof (TInner)};
 
                     // change the selected schematic
-                    ChangeSchematic(_schematicManager.CreateTemporarySchematic(types, _configuration, typeof (TOuter)));
+                    ChangeSchematic(querySchematicManager.CreateTemporarySchematic(types, _configuration, typeof (TOuter)));
                 }
 
                 // combine schematics before sending them in
@@ -1205,7 +1195,7 @@ namespace OR_M_Data_Entities.Data
 
             public IEnumerator<T> GetEnumerator()
             {
-                foreach (var item in ExecuteReader<T>()) yield return item;
+                foreach (T item in ExecuteReader<T>()) yield return item;
 
                 _context.Dispose();
             }
@@ -1686,10 +1676,10 @@ namespace OR_M_Data_Entities.Data
             public static void ResolveOrderByPrimaryKeys(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
             {
                 var result = schematic.MappedTables.Where(w => w.IsIncluded).Select(w => w.OrderByPrimaryKeysInline())
-                    .Aggregate("",
+                    .Aggregate(string.Empty,
                         (current1, table) =>
                             current1 +
-                            table.OrderByColumns.Aggregate("",
+                            table.OrderByColumns.Aggregate(string.Empty,
                                 (current, selectedColumn) =>
                                     current + selectedColumn.Column.ToString(table.Alias, " ASC,"))).TrimEnd(',');
 
@@ -1825,7 +1815,7 @@ namespace OR_M_Data_Entities.Data
                     .Aggregate(string.Empty,
                         (current1, mappedTable) =>
                             string.Concat(current1,
-                                mappedTable.SelectedColumns.Aggregate("",
+                                mappedTable.SelectedColumns.Aggregate(string.Empty,
                                     (current, selectedColumn) =>
                                         string.Concat(current, "\t",
                                             selectedColumn.Column.ToString(mappedTable.Alias, ",\r")))));
@@ -1962,7 +1952,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     return Table.GetTableName(right.Expression.Type);
                 }
-                return "";
+                return string.Empty;
             }
 
             public static string GetSqlFromExpression(Expression expression)

@@ -55,7 +55,7 @@ namespace OR_M_Data_Entities.Expressions
 
         void Take(int count);
 
-        DataReader<T> ExecuteReader<T>();
+        IDataTranslator<T> ExecuteReader<T>();
 
         void IncludeAll();
 

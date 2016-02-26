@@ -6,6 +6,7 @@ using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Tests.Scripts;
+using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn;
 
 namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
 {
@@ -2505,8 +2506,38 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
 
         public static bool Test_52(DbSqlContext ctx)
         {
-            // todo - open
-            return true;
+            try
+            {
+                // performs a try insert update
+                var max1 = ctx.From<Linking>().Select(w => w.PolicyId).Max() + 1;
+                var max2 = ctx.From<Linking>().Select(w => w.PolicyInfoId).Max() + 1;
+
+                // make sure inserting and updating is working for the try insert update
+                var linking = new Linking
+                {
+                    Description = "Test",
+                    PolicyId = max1,
+                    PolicyInfoId = max2
+                };
+
+                ctx.SaveChanges(linking);
+
+                var that = ctx.Find<Linking>(max1, max2);
+
+                that.Description = "Changed!";
+
+                ctx.SaveChanges(that);
+
+                that = ctx.Find<Linking>(max1, max2);
+
+                var changed = that.Description;
+
+                return (that != null && changed == "Changed!");
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         public static bool Test_53(DbSqlContext ctx)
@@ -2753,48 +2784,6 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
 
         public static bool Test_66(DbSqlContext ctx)
         {
-            try
-            {
-                // performs a try insert update
-                var max1 = ctx.From<Linking>().Select(w => w.PolicyId).Max() + 1;
-                var max2 = ctx.From<Linking>().Select(w => w.PolicyInfoId).Max() + 1;
-
-                // make sure inserting and updating is working for the try insert update
-                var linking = new Linking
-                {
-                    Description = "Test",
-                    PolicyId = max1,
-                    PolicyInfoId = max2
-                };
-
-                ctx.SaveChanges(linking);
-
-                var that = ctx.Find<Linking>(max1, max2);
-
-                that.Description = "Changed!";
-
-                ctx.SaveChanges(that);
-
-                that = ctx.Find<Linking>(max1, max2);
-
-                var changed = that.Description;
-
-                return (that != null && changed == "Changed!");
-            }
-            catch (Exception ex)
-            {
-                return false;
-            }
-        }
-
-        public static bool Test_67(DbSqlContext ctx)
-        {
-            // todo - open
-            return true;
-        }
-
-        public static bool Test_68(DbSqlContext ctx)
-        {
             // save timestamp test
             var history = new History
             {
@@ -2805,6 +2794,122 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             ctx.SaveChanges(history);
 
             return (history.CreateDate != null);
+        }
+
+        public static bool Test_67(DbSqlContext ctx)
+        {
+            try
+            {
+                var policy = new Policy
+                {
+                    County = "Hennepin",
+                    CreatedBy = "James Demeuse",
+                    CreatedDate = DateTime.Now,
+                    FeeOwnerName = "OverTenCharactersLong",
+                    FileNumber = 100,
+                    InsuredName = "James Demeuse",
+                    PolicyAmount = 100,
+                    PolicyDate = DateTime.Now,
+                    PolicyInfoId = 1,
+                    PolicyNumber = "001-8A",
+                    StateID = 7,
+                    UpdatedBy = "Me",
+                    UpdatedDate = DateTime.Now
+                };
+
+                ctx.SaveChanges(policy);
+            }
+            catch (Exception ex)
+            {
+                return ex is SqlSaveException && ex.InnerException is MaxLengthException;
+            }
+
+            return false;
+        }
+
+        public static bool Test_68(DbSqlContext ctx)
+        {
+            try
+            {
+                var policy = new Policy
+                {
+                    County = "Hennepin",
+                    CreatedBy = "James Demeuse",
+                    CreatedDate = DateTime.Now,
+                    FeeOwnerName = "Test",
+                    FileNumber = 100,
+                    InsuredName = "TruncateMEREMOVED",
+                    PolicyAmount = 100,
+                    PolicyDate = DateTime.Now,
+                    PolicyInfoId = 1,
+                    PolicyNumber = "001-8A",
+                    StateID = 7,
+                    UpdatedBy = "Me",
+                    UpdatedDate = DateTime.Now
+                };
+
+                ctx.SaveChanges(policy);
+
+                return policy.InsuredName == "TruncateME";
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_69(DbSqlContext ctx)
+        {
+            try
+            {
+                // make sure read only (throw exception) works
+                var policy = new Policy_READONLY
+                {
+                    County = "Hennepin",
+                    CreatedBy = "James Demeuse",
+                    CreatedDate = DateTime.Now,
+                    FeeOwnerName = "Test",
+                    FileNumber = 100,
+                    InsuredName = "fgh",
+                    PolicyAmount = 100,
+                    PolicyDate = DateTime.Now,
+                    PolicyInfoId = 1,
+                    PolicyNumber = "001-8A",
+                    StateID = 7,
+                    UpdatedBy = "Me",
+                    UpdatedDate = DateTime.Now
+                };
+
+                ctx.SaveChanges(policy);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return true;
+            }
+        }
+
+        public static bool Test_70(DbSqlContext ctx)
+        {
+            try
+            {
+                var policy = new PolicyInfo_READONLY
+                {
+                    Description = "info",
+                    FirstName = "james",
+                    LastName = "demeuse",
+                    Stamp = Guid.NewGuid()
+                };
+
+                ctx.SaveChanges(policy);
+
+                return policy.Id == 0;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
         }
 
         #region helpers

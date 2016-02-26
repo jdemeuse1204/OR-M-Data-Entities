@@ -16,7 +16,7 @@ namespace OR_M_Data_Entities.Tracking
 
         public EntityState GetState()
         {
-            return DatabaseSchematic.GetEntityState(this); // TODO - Test this
+            return DatabaseSchematic.GetEntityState(this);
         }
     }
 }

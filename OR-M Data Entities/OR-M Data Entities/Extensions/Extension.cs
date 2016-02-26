@@ -57,13 +57,6 @@ namespace OR_M_Data_Entities
 
         }
 
-        public static Type GetTypeWithListCheck(this Type type)
-        {
-            return type.IsList()
-                ? type.GetGenericArguments()[0]
-                : type;
-        }
-
         public static bool IsNullable(this Type type)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>);
@@ -144,18 +137,6 @@ namespace OR_M_Data_Entities
             return type.IsList() || type.IsNullable()
                 ? type.GetGenericArguments()[0]
                 : type;
-        }
-    }
-
-    public static class StringExtension
-    {
-        public static string ReplaceFirst(this string text, string search, string replace)
-        {
-            var pos = text.IndexOf(search, StringComparison.Ordinal);
-
-            if (pos < 0) return text;
-
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
     }
 }

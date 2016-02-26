@@ -182,21 +182,18 @@ namespace OR_M_Data_Entities.Data
         #region Execution
         protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
-            var s = DateTime.Now;
+            if (OnSqlGeneration != null) OnSqlGeneration(sql);
 
             _preprocessExecution();
 
-            _command = new SqlCommand(sql, _connection);
+            // clean the command text because the query will run slower 
+            // with returns, tabs, and new line characters
+            _command = new SqlCommand(CleanSqlCommandText(sql), _connection);
 
             // for use to return the sql that is generated
-            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText);
-
             _addParameters(parameters);
 
             Reader = new PeekDataReader(_command, _connection, schematic);
-
-            var e = DateTime.Now;
-            Console.WriteLine(string.Format("Execution: {0}", (e - s).Milliseconds));
         }
 
         protected void ExecuteReader(string sql)
@@ -237,6 +234,11 @@ namespace OR_M_Data_Entities.Data
             TryDisposeCloseReader();
 
             Connect();
+        }
+
+        protected static string CleanSqlCommandText(string sql)
+        {
+            return sql.Replace("\r", " ").Replace("\t", " ").Replace("\n", " ");
         }
         #endregion
 
@@ -319,7 +321,7 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsClosed { get { return _wrappedReader.IsClosed; } }
 
-            public bool HasRows { get; private set; }
+            public bool HasRows { get { return _wrappedReader == null ? false : ((SqlDataReader)_wrappedReader).HasRows; } }
 
             public int FieldCount { get { return _wrappedReader == null ? 0 : _wrappedReader.FieldCount; } }
 
@@ -361,7 +363,6 @@ namespace OR_M_Data_Entities.Data
                     var wrappedReader = cmd.ExecuteReader();
 
                     _wrappedReader = wrappedReader;
-                    HasRows = wrappedReader.HasRows;
 
                     _schematic = schematic;
 
