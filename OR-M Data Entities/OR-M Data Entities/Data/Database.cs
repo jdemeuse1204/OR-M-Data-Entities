@@ -464,24 +464,39 @@ namespace OR_M_Data_Entities.Data
 
             private bool _loadObjectFromSchematic(object instance, IDataLoadSchematic schematic)
             {
+                ISelectedColumn currentColumn = null;
+
                 try
                 {
-                    foreach (var property in schematic.MappedTable.SelectedColumns)
+                    foreach (var selectedColumn in schematic.MappedTable.SelectedColumns)
                     {
-                        var dbValue = this[property.Ordinal];
+                        currentColumn = selectedColumn;
+                        var dbValue = this[selectedColumn.Ordinal];
                         var dbNullValue = dbValue as DBNull;
 
                         // the rest of the object will be null.  No data exists for the object
-                        if (property.Column.IsPrimaryKey && dbNullValue != null) return false;
+                        if (selectedColumn.Column.IsPrimaryKey && dbNullValue != null) return false;
 
-                        instance.SetPropertyInfoValue(property.Column.PropertyName, dbNullValue != null ? null : dbValue);
+                        instance.SetPropertyInfoValue(selectedColumn.Column.PropertyName,
+                            dbNullValue != null ? null : dbValue);
                     }
                     return true;
                 }
+                catch (InvalidCastException ex)
+                {
+                    throw new DataLoadException(
+                        string.Format("Column is the incorrect type.  Object Name: {0}. Column Name: {1}.",
+                            instance.GetType().Name,
+                            currentColumn == null ? string.Empty : currentColumn.Column.PropertyName),
+                        ex);
+                }
                 catch (Exception ex)
                 {
-                    throw new DataLoadException(string.Format("PeekDataReader could not load object {0}.  Message: {1}",
-                        instance.GetType().Name, ex.Message));
+                    throw new DataLoadException(
+                        string.Format("PeekDataReader could not load object {0}. Column Name: {1} See inner exception",
+                            instance.GetType().Name,
+                            currentColumn == null ? string.Empty : currentColumn.Column.PropertyName),
+                        ex);
                 }
             }
 
@@ -690,7 +705,9 @@ namespace OR_M_Data_Entities.Data
                 }
                 catch (Exception ex)
                 {
-                    throw new DataLoadException(string.Format("PeekDataReader could not load object {0}.  Message: {1}", instance.GetType().Name, ex.Message));
+                    throw new DataLoadException(
+                        string.Format("PeekDataReader could not load object {0}.  See inner exception.",
+                            instance.GetType().Name), ex);
                 }
             }
 

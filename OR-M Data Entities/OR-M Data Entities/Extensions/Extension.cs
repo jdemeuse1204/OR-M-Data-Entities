@@ -59,7 +59,7 @@ namespace OR_M_Data_Entities
 
         public static bool IsNullable(this Type type)
         {
-            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>);
+            return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
     }
 
@@ -123,7 +123,9 @@ namespace OR_M_Data_Entities
             //use the converter to get the correct value
             property.SetValue(
                 entity,
-                propertyType.IsEnum ? Enum.ToObject(propertyType, value) : Convert.ChangeType(value, propertyType),
+                propertyType.IsEnum
+                    ? Enum.ToObject(propertyType, Convert.ToInt32(value))
+                    : Convert.ChangeType(value, propertyType),
                 null);
         }
 
