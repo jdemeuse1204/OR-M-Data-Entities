@@ -25,7 +25,7 @@ namespace OR_M_Data_Entities.Data
     public abstract partial class DatabaseSchematic : Database
     {
         #region Properties
-        protected TableCache Tables { get; private set; }
+        protected TableFactory DbTableFactory { get; private set; }
 
         private List<KeyValuePair<Type, Type>> _tableScriptMappings { get; set; }
 
@@ -40,7 +40,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseSchematic(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            Tables = new TableCache();
+            DbTableFactory = new TableFactory();
         }
 
         #endregion
@@ -65,7 +65,7 @@ namespace OR_M_Data_Entities.Data
 
         public override void Dispose()
         {
-            Tables = null;
+            DbTableFactory = null;
             _tableScriptMappings = null;
             base.Dispose();
         }
@@ -78,11 +78,11 @@ namespace OR_M_Data_Entities.Data
     /// </summary>
     public abstract partial class DatabaseSchematic 
     {
-        protected class TableCache
+        protected class TableFactory : ITableFactory
         {
             private readonly IDictionary<Type, ITable> _internal;
 
-            public TableCache()
+            public TableFactory()
             {
                 _internal = new Dictionary<Type, ITable>();
             }
@@ -132,9 +132,9 @@ namespace OR_M_Data_Entities.Data
 
         private class AutoLoadRelationshipList : DelayedEnumerationCachedList<IAutoLoadKeyRelationship>
         {
-            private readonly TableCache _tableCache;
+            private readonly TableFactory _tableCache;
 
-            public AutoLoadRelationshipList(ITable table, IConfigurationOptions configuration, TableCache cache, int count)
+            public AutoLoadRelationshipList(ITable table, IConfigurationOptions configuration, TableFactory cache, int count)
                 : base(table, configuration, count)
             {
                 _tableCache = cache;
@@ -652,13 +652,13 @@ namespace OR_M_Data_Entities.Data
         protected class Table : ReflectionCacheTable, ITable
         {
             #region Constructor
-            public Table(object entity, IConfigurationOptions configuration, TableCache tableCache)
+            public Table(object entity, IConfigurationOptions configuration, TableFactory tableCache)
                 : this(entity.GetType(), configuration, tableCache)
             {
 
             }
 
-            public Table(Type type, IConfigurationOptions configuration, TableCache tableCache)
+            public Table(Type type, IConfigurationOptions configuration, TableFactory tableCache)
                 : base(type, configuration)
             {
                 ClassName = type.Name;
@@ -856,7 +856,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public Entity(object entity, IConfigurationOptions configuration, TableCache tableCache)
+            public Entity(object entity, IConfigurationOptions configuration, TableFactory tableCache)
                 : base(entity, configuration, tableCache)
             {
                 if (entity == null) throw new ArgumentNullException("entity");
@@ -1046,12 +1046,12 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableCache tableCache)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableFactory tableCache)
                 : this(entity, uniqueKey, configuration, tableCache, false)
             {
             }
 
-            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
+            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
                 : base(entity, configuration, tableCache)
             {
                 _uniqueKey = uniqueKey;

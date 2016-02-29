@@ -32,12 +32,12 @@ namespace OR_M_Data_Entities.Expressions
         void ResolveOrderByDescending<TKey>(Expression<Func<TSource, TKey>> keySelector);
 
         IExpressionQuery<TResult> ResolveJoin<TOuter, TInner, TKey, TResult>(
-            IExpressionQuery<TOuter> outer,
-            IExpressionQuery<TInner> inner,
-            Expression<Func<TOuter, TKey>> outerKeySelector,
-            Expression<Func<TInner, TKey>> innerKeySelector,
-            Expression<Func<TOuter, TInner, TResult>> resultSelector,
-            JoinType joinType);
+                IExpressionQuery<TOuter> outer,
+                IExpressionQuery<TInner> inner,
+                Expression<Func<TOuter, TKey>> outerKeySelector,
+                Expression<Func<TInner, TKey>> innerKeySelector,
+                Expression<Func<TOuter, TInner, TResult>> resultSelector,
+                JoinType joinType);
 
         void ResolveMax();
 

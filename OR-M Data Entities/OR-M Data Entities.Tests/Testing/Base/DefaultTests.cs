@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Data;
 using OR_M_Data_Entities.Exceptions;
-using OR_M_Data_Entities.Tests.Scripts;
+using OR_M_Data_Entities.Tests.StoredSql;
 using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn;
 
 namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
@@ -432,8 +432,8 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             // DatabaseModifiable
             // Protected Fields:  OnBeforeSave, OnAfterSave, OnSaving, OnConcurrencyViolation
 
-            var Tables = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "Tables") == null;
-            var _tableScriptMappings = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "_tableScriptMappings") == null;
+            var Tables = _getPropertyValue(ctx, typeof(DatabaseSchematic), "DbTableFactory") == null;
+            var _tableScriptMappings = _getPropertyValue(ctx, typeof(DatabaseSchematic), "_tableScriptMappings") == null;
 
             var ConnectionString = _getPropertyValue(ctx, "ConnectionString") == null;
             var Reader = _getPropertyValue(ctx, "Reader") == null;
@@ -443,7 +443,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
             var _configurationCheckPerformed = (bool)_getPropertyValue(ctx, typeof(Database), "_configurationCheckPerformed") == false;
 
-            var _schematicManager = _getStaticPropertyValue(ctx, typeof(DatabaseQuery), "_schematicManager") == null;
+            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "_querySchematicFactory") == null;
 
             var OnBeforeSave = _getEventValue(ctx, "OnBeforeSave") == null;
             var OnAfterSave = _getEventValue(ctx, "OnAfterSave") == null;
@@ -1542,13 +1542,6 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             return property.GetValue(entity);
         }
 
-        private static object _getStaticPropertyValue(object entity, Type baseType, string propertyName)
-        {
-            var property = baseType.GetProperty(propertyName, BindingFlags.Static | BindingFlags.NonPublic);
-
-            return property.GetValue(entity);
-        }
-
         private static object _getEventValue(object entity, string propertyName)
         {
             var e = entity.GetType().GetEvent(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
@@ -1923,8 +1916,8 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             // DatabaseModifiable
             // Protected Fields:  OnBeforeSave, OnAfterSave, OnSaving, OnConcurrencyViolation
 
-            var Tables = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "Tables") == null;
-            var _tableScriptMappings = _getStaticPropertyValue(ctx, typeof(DatabaseSchematic), "_tableScriptMappings") == null;
+            var Tables = _getPropertyValue(ctx, typeof(DatabaseSchematic), "DbTableFactory") == null;
+            var _tableScriptMappings = _getPropertyValue(ctx, typeof(DatabaseSchematic), "_tableScriptMappings") == null;
 
             var ConnectionString = _getPropertyValue(ctx, "ConnectionString") == null;
             var Reader = _getPropertyValue(ctx, "Reader") == null;
@@ -1934,7 +1927,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
             var _configurationCheckPerformed = (bool)_getPropertyValue(ctx, typeof(Database), "_configurationCheckPerformed") == false;
 
-            var _schematicManager = _getStaticPropertyValue(ctx, typeof(DatabaseQuery), "_schematicManager") == null;
+            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "_querySchematicFactory") == null;
 
             var OnBeforeSave = _getEventValue(ctx, "OnBeforeSave") == null;
             var OnAfterSave = _getEventValue(ctx, "OnAfterSave") == null;
@@ -2912,6 +2905,8 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             }
         }
 
+
+
         #region helpers
         protected static Policy _addPolicy(DbSqlContext ctx)
         {
@@ -3109,26 +3104,11 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             return property.GetValue(entity);
         }
 
-        private static object _getStaticPropertyValue(object entity, Type baseType, string propertyName)
-        {
-            var property = baseType.GetProperty(propertyName, BindingFlags.Static | BindingFlags.NonPublic);
-
-            return property.GetValue(entity);
-        }
-
         private static object _getEventValue(object entity, string propertyName)
         {
             var e = entity.GetType().GetEvent(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
 
             return e.GetRaiseMethod();
-        }
-
-
-        private static object _getFieldValue(object entity, string propertyName)
-        {
-            var field = entity.GetType().GetField(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
-
-            return field.GetValue(entity);
         }
 
         private static object _getPropertyValue(object entity, Type type, string propertyName)

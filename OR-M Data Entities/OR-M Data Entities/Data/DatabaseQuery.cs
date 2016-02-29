@@ -25,7 +25,7 @@ namespace OR_M_Data_Entities.Data
     {
         #region Properties
 
-        private readonly QuerySchematicManager _schematicManager;
+        private IQuerySchematicFactory _querySchematicFactory { get; set; }
 
         #endregion
 
@@ -34,7 +34,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseQuery(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            _schematicManager = new QuerySchematicManager();
+            _querySchematicFactory = new QuerySchematicFactory();
         }
         #endregion
 
@@ -43,15 +43,15 @@ namespace OR_M_Data_Entities.Data
         public IExpressionQuery<T> From<T>()
         {
             // grab the base table and reset it
-            var table = Tables.Find<T>(Configuration);
+            var table = DbTableFactory.Find<T>(Configuration);
 
             // get the schematic
-            var schematic = _schematicManager.FindAndReset(table, Configuration);
+            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
             // initialize the selected columns
             schematic.InitializeSelect(Configuration.IsLazyLoading);
 
-            return new ExpressionQuery<T>(this, schematic, Configuration);
+            return new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
         }
 
         /// <summary>
@@ -63,12 +63,12 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
         protected bool Exists<T>(T entity)
         {
-            var table = Tables.Find<T>(Configuration);
+            var table = DbTableFactory.Find<T>(Configuration);
 
             // get the schematic
-            var schematic = _schematicManager.FindAndReset(table, Configuration);
+            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration);
+            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
 
             // initialize the selected columns, we tell it false always for find so the whole object will be returned
             // Find does not have options to include or exclude tables
@@ -83,12 +83,12 @@ namespace OR_M_Data_Entities.Data
         public T Find<T>(params object[] pks)
         {
             // grab the base table
-            var table = Tables.Find<T>(Configuration);
+            var table = DbTableFactory.Find<T>(Configuration);
 
             // get the schematic
-            var schematic = _schematicManager.FindAndReset(table, Configuration);
+            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration);
+            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
 
             // initialize the selected columns, we tell it false always for find so the whole object will be returned
             // Find does not have options to include or exclude tables
@@ -100,14 +100,21 @@ namespace OR_M_Data_Entities.Data
             return ((IExpressionQuery<T>)expressionQuery).FirstOrDefault();
         }
 
+        public override void Dispose()
+        {
+            _querySchematicFactory = null;
+
+            base.Dispose();
+        }
+
         #endregion
 
         #region helpers
 
         // manages the schematics for all queries
-        private class QuerySchematicManager
+        private class QuerySchematicFactory : IQuerySchematicFactory
         {
-            public QuerySchematicManager()
+            public QuerySchematicFactory()
             {
                 _mappings = new Dictionary<Type, IQuerySchematic>();
                 _mappedTables = new HashSet<IMappedTable>();
@@ -119,7 +126,7 @@ namespace OR_M_Data_Entities.Data
             // cache for all mapped tables
             private HashSet<IMappedTable> _mappedTables { get; set; }
 
-            public IQuerySchematic FindAndReset(ITable table, IConfigurationOptions configuration)
+            public IQuerySchematic FindAndReset(ITable table, IConfigurationOptions configuration, ITableFactory tableFactory)
             {
                 IQuerySchematic result;
 
@@ -134,7 +141,7 @@ namespace OR_M_Data_Entities.Data
                     return result;
                 }
 
-                result = _createSchematic(table, configuration);
+                result = _createSchematic(table, configuration, tableFactory);
 
                 _mappings.Add(table.Type, result);
 
@@ -150,7 +157,7 @@ namespace OR_M_Data_Entities.Data
             /// <param name="types"></param>
             /// <param name="configuration"></param>
             /// <returns></returns>
-            public IQuerySchematic CreateTemporarySchematic(List<Type> types, IConfigurationOptions configuration, Type selectedType)
+            public IQuerySchematic CreateTemporarySchematic(List<Type> types, IConfigurationOptions configuration, ITableFactory tableFactory, Type selectedType)
             {
                 const string aliasString = "AkA{0}";
                 var index = 0;
@@ -159,7 +166,7 @@ namespace OR_M_Data_Entities.Data
 
                 foreach (var currentMappedtable in from type in types
                                                    let nextAlias = string.Format(aliasString, index)
-                                                   let tableSchematic = Tables.Find(type, configuration)
+                                                   let tableSchematic = tableFactory.Find(type, configuration)
                                                    select new MappedTable(tableSchematic, nextAlias, nextAlias, false, true))
                 {
                     mappedTables.Add(currentMappedtable);
@@ -173,7 +180,7 @@ namespace OR_M_Data_Entities.Data
             }
 
             // creates the schematic so we know how to load the object
-            private IQuerySchematic _createSchematic(ITable from, IConfigurationOptions configuration)
+            private IQuerySchematic _createSchematic(ITable from, IConfigurationOptions configuration, ITableFactory tableFactory)
             {
                 const string aliasString = "AkA{0}";
 
@@ -206,7 +213,7 @@ namespace OR_M_Data_Entities.Data
                         if (currentMappedtable == null)
                         {
                             var tableSchematic =
-                                Tables.Find(
+                                tableFactory.Find(
                                     autoLoadRelationship.AutoLoadPropertyColumn.PropertyType.GetUnderlyingType(),
                                     configuration);
 
@@ -886,17 +893,23 @@ namespace OR_M_Data_Entities.Data
             private readonly IQuerySchematic _schematic;
 
             private readonly IConfigurationOptions _configuration;
+
+            private readonly IQuerySchematicFactory _querySchematicFactory;
+
+            private readonly ITableFactory _dbTableFactory;
             #endregion
 
             #region Constructor
 
-            public ExpressionQuery(DatabaseExecution context, IQuerySchematic schematic, IConfigurationOptions configuration)
+            public ExpressionQuery(DatabaseExecution context, IQuerySchematic schematic, IConfigurationOptions configuration, IQuerySchematicFactory querySchematicFactory, ITableFactory dbTableFactory)
             {
                 _expressionQuerySql = new ExpressionQuerySqlResolutionContainer();
 
                 _context = context;
                 _schematic = schematic;
                 _configuration = configuration;
+                _querySchematicFactory = querySchematicFactory;
+                _dbTableFactory = dbTableFactory;
             }
 
             #endregion
@@ -1069,10 +1082,20 @@ namespace OR_M_Data_Entities.Data
                 }
                 else
                 {
-                    mappedTable = _schematic.MappedTables.FirstOrDefault(w => w.Table.PlainTableName == tableName);
+                    mappedTable = _schematic.MappedTables.FirstOrDefault(w => w.Table.PlainTableName == actualTableName);
                 }
 
-                if (mappedTable == null) throw new Exception(string.Format("Cannot find table  table name not found on Include. Table name - {0}", tableName));
+                if (mappedTable == null) throw new Exception(string.Format("Cannot find table  table name not found on Include. Table name - {0}", actualTableName));
+
+                // make sure parent is selected
+                var parent =
+                    _schematic.MappedTables.First(
+                        w => w.Relationships.Any(x => x.ChildTable.Table.PlainTableName == actualTableName));
+
+                if (!parent.IsIncluded)
+                {
+                    throw new Exception(string.Format("Parent of {0} must be included in the query", actualTableName));
+                }
 
                 mappedTable.Include();
             }
@@ -1162,7 +1185,7 @@ namespace OR_M_Data_Entities.Data
                     var types = new List<Type> {typeof (TOuter), typeof (TInner)};
 
                     // change the selected schematic
-                    ChangeSchematic(querySchematicManager.CreateTemporarySchematic(types, _configuration, typeof (TOuter)));
+                    ChangeSchematic(_querySchematicFactory.CreateTemporarySchematic(types, _configuration, _dbTableFactory, typeof (TOuter)));
                 }
 
                 // combine schematics before sending them in
@@ -1761,8 +1784,10 @@ namespace OR_M_Data_Entities.Data
                 var context = fields.First(w => w.Name == "_context").GetValue(source);
                 var configurartion = fields.First(w => w.Name == "_configuration").GetValue(source);
                 var expressionQuerySql = fields.First(w => w.Name == "_expressionQuerySql").GetValue(source);
-                
-                var instance = (IExpressionQuery<TResultType>)Activator.CreateInstance(typeof(ExpressionQuery<TResultType>), context, schematic, configurartion);
+                var querySchematicFactory = fields.First(w => w.Name == "_querySchematicFactory").GetValue(source);
+                var dbTableFactory = fields.First(w => w.Name == "_dbTableFactory").GetValue(source);
+
+                var instance = (IExpressionQuery<TResultType>)Activator.CreateInstance(typeof(ExpressionQuery<TResultType>), context, schematic, configurartion, querySchematicFactory, dbTableFactory);
 
                 // set the expression query sql
                 var expressionQuerySqlField = instance.GetType().GetField("_expressionQuerySql", bindingFlags);

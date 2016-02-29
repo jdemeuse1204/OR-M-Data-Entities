@@ -718,11 +718,11 @@ ELSE
         {
             try
             {
-                var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
+                var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
-                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, false);
+                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, false);
 
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
@@ -829,11 +829,11 @@ ELSE
 
         private IPersistResult _delete<T>(T entity) where T : class
         {
-            var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, true);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, true);
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();

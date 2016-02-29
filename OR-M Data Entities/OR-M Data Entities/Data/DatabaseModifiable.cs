@@ -125,7 +125,7 @@ namespace OR_M_Data_Entities.Data
                 _internal.Add(new Reference(entity, _nextAlias()));
             }
 
-            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableCache tableCache, object value, bool isDeleting = false)
+            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableFactory tableCache, object value, bool isDeleting = false)
             {
                 var parentIndex = _indexOf(association.Parent);
 
@@ -143,7 +143,7 @@ namespace OR_M_Data_Entities.Data
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableCache tableCache, bool isDeleting = false)
+            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache, bool isDeleting = false)
             {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
@@ -165,7 +165,7 @@ namespace OR_M_Data_Entities.Data
                 return _internal.IndexOf(entity);
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
             {
                 _internal.Insert(index, new Reference(entity, _nextAlias(), tableCache, configuration, association, isDeleting));
             }
@@ -255,7 +255,7 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, TableCache tableCache, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
+            public Reference(object entity, string alias, TableFactory tableCache, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
                 this(new ModificationEntity(entity, alias, configuration, tableCache, isDeleting), alias, association)
             {
             }
@@ -298,7 +298,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, TableCache tableCache, bool isDeleting)
+            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
             {
                 var result = new ReferenceMap(configuration);
                 var entities = _getForeignKeys(entity.Value);

@@ -685,85 +685,92 @@ IF @@TRANCOUNT > 0
 
         private IPersistResult _saveChangesUsingTransactions<T>(T entity) where T : class
         {
-            var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
-            var changeManager = new ChangeManager();
-
-            // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, false);
-            var parameters = new List<SqlSecureQueryParameter>();
-            var plan = new SqlTransactionPlan(referenceMap, parameters);
-
-            for (var i = 0; i < referenceMap.Count; i++)
+            try
             {
-                var reference = referenceMap[i];
+                var actions = new List<UpdateType>();
+                var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
+                var changeManager = new ChangeManager();
 
-                // add the save to the list so we can tell the user what the save action did
-                actions.Add(reference.Entity.UpdateType);
+                // get all items to save and get them in order
+                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, false);
+                var parameters = new List<SqlSecureQueryParameter>();
+                var plan = new SqlTransactionPlan(referenceMap, parameters);
 
-                if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
-
-                // add the table to the change manager
-                changeManager.AddTable(reference.Entity.PlainTableName, reference.Entity.UpdateType);
-
-                // Get the correct execution plan
-                switch (reference.Entity.UpdateType)
-                {
-                    case UpdateType.Insert:
-                        plan.Add(new SqlTransactionInsertPlan(reference.Entity, parameters, reference, Configuration));
-                        break;
-                    case UpdateType.TryInsert:
-                        plan.Add(new SqlTransactionTryInsertPlan(reference.Entity, parameters, reference, Configuration));
-                        break;
-                    case UpdateType.TryInsertUpdate:
-                        plan.Add(new SqlTransactionTryInsertUpdatePlan(reference.Entity, parameters, reference, Configuration));
-                        break;
-                    case UpdateType.Update:
-                        plan.Add(new SqlTransactionUpdatePlan(reference.Entity, parameters, reference, Configuration));
-                        break;
-                    case UpdateType.Skip:
-                        continue;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-
-            if (OnSaving != null) OnSaving(entity);
-
-            // execute the sql.  make sure all the saves are not skips
-            if (!(actions.All(w => w == UpdateType.Skip)))
-            {
-                ExecuteReader(plan);
-
-                // load back the data from the save into the model and set what has changed
-                // also disconnects connection
-                _loadObjectFromMultipleActiveResults(referenceMap, actions, changeManager);
-
-                // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
-                // Object needs to be loaded with the data from the database first
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
                     var reference = referenceMap[i];
 
-                    // set the pristine state only if entity tracking is on
-                    if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+                    // add the save to the list so we can tell the user what the save action did
+                    actions.Add(reference.Entity.UpdateType);
+
+                    if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
+
+                    // add the table to the change manager
+                    changeManager.AddTable(reference.Entity.PlainTableName, reference.Entity.UpdateType);
+
+                    // Get the correct execution plan
+                    switch (reference.Entity.UpdateType)
+                    {
+                        case UpdateType.Insert:
+                            plan.Add(new SqlTransactionInsertPlan(reference.Entity, parameters, reference, Configuration));
+                            break;
+                        case UpdateType.TryInsert:
+                            plan.Add(new SqlTransactionTryInsertPlan(reference.Entity, parameters, reference, Configuration));
+                            break;
+                        case UpdateType.TryInsertUpdate:
+                            plan.Add(new SqlTransactionTryInsertUpdatePlan(reference.Entity, parameters, reference, Configuration));
+                            break;
+                        case UpdateType.Update:
+                            plan.Add(new SqlTransactionUpdatePlan(reference.Entity, parameters, reference, Configuration));
+                            break;
+                        case UpdateType.Skip:
+                            continue;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
+
+                if (OnSaving != null) OnSaving(entity);
+
+                // execute the sql.  make sure all the saves are not skips
+                if (!(actions.All(w => w == UpdateType.Skip)))
+                {
+                    ExecuteReader(plan);
+
+                    // load back the data from the save into the model and set what has changed
+                    // also disconnects connection
+                    _loadObjectFromMultipleActiveResults(referenceMap, actions, changeManager);
+
+                    // set the pristine state of each entity.  Cannot set above because the object will not save correctly.
+                    // Object needs to be loaded with the data from the database first
+                    for (var i = 0; i < referenceMap.Count; i++)
+                    {
+                        var reference = referenceMap[i];
+
+                        // set the pristine state only if entity tracking is on
+                        if (reference.Entity.IsEntityStateTrackingOn) ModificationEntity.TrySetPristineEntity(reference.Entity.Value);
+                    }
+                }
+
+                if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
+
+                // get our persist result from compiling the change manager
+                return changeManager.Compile();
             }
-
-            if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
-
-            // get our persist result from compiling the change manager
-            return changeManager.Compile();
+            catch (MaxLengthException ex)
+            {
+                // only catch the max length exception so we can tell the user that the save was cancelled
+                throw new SqlSaveException("Max length violated, see inner exception", ex);
+            }
         }
 
-        private IPersistResult _deleteUsingTransactions<T>(T entity)
-            where T : class
+        private IPersistResult _deleteUsingTransactions<T>(T entity) where T : class
         {
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, string.Empty, Configuration, Tables);
+            var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, Tables, true);
+            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, true);
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);
             var changeManager = new ChangeManager();
