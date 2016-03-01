@@ -61,7 +61,7 @@
     <Compile Include="Data\Definition\IQuerySchematicFactory.cs" />
     <Compile Include="Data\Definition\ITableFactory.cs" />
     <Compile Include="Data\IDataTranslator.cs" />
-    <Compile Include="Data\Loading\ObjectLoader.cs" />
+    <Compile Include="Data\ObjectLoader.cs" />
     <Compile Include="Data\Modification\ISaveResult.cs" />
     <Compile Include="Data\Modification\ISqlPartStatement.cs" />
     <Compile Include="Data\Modification\ITableChangeResult.cs" />

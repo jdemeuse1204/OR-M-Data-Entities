@@ -142,7 +142,25 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
                 var contact = ctx.Find<Contact>(1);
 
-                return contact.ContactID == 1 && contact.LastName == "DIFFERENT";
+                return contact.ContactID == 1 && contact.FirstName == "DIFFERENT";
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_8(DbSqlContext ctx)
+        {
+            try
+            {
+                // make sure script properties are inserted in order
+                var sf = ctx.ExecuteScript<string>(new SF1
+                {
+                    Id = 1,
+                    FirstName = ""
+                });
+                return true;
             }
             catch (Exception ex)
             {

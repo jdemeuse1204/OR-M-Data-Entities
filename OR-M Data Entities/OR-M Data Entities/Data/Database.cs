@@ -18,7 +18,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
-using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
@@ -516,8 +515,6 @@ namespace OR_M_Data_Entities.Data
 
             private T _getObjectFromReaderWithForeignKeys<T>()
             {
-                var s = DateTime.Now;
-
                 // Create instance
                 var instance = Activator.CreateInstance<T>();
 
@@ -547,9 +544,6 @@ namespace OR_M_Data_Entities.Data
                 // Clear Schematics, selected columns, and ordered columns
                 // clear is recursive and will clear all children
                 _schematic.ClearReadCache();
-
-                var e = DateTime.Now;
-                Console.WriteLine(string.Format("END: {0}", (e-s).TotalMilliseconds));
 
                 return instance;
             }

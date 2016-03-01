@@ -92,20 +92,13 @@ namespace OR_M_Data_Entities.Tests.StoredSql
         public string FirstName { get; set; }
     }
 
-
-    // todo test these
     [Script("GetLastName")]
     public class SF1 : ScalarFunction<string>
     {
-        [Index(1)]
-        public int Id { get; set; }
-
         [Index(2)]
-        public string FirstName { get; set; }
-    }
-
-    public class GetLastName2 : ScalarFunction<string>
-    {
         public int Id { get; set; }
+
+        [Index(1)]
+        public string FirstName { get; set; }
     }
 }
