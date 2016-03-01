@@ -22,7 +22,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string[] PrimaryKeyNames { get; }
 
-        OSchematicLoadedKeys LoadedCompositePrimaryKeys { get; }
+        LoadedCompositeKeys LoadedCompositePrimaryKeys { get; }
 
         object ReferenceToCurrent { get; set; }
 
@@ -41,48 +41,48 @@ namespace OR_M_Data_Entities.Data.Definition
         void ClearLoadedCompositePrimaryKeys();
     }
 
-    public class OSchematicLoadedKeys
+    public class LoadedCompositeKeys
     {
-        private readonly List<OSchematicKey> _internal;
+        private readonly HashSet<CompositeKey> _internal;
 
-        public OSchematicLoadedKeys()
+        public LoadedCompositeKeys()
         {
-            _internal = new List<OSchematicKey>();
+            _internal = new HashSet<CompositeKey>();
         }
 
-        public void Add(OSchematicKey key)
+        public void Add(CompositeKey key)
         {
             _internal.Add(key);
         }
 
-        public bool Contains(OSchematicKey key)
+        public bool Contains(CompositeKey key)
         {
             return _internal.Contains(key);
         }
     }
 
-    public class OSchematicKey : IEquatable<OSchematicKey>
+    public class CompositeKey : IEquatable<CompositeKey>
     {
-        public OSchematicKey(string compositeKey, int[] ordinals)
+        public CompositeKey(string compositeKey, int[] ordinals)
         {
-            CompositeKey = compositeKey;
+            Value = compositeKey;
             OrdinalCompositeHashCode = ordinals.Aggregate(0, (current, next) => current + next.GetHashCode());
         }
 
-        public string CompositeKey { get; private set; }
+        public readonly string Value;
 
-        public int OrdinalCompositeHashCode { get; private set; }
+        public readonly int OrdinalCompositeHashCode;
 
-        public bool Equals(OSchematicKey other)
+        public bool Equals(CompositeKey other)
         {
             //Check whether the compared object is null.
-            if (Object.ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, null)) return false;
 
             //Check whether the compared object references the same data.
-            if (Object.ReferenceEquals(this, other)) return true;
+            if (ReferenceEquals(this, other)) return true;
 
             //Check whether the products' properties are equal.
-            return CompositeKey == other.CompositeKey &&
+            return Value == other.Value &&
                    OrdinalCompositeHashCode == other.OrdinalCompositeHashCode;
         }
 
@@ -90,7 +90,7 @@ namespace OR_M_Data_Entities.Data.Definition
         // then GetHashCode() must return the same value for these objects.
         public override int GetHashCode()
         {
-            var hashKey = CompositeKey.GetHashCode();
+            var hashKey = Value.GetHashCode();
 
             var hashOrdinals = OrdinalCompositeHashCode.GetHashCode();
 

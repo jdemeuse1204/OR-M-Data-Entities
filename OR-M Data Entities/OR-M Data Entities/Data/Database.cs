@@ -18,6 +18,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
@@ -477,8 +478,7 @@ namespace OR_M_Data_Entities.Data
                         // the rest of the object will be null.  No data exists for the object
                         if (selectedColumn.Column.IsPrimaryKey && dbNullValue != null) return false;
 
-                        instance.SetPropertyInfoValue(selectedColumn.Column.PropertyName,
-                            dbNullValue != null ? null : dbValue);
+                        ObjectLoader.SetPropertyInfoValue(instance, selectedColumn.Column.PropertyName, dbValue);
                     }
                     return true;
                 }
@@ -516,6 +516,8 @@ namespace OR_M_Data_Entities.Data
 
             private T _getObjectFromReaderWithForeignKeys<T>()
             {
+                var s = DateTime.Now;
+
                 // Create instance
                 var instance = Activator.CreateInstance<T>();
 
@@ -545,6 +547,9 @@ namespace OR_M_Data_Entities.Data
                 // Clear Schematics, selected columns, and ordered columns
                 // clear is recursive and will clear all children
                 _schematic.ClearReadCache();
+
+                var e = DateTime.Now;
+                Console.WriteLine(string.Format("END: {0}", (e-s).TotalMilliseconds));
 
                 return instance;
             }
@@ -591,7 +596,7 @@ namespace OR_M_Data_Entities.Data
 
                     var compositeKeyArray = _getCompositKeyOrdinals(currentSchematic);
                     var compositeKey = _compositeKeyValue(compositeKeyArray);
-                    var schematicKey = new OSchematicKey(compositeKey, compositeKeyArray);
+                    var schematicKey = new CompositeKey(compositeKey, compositeKeyArray);
 
                     // if ReferenceToCurrent is null then its from the parent and we need to check the composite key.  If its not from the 
                     // parent we need to check the Reference to current and see if the property has a value.  If not we need to load
@@ -692,15 +697,14 @@ namespace OR_M_Data_Entities.Data
                             .Where(w => w.GetCustomAttribute<NonSelectableAttribute>() == null)
                             .ToList();
 
-                    foreach (var property in properties)
+                    for (var i = 0; i < properties.Count; i++)
                     {
+                        var property = properties[i];
                         var columnAttribute = property.GetCustomAttribute<ColumnAttribute>();
                         var columnName = columnAttribute == null ? property.Name : columnAttribute.Name;
                         var dbValue = this[columnName];
 
-
-                        // todo change
-                        instance.SetPropertyInfoValue(property, dbValue is DBNull ? null : dbValue);
+                        ObjectLoader.SetPropertyInfoValue(instance, property, dbValue);
                     }
                 }
                 catch (Exception ex)

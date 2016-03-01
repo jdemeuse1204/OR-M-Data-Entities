@@ -486,7 +486,7 @@ namespace OR_M_Data_Entities.Data
                     ActualType = actualType;
                     PropertyName = propertyName;
                     PrimaryKeyNames = ReflectionCacheTable.GetPrimaryKeyNames(type).ToArray();
-                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
                     Children = new HashSet<IDataLoadSchematic>();
                     MappedTable = mappedTable;
                     Parent = parent;
@@ -499,7 +499,7 @@ namespace OR_M_Data_Entities.Data
 
                 public string[] PrimaryKeyNames { get; private set; }
 
-                public OSchematicLoadedKeys LoadedCompositePrimaryKeys { get; private set; }
+                public LoadedCompositeKeys LoadedCompositePrimaryKeys { get; private set; }
 
                 public object ReferenceToCurrent { get; set; }
 
@@ -515,7 +515,7 @@ namespace OR_M_Data_Entities.Data
 
                 public void ClearRowReadCache()
                 {
-                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
 
                     var toClear = new List<IDataLoadSchematic>();
 
@@ -534,7 +534,7 @@ namespace OR_M_Data_Entities.Data
 
                 public void ClearLoadedCompositePrimaryKeys()
                 {
-                    LoadedCompositePrimaryKeys = new OSchematicLoadedKeys();
+                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
                 }
             }
 

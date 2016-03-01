@@ -13,6 +13,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -661,7 +662,7 @@ IF @@TRANCOUNT > 0
 
                         if (ObjectComparison.HasChanged(oldValue, newValue)) changeManager.AddChange(databaseColumnName, reference.Entity.PlainTableName, oldValue, newValue);
 
-                        reference.Entity.SetPropertyValue(databaseColumnName, dbValue);
+                        ObjectLoader.SetPropertyInfoValue(reference.Entity.Value, databaseColumnName, dbValue);
 
                         // set any fk's
                         if (reference.Parent == null) continue;

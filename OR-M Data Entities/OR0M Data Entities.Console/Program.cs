@@ -26,7 +26,7 @@ namespace OR0M_Data_Entities.Console
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
-            OnSqlGeneration += OnOnSqlGeneration;
+            //OnSqlGeneration += OnOnSqlGeneration;
         }
 
         private void OnOnSqlGeneration(string sql)
@@ -95,7 +95,7 @@ namespace OR0M_Data_Entities.Console
             //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
             //var sdfsdf = context.From<Contact>().IncludeTo("Appointments").FirstOrDefault(w => w.ContactID == 1);
 
-           // sdfsdf.FirstName = "James";
+            // sdfsdf.FirstName = "James";
 
             //context.SaveChanges(sdfsdf);
 
@@ -105,20 +105,15 @@ namespace OR0M_Data_Entities.Console
 
             System.Console.WriteLine((e - s).Milliseconds);
 
-            t.FirstName = "Different";
+            //t.FirstName = "Different";
 
-            context.SaveChanges(t);
+            //context.SaveChanges(t);
 
             var sdsdfgf = context.From<Contact>().OrderByDescending(w => w.ContactID).Select(w => w.ContactID);
 
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
-
-
-            System.Console.WriteLine(sdgf);
-
-            System.Console.WriteLine((e - s).Milliseconds);
 
             var c1 = context.Find<Contact>(1);
 

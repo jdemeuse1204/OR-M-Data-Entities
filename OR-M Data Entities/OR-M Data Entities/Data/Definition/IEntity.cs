@@ -21,9 +21,5 @@ namespace OR_M_Data_Entities.Data.Definition
         object GetPristineEntityPropertyValue(string propertyName);
 
         object TryGetPristineEntityPropertyValue(string propertyName);
-
-        void SetPropertyValue(string propertyName, object value);
-
-        void SetPropertyValue(PropertyInfo property, object value);
     }
 }

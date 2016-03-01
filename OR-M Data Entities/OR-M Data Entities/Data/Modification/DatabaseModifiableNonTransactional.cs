@@ -12,6 +12,7 @@ using System.Data;
 using System.Linq;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -803,7 +804,7 @@ ELSE
                     {
                         // find the property first in case the column name change attribute is used
                         // Key is property name, value is the db value
-                        reference.Entity.SetPropertyValue(item.Key, item.Value);
+                        ObjectLoader.SetPropertyInfoValue(reference.Entity.Value, item.Key, item.Value);
                     }
 
                     // If relationship is one-one.  Need to set the foreign key after saving

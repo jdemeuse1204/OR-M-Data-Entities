@@ -7,11 +7,11 @@ C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Da
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.dll
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.pdb
 C:\Users\jdemeuse\Documents\GitHub\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.csprojResolveAssemblyReference.cache
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.dll
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.pdb
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.dll
-C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.pdb
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.dll
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.pdb
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.dll
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\bin\Release\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities\obj\Release\OR-M Data Entities.pdb

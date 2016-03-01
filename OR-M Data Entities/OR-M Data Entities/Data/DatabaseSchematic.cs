@@ -13,6 +13,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
@@ -922,55 +923,6 @@ namespace OR_M_Data_Entities.Data
                 return property.GetValue(pristineEntity);
             }
 
-            public void SetPropertyValue(string propertyName, object value)
-            {
-                _setPropertyValue(Value, propertyName, value);
-            }
-
-            private static void _setPropertyValue(object entity, string propertyName, object value)
-            {
-                var found = entity.GetType().GetProperty(propertyName);
-
-                if (found == null) return;
-
-                _setPropertyValue(entity, found, value);
-            }
-
-            public void SetPropertyValue(PropertyInfo property, object value)
-            {
-                _setPropertyValue(Value, property, value);
-            }
-
-            private static void _setPropertyValue(object entity, PropertyInfo property, object value)
-            {
-                var propertyType = property.PropertyType;
-
-                if (value is DBNull) value = null;
-
-                //Nullable properties have to be treated differently, since we 
-                //  use their underlying property to set the value in the object
-                if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
-                {
-                    //if it's null, just set the value from the reserved word null, and return
-                    if (value == null)
-                    {
-                        property.SetValue(entity, null, null);
-                        return;
-                    }
-
-                    //Get the underlying type property instead of the nullable generic
-                    propertyType = new System.ComponentModel.NullableConverter(property.PropertyType).UnderlyingType;
-                }
-
-                //use the converter to get the correct value
-                // convert our value to Int32 for enums because,
-                // if we have a nullable Enum it will be a string
-                property.SetValue(entity,
-                    propertyType.IsEnum
-                        ? Enum.ToObject(propertyType, Convert.ToInt32(value))
-                        : Convert.ChangeType(value, propertyType),
-                    null);
-            }
 
             public static void SetPropertyValue(object parent, object child, string propertyNameToSet)
             {
@@ -983,7 +935,7 @@ namespace OR_M_Data_Entities.Data
                                 (w.PropertyType.IsList()
                                     ? w.PropertyType.GetGenericArguments()[0]
                                     : w.PropertyType) == child.GetType() &&
-                                    w.Name == propertyNameToSet);
+                                w.Name == propertyNameToSet);
 
                 var foreignKeyAttribute = foreignKeyProperty.GetCustomAttribute<ForeignKeyAttribute>();
 
@@ -992,14 +944,14 @@ namespace OR_M_Data_Entities.Data
                     var parentPrimaryKey = GetPrimaryKeys(parent).First();
                     var value = parent.GetType().GetProperty(parentPrimaryKey.Name).GetValue(parent);
 
-                    _setPropertyValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
+                    ObjectLoader.SetPropertyInfoValue(child, foreignKeyAttribute.ForeignKeyColumnName, value);
                 }
                 else
                 {
                     var childPrimaryKey = GetPrimaryKeys(child).First();
                     var value = child.GetType().GetProperty(childPrimaryKey.Name).GetValue(child);
 
-                    _setPropertyValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
+                    ObjectLoader.SetPropertyInfoValue(parent, foreignKeyAttribute.ForeignKeyColumnName, value);
                 }
             }
             #endregion
@@ -1185,7 +1137,7 @@ namespace OR_M_Data_Entities.Data
 
                     if (maxLengthAttribute.ViolationType == MaxLengthViolationType.Truncate)
                     {
-                        entity.SetPropertyInfoValue(property, value.Substring(0, maxLengthAttribute.Length));
+                        ObjectLoader.SetPropertyInfoValue(entity, property, value.Substring(0, maxLengthAttribute.Length));
                         continue;
                     }
 
@@ -1397,9 +1349,11 @@ namespace OR_M_Data_Entities.Data
                 public static object Clone(object table)
                 {
                     var instance = Activator.CreateInstance(table.GetType());
+                    var items = table.GetType().GetProperties().Where(IsColumn).ToList();
 
-                    foreach (var item in table.GetType().GetProperties().Where(IsColumn).ToList())
+                    for (var i = 0; i < items.Count; i++)
                     {
+                        var item = items[i];
                         var value = item.GetValue(table);
 
                         instance.GetType().GetProperty(item.Name).SetValue(instance, value);

@@ -9,12 +9,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Dynamic;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using OR_M_Data_Entities.Mapping;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities
@@ -87,48 +84,6 @@ namespace OR_M_Data_Entities
 
     public static class ObjectExtensions
     {
-        public static void SetPropertyInfoValue(this object entity, string propertyName, object value)
-        {
-            var property = entity.GetType().GetProperty(propertyName) ??
-                           entity.GetType()
-                               .GetProperties()
-                               .First(
-                                   w =>
-                                       w.GetCustomAttribute<ColumnAttribute>() != null &&
-                                       w.GetCustomAttribute<ColumnAttribute>().Name == propertyName);
-
-            entity.SetPropertyInfoValue(property, value);
-        }
-
-        public static void SetPropertyInfoValue(this object entity, PropertyInfo property, object value)
-        {
-            var propertyType = property.PropertyType;
-
-            //Nullable properties have to be treated differently, since we 
-            //  use their underlying property to set the value in the object
-            if (propertyType.IsGenericType
-                && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                //if it's null, just set the value from the reserved word null, and return
-                if (value == null)
-                {
-                    property.SetValue(entity, null, null);
-                    return;
-                }
-
-                //Get the underlying type property instead of the nullable generic
-                propertyType = new NullableConverter(property.PropertyType).UnderlyingType;
-            }
-
-            //use the converter to get the correct value
-            property.SetValue(
-                entity,
-                propertyType.IsEnum
-                    ? Enum.ToObject(propertyType, Convert.ToInt32(value))
-                    : Convert.ChangeType(value, propertyType),
-                null);
-        }
-
         public static Type GetUnderlyingType(this object o)
         {
             return GetUnderlyingType(o.GetType());
