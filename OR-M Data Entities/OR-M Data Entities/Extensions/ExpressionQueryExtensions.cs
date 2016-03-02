@@ -86,14 +86,14 @@ namespace OR_M_Data_Entities
         #region Functions
         public static IExpressionQuery<T> Distinct<T>(this IExpressionQuery<T> source)
         {
-            source.AsResolvable().MakeDistinct();
+            source.AsResolvable().Distinct();
 
             return source;
         }
 
         public static IOrderedExpressionQuery<T> Distinct<T>(this IOrderedExpressionQuery<T> source)
         {
-            source.AsResolvable().MakeDistinct();
+            source.AsResolvable().Distinct();
 
             return source;
         }
@@ -322,7 +322,7 @@ namespace OR_M_Data_Entities
         #region Min/Max
         private static T _max<T>(this IExpressionQuery<T> source)
         {
-            source.AsResolvable().ResolveMax();
+            source.AsResolvable().Max();
 
             return source.FirstOrDefault();
         }
@@ -334,7 +334,7 @@ namespace OR_M_Data_Entities
 
         private static T _min<T>(this IExpressionQuery<T> source)
         {
-            source.AsResolvable().ResolveMin();
+            source.AsResolvable().Min();
 
             return source.FirstOrDefault();
         }
@@ -394,7 +394,7 @@ namespace OR_M_Data_Entities
             var resolvable = source.AsResolvable();
 
             // all we need to do is Select Top 1 1
-            resolvable.ResolveAny();
+            resolvable.Any();
 
             // get the object
             using (var reader = resolvable.ExecuteReader<TSource>()) result = reader.HasRows;
@@ -419,7 +419,7 @@ namespace OR_M_Data_Entities
         #region Where
         public static IExpressionQuery<TSource> Where<TSource>(this IExpressionQuery<TSource> source, Expression<Func<TSource, bool>> expression)
         {
-            source.AsResolvable().ResolveWhere(expression);
+            source.AsResolvable().Where(expression);
 
             return source;
         }
@@ -456,7 +456,7 @@ namespace OR_M_Data_Entities
             var resolvable = source.AsResolvable();
 
             // tell resolvable to do a count
-            resolvable.ResolveCount();
+            resolvable.Count();
 
             // get the object
             using (var reader = resolvable.ExecuteReader<int>()) result = reader.FirstOrDefault();
@@ -484,7 +484,7 @@ namespace OR_M_Data_Entities
             // make sure foreign keys are not selected
             _foreignKeysSelectedCheck(resolvable);
 
-            resolvable.ResolveOrderBy(keySelector);
+            resolvable.OrderBy(keySelector);
 
             return source.AsOrderedExpressionQuery();
         }
@@ -497,7 +497,7 @@ namespace OR_M_Data_Entities
             // make sure foreign keys are not selected
             _foreignKeysSelectedCheck(resolvable);
 
-            resolvable.ResolveOrderByDescending(keySelector);
+            resolvable.OrderByDescending(keySelector);
 
             return source.AsOrderedExpressionQuery();
         }
@@ -510,7 +510,7 @@ namespace OR_M_Data_Entities
             // make sure foreign keys are not selected
             _foreignKeysSelectedCheck(resolvable);
 
-            resolvable.ResolveOrderBy(keySelector);
+            resolvable.OrderBy(keySelector);
 
             return source;
         }
@@ -523,7 +523,7 @@ namespace OR_M_Data_Entities
             // make sure foreign keys are not selected
             _foreignKeysSelectedCheck(resolvable);
 
-            resolvable.ResolveOrderByDescending(keySelector);
+            resolvable.OrderByDescending(keySelector);
 
             return source;
         }
@@ -538,7 +538,7 @@ namespace OR_M_Data_Entities
         {
             _foreignKeysJoinCheck(outer.AsResolvable());
 
-            return outer.AsResolvable().ResolveJoin(outer, inner, outerKeySelector, innerKeySelector, resultSelector, JoinType.Inner);
+            return outer.AsResolvable().Join(outer, inner, outerKeySelector, innerKeySelector, resultSelector, JoinType.Inner);
         }
 
         public static IExpressionQuery<TResult> LeftJoin<TOuter, TInner, TKey, TResult>(this IExpressionQuery<TOuter> outer,
@@ -549,7 +549,7 @@ namespace OR_M_Data_Entities
         {
             _foreignKeysJoinCheck(outer.AsResolvable());
 
-            return outer.AsResolvable().ResolveJoin(outer, inner, outerKeySelector, innerKeySelector, resultSelector, JoinType.Left);
+            return outer.AsResolvable().Join(outer, inner, outerKeySelector, innerKeySelector, resultSelector, JoinType.Left);
         }
         #endregion
 
@@ -593,14 +593,14 @@ namespace OR_M_Data_Entities
         {
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-            return resolvable.ResolveSelect(source, selector);
+            return resolvable.Select(source, selector);
         }
 
         public static IOrderedExpressionQuery<TResult> Select<TSource, TResult>(this IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector)
         {
             var resolvable = ((IExpressionQueryResolvable<TSource>)source);
 
-            return resolvable.ResolveSelect(source, selector);
+            return resolvable.Select(source, selector);
         }
         #endregion
     }

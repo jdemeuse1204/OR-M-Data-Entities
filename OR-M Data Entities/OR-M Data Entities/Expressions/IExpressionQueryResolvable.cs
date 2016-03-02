@@ -19,19 +19,19 @@ namespace OR_M_Data_Entities.Expressions
 
         bool HasForeignKeys();
 
-        void ResolveWhere(Expression<Func<TSource, bool>> expression);
+        void Where(Expression<Func<TSource, bool>> expression);
 
-        IExpressionQuery<TResult> ResolveSelect<TResult>(IExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
+        IExpressionQuery<TResult> Select<TResult>(IExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
 
-        IOrderedExpressionQuery<TResult> ResolveSelect<TResult>(IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
+        IOrderedExpressionQuery<TResult> Select<TResult>(IOrderedExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector);
 
-        void ResolveFind<TResult>(object[] pks, IConfigurationOptions configuration);
+        void Find<TResult>(object[] pks, IConfigurationOptions configuration);
 
-        void ResolveOrderBy<TKey>(Expression<Func<TSource, TKey>> keySelector);
+        void OrderBy<TKey>(Expression<Func<TSource, TKey>> keySelector);
 
-        void ResolveOrderByDescending<TKey>(Expression<Func<TSource, TKey>> keySelector);
+        void OrderByDescending<TKey>(Expression<Func<TSource, TKey>> keySelector);
 
-        IExpressionQuery<TResult> ResolveJoin<TOuter, TInner, TKey, TResult>(
+        IExpressionQuery<TResult> Join<TOuter, TInner, TKey, TResult>(
                 IExpressionQuery<TOuter> outer,
                 IExpressionQuery<TInner> inner,
                 Expression<Func<TOuter, TKey>> outerKeySelector,
@@ -39,19 +39,19 @@ namespace OR_M_Data_Entities.Expressions
                 Expression<Func<TOuter, TInner, TResult>> resultSelector,
                 JoinType joinType);
 
-        void ResolveMax();
+        void Max();
 
-        void ResolveAny();
+        void Any();
 
-        void ResolveCount();
+        void Count();
 
-        void ResolveMin();
+        void Min();
 
-        void ResolveForeignKeyJoins();
+        void ForeignKeyJoins();
 
         void SelectAll();
 
-        void MakeDistinct();
+        void Distinct();
 
         void Take(int count);
 

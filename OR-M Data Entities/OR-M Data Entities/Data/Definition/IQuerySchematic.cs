@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Configuration;
+using OR_M_Data_Entities.Data.Loading;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -36,6 +37,12 @@ namespace OR_M_Data_Entities.Data.Definition
         bool AreForeignKeysSelected();
 
         void InitializeSelect(bool isLazyLoading);
+
+        int NextOrdinal();
+
+        void UnSelectAll();
+
+        void SelectAll();
 
         void ClearReadCache();
 

@@ -418,19 +418,16 @@ namespace OR_M_Data_Entities.Data
 
                 if (typeof(T) == typeof(object)) return ToDynamic();
 
-                // if its an anonymous type, use the correct loader
-                return typeof(T).IsAnonymousType() ? (T)_getAnonymousObject(typeof(T))
-
-                       // if the payload is null, load by column names
-                       : _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
-
-                       // check to see if we are overriding the default return type
-                       : _schematic.ReturnOverride != null ? _getObjectFromReturnOverride<T>(_schematic)
+                       // if its an anonymous type, use the correct loader
+                return typeof(T).IsAnonymousType() ? _getObjectFromAnonymous<T>(_schematic) : 
+                    
+                        // load the data traditionally by looking for database column names
+                       _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
 
                        // if the payload has foreign keys, use the foreign key loader
                        : _schematic.AreForeignKeysSelected() ? _getObjectFromReaderWithForeignKeys<T>()
 
-                       // default if all are false
+                       // default if all are false... this should never happen TODO
                        : _getObjectFromReader<T>();
             }
 
@@ -448,19 +445,49 @@ namespace OR_M_Data_Entities.Data
                 return instance;
             }
 
-            private T _getObjectFromReturnOverride<T>(IQuerySchematic schematic)
+            private static string _getColumnName(MemberExpression expression, IQuerySchematic schematic)
             {
-                var instance = Activator.CreateInstance<T>();
-                var memberInitExpression = schematic.ReturnOverride as MemberInitExpression;
-
-                if (memberInitExpression != null) _loadObjectFromMemberInitExpression(instance, memberInitExpression);
-
-                return instance;
+                var columnAttribute = expression.Member.GetCustomAttribute<ColumnAttribute>();
+                return columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
             }
 
-            private void _loadObjectFromMemberInitExpression(object instance, MemberInitExpression expression)
+            private T _getObjectFromAnonymous<T>(IQuerySchematic schematic)
             {
-                
+                // return override will always be new expression here
+                var expression = (NewExpression)schematic.ReturnOverride;
+                var parameters = new Queue<object>();
+
+                for (var i = 0; i < expression.Arguments.Count; i++)
+                {
+                    // from the base table
+                    var argument = (MemberExpression)expression.Arguments[i];
+
+                    var tableAndColumnName = _getColumnName((dynamic)argument, schematic);
+
+                    // find our table
+                    var table = schematic.FindTable(argument.Expression.Type);
+
+                    ISelectedColumn column;
+
+                    // if the column is not in the table then its a reference to a autoload property
+                    if (!table.HasColumn(tableAndColumnName))
+                    {
+                        table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
+
+                        column = table.SelectedColumns.First(w => w.Column.DatabaseColumnName == tableAndColumnName);
+
+                        parameters.Enqueue(this[column.Ordinal]);
+                        continue;
+                    }
+
+                    table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
+
+                    column = table.SelectedColumns.First(w => w.Column.DatabaseColumnName == tableAndColumnName);
+
+                    parameters.Enqueue(this[column.Ordinal]);
+                }
+
+                return (T)Activator.CreateInstance(typeof(T), parameters);
             }
 
             private bool _loadObjectFromSchematic(object instance, IDataLoadSchematic schematic)
@@ -710,54 +737,6 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            private object _getAnonymousObject(Type type)
-            {
-                var constructorParameters = new Queue<object>();
-                var properties = type.GetProperties();
-
-                foreach (var property in properties)
-                {
-                    var propertyType = property.PropertyType;
-
-                    if (propertyType.IsSerializable)
-                    {
-                        if (propertyType.IsList())
-                        {
-                            // load the object
-                            constructorParameters.Enqueue(_getValue(type, property.Name));
-                            continue;
-                        }
-
-                        // the we assume its a value type
-                        constructorParameters.Enqueue(_getValue(type, property.Name));
-                        continue;
-                    }
-
-                    var propertyInstance = _getAnonymousObject(propertyType);
-
-                    constructorParameters.Enqueue(propertyInstance);
-                }
-
-                // Do last because the constructor needs the premade properties to go into it
-                var instance = Activator.CreateInstance(type, constructorParameters.ToArray());
-
-                return instance;
-            }
-
-            private object _getValue(Type instanceType, string propertyName)
-            {
-                var table = _schematic.MappedTables.FirstOrDefault(w => w.Table.Type == instanceType);
-
-                if (table == null) throw new Exception(string.Format("Table not found for type.  Type of {0}", instanceType.Name));
-
-                var property = table.SelectedColumns.FirstOrDefault(w => w.Column.PropertyName == propertyName);
-
-                if (property == null) throw new Exception(string.Format("Property name not found for type.  Type of {0}.  Property - {1}", instanceType.Name, propertyName));
-
-                var ordinal = property.Ordinal;
-
-                return this[ordinal];
-            }
             #endregion
 
             #region Methods

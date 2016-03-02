@@ -8,9 +8,9 @@
 
 using System;
 using System.Collections.Generic;
-using OR_M_Data_Entities.Data.Loading;
+using OR_M_Data_Entities.Data.Definition;
 
-namespace OR_M_Data_Entities.Data.Definition
+namespace OR_M_Data_Entities.Data.Loading
 {
     public interface IDataLoadSchematic
     {

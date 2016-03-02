@@ -100,7 +100,15 @@ namespace OR0M_Data_Entities.Console
             //context.SaveChanges(sdfsdf);
 
             var s = DateTime.Now;
-            var t = context.Find<Contact>(1);
+            //var tt = context.Find<Contact>(1);
+            var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
+            {
+                w.ContactID,
+                w.CreatedByUserID,
+                w.FirstName,
+                w.Number
+            }).FirstOrDefault();
+
             var e = DateTime.Now;
 
             System.Console.WriteLine((e - s).Milliseconds);

@@ -96,7 +96,7 @@ namespace OR_M_Data_Entities.Data
             schematic.InitializeSelect(false);
 
             // resolve the pks for the where statement
-            expressionQuery.ResolveFind<T>(pks, Configuration);
+            expressionQuery.Find<T>(pks, Configuration);
 
             return ((IExpressionQuery<T>)expressionQuery).FirstOrDefault();
         }
@@ -391,10 +391,10 @@ namespace OR_M_Data_Entities.Data
 
                 public Type Key { get; private set; }
 
-                public Expression ReturnOverride { get; private set; }
-
                 // map tells the DbReader how the object should be loaded
                 public List<IMappedTable> MappedTables { get; private set; }
+
+                public Expression ReturnOverride { get; private set; }
 
                 // skeleton for the data being returned
                 public IDataLoadSchematic DataLoadSchematic { get; private set; }
@@ -444,10 +444,39 @@ namespace OR_M_Data_Entities.Data
                         return;
                     }
 
+                    // select all if we are not lazy loading
+                    SelectAll();
+                }
+
+                public int NextOrdinal()
+                {
+                    return MappedTables.Any(w => w.SelectedColumns.Any())
+                        ? MappedTables.Where(w => w.SelectedColumns.Any())
+                            .Select(w => w.SelectedColumns.Select(x => x.Ordinal).Max())
+                            .Max() + 1
+                        : 0;
+                }
+
+                public void UnSelectAll()
+                {
+                    if (MappedTables == null) return;
+
+                    for (var i = 0; i < MappedTables.Count; i++)
+                    {
+                        var mappedTable = MappedTables[i];
+                        mappedTable.Clear();
+                        mappedTable.Exclude();
+                    }
+                }
+
+                public void SelectAll()
+                {
                     var startingOrdinal = 0;
 
-                    foreach (var mappedTable in MappedTables)
+                    // select all if we are not lazy loading
+                    for (var i = 0; i < MappedTables.Count; i++)
                     {
+                        var mappedTable = MappedTables[i];
                         mappedTable.Include();
                         startingOrdinal += mappedTable.SelectAll(startingOrdinal);
                     }
@@ -461,13 +490,7 @@ namespace OR_M_Data_Entities.Data
 
                 public void Reset()
                 {
-                    ReturnOverride = null;
-
-                    foreach (var mappedTable in MappedTables)
-                    {
-                        mappedTable.Exclude();
-                        mappedTable.Clear();
-                    }
+                    UnSelectAll();
 
                     // recursive clear
                     DataLoadSchematic.ClearRowReadCache();
@@ -494,6 +517,7 @@ namespace OR_M_Data_Entities.Data
                 }
 
                 public HashSet<IDataLoadSchematic> Children { get; private set; }
+
                 public IDataLoadSchematic Parent { get; private set; }
 
                 public Type ActualType { get; private set; }
@@ -629,6 +653,9 @@ namespace OR_M_Data_Entities.Data
 
                     if (!column.IsSelectable) throw new Exception(string.Format("Invalid operation, column is not a selectable type.  Column - {0}", column.DatabaseColumnName));
 
+                    // column is already selected
+                    if (SelectedColumns.Select(w => w.Column.DatabaseColumnName).Contains(column.DatabaseColumnName)) return;
+
                     _addSelectColumn(column, ordinal);
                 }
 
@@ -652,11 +679,21 @@ namespace OR_M_Data_Entities.Data
                     foreach (var column in columns) _addOrderByColumn(column, OrderByColumns.Count);
                 }
 
+                public int MaxOrdinal()
+                {
+                    return !SelectedColumns.Any() ? 0 : SelectedColumns.Max(w => w.Ordinal);
+                }
+
                 public IMappedTable OrderByPrimaryKeysInline()
                 {
                     OrderByPrimaryKeys();
 
                     return this;
+                }
+
+                public bool HasColumn(string propertyName)
+                {
+                    return Table.Columns.Any(w => w.PropertyName == propertyName && w.IsSelectable);
                 }
 
                 public void OrderByColumn(string propertyName)
@@ -926,26 +963,26 @@ namespace OR_M_Data_Entities.Data
                 return _schematic.DataLoadSchematic.Children != null && _schematic.DataLoadSchematic.Children.Any();
             }
 
-            public void ResolveWhere(Expression<Func<T, bool>> expression)
+            public void Where(Expression<Func<T, bool>> expression)
             {
                 ExpressionQueryWhereResolver.Resolve(expression, _expressionQuerySql, _schematic);
             }
 
-            public IExpressionQuery<TResult> ResolveSelect<TResult>(IExpressionQuery<T> source, Expression<Func<T, TResult>> selector)
+            public IExpressionQuery<TResult> Select<TResult>(IExpressionQuery<T> source, Expression<Func<T, TResult>> selector)
             {
                 ExpressionQuerySelectResolver.Resolve(selector, _schematic, _expressionQuerySql);
 
                 return ExpressionQuerySelectResolver.ChangeExpressionQueryGenericType<T, TResult>(source);
             }
 
-            public IOrderedExpressionQuery<TResult> ResolveSelect<TResult>(IOrderedExpressionQuery<T> source, Expression<Func<T, TResult>> selector)
+            public IOrderedExpressionQuery<TResult> Select<TResult>(IOrderedExpressionQuery<T> source, Expression<Func<T, TResult>> selector)
             {
                 ExpressionQuerySelectResolver.Resolve(selector, _schematic, _expressionQuerySql);
 
                 return (IOrderedExpressionQuery<TResult>)ExpressionQuerySelectResolver.ChangeExpressionQueryGenericType<T, TResult>((IExpressionQuery<T>)source);
             }
 
-            public void ResolveFind<TResult>(object[] pks, IConfigurationOptions configuration)
+            public void Find<TResult>(object[] pks, IConfigurationOptions configuration)
             {
                 var table = _schematic.FindTable(typeof(TResult));
 
@@ -965,32 +1002,32 @@ namespace OR_M_Data_Entities.Data
                 ExpressionQueryWhereResolver.ResolveFind(table, _expressionQuerySql, pks);
             }
 
-            public void ResolveOrderBy<TKey>(Expression<Func<T, TKey>> keySelector)
+            public void OrderBy<TKey>(Expression<Func<T, TKey>> keySelector)
             {
                 ExpressionQueryOrderByResolver.ResolveOrderBy(_schematic, _expressionQuerySql, keySelector);
             }
 
-            public void ResolveOrderByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
+            public void OrderByDescending<TKey>(Expression<Func<T, TKey>> keySelector)
             {
                 ExpressionQueryOrderByResolver.ResolveOrderByDescending(_schematic, _expressionQuerySql, keySelector);
             }
 
-            public void ResolveMax()
+            public void Max()
             {
                 _expressionQuerySql.MarkAsMaxStatement();
             }
 
-            public void ResolveAny()
+            public void Any()
             {
                 _expressionQuerySql.MarkAsExistsStatement();
             }
 
-            public void ResolveCount()
+            public void Count()
             {
                 _expressionQuerySql.MarkAsCountStatement();
             }
 
-            public void ResolveMin()
+            public void Min()
             {
                 _expressionQuerySql.MarkAsMinStatement();
             }
@@ -1005,12 +1042,12 @@ namespace OR_M_Data_Entities.Data
                 ExpressionQuerySelectResolver.ResolveSelectAll(_schematic, _expressionQuerySql);
             }
 
-            public void ResolveForeignKeyJoins()
+            public void ForeignKeyJoins()
             {
                 ExpressionQueryJoinResolver.ResolveForeignKeyJoins(_schematic, _expressionQuerySql);
             }
 
-            public void MakeDistinct()
+            public void Distinct()
             {
                 _expressionQuerySql.MarkAsSelectDistinct();
             }
@@ -1039,7 +1076,7 @@ namespace OR_M_Data_Entities.Data
                     OrderByPrimaryKeys();
 
                     // resolve the foreign key joins
-                    ResolveForeignKeyJoins();
+                    ForeignKeyJoins();
                 }
 
                 // generate out sql statement
@@ -1048,7 +1085,7 @@ namespace OR_M_Data_Entities.Data
 
             public void IncludeAll()
             {
-                var nextOrdinal = _getNextOrdinal();
+                var nextOrdinal = _schematic.NextOrdinal();
                 var mappedTables = _schematic.MappedTables.Where(w => !w.IsIncluded).ToList();
 
                 // also need to select the columns
@@ -1057,14 +1094,6 @@ namespace OR_M_Data_Entities.Data
                     nextOrdinal += mappedTable.SelectAll(nextOrdinal);
                     mappedTable.Include();
                 }
-            }
-
-            private int _getNextOrdinal()
-            {
-                return
-                    _schematic.MappedTables.Where(w => w.SelectedColumns.Any())
-                        .Select(w => w.SelectedColumns.Select(x => x.Ordinal).Max())
-                        .Max() + 1;
             }
 
             public void Include(string tableName)
@@ -1106,7 +1135,7 @@ namespace OR_M_Data_Entities.Data
                 var actualTableName = _getActualTableName(tableName);
                 var attribute = _getTableAttributeName(tableName);
                 var searchList = new List<IDataLoadSchematic> { _schematic.DataLoadSchematic };
-                var nextOrdinal = _getNextOrdinal();
+                var nextOrdinal = _schematic.NextOrdinal();
 
                 // find the reference then select backwards
                 for (var i = 0; i < searchList.Count; i++)
@@ -1171,7 +1200,7 @@ namespace OR_M_Data_Entities.Data
                         w => w.MappedTable.Table.PlainTableName == tableName && w.MappedTable.Key == attributeName);
             }
 
-            public IExpressionQuery<TResult> ResolveJoin<TOuter, TInner, TKey, TResult>(
+            public IExpressionQuery<TResult> Join<TOuter, TInner, TKey, TResult>(
                 IExpressionQuery<TOuter> outer,
                 IExpressionQuery<TInner> inner,
                 Expression<Func<TOuter, TKey>> outerKeySelector,
@@ -1180,7 +1209,7 @@ namespace OR_M_Data_Entities.Data
                 JoinType joinType)
             {
                 // make sure the current schematic has the inner type, if not make
-                // a temporary schematic
+                // a temporary schematic, should almost always happen
                 if (!_schematic.HasTable(typeof (TInner)))
                 {
                     var types = new List<Type> {typeof (TOuter), typeof (TInner)};
@@ -1739,15 +1768,13 @@ namespace OR_M_Data_Entities.Data
 
                 if (found == null || !found.IsIncluded)
                 {
-                    throw new OrderByException(string.Format("Cannot order by {0} from {1}, {1} is not part of the query.", tableAndColumnName.ColumnName, tableAndColumnName.TableName));
+                    throw new OrderByException(string.Format("Cannot order by {0} from {1}, {1} is not part of the query.", tableAndColumnName.DatabaseColumnName, tableAndColumnName.TableName));
                 }
             }
         }
 
         private class ExpressionQuerySelectResolver : ExpressionQueryResolverBase
         {
-            public static Expression ReturnObject { get; private set; }
-
             public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
             {
                 _resolve(schematic, expressionQuerySql, expressionQuery.Body);
@@ -1758,22 +1785,11 @@ namespace OR_M_Data_Entities.Data
                 _resolve(schematic, expressionQuerySql, expressionQuery.Body);
             }
 
-            //Expression<Func<TOuter, TInner, TResult>>
             private static void _resolve(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql, Expression expression)
             {
                 expressionQuerySql.From(schematic.MappedTables[0]);
 
-                ReturnObject = null;
-
-                var columns = _evaluate(expression as dynamic, schematic);
-
-                // only format the columns if they are not empty
-                if (!string.IsNullOrEmpty(columns))
-                {
-                    columns = string.Format("{0}\r\n", columns.TrimEnd('\n').TrimEnd('\r').TrimEnd(','));
-                }
-
-                expressionQuerySql.SetColumns(columns);
+                _evaluate(expression as dynamic, schematic);
             }
 
             public static IExpressionQuery<TResultType> ChangeExpressionQueryGenericType<TSourceType, TResultType>(IExpressionQuery<TSourceType> source)
@@ -1804,34 +1820,6 @@ namespace OR_M_Data_Entities.Data
                 return instance;
             }
 
-            private static object _getPropertyValue(object entity, string propertyName)
-            {
-                var property = entity.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
-
-                return property.GetValue(entity);
-            }
-
-            private static object _getStaticPropertyValue(object entity, Type baseType, string propertyName)
-            {
-                var property = baseType.GetProperty(propertyName, BindingFlags.Static | BindingFlags.NonPublic);
-
-                return property.GetValue(entity);
-            }
-
-            private static object _getEventValue(object entity, string propertyName)
-            {
-                var e = entity.GetType().GetEvent(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
-
-                return e.GetRaiseMethod();
-            }
-
-            private static object _getPropertyValue(object entity, Type type, string propertyName)
-            {
-                var property = type.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.NonPublic);
-
-                return property.GetValue(entity);
-            }
-
             public static void ResolveSelectAll(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
             {
                 expressionQuerySql.From(schematic.MappedTables[0]);
@@ -1849,60 +1837,67 @@ namespace OR_M_Data_Entities.Data
                 expressionQuerySql.SetColumns(result.TrimEnd('\r').TrimEnd(','));
             }
 
-            private static string _evaluate(MemberInitExpression expression, IQuerySchematic schematic)
+            private static void _evaluate(MemberInitExpression expression, IQuerySchematic schematic)
             {
                 var sql = _getSql(expression, schematic);
 
                 sql = sql.Replace(expression.ToString(), sql);
 
-                ReturnObject = expression;
-
-                return sql;
             }
 
-            private static string _evaluate(NewExpression expression, IQuerySchematic schematic)
+            private static void _evaluate(NewExpression expression, IQuerySchematic schematic)
             {
-                var sql = string.Empty;
+                // exclude all mapped tables
+                schematic.UnSelectAll();
+                schematic.SetReturnOverride(expression);
 
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
-                    var argument = expression.Arguments[i];
-                    var member = expression.Members[i];
+                    // from the base table
+                    var argument = (MemberExpression)expression.Arguments[i];
 
                     var tableAndColumnName = LoadColumnAndTableName((dynamic)argument, schematic);
-                    var tableAndColmnNameSql = SelectUtilities.GetTableAndColumnNameWithAlias(tableAndColumnName, member.Name);
 
-                    sql = string.Concat(sql, SelectUtilities.GetSqlSelectColumn(tableAndColmnNameSql));
+                    // find our table
+                    var table = schematic.FindTable(argument.Expression.Type);
+
+                    // select the column
+                    var nextOrdinal = schematic.NextOrdinal();
+
+                    // if the column is not in the table then its a reference to a autoload property
+                    if (!table.HasColumn(tableAndColumnName.PropertyName))
+                    {
+                        table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
+
+                        // include the table in the selection
+                        table.Include();
+
+                        // select all from the table
+                        table.SelectAll(nextOrdinal);
+                        continue;
+                    }
+
+                    // include the table
+                    table.Include();
+
+                    table.Select(tableAndColumnName.PropertyName, nextOrdinal);
                 }
-
-                sql = sql.Replace(expression.ToString(), sql);
-
-                ReturnObject = expression;
-
-                return sql;
             }
 
-            private static string _evaluate(ParameterExpression expression, IQuerySchematic schematic)
+            private static void _evaluate(ParameterExpression expression, IQuerySchematic schematic)
             {
                 // comes from select.  We should do a select * from the parameter that is being passed in
                 var table = schematic.FindTable(expression.Type);
 
                 // exclude all mapped tables
-                foreach (var mappedTable in schematic.MappedTables)
-                {
-                    mappedTable.Clear();
-                    mappedTable.Exclude();
-                }
+                schematic.UnSelectAll();
 
                 // include only the selected table
                 table.Include();
                 table.SelectAll(0);
-
-                // return an empty string so SelectAll() will be called
-                return string.Empty;
             }
 
-            private static string _evaluate(MemberExpression expression, IQuerySchematic schematic)
+            private static void _evaluate(MemberExpression expression, IQuerySchematic schematic)
             {
                 var tableAndColumnName = LoadColumnAndTableName(expression, schematic);
                 var tableAndColumnNameSql = tableAndColumnName.GetTableAndColumnName();
@@ -1910,8 +1905,6 @@ namespace OR_M_Data_Entities.Data
                 var sql = expression.ToString();
 
                 sql = sql.Replace(sql, SelectUtilities.GetSqlSelectColumn(tableAndColumnNameSql));
-
-                return sql;
             }
 
             private static string _getSql(MemberInitExpression expression, IQuerySchematic schematic)
@@ -2224,7 +2217,7 @@ namespace OR_M_Data_Entities.Data
                     tableName = ((MemberExpression)expression.Expression).Member.Name;
                 }
 
-                return new TableColumnContainer(tableName, columnName, alias);
+                return new TableColumnContainer(tableName, columnName, alias, expression.Member.Name);
             }
 
             protected static TableColumnContainer LoadColumnAndTableName(MethodCallExpression expression, IQuerySchematic schematic)
@@ -2266,20 +2259,23 @@ namespace OR_M_Data_Entities.Data
         {
             public readonly string TableName;
 
-            public readonly string ColumnName;
+            public readonly string DatabaseColumnName;
 
             public readonly string Alias;
 
-            public TableColumnContainer(string tableName, string columnName, string alias)
+            public readonly string PropertyName;
+
+            public TableColumnContainer(string tableName, string columnName, string alias, string propertyName)
             {
                 TableName = tableName;
-                ColumnName = columnName;
+                DatabaseColumnName = columnName;
                 Alias = alias;
+                PropertyName = propertyName;
             }
 
             public string GetTableAndColumnName()
             {
-                return string.Format("[{0}].[{1}]", Alias, ColumnName);
+                return string.Format("[{0}].[{1}]", Alias, DatabaseColumnName);
             }
         }
         #endregion

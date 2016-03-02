@@ -44,6 +44,10 @@ namespace OR_M_Data_Entities.Data.Definition
 
         void OrderByPrimaryKeys();
 
+        int MaxOrdinal();
+
         IMappedTable OrderByPrimaryKeysInline();
+
+        bool HasColumn(string propertyName);
     }
 }
