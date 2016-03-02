@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Expressions;
 using OR_M_Data_Entities.Mapping;
@@ -486,7 +487,7 @@ namespace OR_M_Data_Entities.Data
                     ActualType = actualType;
                     PropertyName = propertyName;
                     PrimaryKeyNames = ReflectionCacheTable.GetPrimaryKeyNames(type).ToArray();
-                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
+                    LoadedCompositePrimaryKeys = new HashSet<CompositeKey>();
                     Children = new HashSet<IDataLoadSchematic>();
                     MappedTable = mappedTable;
                     Parent = parent;
@@ -499,7 +500,7 @@ namespace OR_M_Data_Entities.Data
 
                 public string[] PrimaryKeyNames { get; private set; }
 
-                public LoadedCompositeKeys LoadedCompositePrimaryKeys { get; private set; }
+                public HashSet<CompositeKey> LoadedCompositePrimaryKeys { get; private set; }
 
                 public object ReferenceToCurrent { get; set; }
 
@@ -515,7 +516,7 @@ namespace OR_M_Data_Entities.Data
 
                 public void ClearRowReadCache()
                 {
-                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
+                    LoadedCompositePrimaryKeys = new HashSet<CompositeKey>();
 
                     var toClear = new List<IDataLoadSchematic>();
 
@@ -534,7 +535,7 @@ namespace OR_M_Data_Entities.Data
 
                 public void ClearLoadedCompositePrimaryKeys()
                 {
-                    LoadedCompositePrimaryKeys = new LoadedCompositeKeys();
+                    LoadedCompositePrimaryKeys = new HashSet<CompositeKey>();
                 }
             }
 

@@ -8,7 +8,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using OR_M_Data_Entities.Data.Loading;
 
 namespace OR_M_Data_Entities.Data.Definition
 {
@@ -22,7 +22,7 @@ namespace OR_M_Data_Entities.Data.Definition
 
         string[] PrimaryKeyNames { get; }
 
-        LoadedCompositeKeys LoadedCompositePrimaryKeys { get; }
+        HashSet<CompositeKey> LoadedCompositePrimaryKeys { get; }
 
         object ReferenceToCurrent { get; set; }
 
@@ -39,62 +39,5 @@ namespace OR_M_Data_Entities.Data.Definition
         void ClearRowReadCache();
 
         void ClearLoadedCompositePrimaryKeys();
-    }
-
-    public class LoadedCompositeKeys
-    {
-        private readonly HashSet<CompositeKey> _internal;
-
-        public LoadedCompositeKeys()
-        {
-            _internal = new HashSet<CompositeKey>();
-        }
-
-        public void Add(CompositeKey key)
-        {
-            _internal.Add(key);
-        }
-
-        public bool Contains(CompositeKey key)
-        {
-            return _internal.Contains(key);
-        }
-    }
-
-    public class CompositeKey : IEquatable<CompositeKey>
-    {
-        public CompositeKey(string compositeKey, int[] ordinals)
-        {
-            Value = compositeKey;
-            OrdinalCompositeHashCode = ordinals.Aggregate(0, (current, next) => current + next.GetHashCode());
-        }
-
-        public readonly string Value;
-
-        public readonly int OrdinalCompositeHashCode;
-
-        public bool Equals(CompositeKey other)
-        {
-            //Check whether the compared object is null.
-            if (ReferenceEquals(other, null)) return false;
-
-            //Check whether the compared object references the same data.
-            if (ReferenceEquals(this, other)) return true;
-
-            //Check whether the products' properties are equal.
-            return Value == other.Value &&
-                   OrdinalCompositeHashCode == other.OrdinalCompositeHashCode;
-        }
-
-        // If Equals() returns true for a pair of objects 
-        // then GetHashCode() must return the same value for these objects.
-        public override int GetHashCode()
-        {
-            var hashKey = Value.GetHashCode();
-
-            var hashOrdinals = OrdinalCompositeHashCode.GetHashCode();
-
-            return hashKey ^ hashOrdinals;
-        }
     }
 }

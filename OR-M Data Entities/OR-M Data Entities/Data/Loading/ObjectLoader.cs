@@ -12,7 +12,7 @@ using System.Linq;
 using System.Reflection;
 using OR_M_Data_Entities.Mapping;
 
-namespace OR_M_Data_Entities.Data
+namespace OR_M_Data_Entities.Data.Loading
 {
 
     public static class ObjectLoader
