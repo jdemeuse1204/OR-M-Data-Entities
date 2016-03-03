@@ -29,7 +29,7 @@ namespace OR_M_Data_Entities.Data
     public abstract partial class Database : IDisposable
     {
         #region Properties
-        protected delegate void OnSqlGenerated(string sql);
+        protected delegate void OnSqlGenerated(string sql, List<SqlDbParameter> parameters);
 
         protected event OnSqlGenerated OnSqlGeneration;
 
@@ -101,7 +101,7 @@ namespace OR_M_Data_Entities.Data
                     _connection.Open();
                     return;
                 case ConnectionState.Connecting:
-                    throw new Exception(string.Format(errorMessage,"Connecting to database"));
+                    throw new Exception(string.Format(errorMessage, "Connecting to database"));
 
                 case ConnectionState.Executing:
                     throw new Exception(string.Format(errorMessage, "Executing Query"));
@@ -183,9 +183,9 @@ namespace OR_M_Data_Entities.Data
         #region Execution
         protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
-            if (OnSqlGeneration != null) OnSqlGeneration(sql);
-
             _preprocessExecution();
+
+            if (OnSqlGeneration != null) OnSqlGeneration(sql, parameters);
 
             // clean the command text because the query will run slower 
             // with returns, tabs, and new line characters
@@ -213,8 +213,15 @@ namespace OR_M_Data_Entities.Data
 
             _command = plan.BuildSqlCommand(_connection);
 
-            // for use to return the sql that is generated
-            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText);
+            var parameters = new List<SqlDbParameter>();
+
+            for (var i = 0; i < _command.Parameters.Count; i++)
+            {
+                var parameter = _command.Parameters[i];
+                parameters.Add(new SqlDbParameter(parameter.ParameterName, parameter.Value));
+            }
+
+            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText, parameters);
 
             Reader = new PeekDataReader(_command, _connection);
         }
@@ -264,9 +271,9 @@ namespace OR_M_Data_Entities.Data
             var insertKeyProperties = Configuration.InsertKeys.GetType().GetProperties().ToList();
 
             foreach (var insertKeyProperty in from insertKeyProperty in insertKeyProperties
-                let value = insertKeyProperty.GetValue(Configuration.InsertKeys)
-                where value == null || ((ICollection) value).Count == 0
-                select insertKeyProperty)
+                                              let value = insertKeyProperty.GetValue(Configuration.InsertKeys)
+                                              where value == null || ((ICollection)value).Count == 0
+                                              select insertKeyProperty)
             {
                 throw new Exception(string.Format(errorMessage, insertKeyProperty.Name));
             }
@@ -418,16 +425,16 @@ namespace OR_M_Data_Entities.Data
 
                 if (typeof(T) == typeof(object)) return ToDynamic();
 
-                       // if its an anonymous type, use the correct loader
-                return typeof(T).IsAnonymousType() ? _getObjectFromAnonymous<T>(_schematic) : 
-                    
-                        // load the data traditionally by looking for database column names
+                // if its an anonymous type, use the correct loader
+                return typeof(T).IsAnonymousType() ? _getAnonymousObjectFromReader<T>(_schematic) :
+
+                       // load the data traditionally by looking for database column names
                        _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
 
                        // if the payload has foreign keys, use the foreign key loader
                        : _schematic.AreForeignKeysSelected() ? _getObjectFromReaderWithForeignKeys<T>()
 
-                       // default if all are false... this should never happen TODO
+                       // default if all are false
                        : _getObjectFromReader<T>();
             }
 
@@ -441,60 +448,6 @@ namespace OR_M_Data_Entities.Data
 
                 // set the table on load if possible
                 DatabaseSchematic.TrySetPristineEntity(instance);
-
-                return instance;
-            }
-
-            private T _getObjectFromAnonymous<T>(IQuerySchematic schematic)
-            {
-                // return override will always be new expression here
-                var expression = (NewExpression)schematic.ReturnOverride;
-                var parameters = new Queue<object>();
-
-                for (var i = 0; i < expression.Arguments.Count; i++)
-                {
-                    // from the base table
-                    var argument = (MemberExpression)expression.Arguments[i];
-
-                    var columnName = argument.Member.Name;
-
-                    // find our table
-                    var table = schematic.FindTable(argument.Expression.Type);
-
-                    ISelectedColumn column;
-
-                    // if the column is not in the table then its a reference to a autoload property
-                    if (!table.HasColumn(columnName))
-                    {
-                        // create the object then load it here
-                        var instance = _createObjectForAnonymousInstance(((PropertyInfo) argument.Member).PropertyType,
-                            schematic);
-
-                        parameters.Enqueue(instance);
-                        continue;
-                    }
-
-                    table = schematic.FindTable(argument.Expression.Type);
-
-                    column = table.SelectedColumns.First(w => w.Column.PropertyName == columnName);
-
-                    parameters.Enqueue(this[column.Ordinal]);
-                }
-
-                return (T)Activator.CreateInstance(typeof(T), parameters);
-            }
-
-            private object _createObjectForAnonymousInstance(Type typeToCreate, IQuerySchematic schematic)
-            {
-                var instance = Activator.CreateInstance(typeToCreate);
-                var table = schematic.FindTable(typeToCreate);
-
-                foreach (var selectedColumn in table.SelectedColumns)
-                {
-                    var value = this[selectedColumn.Ordinal];
-
-                    ObjectLoader.SetPropertyInfoValue(instance, selectedColumn.Column.PropertyName, value);
-                }
 
                 return instance;
             }
@@ -603,6 +556,149 @@ namespace OR_M_Data_Entities.Data
                 return dataLoadSchematic.MappedTable.SelectedColumns.Where(w => w.Column.IsPrimaryKey).Select(w => w.Ordinal).OrderBy(w => w).ToArray();
             }
 
+            private object _createObjectForAnonymousInstance(Type typeToCreate, IQuerySchematic schematic)
+            {
+                var instance = Activator.CreateInstance(typeToCreate);
+                var table = schematic.FindTable(typeToCreate);
+
+                foreach (var selectedColumn in table.SelectedColumns)
+                {
+                    var value = this[selectedColumn.Ordinal];
+
+                    ObjectLoader.SetPropertyInfoValue(instance, selectedColumn.Column.PropertyName, value);
+                }
+
+                return instance;
+            }
+
+            private T _createAnonymousObject<T>(IQuerySchematic schematic, out Type baseType)
+            {
+                // return override will always be new expression here
+                var expression = (NewExpression)schematic.ReturnOverride;
+
+                // parameters list for the constructor
+                var parameters = new object[expression.Arguments.Count];
+
+                baseType = null;
+
+                for (var i = 0; i < expression.Arguments.Count; i++)
+                {
+                    // from the base table
+                    var argument = (MemberExpression)expression.Arguments[i];
+
+                    // find our table
+                    var table = schematic.FindTable(argument.Expression.Type);
+
+                    // grab the column from our table
+                    var column = table.SelectedColumns.FirstOrDefault(w => w.Column.PropertyName == argument.Member.Name);
+
+                    // if the column is not in the table then its a reference to a autoload property
+                    if (column == null)
+                    {
+                        var propertyType = ((PropertyInfo) argument.Member).PropertyType;
+
+                        // check to see if its a list
+                        if (propertyType.IsList())
+                        {
+                            // list will never exist here, create it
+                            var list = Activator.CreateInstance(propertyType);
+
+                            var listItem = _createObjectForAnonymousInstance(propertyType.GetUnderlyingType(), schematic);
+
+                            _add(list, listItem);
+
+                            parameters[i] = list;
+                            continue;
+                        }
+
+                        // create the object then load it here
+                        var instance = _createObjectForAnonymousInstance(propertyType, schematic);
+
+                        parameters[i] = instance;
+                        continue;
+                    }
+
+                    // set the base type
+                    if (baseType == null) baseType = argument.Expression.Type;
+
+                    parameters[i] = this[column.Ordinal];
+                }
+
+                return (T)Activator.CreateInstance(typeof(T), parameters);
+            }
+
+            private void _loadAnonymousChildObject(IQuerySchematic schematic, object instance)
+            {
+                // return override will always be new expression here
+                var expression = (NewExpression)schematic.ReturnOverride;
+
+                for (var i = 0; i < expression.Arguments.Count; i++)
+                {
+                    // from the base table
+                    var argument = (MemberExpression)expression.Arguments[i];
+
+                    // find our table
+                    var table = schematic.FindTable(argument.Expression.Type);
+
+                    // grab the column from our table
+                    var column = table.SelectedColumns.FirstOrDefault(w => w.Column.PropertyName == argument.Member.Name);
+
+                    var type = ((PropertyInfo) argument.Member).PropertyType;
+
+                    // different from other loader, only thing left here to load should be a list
+                    if (column != null || !type.IsList()) continue;
+
+                    var propertyName = expression.Members[i].Name;
+
+                    // list will already exist
+                    var list = instance.GetType().GetProperty(propertyName).GetValue(instance);
+
+                    // create our list item
+                    var listItem = _createObjectForAnonymousInstance(type.GetUnderlyingType(), schematic);
+
+                    _add(list, listItem);
+                }
+            }
+
+            private int[] _getOrdinalsForAnonymousFromType(Type type, IQuerySchematic schematic)
+            {
+                // find our table
+                var table = schematic.FindTable(type);
+
+                // get the pks if they exist
+                var pks = table.SelectedColumns.Where(w => w.Column.IsPrimaryKey).ToList();
+
+                return pks.Any()
+                    ? pks.Select(w => w.Ordinal).ToArray() // get composite key if any pks selected
+                    : table.SelectedColumns.Select(w => w.Ordinal).ToArray(); // get composite key of all columns
+            }
+
+            // similar to the foreign key object loader
+            private T _getAnonymousObjectFromReader<T>(IQuerySchematic schematic)
+            {
+                // base type of the query
+                Type baseType;
+
+                // Create anonymous instance and get the base type
+                var instance = _createAnonymousObject<T>(schematic, out baseType);
+
+                var pkOrdinals = _getOrdinalsForAnonymousFromType(baseType, schematic);
+
+                // if key of object is in selection grab it otherwise grab all columns and make a composite
+                var compareKey = _compositeKeyValue(pkOrdinals);
+
+                // only thing left to load is if we have a list attached to the 
+                // anonymous instance.  Loop through rows and load the anonymous instance
+                while (Peek() && _compareKey(compareKey, pkOrdinals) && Read()) _loadAnonymousChildObject(schematic, instance);
+
+                // Rows with a PK from the initial object are done loading.  
+                // Clear Schematics, selected columns, and ordered columns
+                // clear is recursive and will clear all children
+                _schematic.ClearReadCache();
+
+                return instance;
+            }
+
             private void _loadObjectWithForeignKeys(object startingInstance)
             {
                 // after this method is completed we need to make sure we can read the next set.  This method should go in a loop
@@ -708,7 +804,7 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            private void _add(object list, object valueToAdd)
+            private static void _add(object list, object valueToAdd)
             {
                 list.GetType().GetMethod("Add").Invoke(list, new[] { valueToAdd });
             }

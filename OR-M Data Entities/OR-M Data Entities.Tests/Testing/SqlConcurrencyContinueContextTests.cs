@@ -860,6 +860,18 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(DefaultTestsESTOff.Test_70(_ctx));
         }
+
+        [TestMethod]
+        public void Test_ConcurrencyContinue_142()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_71(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_ConcurrencyContinue_143()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_72(_ctx));
+        }
         #endregion
     }
 }

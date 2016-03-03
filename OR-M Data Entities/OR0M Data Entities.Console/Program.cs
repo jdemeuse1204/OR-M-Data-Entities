@@ -6,6 +6,7 @@ using System.IO;
 using System.Xml;
 using System.Xml.Schema;
 using OR_M_Data_Entities;
+using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Scripts.Base;
@@ -26,12 +27,12 @@ namespace OR0M_Data_Entities.Console
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
-            //OnSqlGeneration += OnOnSqlGeneration;
+            OnSqlGeneration += OnOnSqlGeneration;
         }
 
-        private void OnOnSqlGeneration(string sql)
+        private void OnOnSqlGeneration(string sql, List<SqlDbParameter> parameters)
         {
-            return;
+            //return;
             using (var writetext = File.AppendText("C:\\users\\jdemeuse\\desktop\\OR-M Sql.txt"))
             {
                 writetext.WriteLine(sql);
@@ -74,6 +75,43 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new SqlContext();
 
+
+            // when inserting into half the object we get an error with transactions, 
+            // becauser we do not have the whole object, we need it
+            var c1 = context.Find<Contact>(1);
+
+            c1.Appointments.Add(new Appointment
+            {
+                Description = "Appointment 1000",
+                IsScheduled = false,
+                Address = new List<Address>
+                {
+                    new Address
+                    {
+                        Addy = "Some Street",
+                        State = new StateCode
+                        {
+                            Value = "MN"
+                        },
+                        ZipCode = new List<Zip>
+                        {
+                            new Zip
+                            {
+                                Zip4 = "5412",
+                                Zip5 = "55555"
+                            },
+                            new Zip
+                            {
+                                Zip5 = "12345"
+                            }
+                        }
+                    }
+                }
+            });
+
+            // TODO: this errors, fix it!
+            context.SaveChanges(c1);
+
             //var sedfsdf = context.From<Zip>()
             //    .InnerJoin(context.From<StateCode>(),
             //        contact => contact.ID,
@@ -103,11 +141,13 @@ namespace OR0M_Data_Entities.Console
             //var tt = context.Find<Contact>(1);
             var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
             {
-                w.ContactID,
+                ID = w.ContactID,
                 w.CreatedByUserID,
                 w.FirstName,
-                w.Number
-            }).FirstOrDefault();
+                w.Number,
+                w.Appointments,
+                w.Number.PhoneType
+            }).ToList();
 
             var e = DateTime.Now;
 
@@ -122,8 +162,6 @@ namespace OR0M_Data_Entities.Console
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
-
-            var c1 = context.Find<Contact>(1);
 
             if (sdgf != null)
             {

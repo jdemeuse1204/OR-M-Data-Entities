@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using OR_M_Data_Entities.Tests.Tables;
 using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff;
 using OR_M_Data_Entities.Tests.Testing.Context;
@@ -54,6 +55,52 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 return item.Id == "COOL";
             }
             catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_3(TransactionContext ctx)
+        {
+            // test with EST on and off
+            try
+            {
+                var c1 = ctx.Find<Contact>(1);
+
+                c1.Appointments.Add(new Appointment
+                {
+                    Description = "AppointmentING!STUFF",
+                    IsScheduled = false,
+                    Address = new List<Address>
+                    {
+                        new Address
+                        {
+                            Addy = "Some Street",
+                            State = new StateCode
+                            {
+                                Value = "MN"
+                            },
+                            ZipCode = new List<Zip>
+                            {
+                                new Zip
+                                {
+                                    Zip4 = "5412",
+                                    Zip5 = "55555"
+                                },
+                                new Zip
+                                {
+                                    Zip5 = "12345"
+                                }
+                            }
+                        }
+                    }
+                });
+
+                ctx.SaveChanges(c1);
+
+                return true;
+            }
+            catch (Exception ex)
             {
                 return false;
             }

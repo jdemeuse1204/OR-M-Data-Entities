@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OR_M_Data_Entities.Tests.Testing.Base;
 using OR_M_Data_Entities.Tests.Testing.BaseESTOff;
 using OR_M_Data_Entities.Tests.Testing.BaseESTOn;
 using OR_M_Data_Entities.Tests.Testing.Context;
@@ -858,6 +859,24 @@ namespace OR_M_Data_Entities.Tests.Testing
         public void Test_Transaction_141()
         {
             Assert.IsTrue(DefaultTestsESTOff.Test_70(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_Transaction_142()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_71(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_Transaction_143()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_72(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_Transaction_144()
+        {
+            Assert.IsTrue(OtherTests.Test_3(_ctx));
         }
         #endregion
     }

@@ -1,12 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using OR_M_Data_Entities.Data.Definition;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
 {
     public static class ContextMembers
     {
-        public static void OnOnSqlGeneration(string sql)
+        public static void OnOnSqlGeneration(string sql, List<SqlDbParameter> parameters)
         {
             const string path = "C:\\users\\jdemeuse\\desktop\\OR-M Data Entities Tests\\";
             var fileName = string.Format("OR-M Sql_{0}.txt", DateTime.Now.ToString("MM-dd-yyyy"));

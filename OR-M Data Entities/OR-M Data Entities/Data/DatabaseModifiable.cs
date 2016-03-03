@@ -122,7 +122,7 @@ namespace OR_M_Data_Entities.Data
 
             public void Add(ModificationEntity entity)
             {
-                _internal.Add(new Reference(entity, _nextAlias()));
+                _internal.Add(new Reference(entity, NextAlias()));
             }
 
             public void AddOneToManySaveReference(ForeignKeyAssociation association, TableFactory tableCache, object value, bool isDeleting = false)
@@ -167,10 +167,10 @@ namespace OR_M_Data_Entities.Data
 
             private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
             {
-                _internal.Insert(index, new Reference(entity, _nextAlias(), tableCache, configuration, association, isDeleting));
+                _internal.Insert(index, new Reference(entity, NextAlias(), tableCache, configuration, association, isDeleting));
             }
 
-            private string _nextAlias()
+            public string NextAlias()
             {
                 return string.Format("Tbl{0}", _internal.Count);
             }
@@ -298,9 +298,8 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static ReferenceMap GetReferenceMap(ModificationEntity entity, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
+            public static void BuildReferenceMap(ModificationEntity entity, ReferenceMap map, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
             {
-                var result = new ReferenceMap(configuration);
                 var entities = _getForeignKeys(entity.Value);
 
                 entities.Insert(0, new ForeignKeyAssociation(null, entity.Value, null));
@@ -356,7 +355,7 @@ namespace OR_M_Data_Entities.Data
                     if (i == 0)
                     {
                         // is the base entity, will never have a parent, set it and continue to the next entity
-                        result.Add(entity);
+                        map.Add(entity);
                         continue;
                     }
 
@@ -371,7 +370,7 @@ namespace OR_M_Data_Entities.Data
                         {
                             // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                             // the value property
-                            result.AddOneToManySaveReference(e, tableCache, item, isDeleting);
+                            map.AddOneToManySaveReference(e, tableCache, item, isDeleting);
 
                             // add any dependencies
                             if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
@@ -382,14 +381,13 @@ namespace OR_M_Data_Entities.Data
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
-                        result.AddOneToOneSaveReference(e, tableCache, isDeleting);
+                        map.AddOneToOneSaveReference(e, tableCache, isDeleting);
 
                         // add any dependencies
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
                     }
                 }
 
-                return result;
             }
         }
 
@@ -476,6 +474,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region shared
+
         private class SqlPartStatement : ISqlPartStatement
         {
             public SqlPartStatement(string sql, string declare = null, string set = null)
@@ -536,10 +535,10 @@ namespace OR_M_Data_Entities.Data
             {
                 // build the sql package
                 var package = GetBuilder();
-
+                
                 // generate the sql command
                 var command = new SqlCommand(CleanSqlCommandText(package.GetSql()), connection);
-
+                
                 // insert the parameters
                 package.InsertParameters(command);
 

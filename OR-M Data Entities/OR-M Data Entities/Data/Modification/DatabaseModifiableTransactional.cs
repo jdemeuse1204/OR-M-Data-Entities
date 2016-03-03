@@ -247,7 +247,7 @@ namespace OR_M_Data_Entities.Data
                 var package = GetBuilder();
 
                 // generate the sql command
-                var command = new SqlCommand(CleanSqlCommandText(package.GetSql()), connection);
+                var command = new SqlCommand(package.GetSql(), connection);
 
                 // insert the parameters
                 package.InsertParameters(command);
@@ -688,12 +688,14 @@ IF @@TRANCOUNT > 0
         {
             try
             {
+                var referenceMap = new ReferenceMap(Configuration);
                 var actions = new List<UpdateType>();
-                var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
+                var parent = new ModificationEntity(entity, referenceMap.NextAlias(), Configuration, DbTableFactory);
                 var changeManager = new ChangeManager();
-
+                
                 // get all items to save and get them in order
-                var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, false);
+                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, false);
+
                 var parameters = new List<SqlSecureQueryParameter>();
                 var plan = new SqlTransactionPlan(referenceMap, parameters);
 
@@ -767,11 +769,13 @@ IF @@TRANCOUNT > 0
 
         private IPersistResult _deleteUsingTransactions<T>(T entity) where T : class
         {
+            var referenceMap = new ReferenceMap(Configuration);
             var actions = new List<UpdateType>();
-            var parent = new ModificationEntity(entity, string.Empty, Configuration, DbTableFactory);
+            var parent = new ModificationEntity(entity, referenceMap.NextAlias(), Configuration, DbTableFactory);
 
             // get all items to save and get them in order
-            var referenceMap = EntityMapper.GetReferenceMap(parent, Configuration, DbTableFactory, true);
+            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, true);
+
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);
             var changeManager = new ChangeManager();

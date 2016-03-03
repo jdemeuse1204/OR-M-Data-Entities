@@ -1175,7 +1175,6 @@ namespace OR_M_Data_Entities.Data
                 _context.Disconnect();
             }
 
-
             private string _getActualTableName(string tableName)
             {
                 if (!tableName.Contains("[")) return tableName;
@@ -1787,6 +1786,9 @@ namespace OR_M_Data_Entities.Data
 
             private static void _resolve(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql, Expression expression)
             {
+                // we will be selecting new columns, unselect everything
+                schematic.UnSelectAll();
+
                 expressionQuerySql.From(schematic.MappedTables[0]);
 
                 _evaluate(expression as dynamic, schematic);
@@ -1853,34 +1855,7 @@ namespace OR_M_Data_Entities.Data
 
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
-                    // from the base table
-                    var argument = (MemberExpression)expression.Arguments[i];
-
-                    var tableAndColumnName = LoadColumnAndTableName((dynamic)argument, schematic);
-
-                    // find our table
-                    var table = schematic.FindTable(argument.Expression.Type);
-
-                    // select the column
-                    var nextOrdinal = schematic.NextOrdinal();
-
-                    // if the column is not in the table then its a reference to a autoload property
-                    if (!table.HasColumn(tableAndColumnName.PropertyName))
-                    {
-                        table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
-
-                        // include the table in the selection
-                        table.Include();
-
-                        // select all from the table
-                        table.SelectAll(nextOrdinal);
-                        continue;
-                    }
-
-                    // include the table
-                    table.Include();
-
-                    table.Select(tableAndColumnName.PropertyName, nextOrdinal);
+                    _evaluate((MemberExpression)expression.Arguments[i], schematic);
                 }
             }
 
@@ -1899,12 +1874,31 @@ namespace OR_M_Data_Entities.Data
 
             private static void _evaluate(MemberExpression expression, IQuerySchematic schematic)
             {
-                var tableAndColumnName = LoadColumnAndTableName(expression, schematic);
-                var tableAndColumnNameSql = tableAndColumnName.GetTableAndColumnName();
+                var tableAndColumnName = LoadColumnAndTableName((dynamic)expression, schematic);
 
-                var sql = expression.ToString();
+                // find our table
+                var table = schematic.FindTable(expression.Expression.Type);
 
-                sql = sql.Replace(sql, SelectUtilities.GetSqlSelectColumn(tableAndColumnNameSql));
+                // select the column
+                var nextOrdinal = schematic.NextOrdinal();
+
+                // if the column is not in the table then its a reference to a autoload property
+                if (!table.HasColumn(tableAndColumnName.PropertyName))
+                {
+                    table = schematic.FindTable(((PropertyInfo)expression.Member).PropertyType.GetUnderlyingType());
+
+                    // include the table in the selection
+                    table.Include();
+
+                    // select all from the table
+                    table.SelectAll(nextOrdinal);
+                    return;
+                }
+
+                // include the table
+                table.Include();
+
+                table.Select(tableAndColumnName.PropertyName, nextOrdinal);
             }
 
             private static string _getSql(MemberInitExpression expression, IQuerySchematic schematic)

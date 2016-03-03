@@ -1236,7 +1236,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             try
             {
                 // previous issue
-                var count = ctx.From<Contact>().Where(w => w.FirstName.Contains("James")).Count(w => w.LastName.Contains("Use"));
+                var count = ctx.From<Contact>().Where(w => w.FirstName.Contains("Test")).Count(w => w.LastName.Contains("Use"));
 
                 return count > 0;
             }
@@ -2736,7 +2736,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             try
             {
                 // previous issue
-                var count = ctx.From<Contact>().Where(w => w.FirstName.Contains("James")).Count(w => w.LastName.Contains("Use"));
+                var count = ctx.From<Contact>().Where(w => w.FirstName.Contains("Test")).Count(w => w.LastName.Contains("Use"));
 
                 return count > 0;
             }
@@ -2905,6 +2905,35 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             }
         }
 
+        public static bool Test_71(DbSqlContext ctx)
+        {
+            var t = ctx.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
+            {
+                ID = w.ContactID,
+                w.CreatedByUserID,
+                w.FirstName,
+                w.Number,
+                w.Appointments,
+                w.Number.PhoneType
+            }).ToList();
+
+            return t != null;
+        }
+
+        public static bool Test_72(DbSqlContext ctx)
+        {
+            var t = ctx.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
+            {
+                ID = w.ContactID,
+                w.CreatedByUserID,
+                w.FirstName,
+                w.Number,
+                w.Appointments,
+                w.Number.PhoneType
+            }).FirstOrDefault();
+
+            return t != null;
+        }
 
 
         #region helpers
