@@ -445,12 +445,6 @@ namespace OR_M_Data_Entities.Data
                 return instance;
             }
 
-            private static string _getColumnName(MemberExpression expression, IQuerySchematic schematic)
-            {
-                var columnAttribute = expression.Member.GetCustomAttribute<ColumnAttribute>();
-                return columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
-            }
-
             private T _getObjectFromAnonymous<T>(IQuerySchematic schematic)
             {
                 // return override will always be new expression here
@@ -462,7 +456,7 @@ namespace OR_M_Data_Entities.Data
                     // from the base table
                     var argument = (MemberExpression)expression.Arguments[i];
 
-                    var tableAndColumnName = _getColumnName((dynamic)argument, schematic);
+                    var columnName = argument.Member.Name;
 
                     // find our table
                     var table = schematic.FindTable(argument.Expression.Type);
@@ -470,24 +464,39 @@ namespace OR_M_Data_Entities.Data
                     ISelectedColumn column;
 
                     // if the column is not in the table then its a reference to a autoload property
-                    if (!table.HasColumn(tableAndColumnName))
+                    if (!table.HasColumn(columnName))
                     {
-                        table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
+                        // create the object then load it here
+                        var instance = _createObjectForAnonymousInstance(((PropertyInfo) argument.Member).PropertyType,
+                            schematic);
 
-                        column = table.SelectedColumns.First(w => w.Column.DatabaseColumnName == tableAndColumnName);
-
-                        parameters.Enqueue(this[column.Ordinal]);
+                        parameters.Enqueue(instance);
                         continue;
                     }
 
-                    table = schematic.FindTable(((PropertyInfo)argument.Member).PropertyType);
+                    table = schematic.FindTable(argument.Expression.Type);
 
-                    column = table.SelectedColumns.First(w => w.Column.DatabaseColumnName == tableAndColumnName);
+                    column = table.SelectedColumns.First(w => w.Column.PropertyName == columnName);
 
                     parameters.Enqueue(this[column.Ordinal]);
                 }
 
                 return (T)Activator.CreateInstance(typeof(T), parameters);
+            }
+
+            private object _createObjectForAnonymousInstance(Type typeToCreate, IQuerySchematic schematic)
+            {
+                var instance = Activator.CreateInstance(typeToCreate);
+                var table = schematic.FindTable(typeToCreate);
+
+                foreach (var selectedColumn in table.SelectedColumns)
+                {
+                    var value = this[selectedColumn.Ordinal];
+
+                    ObjectLoader.SetPropertyInfoValue(instance, selectedColumn.Column.PropertyName, value);
+                }
+
+                return instance;
             }
 
             private bool _loadObjectFromSchematic(object instance, IDataLoadSchematic schematic)
