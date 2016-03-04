@@ -49,6 +49,10 @@ namespace OR_M_Data_Entities.Data
 
         #endregion
 
+        #region Thread Management
+        private readonly object _modificationLock = new object();
+        #endregion
+
         #region Constructor
 
         protected DatabaseModifiable(string connectionStringOrName)
@@ -62,20 +66,31 @@ namespace OR_M_Data_Entities.Data
 
         public virtual IPersistResult SaveChanges<T>(T entity) where T : class
         {
-            return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
+            lock (_modificationLock)
+            {
+                return Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity);
+            }
         }
 
         public virtual List<IPersistResult> SaveChanges<T>(List<T> entities) where T : class
         {
-            return
-                entities.Select(
-                    entity => Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity))
-                    .ToList();
+            lock (_modificationLock)
+            {
+
+                return
+                    entities.Select(
+                        entity =>
+                            Configuration.UseTransactions ? _saveChangesUsingTransactions(entity) : _saveChanges(entity))
+                        .ToList();
+            }
         }
 
         public virtual List<IPersistResult> SaveChanges<T>(IEnumerable<T> entities) where T : class
         {
-            return SaveChanges(entities.ToList());
+            lock (_modificationLock)
+            {
+                return SaveChanges(entities.ToList());
+            }
         }
         #endregion
 
@@ -83,20 +98,29 @@ namespace OR_M_Data_Entities.Data
 
         public virtual IPersistResult Delete<T>(T entity) where T : class
         {
-            return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
+            lock (_modificationLock)
+            {
+                return Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity);
+            }
         }
 
         public virtual List<IPersistResult> Delete<T>(List<T> entities) where T : class
         {
-            return
-                entities.Select(
-                    entity => Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity))
-                    .ToList();
+            lock (_modificationLock)
+            {
+                return
+                    entities.Select(
+                        entity => Configuration.UseTransactions ? _deleteUsingTransactions(entity) : _delete(entity))
+                        .ToList();
+            }
         }
 
         public virtual List<IPersistResult> Delete<T>(IEnumerable<T> entities) where T : class
         {
-            return Delete(entities.ToList());
+            lock (_modificationLock)
+            {
+                return Delete(entities.ToList());
+            }
         }
         #endregion
 
@@ -238,9 +262,20 @@ namespace OR_M_Data_Entities.Data
 
             public readonly Link Link;
 
+            public object GetChildPropertyValue()
+            {
+                if (Value == null) return null;
+
+                var property = Value.GetType().GetProperty(Link.ChildPropertyName);
+
+                if (property == null) throw new Exception(string.Format("Reference Node: Could not find property {0} on child", Link.ChildPropertyName));
+
+                return property.GetValue(Value);
+            }
+
             public string GetOutputFieldValue()
             {
-                return string.Format("(SELECT TOP 1 {0} FROM @{1})", Link.ChildPropertyName, Alias);
+                return string.Format("(SELECT TOP 1 {0} FROM @{1})", Link.ChildColumnName, Alias);
             }
         }
 

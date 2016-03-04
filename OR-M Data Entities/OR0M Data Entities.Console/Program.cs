@@ -27,7 +27,7 @@ namespace OR0M_Data_Entities.Console
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
-            OnSqlGeneration += OnOnSqlGeneration;
+            //OnSqlGeneration += OnOnSqlGeneration;
         }
 
         private void OnOnSqlGeneration(string sql, List<SqlDbParameter> parameters)
@@ -75,79 +75,18 @@ namespace OR0M_Data_Entities.Console
         {
             var context = new SqlContext();
 
-
-            // when inserting into half the object we get an error with transactions, 
-            // becauser we do not have the whole object, we need it
-            var c1 = context.Find<Contact>(1);
-
-            c1.Appointments.Add(new Appointment
-            {
-                Description = "Appointment 1000",
-                IsScheduled = false,
-                Address = new List<Address>
-                {
-                    new Address
-                    {
-                        Addy = "Some Street",
-                        State = new StateCode
-                        {
-                            Value = "MN"
-                        },
-                        ZipCode = new List<Zip>
-                        {
-                            new Zip
-                            {
-                                Zip4 = "5412",
-                                Zip5 = "55555"
-                            },
-                            new Zip
-                            {
-                                Zip5 = "12345"
-                            }
-                        }
-                    }
-                }
-            });
-
-            // TODO: this errors, fix it!
-            context.SaveChanges(c1);
-
-            //var sedfsdf = context.From<Zip>()
-            //    .InnerJoin(context.From<StateCode>(),
-            //        contact => contact.ID,
-            //        appointment => appointment.ID,
-            //        (contact, appointment) => appointment).FirstOrDefault();
-            //context.From<Contact>()
-            //    .Where(w => w.ContactID == 1)
-            //    .Select(w => new Test
-            //    {
-            //        Id = w.CreatedByUserID,
-            //        Phone = w.Number.Phone,
-            //        Item = new Test2
-            //        {
-            //            FirstName = w.FirstName,
-            //            TestingId = w.ContactID
-            //        }
-            //    });
-
-            //    .Where(w => w.ContactID == w.Appointments.First(q => q.ID == Guid.Empty).ContactID);
-            //var sdfsdf = context.From<Contact>().IncludeTo("Appointments").FirstOrDefault(w => w.ContactID == 1);
-
-            // sdfsdf.FirstName = "James";
-
-            //context.SaveChanges(sdfsdf);
-
             var s = DateTime.Now;
-            //var tt = context.Find<Contact>(1);
-            var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
-            {
-                ID = w.ContactID,
-                w.CreatedByUserID,
-                w.FirstName,
-                w.Number,
-                w.Appointments,
-                w.Number.PhoneType
-            }).ToList();
+            var tt = context.Find<Contact>(1);
+            //var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
+            //{
+            //    ID = w.ContactID,
+            //    w.CreatedByUserID,
+            //    w.FirstName,
+            //    w.Number,
+            //    w.Appointments,
+            //    w.Number.PhoneType
+            //}).ToList();
+            //var ttt = context.From<Contact>().IncludeAll().ToList();
 
             var e = DateTime.Now;
 

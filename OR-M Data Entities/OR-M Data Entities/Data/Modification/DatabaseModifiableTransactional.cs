@@ -18,6 +18,7 @@ using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
 using OR_M_Data_Entities.Exceptions;
+using OR_M_Data_Entities.Tracking;
 
 // ReSharper disable once CheckNamespace
 namespace OR_M_Data_Entities.Data
@@ -76,7 +77,7 @@ namespace OR_M_Data_Entities.Data
             public override ISqlPartStatement Split()
             {
                 var outputStatement = string.Concat(Output.TrimEnd(','), string.Format(" INTO @{0}", _tableAlias));
-                var columns =  Output.Replace("[INSERTED].", string.Empty);
+                var columns = Output.Replace("[INSERTED].", string.Empty);
                 var selectBackStatement = string.Format("\rSELECT TOP 1 {0} FROM @{1}", columns.TrimEnd(','), _tableAlias);
 
                 // need output so we can see how many rows were updated.  Needed for concurrency checking
@@ -107,7 +108,7 @@ namespace OR_M_Data_Entities.Data
                                 SQL_CONCURRENCY_VIOLATION_ERROR_SEVERITY,
 
                                 SQL_CONCURRENCY_VIOLATION_ERROR_STATE,
-                                
+
                                 selectBackStatement));
                     }
                     else
@@ -516,7 +517,22 @@ IF @@TRANCOUNT > 0
 
                 if (node != null)
                 {
-                    // grab the reference from the other table
+                    // grab the reference from the other table only if:
+                    // 1 - Only if table has changes
+                    // if table has no changes it will not be in the output, we need to add parameter for its id
+                    // if EST is off the table will always have changes
+                    var entityStateTrackableNode = node.Value as EntityStateTrackable;
+
+                    if (entityStateTrackableNode != null && entityStateTrackableNode.GetState() == EntityState.UnChanged)
+                    {
+                        // parameter key
+                        var entityStateValue = node.GetChildPropertyValue();
+                        var entityStateData = AddParameter(item, entityStateValue);
+
+                        ((TransactionInsertContainer)container).AddValue(entityStateData);
+                        return;
+                    }
+
                     ((TransactionInsertContainer)container).AddValue(node.GetOutputFieldValue());
                     return;
                 }
@@ -692,7 +708,7 @@ IF @@TRANCOUNT > 0
                 var actions = new List<UpdateType>();
                 var parent = new ModificationEntity(entity, referenceMap.NextAlias(), Configuration, DbTableFactory);
                 var changeManager = new ChangeManager();
-                
+
                 // get all items to save and get them in order
                 EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, false);
 
@@ -804,7 +820,7 @@ IF @@TRANCOUNT > 0
 
             // check to see if the rows were deleted or not
             // also disconnects connection
-            _getActionsTaken(referenceMap, actions);     
+            _getActionsTaken(referenceMap, actions);
 
             if (OnAfterSave != null) OnAfterSave(entity, UpdateType.TransactionalSave);
 

@@ -98,7 +98,7 @@ namespace OR_M_Data_Entities.Data
             public void AddOutput(IModificationItem item)
             {
                 _output = string.Concat(_output, item.AsOutput(","));
-                _outputColumnsOnly = string.Concat(_outputColumnsOnly, item.AsFieldPropertyName(","));
+                _outputColumnsOnly = string.Concat(_outputColumnsOnly, item.AsField(","));
             }
 
             public void AddSetGenerationItem(IModificationItem item, out string key)
@@ -299,7 +299,7 @@ namespace OR_M_Data_Entities.Data
                 // varbinary so we can insert it into the table variable and read it back
                 var sqlDataTypeString = item.DbTranslationType == SqlDbType.Timestamp ? string.Format("{0}(MAX)", SqlDbType.VarBinary) : item.SqlDataTypeString;
 
-                return string.Concat(tableVariables, string.Format("{0} {1},", item.PropertyName, sqlDataTypeString));
+                return string.Concat(tableVariables, string.Format("{0} {1},", item.DatabaseColumnName, sqlDataTypeString));
             }
         }
 
@@ -605,6 +605,11 @@ ELSE
                     if (item.IsPrimaryKey)
                     {
                         AddWhere(container, item);
+
+                        // if we are using transactions we need to select back primary keys 
+                        // they are used in subsequent queries
+                        if (Configuration.UseTransactions) AddOutput(container, item);
+
                         continue;
                     }
 
@@ -617,7 +622,6 @@ ELSE
 
                     // set the item to be updated
                     AddUpdate(container, item);
-
 
                     // check to see if concurrency checking is on
                     if (!Configuration.ConcurrencyChecking.IsOn) continue;

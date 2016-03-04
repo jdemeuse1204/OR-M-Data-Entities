@@ -310,6 +310,24 @@ namespace OR_M_Data_Entities.Data
                 parentTable.Relationships.Add(relationship);
             }
 
+            private string _getJoinBody(IMappedTable currentMappedTable, IMappedTable parentTable, string parentColumnName, string childColumnName)
+            {
+                var from = currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema);
+
+                if (!currentMappedTable.Table.IsUsingLinkedServer) return from;
+
+                const string body = "({0})";
+                const string distinctParentSelect = "(SELECT DISTINCT {0} FROM {1})";
+                const string linkedServerSelectConstraint = "SELECT {0} FROM {1} WHERE {2} IN {3}";
+                var columns = currentMappedTable.Table.Columns.Aggregate(string.Empty,
+                    (current, column) => string.Concat(current, string.Format("[{0}][{1}],", sdf, column.DatabaseColumnName))).TrimEnd(',');
+
+                return string.Format(body,
+                    string.Format(linkedServerSelectConstraint, columns, from, childColumnName,
+                        string.Format(distinctParentSelect, parentColumnName,
+                            parentTable.Table.ToString(TableNameFormat.SqlWithSchema))));
+            }
+
             private string _getRelationshipSql(IMappedTable currentMappedTable, IMappedTable parentTable, IColumn column,
                 RelationshipType relationshipType)
             {
@@ -317,8 +335,6 @@ namespace OR_M_Data_Entities.Data
                 string pskColumnName;
                 const string sql = "{0} JOIN {1} ON {2} = {3}";
                 const string tableColumn = "[{0}].[{1}]";
-                var alias = string.Format("{0} AS [{1}]", currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema),
-                    currentMappedTable.Alias);
                 var fkAttribute = column.GetCustomAttribute<ForeignKeyAttribute>();
                 var pskAttribute = column.GetCustomAttribute<PseudoKeyAttribute>();
 
@@ -339,7 +355,10 @@ namespace OR_M_Data_Entities.Data
                         var oneToOneChild = string.Format(tableColumn, currentMappedTable.Alias,
                             currentMappedTable.Table.GetPrimaryKeyName(0)); // fk attribute in child
 
-                        return string.Format(sql, joinType, alias, oneToOneChild, oneToOneParent);
+                        // grab the alias body
+                        var oneToOneAlias = string.Format("{0} AS [{1}]", _getJoinBody(currentMappedTable, parentTable, oneToOneChild, oneToOneChild), currentMappedTable.Alias);
+
+                        return string.Format(sql, joinType, oneToOneAlias, oneToOneChild, oneToOneParent);
                     case RelationshipType.OneToMany:
 
                         pskColumnName = pskAttribute == null ? string.Empty : pskAttribute.ChildTableColumnName;
@@ -352,7 +371,10 @@ namespace OR_M_Data_Entities.Data
                         var oneToManyChild = string.Format(tableColumn, currentMappedTable.Alias, columnName);
                         // fk attribute in parent... in other table
 
-                        return string.Format(sql, "LEFT", alias, oneToManyChild, oneToManyParent);
+                        // grab the alias body
+                        var oneToManyAlias = string.Format("{0} AS [{1}]", _getJoinBody(currentMappedTable, parentTable, oneToManyParent, oneToManyChild), currentMappedTable.Alias);
+
+                        return string.Format(sql, "LEFT", oneToManyAlias, oneToManyChild, oneToManyParent);
                     default:
                         throw new ArgumentOutOfRangeException("relationshipType");
                 }

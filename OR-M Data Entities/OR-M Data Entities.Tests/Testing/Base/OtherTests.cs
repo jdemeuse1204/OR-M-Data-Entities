@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using OR_M_Data_Entities.Tests.Tables;
 using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff;
+using OR_M_Data_Entities.Tests.Tables.Other;
 using OR_M_Data_Entities.Tests.Testing.Context;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
@@ -67,7 +68,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             {
                 var c1 = ctx.Find<Contact>(1);
 
-                c1.Appointments.Add(new Appointment
+                c1.Appointments.Add(new OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff.Appointment
                 {
                     Description = "AppointmentING!STUFF",
                     IsScheduled = false,
@@ -103,6 +104,67 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             catch (Exception ex)
             {
                 return false;
+            }
+        }
+
+        public static bool Test_4(TransactionContext ctx)
+        {
+            // test with EST on and off
+            try
+            {
+                var c1 = ctx.Find<Tables.EntityStateTrackableOn.Contact>(1);
+
+                c1.Appointments.Add(new Tables.EntityStateTrackableOn.Appointment
+                {
+                    Description = "AppointmentING!STUFF",
+                    IsScheduled = false,
+                    Address = new List<Tables.EntityStateTrackableOn.Address>
+                    {
+                        new Tables.EntityStateTrackableOn.Address
+                        {
+                            Addy = "Some Street",
+                            State = new Tables.EntityStateTrackableOn.StateCode
+                            {
+                                Value = "MN"
+                            },
+                            ZipCode = new List<Tables.EntityStateTrackableOn.Zip>
+                            {
+                                new Tables.EntityStateTrackableOn.Zip
+                                {
+                                    Zip4 = "5412",
+                                    Zip5 = "55555"
+                                },
+                                new Tables.EntityStateTrackableOn.Zip
+                                {
+                                    Zip5 = "12345"
+                                }
+                            }
+                        }
+                    }
+                });
+
+                ctx.SaveChanges(c1);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_5(DefaultContext ctx)
+        {
+            // test linked server join
+            try
+            {
+                var c1 = ctx.Find<Order>(1);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return true;
             }
         }
     }

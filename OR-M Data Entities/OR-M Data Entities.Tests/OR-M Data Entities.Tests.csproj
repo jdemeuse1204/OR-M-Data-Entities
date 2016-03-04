@@ -130,6 +130,7 @@
     <Compile Include="Tables\EntityStateTrackableOn\TryInsertUpdateWithGeneration.cs" />
     <Compile Include="Tables\EntityStateTrackableOn\User.cs" />
     <Compile Include="Tables\EntityStateTrackableOn\Zip.cs" />
+    <Compile Include="Tables\Other\LinkedServerTest.cs" />
     <Compile Include="Tables\Other\Policy_READONLY.cs" />
     <Compile Include="Tables\Other\PolicyInfo_READONLY.cs" />
     <Compile Include="Testing\Base\ConcurrencyTests.cs" />
