@@ -454,15 +454,19 @@ namespace OR_M_Data_Entities.Data
 
             private bool _loadObjectFromSchematic(object instance, IDataLoadSchematic schematic)
             {
+                // load the pks first so we can detect if the object doesnt exist.
                 ISelectedColumn currentColumn = null;
+                var isValueNull = false;
+                var orderedColumns = schematic.MappedTable.SelectedColumns.OrderByDescending(w => w.Column.IsPrimaryKey);
 
                 try
                 {
-                    foreach (var selectedColumn in schematic.MappedTable.SelectedColumns)
+                    foreach (var selectedColumn in orderedColumns)
                     {
                         currentColumn = selectedColumn;
                         var dbValue = this[selectedColumn.Ordinal];
                         var dbNullValue = dbValue as DBNull;
+                        isValueNull = dbNullValue != null;
 
                         // the rest of the object will be null.  No data exists for the object
                         if (selectedColumn.Column.IsPrimaryKey && dbNullValue != null) return false;
@@ -473,6 +477,16 @@ namespace OR_M_Data_Entities.Data
                 }
                 catch (InvalidCastException ex)
                 {
+                    // column needs to allow null values
+                    if (isValueNull)
+                    {
+                        throw new DataLoadException(
+                            string.Format("Column needs to allow null values.  Object Name: {0}. Column Name: {1}.",
+                                instance.GetType().Name,
+                                currentColumn == null ? string.Empty : currentColumn.Column.PropertyName),
+                            ex);
+                    }
+
                     throw new DataLoadException(
                         string.Format("Column is the incorrect type.  Object Name: {0}. Column Name: {1}.",
                             instance.GetType().Name,

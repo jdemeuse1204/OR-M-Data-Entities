@@ -155,10 +155,27 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
         public static bool Test_5(DefaultContext ctx)
         {
-            // test linked server join
+            // test linked server join, should not optimize this join because its
+            // from one linked server to another linked server table
             try
             {
                 var c1 = ctx.Find<Order>(1);
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return true;
+            }
+        }
+
+        public static bool Test_6(DefaultContext ctx)
+        {
+            // test linked server join, should optimize this join because its
+            // across servers
+            try
+            {
+                var c1 = ctx.Find<Test>(1);
 
                 return false;
             }

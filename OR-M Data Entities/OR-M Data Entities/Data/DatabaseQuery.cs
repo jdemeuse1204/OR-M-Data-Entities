@@ -310,21 +310,35 @@ namespace OR_M_Data_Entities.Data
                 parentTable.Relationships.Add(relationship);
             }
 
-            private string _getJoinBody(IMappedTable currentMappedTable, IMappedTable parentTable, string parentColumnName, string childColumnName)
+            private string _getOptimizedJoin(IMappedTable currentMappedTable, IMappedTable parentTable, string parentColumnName, string childColumnName)
             {
                 var from = currentMappedTable.Table.ToString(TableNameFormat.SqlWithSchema);
 
-                if (!currentMappedTable.Table.IsUsingLinkedServer) return from;
+                // we only want to optimize joins across a linked server table and a non linked server table
+                if (!currentMappedTable.Table.IsUsingLinkedServer ||
+                    (currentMappedTable.Table.IsUsingLinkedServer && parentTable.Table.IsUsingLinkedServer))
+                {
+                    return from;
+                }
 
                 const string body = "({0})";
                 const string distinctParentSelect = "(SELECT DISTINCT {0} FROM {1})";
                 const string linkedServerSelectConstraint = "SELECT {0} FROM {1} WHERE {2} IN {3}";
                 var columns = currentMappedTable.Table.Columns.Aggregate(string.Empty,
-                    (current, column) => string.Concat(current, string.Format("[{0}][{1}],", sdf, column.DatabaseColumnName))).TrimEnd(',');
+                    (current, column) =>
+                        string.Concat(current,
+                            string.Format("[{0}].[{1}],", column.Table.PlainTableName,
+                                column.DatabaseColumnName))).TrimEnd(',');
+
+                // need to trim off the alias so the where clase is valid
+                var childSplit = childColumnName.Split('.');
+                var childColumn = childSplit.Length == 2 ? childSplit[1] : childColumnName;
+                var parentSplit = parentColumnName.Split('.');
+                var parentColumn = parentSplit.Length == 2 ? parentSplit[1] : parentColumnName;
 
                 return string.Format(body,
-                    string.Format(linkedServerSelectConstraint, columns, from, childColumnName,
-                        string.Format(distinctParentSelect, parentColumnName,
+                    string.Format(linkedServerSelectConstraint, columns, from, childColumn,
+                        string.Format(distinctParentSelect, parentColumn,
                             parentTable.Table.ToString(TableNameFormat.SqlWithSchema))));
             }
 
@@ -353,10 +367,10 @@ namespace OR_M_Data_Entities.Data
                         var oneToOneParent = string.Format(tableColumn, parentTable.Alias, columnName);
                         // pk in parent
                         var oneToOneChild = string.Format(tableColumn, currentMappedTable.Alias,
-                            currentMappedTable.Table.GetPrimaryKeyName(0)); // fk attribute in child
+                            pskAttribute == null ? currentMappedTable.Table.GetPrimaryKeyName(0) : pskAttribute.ChildTableColumnName); // fk attribute in child
 
                         // grab the alias body
-                        var oneToOneAlias = string.Format("{0} AS [{1}]", _getJoinBody(currentMappedTable, parentTable, oneToOneChild, oneToOneChild), currentMappedTable.Alias);
+                        var oneToOneAlias = string.Format("{0} AS [{1}]", _getOptimizedJoin(currentMappedTable, parentTable, oneToOneParent, oneToOneChild), currentMappedTable.Alias);
 
                         return string.Format(sql, joinType, oneToOneAlias, oneToOneChild, oneToOneParent);
                     case RelationshipType.OneToMany:
@@ -367,12 +381,12 @@ namespace OR_M_Data_Entities.Data
                         columnName = _getAutoLoadChildDatabaseColumnName(currentMappedTable, fkAttribute, pskColumnName);
 
                         var oneToManyParent = string.Format(tableColumn, parentTable.Alias,
-                            parentTable.Table.GetPrimaryKeyName(0)); // pk in parent
+                            pskAttribute == null ? parentTable.Table.GetPrimaryKeyName(0) : pskAttribute.ParentTableColumnName); // pk in parent
                         var oneToManyChild = string.Format(tableColumn, currentMappedTable.Alias, columnName);
                         // fk attribute in parent... in other table
 
                         // grab the alias body
-                        var oneToManyAlias = string.Format("{0} AS [{1}]", _getJoinBody(currentMappedTable, parentTable, oneToManyParent, oneToManyChild), currentMappedTable.Alias);
+                        var oneToManyAlias = string.Format("{0} AS [{1}]", _getOptimizedJoin(currentMappedTable, parentTable, oneToManyParent, oneToManyChild), currentMappedTable.Alias);
 
                         return string.Format(sql, "LEFT", oneToManyAlias, oneToManyChild, oneToManyParent);
                     default:
