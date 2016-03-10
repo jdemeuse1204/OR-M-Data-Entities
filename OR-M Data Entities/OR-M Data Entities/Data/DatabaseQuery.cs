@@ -13,6 +13,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Loading;
@@ -1439,20 +1440,20 @@ namespace OR_M_Data_Entities.Data
                 if (item.NodeType == ExpressionType.Equal)
                 {
                     // check to see if the user is using (test == true) instead of (test)
-                    bool outLeft;
-                    if (WhereUtilities.IsLeftBooleanValue(item, out outLeft))
+                    bool outLeftValue;
+                    if (WhereUtilities.IsLeftBooleanValue(item, out outLeftValue))
                     {
                         sql = sql.Replace(replacementString,
-                            _getSql(item.Right as MethodCallExpression, expressionQuerySql, schematic, outLeft || isNotExpressionType));
+                            _getSql(item.Right, expressionQuerySql, schematic, outLeftValue || isNotExpressionType));
                         return;
                     }
 
                     // check to see if the user is using (test == true) instead of (test)
-                    bool outRight;
-                    if (WhereUtilities.IsRightBooleanValue(item, out outRight))
+                    bool outRightValue;
+                    if (WhereUtilities.IsRightBooleanValue(item, out outRightValue))
                     {
                         sql = sql.Replace(replacementString,
-                            _getSql(item.Left as MethodCallExpression, expressionQuerySql, schematic, outRight || isNotExpressionType));
+                            _getSql(item.Left, expressionQuerySql, schematic, outRightValue || isNotExpressionType));
                         return;
                     }
 
@@ -1679,17 +1680,27 @@ namespace OR_M_Data_Entities.Data
                     string.Format(comparison, inString.TrimEnd(',')));
             }
 
+            private static string _getSql(MemberExpression expression,
+                ExpressionQuerySqlResolutionContainer expressionQuerySql,
+                IQuerySchematic schematic,
+                bool isNotExpressionType)
+            {
+                var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
+                var value = isNotExpressionType;
+                var comparison = isNotExpressionType ? "!=" : "=";
+                string parameter;
+
+                expressionQuerySql.AddParameter(value, out parameter);
+
+                return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
+                    comparison, parameter);
+            }
+
             private static string _getSql(MethodCallExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
                 bool isNotExpressionType)
             {
-                //var isConverting =
-                //    expression.Arguments.Any(
-                //        w =>
-                //            w is MethodCallExpression &&
-                //            ((MethodCallExpression)w).Method.DeclaringType == typeof(DbTransform) &&
-                //            ((MethodCallExpression)w).Method.Name == "Convert");
                 var methodName = expression.Method.Name;
 
                 switch (methodName.ToUpper())
