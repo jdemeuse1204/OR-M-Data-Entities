@@ -10,6 +10,7 @@ using System;
 using System.Reflection;
 using OR_M_Data_Entities.Expressions.Query.Tables;
 using OR_M_Data_Entities.Expressions.Resolution.Base;
+using OR_M_Data_Entities.Extensions;
 using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Expressions.Query.Columns

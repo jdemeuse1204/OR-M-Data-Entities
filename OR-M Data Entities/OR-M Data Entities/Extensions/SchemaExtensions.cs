@@ -154,11 +154,6 @@ namespace OR_M_Data_Entities.Extensions
             return entityType.GetProperties().Count(w => w.GetCustomAttribute<ForeignKeyAttribute>() != null) > 0;
         }
 
-        public static bool HasForeignKeys(this TypeInfo entityType)
-        {
-            return entityType.UnderlyingSystemType.HasForeignKeys();
-        }
-
         public static bool HasForeignKeys(this object entity)
         {
             return entity.GetType().HasForeignKeys();
@@ -267,7 +262,7 @@ namespace OR_M_Data_Entities.Extensions
 
         public static bool IsColumn(this PropertyInfo info)
         {
-            var attributes = info.GetCustomAttributes();
+            var attributes = info.GetCustomAttributes(false);
 
             var isNonSelectable = attributes.Any(w => w is NonSelectableAttribute);
             var isPrimaryKey = attributes.Any(w => w is SearchablePrimaryKeyAttribute);
@@ -280,6 +275,52 @@ namespace OR_M_Data_Entities.Extensions
         {
             var properties = entity.GetType().GetProperties();
             return properties.Count(w => w.IsColumn()) == properties.Count(w => w.IsPrimaryKey());
+        }
+
+        public static T GetCustomAttribute<T>(this Type type)
+        {
+            var attributes = type.GetCustomAttributes(typeof(T), true);
+
+            return (T)attributes.FirstOrDefault();
+        }
+
+        public static T GetCustomAttribute<T>(this PropertyInfo property)
+        {
+            var attributes = property.GetCustomAttributes(typeof(T), true);
+
+            return (T)attributes.FirstOrDefault();
+        }
+
+        public static T GetCustomAttribute<T>(this MemberInfo property)
+        {
+            var attributes = property.GetCustomAttributes(typeof (T), true);
+
+            return (T)attributes.FirstOrDefault();
+        }
+
+        public static List<T> GetCustomAttributes<T>(this Type type)
+        {
+            return type.GetCustomAttributes(typeof(T),true).Cast<T>().ToList();
+        }
+
+        public static List<T> GetCustomAttributes<T>(this PropertyInfo property)
+        {
+            return property.GetCustomAttributes(typeof(T), true).Cast<T>().ToList();
+        }
+
+        public static List<T> GetCustomAttributes<T>(this MemberInfo property)
+        {
+            return property.GetCustomAttributes(typeof(T), true).Cast<T>().ToList();
+        }
+
+        public static object GetValue(this PropertyInfo property, object entity)
+        {
+            return property.GetValue(entity, null);
+        }
+
+        public static void SetValue(this PropertyInfo property, object entity, object value)
+        {
+            property.SetValue(entity, value, null);
         }
     }
 }

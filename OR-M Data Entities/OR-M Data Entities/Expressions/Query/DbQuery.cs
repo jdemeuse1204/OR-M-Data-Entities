@@ -13,6 +13,7 @@ using OR_M_Data_Entities.Data.Definition.Base;
 using OR_M_Data_Entities.Enumeration;
 using OR_M_Data_Entities.Expressions.Resolution;
 using OR_M_Data_Entities.Expressions.Resolution.SubQuery;
+using OR_M_Data_Entities.Extensions;
 
 namespace OR_M_Data_Entities.Expressions.Query
 {
