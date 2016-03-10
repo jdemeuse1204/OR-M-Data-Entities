@@ -97,7 +97,6 @@ namespace OR0M_Data_Entities.Console
             //context.SaveChanges(t);
 
             var sdsdfgf = context.From<Contact>().OrderByDescending(w => w.ContactID).Select(w => w.ContactID);
-
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
