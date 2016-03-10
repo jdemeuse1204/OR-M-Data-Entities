@@ -69,7 +69,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.SubQuery
 
         private static void _resolveFrom(Expression expression, IExpressionQueryResolvable baseQuery, ref object query, ref Type type)
         {
-            type = expression.Type.GenericTypeArguments[0];
+            type = expression.Type.GetGenericArguments()[0];
             var expressionQuery = typeof(ExpressionQueryResolvable<>);
             var creationType = expressionQuery.MakeGenericType(type);
 

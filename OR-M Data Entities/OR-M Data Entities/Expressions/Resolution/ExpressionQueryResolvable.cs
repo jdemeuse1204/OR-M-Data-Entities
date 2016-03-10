@@ -27,7 +27,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
     public class ExpressionQueryResolvable<T> : OrderedExpressionQuery<T>, IExpressionQueryResolvable
     {
         #region Properties
-        public IReadOnlyList<SqlDbParameter> Parameters
+        public IEnumerable<SqlDbParameter> Parameters
         {
             get { return WhereResolution.Parameters; }
         }

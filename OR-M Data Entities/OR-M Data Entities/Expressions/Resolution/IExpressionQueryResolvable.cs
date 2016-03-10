@@ -20,7 +20,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution
     {
         void ResolveExpression();
 
-        IReadOnlyList<SqlDbParameter> Parameters { get; }
+        IEnumerable<SqlDbParameter> Parameters { get; }
 
         ReadOnlyTableCollection Tables { get; }
 

@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
                 .GetValue(container) as List<SqlDbParameter>;
         }
 
-        public IReadOnlyList<IQueryPart> Resolutions { get { return _resolutions; } }
+        public IEnumerable<IQueryPart> Resolutions { get { return _resolutions; } }
         #endregion
 
         #region Fields
@@ -47,7 +47,7 @@ namespace OR_M_Data_Entities.Expressions.Resolution.Containers
         private List<IQueryPart> _resolutions;
 
         private List<SqlDbParameter> _parameters;
-        public IReadOnlyList<SqlDbParameter> Parameters { get { return _parameters; } }
+        public IEnumerable<SqlDbParameter> Parameters { get { return _parameters; } }
         #endregion
 
         #region Constructor
