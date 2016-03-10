@@ -874,13 +874,13 @@ namespace OR_M_Data_Entities.Tests.Testing
         }
 
         [TestMethod]
-        public void Test_Transaction_144()
+        public void Test_Default_144()
         {
             Assert.IsTrue(OtherTests.Test_5(_ctx));
         }
 
         [TestMethod]
-        public void Test_Transaction_145()
+        public void Test_Default_145()
         {
             Assert.IsTrue(OtherTests.Test_6(_ctx));
         }
