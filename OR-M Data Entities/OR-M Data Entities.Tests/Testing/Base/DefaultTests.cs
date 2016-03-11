@@ -2935,7 +2935,6 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             return t != null;
         }
 
-
         #region helpers
         protected static Policy _addPolicy(DbSqlContext ctx)
         {

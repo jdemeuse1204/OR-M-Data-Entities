@@ -136,6 +136,7 @@
     <Compile Include="Testing\Base\ConcurrencyTests.cs" />
     <Compile Include="Testing\Base\ContextMembers.cs" />
     <Compile Include="Testing\Base\DefaultTests.cs" />
+    <Compile Include="Testing\Base\LambdaResolverTests.cs" />
     <Compile Include="Testing\Base\LazyLoadTests.cs" />
     <Compile Include="Testing\Base\OtherTests.cs" />
     <Compile Include="Testing\Base\ScriptTests.cs" />
@@ -152,6 +153,7 @@
     <Compile Include="Testing\SqlConcurrencyGeneralContextTests.cs" />
     <Compile Include="Testing\SqlConcurrencyHandleContextTests.cs" />
     <Compile Include="Testing\SqlDefaultContextTests.cs" />
+    <Compile Include="Testing\SqlLambdaResolverTests.cs" />
     <Compile Include="Testing\SqlLazyLoadTests.cs" />
     <Compile Include="Testing\SqlScriptTests.cs" />
     <Compile Include="Testing\SqlTransactionContextTests.cs" />

@@ -9,6 +9,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -1303,7 +1304,9 @@ namespace OR_M_Data_Entities.Data
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic)
             {
-                _evaluate(expressionQuery.Body as dynamic, expressionQuerySql, schematic);
+                var sql = _evaluate(expressionQuery.Body as dynamic, expressionQuerySql, schematic);
+
+                expressionQuerySql.AddWhere(sql);
             }
 
             public static void ResolveFind(IMappedTable table,
@@ -1327,38 +1330,34 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            private static void _evaluate(MethodCallExpression expression,
+            private static string _evaluate(MethodCallExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic)
             {
                 // get the sql from the expression
                 var sql = WhereUtilities.GetSqlFromExpression(expression);
 
-                _processExpression(expression, expressionQuerySql, schematic, expression.ToString(), false, ref sql);
-
-                expressionQuerySql.AddWhere(sql);
+                return _processExpression(expression, expressionQuerySql, schematic, expression.ToString(), false, sql);
             }
 
-            private static void _evaluate(UnaryExpression expression,
+            private static string _evaluate(UnaryExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic)
             {
-                _evaluate(expression.Operand as dynamic, expressionQuerySql, schematic);
+                return _evaluate(expression.Operand as dynamic, expressionQuerySql, schematic);
             }
 
-            private static void _evaluate(MemberExpression expression,
+            private static string _evaluate(MemberExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic)
             {
                 // get the sql from the expression
                 var sql = WhereUtilities.GetSqlFromExpression(expression);
 
-                _processExpression(expression, expressionQuerySql, schematic, expression.ToString(), false, ref sql);
-
-                expressionQuerySql.AddWhere(sql);
+                return _processExpression(expression, expressionQuerySql, schematic, expression.ToString(), false, sql);
             }
 
-            private static void _evaluate(BinaryExpression expression,
+            private static string _evaluate(BinaryExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic)
             {
@@ -1383,12 +1382,12 @@ namespace OR_M_Data_Entities.Data
                         // expression is embedded inside of it
                         if (e.NodeType == ExpressionType.Not)
                         {
-                            _processNotExpression(e, expressionQuerySql, schematic, replacementString, ref sql);
+                            sql = _processNotExpression(e, expressionQuerySql, schematic, replacementString, sql);
                             continue;
                         }
 
                         // process normal expression
-                        _processExpression(e, expressionQuerySql, schematic, replacementString, false, ref sql);
+                        sql = _processExpression(e, expressionQuerySql, schematic, replacementString, false, sql);
                         continue;
                     }
 
@@ -1396,45 +1395,47 @@ namespace OR_M_Data_Entities.Data
                     expressions.Add(((BinaryExpression)e).Right);
                 }
 
-                expressionQuerySql.AddWhere(sql);
+                return sql;
             }
 
-            private static void _processNotExpression(dynamic item,
+            private static string _processNotExpression(dynamic item,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
                 string replacementString,
-                ref string sql)
+                string expressionString)
             {
                 var unaryExpression = item as UnaryExpression;
 
                 if (unaryExpression != null)
                 {
-                    _processExpression(unaryExpression.Operand, expressionQuerySql, schematic, replacementString, true, ref sql);
-                    return;
+                    return _processExpression(unaryExpression.Operand, expressionQuerySql, schematic, replacementString, true, expressionString);
                 }
 
                 var binaryExpression = item as BinaryExpression;
 
                 if (binaryExpression != null)
                 {
-                    _processExpression(binaryExpression, expressionQuerySql, schematic, replacementString, true, ref sql);
-                    return;
+                    return _processExpression(binaryExpression, expressionQuerySql, schematic, replacementString, true, expressionString);
                 }
 
                 throw new Exception(string.Format("Expression Type not valid.  Type: {0}", item.NodeType));
             }
 
-            private static void _processExpression(dynamic item,
+            private static string _processExpression(dynamic item,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
                 string replacementString,
                 bool isNotExpressionType,
-                ref string sql)
+                string expressionString)
             {
+                var memberExpression = item as MemberExpression;
+
                 if (item.NodeType == ExpressionType.Call)
                 {
-                    sql = sql.Replace(replacementString, _getSql(item as MethodCallExpression, expressionQuerySql, schematic, isNotExpressionType));
-                    return;
+                    // try and evaluate the expression to get the internal value
+                    var expressionValue = GetValue(item);
+
+                    return expressionString.Replace(replacementString, _getSql(item as MethodCallExpression, expressionQuerySql, schematic, isNotExpressionType, expressionValue));
                 }
 
                 if (item.NodeType == ExpressionType.Equal)
@@ -1443,23 +1444,24 @@ namespace OR_M_Data_Entities.Data
                     bool outLeftValue;
                     if (WhereUtilities.IsLeftBooleanValue(item, out outLeftValue))
                     {
-                        sql = sql.Replace(replacementString,
-                            _getSql(item.Right, expressionQuerySql, schematic, outLeftValue || isNotExpressionType));
-                        return;
+                        var booleanValue = WhereUtilities.GetBooleanValueFromExpression(item.Left);
+
+                        return expressionString.Replace(replacementString,
+                            _getSql(item.Right, expressionQuerySql, schematic, isNotExpressionType, booleanValue));
                     }
 
                     // check to see if the user is using (test == true) instead of (test)
                     bool outRightValue;
                     if (WhereUtilities.IsRightBooleanValue(item, out outRightValue))
                     {
-                        sql = sql.Replace(replacementString,
-                            _getSql(item.Left, expressionQuerySql, schematic, outRightValue || isNotExpressionType));
-                        return;
+                        var booleanValue = WhereUtilities.GetBooleanValueFromExpression(item.Right);
+
+                        return expressionString.Replace(replacementString,
+                            _getSql(item.Left, expressionQuerySql, schematic, isNotExpressionType, booleanValue));
                     }
 
-                    sql = sql.Replace(replacementString,
+                    return expressionString.Replace(replacementString,
                         _getSqlEquals(item as BinaryExpression, expressionQuerySql, schematic, isNotExpressionType));
-                    return;
                 }
 
                 if (item.NodeType == ExpressionType.GreaterThan ||
@@ -1470,17 +1472,15 @@ namespace OR_M_Data_Entities.Data
                     // check to see the order the user typed the statement
                     if (WhereUtilities.IsConstant(item.Left))
                     {
-                        sql = sql.Replace(replacementString,
+                        return expressionString.Replace(replacementString,
                             _getSqlGreaterThanLessThan(item as BinaryExpression, expressionQuerySql, schematic, isNotExpressionType, item.NodeType));
-                        return;
                     }
 
                     // check to see the order the user typed the statement
                     if (WhereUtilities.IsConstant(item.Right))
                     {
-                        sql = sql.Replace(replacementString,
+                        return expressionString.Replace(replacementString,
                             _getSqlGreaterThanLessThan(item as BinaryExpression, expressionQuerySql, schematic, isNotExpressionType, item.NodeType));
-                        return;
                     }
 
                     throw new Exception("invalid comparison");
@@ -1489,8 +1489,13 @@ namespace OR_M_Data_Entities.Data
                 // double negative check will go into recursive check
                 if (item.NodeType == ExpressionType.Not)
                 {
-                    _processNotExpression(item, expressionQuerySql, schematic, replacementString, ref sql);
-                    return;
+                    return _processNotExpression(item, expressionQuerySql, schematic, replacementString, expressionString);
+                }
+
+                if (memberExpression != null)
+                {
+                    return expressionString.Replace(replacementString,
+                            _getSql(memberExpression, expressionQuerySql, schematic, isNotExpressionType, true));
                 }
 
                 throw new ArgumentNullException(item.NodeType);
@@ -1616,14 +1621,14 @@ namespace OR_M_Data_Entities.Data
             private static string _getSqlEquality(MethodCallExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
-                bool isNotExpressionType)
+                bool isNotExpressionType,
+                object expressionValue)
             {
                 var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
-                var value = GetValue(expression as dynamic);
                 var comparison = isNotExpressionType ? "!=" : "=";
                 string parameter;
 
-                expressionQuerySql.AddParameter(value, out parameter);
+                expressionQuerySql.AddParameter(expressionValue, out parameter);
 
                 return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
@@ -1633,14 +1638,14 @@ namespace OR_M_Data_Entities.Data
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
                 bool isNotExpressionType,
-                bool isStartsWith)
+                bool isStartsWith,
+                object expressionValue)
             {
                 var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
-                var value = GetValue(expression as dynamic);
                 var comparison = isNotExpressionType ? "NOT LIKE" : "LIKE";
                 string parameter;
 
-                expressionQuerySql.AddParameter(string.Format(isStartsWith ? "{0}%" : "%{0}", value), out parameter);
+                expressionQuerySql.AddParameter(string.Format(isStartsWith ? "{0}%" : "%{0}", expressionValue), out parameter);
 
                 return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
@@ -1649,11 +1654,11 @@ namespace OR_M_Data_Entities.Data
             private static string _getSqlContains(MethodCallExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
-                bool isNotExpressionType)
+                bool isNotExpressionType,
+                object expressionValue)
             {
                 var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
-                var value = GetValue(expression);
-                var isEnumerable = IsEnumerable(value.GetType());
+                var isEnumerable = IsEnumerable(expressionValue.GetType());
                 var comparison = isEnumerable
                     ? (isNotExpressionType ? "NOT IN ({0})" : "IN ({0})")
                     : (isNotExpressionType ? "NOT LIKE" : "LIKE");
@@ -1661,14 +1666,14 @@ namespace OR_M_Data_Entities.Data
                 if (!isEnumerable)
                 {
                     string containsParameter;
-                    expressionQuerySql.AddParameter(string.Format("%{0}%", value), out containsParameter);
+                    expressionQuerySql.AddParameter(string.Format("%{0}%", expressionValue), out containsParameter);
 
                     return string.Format("{0} {1} {2}", aliasAndColumnName.GetTableAndColumnName(), comparison, containsParameter);
                 }
 
                 var inString = string.Empty;
 
-                foreach (var item in ((ICollection)value))
+                foreach (var item in ((ICollection)expressionValue))
                 {
                     string inParameter;
                     expressionQuerySql.AddParameter(item, out inParameter);
@@ -1683,23 +1688,25 @@ namespace OR_M_Data_Entities.Data
             private static string _getSql(MemberExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
-                bool isNotExpressionType)
+                bool isNotExpressionType,
+                object expressionValue)
             {
                 var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
-                var value = isNotExpressionType;
                 var comparison = isNotExpressionType ? "!=" : "=";
                 string parameter;
 
-                expressionQuerySql.AddParameter(value, out parameter);
+                expressionQuerySql.AddParameter(expressionValue, out parameter);
 
                 return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
             }
 
+            // in order for this to work we need expressionValue even though its never used 
             private static string _getSql(MethodCallExpression expression,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
-                bool isNotExpressionType)
+                bool isNotExpressionType,
+                object expressionValue)
             {
                 var methodName = expression.Method.Name;
 
@@ -1707,17 +1714,39 @@ namespace OR_M_Data_Entities.Data
                 {
                     case "EQUALS":
                     case "OP_EQUALITY":
-                        return _getSqlEquality(expression, expressionQuerySql, schematic, isNotExpressionType);
+                        return _getSqlEquality(expression, expressionQuerySql, schematic, isNotExpressionType, expressionValue);
                     case "CONTAINS":
-                        return _getSqlContains(expression, expressionQuerySql, schematic, isNotExpressionType);
+                        return _getSqlContains(expression, expressionQuerySql, schematic, isNotExpressionType, expressionValue);
                     case "STARTSWITH":
-                        return _getSqlStartsEndsWith(expression, expressionQuerySql, schematic, isNotExpressionType, true);
+                        return _getSqlStartsEndsWith(expression, expressionQuerySql, schematic, isNotExpressionType, true, expressionValue);
                     case "ENDSWITH":
-                        return _getSqlStartsEndsWith(expression, expressionQuerySql, schematic, isNotExpressionType, false);
+                        return _getSqlStartsEndsWith(expression, expressionQuerySql, schematic, isNotExpressionType, false, expressionValue);
+                    case "ANY":
+                        return _getSqlFromAny(expression, expressionQuerySql, schematic);
                 }
 
                 throw new Exception(string.Format("Method does not translate into Sql.  Method Name: {0}",
                     methodName));
+            }
+
+            private static string _getSqlFromAny(MethodCallExpression expression, ExpressionQuerySqlResolutionContainer expressionQuerySql, IQuerySchematic schematic)
+            {
+                // first argument is the table, after that are the arguments to be compiled
+                for (var i = 0; i < expression.Arguments.Count; i++)
+                {
+                    var argument = expression.Arguments[i];
+
+                    // subquery, nothing to do on the first argument
+                    if (i == 0) continue;
+
+                    var lambdaExpression = argument as LambdaExpression;
+
+                    if (lambdaExpression != null) return _evaluate(lambdaExpression.Body as dynamic, expressionQuerySql, schematic);
+
+                    throw new Exception("Subquery expression not recognized");
+                }
+
+                throw new Exception("Invalid subquery");
             }
 
             private static TableColumnContainer _getTableAliasAndColumnName(BinaryExpression expression, IQuerySchematic schematic)
@@ -2054,6 +2083,18 @@ namespace OR_M_Data_Entities.Data
                 return false;
             }
 
+            public static bool? GetBooleanValueFromExpression(Expression expression)
+            {
+                var e = expression as ConstantExpression;
+
+                if (e != null && e.Value is bool)
+                {
+                    return (bool)e.Value;
+                }
+
+                return null;
+            }
+
             public static bool IsConstant(Expression expression)
             {
                 var constant = expression as ConstantExpression;
@@ -2077,10 +2118,10 @@ namespace OR_M_Data_Entities.Data
             {
                 var finalExpressionTypes = new[]
                 {
-                        ExpressionType.Equal, ExpressionType.Call, ExpressionType.Lambda, ExpressionType.Not,
-                        ExpressionType.GreaterThan, ExpressionType.GreaterThanOrEqual, ExpressionType.LessThan,
-                        ExpressionType.LessThanOrEqual
-                    };
+                    ExpressionType.Equal, ExpressionType.Call, ExpressionType.Lambda, ExpressionType.Not,
+                    ExpressionType.GreaterThan, ExpressionType.GreaterThanOrEqual, ExpressionType.LessThan,
+                    ExpressionType.LessThanOrEqual, ExpressionType.MemberAccess,
+                };
 
                 return finalExpressionTypes.Contains(expressionType);
             }
@@ -2121,55 +2162,83 @@ namespace OR_M_Data_Entities.Data
                 return value ?? "IS NULL";
             }
 
+            private static object _getValueFromConstantExpression(ConstantExpression expression, string memberName)
+            {
+                var value = expression.Value;
+
+                if (value == null) throw new ArgumentNullException("value");
+
+                var valueType = value.GetType();
+
+                if (IsSystemType(value)) return value;
+
+                var field = valueType.GetField(memberName);
+
+                return field.GetValue(value);
+            }
+
             protected static object GetValue(MethodCallExpression expression)
             {
                 var methodName = expression.Method.Name.ToUpper();
 
-                if (methodName.Equals("CONTAINS"))
+                switch (methodName)
                 {
-                    if (expression.Object != null)
-                    {
-                        var type = expression.Object.Type;
-
-                        if (IsEnumerable(type)) return _compile(expression.Object);
-                    }
-
-                    // search in arguments for the Ienumerable
-                    foreach (var argument in expression.Arguments)
-                    {
-                        if (IsEnumerable(argument.Type)) return _compile(argument);
-
-                        if (argument.NodeType == ExpressionType.Constant) return ((ConstantExpression)argument).Value;
-                    }
-
-                    throw new ArgumentException("Comparison value not found");
-                }
-
-                if (methodName.Equals("EQUALS") || methodName.Equals("STARTSWITH") || methodName.Equals("ENDSWITH"))
-                {
-                    // need to look for the argument that has the constant
-                    foreach (var argument in expression.Arguments)
-                    {
-                        var contstant = argument as ConstantExpression;
-
-                        if (contstant != null)
+                    case "CONTAINS":
+                        if (expression.Object != null)
                         {
-                            return contstant.Value;
+                            var type = expression.Object.Type;
+
+                            if (IsEnumerable(type)) return _compile(expression.Object);
                         }
 
-                        var memberExpression = argument as MemberExpression;
+                        // search in arguments for the Ienumerable
+                        foreach (var argument in expression.Arguments)
+                        {
+                            if (IsEnumerable(argument.Type)) return _compile(argument);
 
-                        if (memberExpression == null) continue;
+                            if (argument.NodeType == ExpressionType.Constant) return ((ConstantExpression)argument).Value;
+                        }
 
-                        contstant = memberExpression.Expression as ConstantExpression;
+                        throw new ArgumentException("Comparison value not found");
 
-                        if (contstant != null) return contstant.Value;
-                    }
+                    case "EQUALS":
+                    case "STARTSWITH":
+                    case "ENDSWITH":
+                        // need to look for the argument that has the constant
+                        foreach (var argument in expression.Arguments)
+                        {
+                            var contstant = argument as ConstantExpression;
 
-                    throw new ArgumentException("Comparison value not found");
+                            // no need to use _getValueFromConstantExpression here, value will always be of system type here
+                            if (contstant != null) return contstant.Value;
+
+                            var memberExpression = argument as MemberExpression;
+
+                            if (memberExpression == null) continue;
+
+                            contstant = memberExpression.Expression as ConstantExpression;
+
+                            if (contstant != null) return _getValueFromConstantExpression(contstant, memberExpression.Member.Name);
+                        }
+
+                        // check for inverted expression
+                        var inversion = expression.Object as MemberExpression;
+
+                        if (inversion != null)
+                        {
+                            var invertedConstant = inversion.Expression as ConstantExpression;
+
+                            if (invertedConstant != null) return _getValueFromConstantExpression(invertedConstant, inversion.Member.Name);
+                        }
+
+                        throw new ArgumentException("Comparison value not found");
+
+                    case "ANY":
+                        return null; // has no value to evaluate
+
+                    default:
+                        return _compile(expression.Object as MethodCallExpression);
                 }
-
-                return _compile(expression.Object as MethodCallExpression);
             }
 
             private static object _compile(Expression expression)
@@ -2195,6 +2264,13 @@ namespace OR_M_Data_Entities.Data
                 return WhereUtilities.IsConstant(expression.Right)
                     ? GetValue(expression.Right as dynamic)
                     : GetValue(expression.Left as dynamic);
+            }
+
+            protected static bool IsSystemType(object value)
+            {
+                if (value == null) throw new ArgumentNullException("value");
+
+                return value.GetType().Namespace.Contains("System");
             }
 
             protected static bool IsValueOnRight(BinaryExpression expression)
@@ -2272,13 +2348,22 @@ namespace OR_M_Data_Entities.Data
 
                 if (IsEnumerable(expression.Object.Type))
                 {
-                    foreach (var memberExpression in expression.Arguments.OfType<MemberExpression>())
+                    foreach (var e in expression.Arguments.OfType<MemberExpression>())
                     {
-                        return LoadColumnAndTableName(memberExpression, schematic);
+                        return LoadColumnAndTableName(e, schematic);
                     }
                 }
 
-                return LoadColumnAndTableName(expression.Object as MemberExpression, schematic);
+                var memberExpression = expression.Object as MemberExpression;
+
+                if (memberExpression != null && (memberExpression.Expression is MemberExpression || memberExpression.Expression.NodeType == ExpressionType.Parameter))
+                {
+                    return LoadColumnAndTableName(memberExpression, schematic);
+                }
+
+                // if we get here then the linq is writtn backwards, grab the column and table name
+                // from the method call arguments
+                return LoadColumnAndTableName(expression.Arguments[0] as MemberExpression, schematic);
             }
 
             protected static TableColumnContainer LoadColumnAndTableName(UnaryExpression expression, IQuerySchematic schematic)
