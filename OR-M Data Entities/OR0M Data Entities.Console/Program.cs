@@ -27,7 +27,7 @@ namespace OR0M_Data_Entities.Console
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 
-            //OnSqlGeneration += OnOnSqlGeneration;
+            OnSqlGeneration += OnOnSqlGeneration;
         }
 
         private void OnOnSqlGeneration(string sql, List<SqlDbParameter> parameters)
@@ -76,7 +76,7 @@ namespace OR0M_Data_Entities.Console
             var context = new SqlContext();
 
             var s = DateTime.Now;
-            var tt = context.Find<Contact>(1);
+            //var tt = context.Find<Contact>(500);
             //var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
             //{
             //    ID = w.ContactID,
@@ -86,7 +86,7 @@ namespace OR0M_Data_Entities.Console
             //    w.Appointments,
             //    w.Number.PhoneType
             //}).ToList();
-            //var ttt = context.From<Contact>().IncludeAll().ToList();
+            var ttt = context.From<Contact>().IncludeAll().ToList();
 
             var e = DateTime.Now;
 

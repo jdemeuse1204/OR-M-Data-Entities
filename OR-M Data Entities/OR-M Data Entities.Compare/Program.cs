@@ -12,43 +12,36 @@ namespace OR_M_Data_Entities.Compare
     {
         static void Main(string[] args)
         {
-            var s1 = DateTime.Now;
-            using (var efCtx = new EntityFrameworkContext())
-            {
-                var z = efCtx.Contacts.FirstOrDefault();
+            var efCtx = new EntityFrameworkContext();
 
-                z.Appointments.FirstOrDefault().Description = "fghfgh";
+            var s = DateTime.Now;
+            //var tt = context.Find<Contact>(500);
+            //var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
+            //{
+            //    ID = w.ContactID,
+            //    w.CreatedByUserID,
+            //    w.FirstName,
+            //    w.Number,
+            //    w.Appointments,
+            //    w.Number.PhoneType
+            //}).ToList();
+            var c = efCtx.Contacts.FirstOrDefault(w => w.ContactID == 1);
 
-                efCtx.SaveChanges();
+            var ttt =
+                efCtx.Contacts.Include("Appointments")
+                    .Include("Appointments.Address")
+                    .Include("Names")
+                    .Include("PhoneNumbers")
+                    .Include("PhoneNumbers.PhoneType")
+                    .Include("Appointments.Address.State")
+                    .Include("CreatedByUser")
+                    .Include("EditedByUser")
+                    .Include("Appointments.Address.Zip")
+                    .ToList().OrderBy(w => w.ContactID);
 
-                var e1 = DateTime.Now;
-                var d1 = e1 - s1;
+            var e = DateTime.Now;
 
-                if (d1.TotalDays != null && z != null)
-                {
-
-                }
-            }
-
-            var s2 = DateTime.Now;
-            using (var ctx = new ORMDEContext())
-            {
-                var c2 = ctx.From<Contact>().FirstOrDefault(w => w.ContactID == 1);
-
-                var e2 = DateTime.Now;
-                var d2 = e2 - s2;
-                
-
-                if (d2.TotalDays != null)
-                {
-
-                }
-
-                if (c2 != null)
-                {
-
-                }
-            }
+            System.Console.WriteLine((e - s).Milliseconds);
         }
     }
 }
