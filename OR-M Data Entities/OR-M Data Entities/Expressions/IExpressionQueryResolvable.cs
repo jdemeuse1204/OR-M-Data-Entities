@@ -59,9 +59,7 @@ namespace OR_M_Data_Entities.Expressions
 
         void IncludeAll();
 
-        void IncludeTo(string tableName);
-
-        void Include(string tableName);
+        void Include(string pathOrTableName);
 
         void OrderByPrimaryKeys();
 

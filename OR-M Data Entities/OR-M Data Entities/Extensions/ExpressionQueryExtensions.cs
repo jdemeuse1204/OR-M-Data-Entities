@@ -426,9 +426,9 @@ namespace OR_M_Data_Entities
         #endregion
 
         #region Include
-        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string tableName)
+        public static IExpressionQuery<TSource> Include<TSource>(this IExpressionQuery<TSource> source, string pathOrTableName)
         {
-            source.AsResolvable().Include(tableName);
+            source.AsResolvable().Include(pathOrTableName);
 
             return source;
         }
@@ -436,13 +436,6 @@ namespace OR_M_Data_Entities
         public static IExpressionQuery<TSource> IncludeAll<TSource>(this IExpressionQuery<TSource> source)
         {
             source.AsResolvable().IncludeAll();
-
-            return source;
-        }
-
-        public static IExpressionQuery<TSource> IncludeTo<TSource>(this IExpressionQuery<TSource> source, string tableName)
-        {
-            source.AsResolvable().IncludeTo(tableName);
 
             return source;
         }

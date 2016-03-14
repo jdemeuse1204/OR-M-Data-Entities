@@ -1134,78 +1134,26 @@ namespace OR_M_Data_Entities.Data
                 }
             }
 
-            public void Include(string tableName)
+            public void Include(string pathOrTableName)
             {
-                IMappedTable mappedTable;
-                var actualTableName = _getActualTableName(tableName);
-
-                // if table names are the same search by FK matched column name
-                if (tableName.Contains("["))
-                {
-                    var attribute = _getTableAttributeName(tableName);
-
-                    mappedTable =
-                        _schematic.MappedTables.FirstOrDefault(
-                            w => w.Table.PlainTableName == actualTableName && w.Key == attribute);
-                }
-                else
-                {
-                    mappedTable = _schematic.MappedTables.FirstOrDefault(w => w.Table.PlainTableName == actualTableName);
-                }
-
-                if (mappedTable == null) throw new Exception(string.Format("Cannot find table  table name not found on Include. Table name - {0}", actualTableName));
-
-                // make sure parent is selected
-                var parent =
-                    _schematic.MappedTables.First(
-                        w => w.Relationships.Any(x => x.ChildTable.Table.PlainTableName == actualTableName));
-
-                if (!parent.IsIncluded)
-                {
-                    throw new Exception(string.Format("Parent of {0} must be included in the query", actualTableName));
-                }
-
-                mappedTable.Include();
-            }
-
-            public void IncludeTo(string tableName)
-            {
-                var actualTableName = _getActualTableName(tableName);
-                var attribute = _getTableAttributeName(tableName);
-                var searchList = new List<IDataLoadSchematic> { _schematic.DataLoadSchematic };
+                if (string.IsNullOrEmpty(pathOrTableName)) throw new ArgumentNullException("pathOrTableName");
+                    
+                var tables = pathOrTableName.Split('.');
                 var nextOrdinal = _schematic.NextOrdinal();
+                var schematicToScan = _schematic.DataLoadSchematic;
 
-                // find the reference then select backwards
-                for (var i = 0; i < searchList.Count; i++)
+                foreach (var table in tables)
                 {
-                    var dataLoadSchematic = searchList[i];
-                    var foundMappedTable = _findDataLoadSchematic(dataLoadSchematic, actualTableName, attribute);
+                    schematicToScan =
+                        schematicToScan.Children.FirstOrDefault(
+                            w =>
+                                w.MappedTable.Key == table);
 
-                    if (foundMappedTable != null)
-                    {
-                        // include found item
-                        if (!foundMappedTable.MappedTable.IsIncluded) nextOrdinal += foundMappedTable.MappedTable.SelectAll(nextOrdinal);
+                    if (schematicToScan == null) throw new Exception(string.Format("Could not find property name - {0}", table));
 
-                        foundMappedTable.MappedTable.Include();
-
-                        var parent = foundMappedTable.Parent;
-
-                        while (parent != null)
-                        {
-                            if (!parent.MappedTable.IsIncluded) nextOrdinal += parent.MappedTable.SelectAll(nextOrdinal);
-
-                            parent.MappedTable.Include();
-
-                            parent = parent.Parent;
-                        }
-                        return;
-                    }
-
-                    searchList.AddRange(dataLoadSchematic.Children);
+                    schematicToScan.MappedTable.Include();
+                    nextOrdinal += schematicToScan.MappedTable.SelectAll(nextOrdinal);
                 }
-
-                // should never hit this if table found
-                throw new Exception(string.Format("Table not found for Include.  Table Name - {0}", tableName));
             }
 
             public void Disconnect()

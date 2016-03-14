@@ -11,13 +11,13 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             // should throw an error if the table is not found
             try
             {
-                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("Users").First();
+                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("Appointments").First();
 
-                return false;
+                return contact != null && contact.Appointments.All(w => w.ID != Guid.Empty);
             }
             catch
             {
-                return true;
+                return false;
             }
         }
 
@@ -26,9 +26,10 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             // make sure include works
             try
             {
-                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("User").First();
+                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("Appointments.Address.ZipCode").First();
 
-                return contact != null;
+                return contact != null && contact.Appointments.All(w => w.ID != Guid.Empty) &&
+                       contact.Appointments.All(w => w.Address.All(x => x.ZipCode.All(y => y.ID != 0)));
             }
             catch (Exception ex)
             {
@@ -42,9 +43,14 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             // should be able to use selector
             try
             {
-                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("User[EditedBy]").First();
+                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).IncludeAll().First();
 
-                return contact.EditedBy != null;
+                return contact.EditedBy.ID != 0 && contact.CreatedByUserID != 0 && contact.Names.All(w => w.ID != 0) &&
+                       contact.Number.ID != 0 && contact.Number.PhoneTypeID != 0 &&
+                       contact.Appointments.All(w => w.ID != Guid.Empty) &&
+                       contact.Appointments.All(w => w.Address.All(x => x.ID != 0)) &&
+                       contact.Appointments.All(w => w.Address.All(x => x.ZipCode.All(y => y.ID != 0))) &&
+                       contact.Appointments.All(w => w.Address.All(x => x.State.ID != 0));
             }
             catch (Exception ex)
             {
@@ -57,7 +63,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             // test include to
             try
             {
-                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).IncludeTo("ZipCode").First();
+                var contact = ctx.From<Contact>().Where(w => w.ContactID == 1).Include("Appointments.Address.ZipCode").First();
 
                 return contact.Appointments.Any(w => w.Address.Any(x => x.ZipCode.Any()));
             }
@@ -93,12 +99,12 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 var contact =
                     ctx.From<Contact>()
                         .Where(w => w.ContactID == 1)
-                        .Include("User[EditedBy]")
-                        .Include("User[CreatedBy]")
+                        .Include("EditedBy")
+                        .Include("CreatedBy")
                         .Include("Appointments")
                         .First();
 
-                return contact.EditedBy != null && contact.CreatedBy != null && contact.Appointments.Any();
+                return contact.EditedBy.ID != 0 && contact.CreatedBy.ID != 0 && contact.Appointments.All(w => w.ID != Guid.Empty);
             }
             catch (Exception ex)
             {
