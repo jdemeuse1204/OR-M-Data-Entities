@@ -867,6 +867,13 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Property Methods
+            public List<Attribute> GetAllForeignAndPseudoKeyAttributes()
+            {
+                var type = Value.GetType();
+
+                return type.GetCustomAttributes(typeof(AutoLoadKeyAttribute)).ToList();
+            }
+
             protected static FieldInfo GetPristineEntityFieldInfo()
             {
                 return typeof(EntityStateTrackable).GetField("_pristineEntity",
@@ -915,6 +922,12 @@ namespace OR_M_Data_Entities.Data
                 if (!IsEntityStateTrackingOn) return null;
 
                 var pristineEntity = _getPristineEntity();
+
+                if (pristineEntity == null)
+                {
+                    // we have an insert, return null
+                    return null;
+                }
 
                 var property = pristineEntity.GetType().GetProperty(propertyName);
 
@@ -1248,6 +1261,35 @@ namespace OR_M_Data_Entities.Data
                     if (!isUpdating)
                     {
                         if (generationOption != DbGenerationOption.None) continue;
+
+                        // check to see if FK corresponds to PK, if it does and its one-one,
+                        // then check to see if the FK property has a value, if it does then
+                        // we are ok because it will be saved before its parent
+                        var foreignKeyCheck =
+                            AllProperties.FirstOrDefault(
+                                w =>
+                                    w.GetCustomAttribute<ForeignKeyAttribute>() != null &&
+                                    w.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName == key.Name);
+
+                        if (foreignKeyCheck != null)
+                        {
+                            var value = GetPropertyValue(foreignKeyCheck);
+                            
+                            if (value != null) continue;
+                        }
+
+                        var pseudoKeyCheck =
+                            AllProperties.FirstOrDefault(
+                                w =>
+                                    w.GetCustomAttribute<PseudoKeyAttribute>() != null &&
+                                    w.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName == key.Name);
+
+                        if (pseudoKeyCheck != null)
+                        {
+                            var value = GetPropertyValue(pseudoKeyCheck);
+
+                            if (value != null) continue;
+                        }
 
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
                         throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));

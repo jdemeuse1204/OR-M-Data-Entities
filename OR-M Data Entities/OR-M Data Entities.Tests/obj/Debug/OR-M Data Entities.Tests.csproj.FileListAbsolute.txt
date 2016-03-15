@@ -10,3 +10,15 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csprojResolveAssemblyReference.cache
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.dll
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Test.mdf
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Test_log.ldf
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.Tests.dll.config
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.Tests.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.Tests.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csprojResolveAssemblyReference.cache
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.pdb

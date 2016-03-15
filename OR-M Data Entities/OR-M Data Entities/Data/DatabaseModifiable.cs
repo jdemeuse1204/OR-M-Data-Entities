@@ -875,8 +875,6 @@ namespace OR_M_Data_Entities.Data
 
                 _doc.AppendChild(_root);
 
-                _doc.Save("C:\\users\\jdemeuse\\desktop\\document.xml");
-
                 return new SaveResult(_doc, _tableChangeResults);
             }
 

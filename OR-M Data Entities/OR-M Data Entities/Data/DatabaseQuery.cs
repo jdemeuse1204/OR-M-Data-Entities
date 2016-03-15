@@ -9,12 +9,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Loading;
@@ -27,7 +25,6 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseQuery : DatabaseExecution
     {
         #region Properties
-
         private IQuerySchematicFactory _querySchematicFactory { get; set; }
 
         #endregion
@@ -501,8 +498,21 @@ namespace OR_M_Data_Entities.Data
 
                     for (var i = 0; i < MappedTables.Count; i++)
                     {
+                        // we need to make sure the table still joins to children, only
+                        // exclude the selected columns, do not exclude the table
+                        // or else the joins will be incorrect
                         var mappedTable = MappedTables[i];
                         mappedTable.Clear();
+                    }
+                }
+
+                public void ExcludeAll()
+                {
+                    if (MappedTables == null) return;
+
+                    for (var i = 0; i < MappedTables.Count; i++)
+                    {
+                        var mappedTable = MappedTables[i];
                         mappedTable.Exclude();
                     }
                 }
@@ -529,6 +539,7 @@ namespace OR_M_Data_Entities.Data
                 public void Reset()
                 {
                     UnSelectAll();
+                    ExcludeAll();
 
                     // recursive clear
                     DataLoadSchematic.ClearRowReadCache();
@@ -1873,8 +1884,6 @@ namespace OR_M_Data_Entities.Data
 
             private static void _evaluate(NewExpression expression, IQuerySchematic schematic)
             {
-                // exclude all mapped tables
-                schematic.UnSelectAll();
                 schematic.SetReturnOverride(expression);
 
                 for (var i = 0; i < expression.Arguments.Count; i++)
@@ -1887,9 +1896,6 @@ namespace OR_M_Data_Entities.Data
             {
                 // comes from select.  We should do a select * from the parameter that is being passed in
                 var table = schematic.FindTable(expression.Type);
-
-                // exclude all mapped tables
-                schematic.UnSelectAll();
 
                 // include only the selected table
                 table.Include();

@@ -42,6 +42,8 @@ namespace OR_M_Data_Entities.Data.Definition
 
         void UnSelectAll();
 
+        void ExcludeAll();
+
         void SelectAll();
 
         void ClearReadCache();

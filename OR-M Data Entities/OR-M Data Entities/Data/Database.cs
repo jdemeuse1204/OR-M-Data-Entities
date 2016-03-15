@@ -320,6 +320,7 @@ namespace OR_M_Data_Entities.Data
             private bool _lastResult;
             private readonly SqlConnection _connection;
             private readonly IQuerySchematic _schematic;
+            private  readonly object _dataLoadLock = new object();
             #endregion
 
             #region Properties
@@ -389,53 +390,66 @@ namespace OR_M_Data_Entities.Data
             #region Data Loading Methods
             public dynamic ToDynamic()
             {
-                if (!HasRows) return null;
+                lock (_dataLoadLock)
+                {
+                    if (!HasRows) return null;
 
-                var result = new ExpandoObject() as IDictionary<string, object>;
+                    var result = new ExpandoObject() as IDictionary<string, object>;
 
-                var rec = (IDataRecord)this;
+                    var rec = (IDataRecord)this;
 
-                for (var i = 0; i < rec.FieldCount; i++) result.Add(rec.GetName(i), rec.GetValue(i));
+                    for (var i = 0; i < rec.FieldCount; i++) result.Add(rec.GetName(i), rec.GetValue(i));
 
-                return result;
+                    return result;
+                }
             }
 
             public T ToObjectDefault<T>()
             {
-                if (HasRows) return ToObject<T>();
+                lock (_dataLoadLock)
+                {
+                    if (HasRows) return ToObject<T>();
 
-                // clean up reader
-                Dispose();
+                    // clean up reader
+                    Dispose();
 
-                // return the default
-                return default(T);
+                    // return the default
+                    return default(T);
+                }
             }
 
             public T ToObject<T>()
             {
-                if (!HasRows)
+                lock (_dataLoadLock)
                 {
-                    // clean up reader
-                    Dispose();
+                    if (!HasRows)
+                    {
+                        // clean up reader
+                        Dispose();
 
-                    throw new DataException("Query contains no records");
+                        throw new DataException("Query contains no records");
+                    }
+
+                    if (typeof (T).IsValueType || typeof (T) == typeof (string))
+                        return this[0] == DBNull.Value ? default(T) : (T) this[0];
+
+                    if (typeof (T) == typeof (object)) return ToDynamic();
+
+                    // if its an anonymous type, use the correct loader
+                    return typeof (T).IsAnonymousType()
+                        ? _getAnonymousObjectFromReader<T>(_schematic)
+                        :
+
+                        // load the data traditionally by looking for database column names
+                        _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
+
+                            // if the payload has foreign keys, use the foreign key loader
+                            : _schematic.AreForeignKeysSelected()
+                                ? _getObjectFromReaderWithForeignKeys<T>()
+
+                                // default if all are false
+                                : _getObjectFromReader<T>();
                 }
-
-                if (typeof(T).IsValueType || typeof(T) == typeof(string)) return this[0] == DBNull.Value ? default(T) : (T)this[0];
-
-                if (typeof(T) == typeof(object)) return ToDynamic();
-
-                // if its an anonymous type, use the correct loader
-                return typeof(T).IsAnonymousType() ? _getAnonymousObjectFromReader<T>(_schematic) :
-
-                       // load the data traditionally by looking for database column names
-                       _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
-
-                       // if the payload has foreign keys, use the foreign key loader
-                       : _schematic.AreForeignKeysSelected() ? _getObjectFromReaderWithForeignKeys<T>()
-
-                       // default if all are false
-                       : _getObjectFromReader<T>();
             }
 
             private T _getObjectFromReaderUsingDatabaseColumnNames<T>()
