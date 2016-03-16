@@ -79,5 +79,29 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
             return true;
         }
+
+        public static bool Test_9(DbSqlContext ctx)
+        {
+            var t =
+                ctx.From<Contact>()
+                    .Where(w => w.ContactID == 1)
+                    .Include("Appointments")
+                    .Select(w => w.Appointments)
+                    .ToList();
+
+            return true;
+        }
+
+        public static bool Test_10(DbSqlContext ctx)
+        {
+            var t =
+                ctx.From<Contact>()
+                    .Where(w => w.ContactID == 1)
+                    .Include("Appointments")
+                    .Select(w => w.Appointments)
+                    .FirstOrDefault();
+
+            return true;
+        }
     }
 }

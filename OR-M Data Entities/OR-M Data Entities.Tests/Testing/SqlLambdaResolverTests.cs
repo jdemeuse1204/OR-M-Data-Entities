@@ -56,5 +56,17 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(LambdaResolverTests.Test_8(_ctx));
         }
+
+        [TestMethod]
+        public void Test_LambdaResolver_9()
+        {
+            Assert.IsTrue(LambdaResolverTests.Test_9(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_LambdaResolver_10()
+        {
+            Assert.IsTrue(LambdaResolverTests.Test_10(_ctx));
+        }
     }
 }

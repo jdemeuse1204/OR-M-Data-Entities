@@ -29,6 +29,11 @@ namespace OR_M_Data_Entities.Data
 
         #endregion
 
+        #region Thread Management
+
+        private readonly object _queryLock = new object();
+        #endregion
+
         #region Constructor
 
         protected DatabaseQuery(string connectionStringOrName)
@@ -42,16 +47,19 @@ namespace OR_M_Data_Entities.Data
 
         public IExpressionQuery<T> From<T>()
         {
-            // grab the base table and reset it
-            var table = DbTableFactory.Find<T>(Configuration);
+            lock (_queryLock)
+            {
+                // grab the base table and reset it
+                var table = DbTableFactory.Find<T>(Configuration);
 
-            // get the schematic
-            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                // get the schematic
+                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-            // initialize the selected columns
-            schematic.InitializeSelect(Configuration.IsLazyLoading);
+                // initialize the selected columns
+                schematic.InitializeSelect(Configuration.IsLazyLoading);
 
-            return new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
+                return new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
+            }
         }
 
         /// <summary>
@@ -63,41 +71,49 @@ namespace OR_M_Data_Entities.Data
         /// <returns></returns>
         protected bool Exists<T>(T entity)
         {
-            var table = DbTableFactory.Find<T>(Configuration);
+            lock (_queryLock)
+            {
+                var table = DbTableFactory.Find<T>(Configuration);
 
-            // get the schematic
-            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                // get the schematic
+                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
+                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory,
+                    DbTableFactory);
 
-            // initialize the selected columns, we tell it false always for find so the whole object will be returned
-            // Find does not have options to include or exclude tables
-            schematic.InitializeSelect(false);
+                // initialize the selected columns, we tell it false always for find so the whole object will be returned
+                // Find does not have options to include or exclude tables
+                schematic.InitializeSelect(false);
 
-            // resolve the pks for the where statement
-            expressionQuery.ResolveExists(entity);
+                // resolve the pks for the where statement
+                expressionQuery.ResolveExists(entity);
 
-            return ((IExpressionQuery<T>)expressionQuery).Any();
+                return ((IExpressionQuery<T>) expressionQuery).Any();
+            }
         }
 
         public T Find<T>(params object[] pks)
         {
-            // grab the base table
-            var table = DbTableFactory.Find<T>(Configuration);
+            lock (_queryLock)
+            {
+                // grab the base table
+                var table = DbTableFactory.Find<T>(Configuration);
 
-            // get the schematic
-            var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                // get the schematic
+                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-            var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
+                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory,
+                    DbTableFactory);
 
-            // initialize the selected columns, we tell it false always for find so the whole object will be returned
-            // Find does not have options to include or exclude tables
-            schematic.InitializeSelect(false);
+                // initialize the selected columns, we tell it false always for find so the whole object will be returned
+                // Find does not have options to include or exclude tables
+                schematic.InitializeSelect(false);
 
-            // resolve the pks for the where statement
-            expressionQuery.Find<T>(pks, Configuration);
+                // resolve the pks for the where statement
+                expressionQuery.Find<T>(pks, Configuration);
 
-            return ((IExpressionQuery<T>)expressionQuery).FirstOrDefault();
+                return ((IExpressionQuery<T>) expressionQuery).FirstOrDefault();
+            }
         }
 
         public override void Dispose()
@@ -1172,30 +1188,6 @@ namespace OR_M_Data_Entities.Data
                 _context.Disconnect();
             }
 
-            private string _getActualTableName(string tableName)
-            {
-                if (!tableName.Contains("[")) return tableName;
-
-                var index = tableName.IndexOf("[", StringComparison.Ordinal);
-                return tableName.Substring(0, index);
-            }
-
-            private string _getTableAttributeName(string tableName)
-            {
-                if (!tableName.Contains("[")) return string.Empty;
-
-                var index = tableName.IndexOf("[", StringComparison.Ordinal);
-                return tableName.Substring(index + 1, tableName.Length - index - 2);
-            }
-
-            private IDataLoadSchematic _findDataLoadSchematic(IDataLoadSchematic schematic, string tableName, string attributeName)
-            {
-                return string.IsNullOrEmpty(attributeName)
-                    ? schematic.Children.FirstOrDefault(w => w.MappedTable.Table.PlainTableName == tableName)
-                    : schematic.Children.FirstOrDefault(
-                        w => w.MappedTable.Table.PlainTableName == tableName && w.MappedTable.Key == attributeName);
-            }
-
             public IExpressionQuery<TResult> Join<TOuter, TInner, TKey, TResult>(
                 IExpressionQuery<TOuter> outer,
                 IExpressionQuery<TInner> inner,
@@ -1904,6 +1896,9 @@ namespace OR_M_Data_Entities.Data
 
             private static void _evaluate(MemberExpression expression, IQuerySchematic schematic)
             {
+                // set the return override so we can load our object correctly
+                schematic.SetReturnOverride(expression);
+
                 var tableAndColumnName = LoadColumnAndTableName((dynamic)expression, schematic);
 
                 // find our table

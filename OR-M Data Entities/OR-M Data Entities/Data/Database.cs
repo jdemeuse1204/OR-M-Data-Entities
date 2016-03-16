@@ -28,6 +28,10 @@ namespace OR_M_Data_Entities.Data
 {
     public abstract partial class Database : IDisposable
     {
+        #region Thread Management
+        private readonly object _executionLock = new object();
+        #endregion
+
         #region Properties
         protected delegate void OnSqlGenerated(string sql, List<SqlDbParameter> parameters);
 
@@ -183,18 +187,21 @@ namespace OR_M_Data_Entities.Data
         #region Execution
         protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
-            _preprocessExecution();
+            lock (_executionLock)
+            {
+                _preprocessExecution();
 
-            if (OnSqlGeneration != null) OnSqlGeneration(sql, parameters);
+                if (OnSqlGeneration != null) OnSqlGeneration(sql, parameters);
 
-            // clean the command text because the query will run slower 
-            // with returns, tabs, and new line characters
-            _command = new SqlCommand(CleanSqlCommandText(sql), _connection);
+                // clean the command text because the query will run slower 
+                // with returns, tabs, and new line characters
+                _command = new SqlCommand(CleanSqlCommandText(sql), _connection);
 
-            // for use to return the sql that is generated
-            _addParameters(parameters);
+                // for use to return the sql that is generated
+                _addParameters(parameters);
 
-            Reader = new PeekDataReader(_command, _connection, schematic);
+                Reader = new PeekDataReader(_command, _connection, schematic);
+            }
         }
 
         protected void ExecuteReader(string sql)
@@ -209,21 +216,24 @@ namespace OR_M_Data_Entities.Data
 
         protected void ExecuteReader(ISqlExecutionPlan plan)
         {
-            _preprocessExecution();
-
-            _command = plan.BuildSqlCommand(_connection);
-
-            var parameters = new List<SqlDbParameter>();
-
-            for (var i = 0; i < _command.Parameters.Count; i++)
+            lock (_executionLock)
             {
-                var parameter = _command.Parameters[i];
-                parameters.Add(new SqlDbParameter(parameter.ParameterName, parameter.Value));
+                _preprocessExecution();
+
+                _command = plan.BuildSqlCommand(_connection);
+
+                var parameters = new List<SqlDbParameter>();
+
+                for (var i = 0; i < _command.Parameters.Count; i++)
+                {
+                    var parameter = _command.Parameters[i];
+                    parameters.Add(new SqlDbParameter(parameter.ParameterName, parameter.Value));
+                }
+
+                if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText, parameters);
+
+                Reader = new PeekDataReader(_command, _connection);
             }
-
-            if (OnSqlGeneration != null) OnSqlGeneration(_command.CommandText, parameters);
-
-            Reader = new PeekDataReader(_command, _connection);
         }
 
         private void _addParameters(List<SqlDbParameter> parameters)
@@ -320,7 +330,6 @@ namespace OR_M_Data_Entities.Data
             private bool _lastResult;
             private readonly SqlConnection _connection;
             private readonly IQuerySchematic _schematic;
-            private  readonly object _dataLoadLock = new object();
             #endregion
 
             #region Properties
@@ -390,66 +399,53 @@ namespace OR_M_Data_Entities.Data
             #region Data Loading Methods
             public dynamic ToDynamic()
             {
-                lock (_dataLoadLock)
-                {
-                    if (!HasRows) return null;
+                if (!HasRows) return null;
 
-                    var result = new ExpandoObject() as IDictionary<string, object>;
+                var result = new ExpandoObject() as IDictionary<string, object>;
 
-                    var rec = (IDataRecord)this;
+                var rec = (IDataRecord)this;
 
-                    for (var i = 0; i < rec.FieldCount; i++) result.Add(rec.GetName(i), rec.GetValue(i));
+                for (var i = 0; i < rec.FieldCount; i++) result.Add(rec.GetName(i), rec.GetValue(i));
 
-                    return result;
-                }
+                return result;
             }
 
             public T ToObjectDefault<T>()
             {
-                lock (_dataLoadLock)
-                {
-                    if (HasRows) return ToObject<T>();
+                if (HasRows) return ToObject<T>();
 
-                    // clean up reader
-                    Dispose();
+                // clean up reader
+                Dispose();
 
-                    // return the default
-                    return default(T);
-                }
+                // return the default
+                return default(T);
             }
 
             public T ToObject<T>()
             {
-                lock (_dataLoadLock)
+                if (!HasRows)
                 {
-                    if (!HasRows)
-                    {
-                        // clean up reader
-                        Dispose();
+                    // clean up reader
+                    Dispose();
 
-                        throw new DataException("Query contains no records");
-                    }
-
-                    if (typeof (T).IsValueType || typeof (T) == typeof (string))
-                        return this[0] == DBNull.Value ? default(T) : (T) this[0];
-
-                    if (typeof (T) == typeof (object)) return ToDynamic();
-
-                    // if its an anonymous type, use the correct loader
-                    return typeof (T).IsAnonymousType()
-                        ? _getAnonymousObjectFromReader<T>(_schematic)
-                        :
-
-                        // load the data traditionally by looking for database column names
-                        _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
-
-                            // if the payload has foreign keys, use the foreign key loader
-                            : _schematic.AreForeignKeysSelected()
-                                ? _getObjectFromReaderWithForeignKeys<T>()
-
-                                // default if all are false
-                                : _getObjectFromReader<T>();
+                    throw new DataException("Query contains no records");
                 }
+
+                if (typeof(T).IsValueType || typeof(T) == typeof(string)) return this[0] == DBNull.Value ? default(T) : (T)this[0];
+
+                if (typeof(T) == typeof(object)) return ToDynamic();
+
+                // if its an anonymous type, use the correct loader
+                return typeof(T).IsAnonymousType() ? _getAnonymousObjectFromReader<T>(_schematic) :
+
+                    // load the data traditionally by looking for database column names
+                    _schematic == null ? _getObjectFromReaderUsingDatabaseColumnNames<T>()
+
+                        // if the payload has foreign keys, use the foreign key loader
+                        : _schematic.AreForeignKeysSelected() && _schematic.ReturnOverride == null ? _getObjectFromReaderWithForeignKeys<T>()
+
+                            // default if all are false
+                            : _getObjectFromReader<T>();
             }
 
             private T _getObjectFromReaderUsingDatabaseColumnNames<T>()
@@ -623,7 +619,7 @@ namespace OR_M_Data_Entities.Data
                     // if the column is not in the table then its a reference to a autoload property
                     if (column == null)
                     {
-                        var propertyType = ((PropertyInfo) argument.Member).PropertyType;
+                        var propertyType = ((PropertyInfo)argument.Member).PropertyType;
 
                         // check to see if its a list
                         if (propertyType.IsList())
@@ -671,7 +667,7 @@ namespace OR_M_Data_Entities.Data
                     // grab the column from our table
                     var column = table.SelectedColumns.FirstOrDefault(w => w.Column.PropertyName == argument.Member.Name);
 
-                    var type = ((PropertyInfo) argument.Member).PropertyType;
+                    var type = ((PropertyInfo)argument.Member).PropertyType;
 
                     // different from other loader, only thing left here to load should be a list
                     if (column != null || !type.IsList()) continue;
