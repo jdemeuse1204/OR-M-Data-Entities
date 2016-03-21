@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
-using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff;
+using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn;
+using Address = OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff.Address;
+using Contact = OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff.Contact;
 
 namespace OR_M_Data_Entities.Tests.Testing.Base
 {
@@ -129,6 +131,21 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             {
                 return true;
             }
+        }
+
+        public static bool Test_8(DbSqlContext ctx)
+        {
+            var address = ctx.From<Tables.EntityStateTrackableOn.Address>().FirstOrDefault(w => w.ID == 6);
+            var user = ctx.From<User>().FirstOrDefault(w => w.ID == 11);
+
+            ctx.SaveChanges(new UserAddress
+            {
+                Address = address,
+                AddressId = address.ID,
+                UserId = user.ID
+            });
+
+            return false;
         }
     }
 }
