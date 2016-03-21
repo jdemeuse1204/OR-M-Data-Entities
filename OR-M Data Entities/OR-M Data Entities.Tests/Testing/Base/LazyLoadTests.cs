@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOn;
 using Address = OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff.Address;
@@ -135,17 +136,42 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
 
         public static bool Test_8(DbSqlContext ctx)
         {
-            var address = ctx.From<Tables.EntityStateTrackableOn.Address>().FirstOrDefault(w => w.ID == 6);
-            var user = ctx.From<User>().FirstOrDefault(w => w.ID == 11);
-
-            ctx.SaveChanges(new UserAddress
+            try
             {
-                Address = address,
-                AddressId = address.ID,
-                UserId = user.ID
-            });
+                var address = new Tables.EntityStateTrackableOn.Address
+                {
+                    AppointmentID = Guid.Parse("1022AD65-6948-442C-A5A5-00577320F324"),
+                    Addy = "1234 First Ave South",
+                    State = new StateCode
+                    {
+                        Value = "MN"
+                    },
+                    ZipCode = new List<Zip>
+                {
+                    new Zip
+                    {
+                        Zip4 = "5412",
+                        Zip5 = "55555"
+                    }
+                }
+                };
 
-            return false;
+                var user = ctx.From<User>().FirstOrDefault(w => w.ID == 11);
+
+                var userAddress = new UserAddress
+                {
+                    Address = address,
+                    UserId = user.ID
+                };
+
+                ctx.SaveChanges(userAddress);
+
+                return true;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }
