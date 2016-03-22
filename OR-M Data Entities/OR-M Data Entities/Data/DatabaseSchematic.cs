@@ -1035,6 +1035,11 @@ namespace OR_M_Data_Entities.Data
                 return ModificationItems.Where(w => w.IsModified && !w.IsPrimaryKey).ToList();
             }
 
+            public void RecalculateChanges(IConfigurationOptions configuration)
+            {
+                _initialize(configuration);
+            }
+
             // get the keys from AllProperties.  If we are deleting,
             // all the modification items will be empty
             public IReadOnlyList<IModificationItem> Keys()

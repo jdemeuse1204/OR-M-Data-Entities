@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Modification;
 
 namespace OR_M_Data_Entities.Data.Definition
@@ -22,5 +23,7 @@ namespace OR_M_Data_Entities.Data.Definition
         IReadOnlyList<IModificationItem> Keys();
 
         IReadOnlyList<IModificationItem> All();
+
+        void RecalculateChanges(IConfigurationOptions configuration);
     }
 }

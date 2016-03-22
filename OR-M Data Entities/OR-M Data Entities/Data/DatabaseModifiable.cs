@@ -134,13 +134,13 @@ namespace OR_M_Data_Entities.Data
 
             public int Count { get { return _internal.Count; } }
 
-            private readonly List<object> _internal;
+            private readonly List<Reference> _internal;
 
             private readonly IConfigurationOptions _configuration;
 
             public ReferenceMap(IConfigurationOptions configuration)
             {
-                _internal = new List<object>();
+                _internal = new List<Reference>();
                 _configuration = configuration;
             }
 
@@ -186,7 +186,19 @@ namespace OR_M_Data_Entities.Data
 
             private int _indexOf(object entity)
             {
-                return _internal.IndexOf(entity);
+                var reference = entity as Reference;
+
+                if (reference != null) return _internal.IndexOf(reference);
+
+                // check the hash code for equality
+                for (var i = 0; i < _internal.Count; i++)
+                {
+                    var current = _internal[i];
+
+                    if (current.Equals(entity)) return i;
+                }
+
+                return -1;
             }
 
             private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
@@ -206,7 +218,7 @@ namespace OR_M_Data_Entities.Data
 
             public IEnumerator<Reference> GetEnumerator()
             {
-                return (dynamic)_internal.GetEnumerator();
+                return _internal.GetEnumerator();
             }
 
             IEnumerator IEnumerable.GetEnumerator()
@@ -413,6 +425,18 @@ namespace OR_M_Data_Entities.Data
                     }
                     else
                     {
+                        // if one-to-one, we need to check and see if the FK is also the PK of the parent.  If so,
+                        // we need to delete the child first
+                        var foreignKey = e.Property.GetCustomAttribute<ForeignKeyAttribute>();
+                        var parentPrimaryKeys = ReflectionCacheTable.GetPrimaryKeys(e.Parent);
+                        var foundKey = parentPrimaryKeys.FirstOrDefault(w => w.Name == foreignKey.ForeignKeyColumnName);
+
+                        if (foundKey != null)
+                        {
+                            map.AddOneToManySaveReference(e, tableCache, e.Value, isDeleting);
+                            continue;
+                        }
+
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property

@@ -816,6 +816,12 @@ ELSE
                     if (reference.Parent != null && !reference.Property.IsList())
                     {
                         Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
+
+                        // Recalcualte the parent changes because we changed a modification item
+                        var tableName = Table.GetTableName(reference.Parent);
+                        var searchItems = referenceMap.Where(w => w.Entity.PlainTableName == tableName).ToList();
+
+                        foreach (var item in searchItems) item.Entity.RecalculateChanges(Configuration);
                     }
 
                     // set the pristine state only if entity tracking is on and there is no concurrency violation

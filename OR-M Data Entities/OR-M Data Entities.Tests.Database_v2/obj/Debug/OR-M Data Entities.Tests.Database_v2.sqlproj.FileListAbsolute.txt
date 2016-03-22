@@ -1,0 +1,9 @@
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\bin\Debug\OR-M Data Entities.Tests.Database_v2.dacpac
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\bin\Debug\OR_M_Data_Entities.Tests.Database_v2.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\bin\Debug\OR_M_Data_Entities.Tests.Database_v2.pdb
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\Model.xml
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\refactor.xml
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\postdeploy.sql
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\predeploy.sql
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\OR_M_Data_Entities.Tests.Database_v2.dll
+C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests.Database_v2\obj\Debug\OR_M_Data_Entities.Tests.Database_v2.pdb
