@@ -1876,12 +1876,12 @@ namespace OR_M_Data_Entities.Data
 
             private static void _evaluate(NewExpression expression, IQuerySchematic schematic)
             {
-                schematic.SetReturnOverride(expression);
-
                 for (var i = 0; i < expression.Arguments.Count; i++)
                 {
                     _evaluate((MemberExpression)expression.Arguments[i], schematic);
                 }
+
+                schematic.SetReturnOverride(expression);
             }
 
             private static void _evaluate(ParameterExpression expression, IQuerySchematic schematic)

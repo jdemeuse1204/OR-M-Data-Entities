@@ -24,6 +24,6 @@ namespace OR_M_Data_Entities.Data.Definition
 
         IReadOnlyList<IModificationItem> All();
 
-        void RecalculateChanges(IConfigurationOptions configuration);
+        void CalculateChanges(IConfigurationOptions configuration);
     }
 }

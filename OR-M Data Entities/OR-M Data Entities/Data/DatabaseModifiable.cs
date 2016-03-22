@@ -149,11 +149,11 @@ namespace OR_M_Data_Entities.Data
                 _internal.Add(new Reference(entity, NextAlias()));
             }
 
-            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableFactory tableCache, object value, bool isDeleting = false)
+            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableFactory tableCache, object value)
             {
                 var parentIndex = _indexOf(association.Parent);
 
-                _insert(parentIndex + 1, value, association, _configuration, tableCache, isDeleting);
+                _insert(parentIndex + 1, value, association, _configuration, tableCache);
 
                 // add the references
                 var index = _indexOf(value);
@@ -167,11 +167,16 @@ namespace OR_M_Data_Entities.Data
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache, bool isDeleting = false)
+            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache)
+            {
+                _addOneToOneSaveReference(association, tableCache, false);
+            }
+
+            private void _addOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache, bool isNullableReference)
             {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
-                _insert(oneToOneParentIndex, association.Value, association, _configuration, tableCache, isDeleting);
+                _insert(oneToOneParentIndex, association.Value, association, _configuration, tableCache);
 
                 var oneToOneIndex = _indexOf(association.Parent);
                 var childIndex = _indexOf(association.Value);
@@ -181,7 +186,14 @@ namespace OR_M_Data_Entities.Data
                 var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
                 var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ChildType)[0];
 
-                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne, new Link(oneToOneParentProperty, oneToOneChildProperty)));
+                parent.References.Add(new ReferenceNode(association.Value, child.Alias,
+                    isNullableReference ? RelationshipType.OneToMany : RelationshipType.OneToOne, // treat a nullable 1-1 like 1-many so the join is correct
+                    new Link(oneToOneParentProperty, oneToOneChildProperty)));
+            }
+
+            public void AddOneToOneNullableSaveReference(ForeignKeyAssociation association, TableFactory tableCache)
+            {
+                _addOneToOneSaveReference(association, tableCache, true);
             }
 
             private int _indexOf(object entity)
@@ -201,9 +213,9 @@ namespace OR_M_Data_Entities.Data
                 return -1;
             }
 
-            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
+            private void _insert(int index, object entity, ForeignKeyAssociation association, IConfigurationOptions configuration, TableFactory tableCache)
             {
-                _internal.Insert(index, new Reference(entity, NextAlias(), tableCache, configuration, association, isDeleting));
+                _internal.Insert(index, new Reference(entity, NextAlias(), tableCache, configuration, association));
             }
 
             public string NextAlias()
@@ -302,8 +314,8 @@ namespace OR_M_Data_Entities.Data
                 References = new List<ReferenceNode>();
             }
 
-            public Reference(object entity, string alias, TableFactory tableCache, IConfigurationOptions configuration, ForeignKeyAssociation association, bool isDeleting = false) :
-                this(new ModificationEntity(entity, alias, configuration, tableCache, isDeleting), alias, association)
+            public Reference(object entity, string alias, TableFactory tableCache, IConfigurationOptions configuration, ForeignKeyAssociation association) :
+                this(new ModificationEntity(entity, alias, configuration, tableCache), alias, association)
             {
             }
 
@@ -345,7 +357,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static void BuildReferenceMap(ModificationEntity entity, ReferenceMap map, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
+            public static void BuildReferenceMap(ModificationEntity entity, ReferenceMap map, IConfigurationOptions configuration, TableFactory tableCache)
             {
                 var entities = _getForeignKeys(entity.Value);
 
@@ -417,7 +429,7 @@ namespace OR_M_Data_Entities.Data
                         {
                             // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                             // the value property
-                            map.AddOneToManySaveReference(e, tableCache, item, isDeleting);
+                            map.AddOneToManySaveReference(e, tableCache, item);
 
                             // add any dependencies
                             if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
@@ -433,14 +445,17 @@ namespace OR_M_Data_Entities.Data
 
                         if (foundKey != null)
                         {
-                            map.AddOneToManySaveReference(e, tableCache, e.Value, isDeleting);
+                            map.AddOneToOneNullableSaveReference(e, tableCache);
+
+                            // add any dependencies
+                            if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
                             continue;
                         }
 
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
-                        map.AddOneToOneSaveReference(e, tableCache, isDeleting);
+                        map.AddOneToOneSaveReference(e, tableCache);
 
                         // add any dependencies
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));

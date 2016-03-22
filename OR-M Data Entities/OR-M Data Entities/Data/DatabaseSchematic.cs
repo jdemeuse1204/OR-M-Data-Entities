@@ -1012,19 +1012,9 @@ namespace OR_M_Data_Entities.Data
 
             #region Constructor
             public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableFactory tableCache)
-                : this(entity, uniqueKey, configuration, tableCache, false)
-            {
-            }
-
-            public ModificationEntity(object entity, string uniqueKey, IConfigurationOptions configuration, TableFactory tableCache, bool isDeleting)
                 : base(entity, configuration, tableCache)
             {
                 _uniqueKey = uniqueKey;
-
-                // do not build the entity if deleting
-                if (isDeleting) return;
-
-                _initialize(configuration);
             }
             #endregion
 
@@ -1035,9 +1025,96 @@ namespace OR_M_Data_Entities.Data
                 return ModificationItems.Where(w => w.IsModified && !w.IsPrimaryKey).ToList();
             }
 
-            public void RecalculateChanges(IConfigurationOptions configuration)
+            public void CalculateChanges(IConfigurationOptions configuration)
             {
-                _initialize(configuration);
+                var primaryKeys = GetPrimaryKeys();
+
+                // make sure the table is valid
+                _isEntityValid(Value);
+
+                var hasPrimaryKeysOnly = HasPrimaryKeysOnly();
+                var areAnyPkGenerationOptionsNone = false;
+
+                UpdateType = UpdateType.Skip;
+
+                // check to see if anything has updated, if not we can skip everything
+                _setChanges();
+
+                // if there are no changes then exit
+                if (State == EntityState.UnChanged) return;
+
+                // validate all max length attributes
+                _checkMaxLengthViolations(Value, Type);
+
+                UpdateType = UpdateType.Insert;
+
+                // need to find the Update Type
+                for (var i = 0; i < primaryKeys.Count; i++)
+                {
+                    var key = primaryKeys[i];
+                    var pkValue = key.GetValue(Value);
+                    var generationOption = GetGenerationOption(key);
+
+                    // make sure the primary key is not null
+                    _checkPkNotNull(pkValue, key);
+
+                    // check to see if we are updating or not
+                    var isUpdating = !IsKeyInInsertArray(configuration, pkValue);
+
+                    if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
+
+                    // break because we are already updating, do not want to set to false
+                    if (!isUpdating)
+                    {
+                        if (generationOption != DbGenerationOption.None) continue;
+
+                        // check to see if FK corresponds to PK, if it does and its one-one,
+                        // then check to see if the FK property has a value, if it does then
+                        // we are ok because it will be saved before its parent
+                        var foreignKeyCheck =
+                            AllProperties.FirstOrDefault(
+                                w =>
+                                    w.GetCustomAttribute<ForeignKeyAttribute>() != null &&
+                                    w.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName == key.Name);
+
+                        if (foreignKeyCheck != null)
+                        {
+                            var value = GetPropertyValue(foreignKeyCheck);
+
+                            if (value != null) continue;
+                        }
+
+                        var pseudoKeyCheck =
+                            AllProperties.FirstOrDefault(
+                                w =>
+                                    w.GetCustomAttribute<PseudoKeyAttribute>() != null &&
+                                    w.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName == key.Name);
+
+                        if (pseudoKeyCheck != null)
+                        {
+                            var value = GetPropertyValue(pseudoKeyCheck);
+
+                            if (value != null) continue;
+                        }
+
+                        // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
+                        throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
+                    }
+
+                    // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
+                    // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
+                    // if so we need to perform an update, otherwise we perform an insert
+                    UpdateType = hasPrimaryKeysOnly ? UpdateType.TryInsert : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
+
+                    if (UpdateType != UpdateType.Update && UpdateType != UpdateType.TryInsertUpdate) continue;
+
+                    // make sure identity columns were not updated
+                    _checkForIdentityColumnUpdates(EntityTrackable, configuration, AllColumns);
+                }
+
+                // make sure timestamps are not updated.
+                // Process here because we need to know the update type
+                _validateTimestamps();
             }
 
             // get the keys from AllProperties.  If we are deleting,
@@ -1222,98 +1299,6 @@ namespace OR_M_Data_Entities.Data
             private void _checkPkNotNull(object pkValue, MemberInfo key)
             {
                 if (pkValue == null) throw new SqlSaveException(string.Format("Primary Key cannot be null: {0}", GetColumnName(key)));
-            }
-
-            private void _initialize(IConfigurationOptions configuration)
-            {
-                var primaryKeys = GetPrimaryKeys();
-
-                // make sure the table is valid
-                _isEntityValid(Value);
-
-                var hasPrimaryKeysOnly = HasPrimaryKeysOnly();
-                var areAnyPkGenerationOptionsNone = false;
-
-                UpdateType = UpdateType.Skip;
-
-                // check to see if anything has updated, if not we can skip everything
-                _setChanges();
-
-                // if there are no changes then exit
-                if (State == EntityState.UnChanged) return;
-
-                // validate all max length attributes
-                _checkMaxLengthViolations(Value, Type);
-
-                UpdateType = UpdateType.Insert;
-
-                // need to find the Update Type
-                for (var i = 0; i < primaryKeys.Count; i++)
-                {
-                    var key = primaryKeys[i];
-                    var pkValue = key.GetValue(Value);
-                    var generationOption = GetGenerationOption(key);
-
-                    // make sure the primary key is not null
-                    _checkPkNotNull(pkValue, key);
-
-                    // check to see if we are updating or not
-                    var isUpdating = !IsKeyInInsertArray(configuration, pkValue);
-
-                    if (generationOption == DbGenerationOption.None) areAnyPkGenerationOptionsNone = true;
-
-                    // break because we are already updating, do not want to set to false
-                    if (!isUpdating)
-                    {
-                        if (generationOption != DbGenerationOption.None) continue;
-
-                        // check to see if FK corresponds to PK, if it does and its one-one,
-                        // then check to see if the FK property has a value, if it does then
-                        // we are ok because it will be saved before its parent
-                        var foreignKeyCheck =
-                            AllProperties.FirstOrDefault(
-                                w =>
-                                    w.GetCustomAttribute<ForeignKeyAttribute>() != null &&
-                                    w.GetCustomAttribute<ForeignKeyAttribute>().ForeignKeyColumnName == key.Name);
-
-                        if (foreignKeyCheck != null)
-                        {
-                            var value = GetPropertyValue(foreignKeyCheck);
-                            
-                            if (value != null) continue;
-                        }
-
-                        var pseudoKeyCheck =
-                            AllProperties.FirstOrDefault(
-                                w =>
-                                    w.GetCustomAttribute<PseudoKeyAttribute>() != null &&
-                                    w.GetCustomAttribute<PseudoKeyAttribute>().ParentTableColumnName == key.Name);
-
-                        if (pseudoKeyCheck != null)
-                        {
-                            var value = GetPropertyValue(pseudoKeyCheck);
-
-                            if (value != null) continue;
-                        }
-
-                        // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
-                        throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
-                    }
-
-                    // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.
-                    // if we have any Pk's with a DbGenerationOption of None we need to first see if a record exists for the pks, 
-                    // if so we need to perform an update, otherwise we perform an insert
-                    UpdateType = hasPrimaryKeysOnly ? UpdateType.TryInsert : areAnyPkGenerationOptionsNone ? UpdateType.TryInsertUpdate : UpdateType.Update;
-
-                    if (UpdateType != UpdateType.Update && UpdateType != UpdateType.TryInsertUpdate) continue;
-
-                    // make sure identity columns were not updated
-                    _checkForIdentityColumnUpdates(EntityTrackable, configuration, AllColumns);
-                }
-
-                // make sure timestamps are not updated.
-                // Process here because we need to know the update type
-                _validateTimestamps();
             }
 
             private void _validateTimestamps()

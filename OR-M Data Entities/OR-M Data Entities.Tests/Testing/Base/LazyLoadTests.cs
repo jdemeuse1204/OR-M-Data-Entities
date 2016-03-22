@@ -147,13 +147,13 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                         Value = "MN"
                     },
                     ZipCode = new List<Zip>
-                {
-                    new Zip
                     {
-                        Zip4 = "5412",
-                        Zip5 = "55555"
+                        new Zip
+                        {
+                            Zip4 = "5412",
+                            Zip5 = "55555"
+                        }
                     }
-                }
                 };
 
                 var user = ctx.From<User>().FirstOrDefault(w => w.ID == 11);

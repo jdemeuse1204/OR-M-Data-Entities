@@ -728,12 +728,15 @@ ELSE
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
-                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, false);
+                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
 
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
                     var reference = referenceMap[i];
                     ISqlExecutionPlan plan;
+
+                    // calculate the changes for the entity
+                    reference.Entity.CalculateChanges(Configuration);
 
                     if (OnBeforeSave != null) OnBeforeSave(reference.Entity.Value, reference.Entity.UpdateType);
 
@@ -816,12 +819,6 @@ ELSE
                     if (reference.Parent != null && !reference.Property.IsList())
                     {
                         Entity.SetPropertyValue(reference.Parent, reference.Entity.Value, reference.Property.Name);
-
-                        // Recalcualte the parent changes because we changed a modification item
-                        var tableName = Table.GetTableName(reference.Parent);
-                        var searchItems = referenceMap.Where(w => w.Entity.PlainTableName == tableName).ToList();
-
-                        foreach (var item in searchItems) item.Entity.RecalculateChanges(Configuration);
                     }
 
                     // set the pristine state only if entity tracking is on and there is no concurrency violation
@@ -846,7 +843,7 @@ ELSE
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, true);
+            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();

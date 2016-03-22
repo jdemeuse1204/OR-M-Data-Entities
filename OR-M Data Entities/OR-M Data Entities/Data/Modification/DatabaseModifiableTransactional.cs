@@ -710,7 +710,7 @@ IF @@TRANCOUNT > 0
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
-                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, false);
+                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
 
                 var parameters = new List<SqlSecureQueryParameter>();
                 var plan = new SqlTransactionPlan(referenceMap, parameters);
@@ -718,6 +718,9 @@ IF @@TRANCOUNT > 0
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
                     var reference = referenceMap[i];
+
+                    // calculate the changes for the entity
+                    reference.Entity.CalculateChanges(Configuration);
 
                     // add the save to the list so we can tell the user what the save action did
                     actions.Add(reference.Entity.UpdateType);
@@ -790,7 +793,7 @@ IF @@TRANCOUNT > 0
             var parent = new ModificationEntity(entity, referenceMap.NextAlias(), Configuration, DbTableFactory);
 
             // get all items to save and get them in order
-            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, true);
+            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
 
             var parameters = new List<SqlSecureQueryParameter>();
             var builder = new SqlTransactionPlan(referenceMap, parameters);

@@ -1345,6 +1345,38 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             return (history.CreateDate != null);
         }
 
+        public static bool Test_69(DbSqlContext ctx)
+        {
+            // test insert after parent is saved already
+            var contact = new Contact
+            {
+                CreatedBy = new User
+                {
+                    Name = "James Demeuse"
+                },
+                EditedBy = new User
+                {
+                    Name = "Different User"
+                },
+                
+            };
+
+            ctx.SaveChanges(contact);
+
+            contact.Number = new PhoneNumber
+            {
+                Phone = "555-555-5555",
+                PhoneType = new PhoneType
+                {
+                    Type = "Cell"
+                }
+            };
+
+            ctx.SaveChanges(contact);
+
+            return contact.PhoneID.HasValue;
+        }
+
         #region helpers
         protected static Policy _addPolicy(DbSqlContext ctx)
         {
@@ -2924,7 +2956,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
         {
             var t = ctx.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
             {
-                ID = w.ContactID,
+                w.ContactID,
                 w.CreatedByUserID,
                 w.FirstName,
                 w.Number,
