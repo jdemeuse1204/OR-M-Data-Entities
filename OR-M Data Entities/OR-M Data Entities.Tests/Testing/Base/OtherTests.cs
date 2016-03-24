@@ -184,5 +184,25 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 return true;
             }
         }
+
+        public static bool Test_7(DefaultContext ctx)
+        {
+            // make sure we can insert guid with dbdefault
+            try
+            {
+                var t = new DbDefaultGuidTest
+                {
+                    Test = "WIN!"
+                };
+
+                ctx.SaveChanges(t);
+
+                return t.Id != Guid.Empty;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
     }
 }

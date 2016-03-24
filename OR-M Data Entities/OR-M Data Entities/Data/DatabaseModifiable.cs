@@ -169,8 +169,6 @@ namespace OR_M_Data_Entities.Data
 
             public void AddOneToOneModificationReference(ForeignKeyAssociation association, TableFactory tableCache)
             {
-                // if we are deleing and we have a 1-1 nullable reference and the 
-
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
                 _insert(oneToOneParentIndex, association.Value, association, _configuration, tableCache);
@@ -183,14 +181,11 @@ namespace OR_M_Data_Entities.Data
                 var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
                 var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ChildType)[0];
 
-                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne,
-                    new Link(oneToOneParentProperty, oneToOneChildProperty)));
+                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneParentPrimaryKeyModificationReference(ForeignKeyAssociation association, TableFactory tableCache, object value)
+            public void AddOneToOneParentPrimaryKeyModificationReference(ForeignKeyAssociation association, TableFactory tableCache)
             {
-                // if we are deleing and we have a 1-1 nullable reference and the 
-
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
                 _insert(oneToOneParentIndex + 1, association.Value, association, _configuration, tableCache);
@@ -460,7 +455,7 @@ namespace OR_M_Data_Entities.Data
 
                             if (foundKey != null)
                             {
-                                map.AddOneToOneParentPrimaryKeyModificationReference(e, tableCache, e.Value);
+                                map.AddOneToOneParentPrimaryKeyModificationReference(e, tableCache);
 
                                 // add any dependencies
                                 if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
