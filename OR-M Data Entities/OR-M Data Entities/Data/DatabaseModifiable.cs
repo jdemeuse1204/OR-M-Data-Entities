@@ -149,7 +149,7 @@ namespace OR_M_Data_Entities.Data
                 _internal.Add(new Reference(entity, NextAlias()));
             }
 
-            public void AddOneToManySaveReference(ForeignKeyAssociation association, TableFactory tableCache, object value)
+            public void AddOneToManyModificationReference(ForeignKeyAssociation association, TableFactory tableCache, object value)
             {
                 var parentIndex = _indexOf(association.Parent);
 
@@ -167,13 +167,10 @@ namespace OR_M_Data_Entities.Data
                 oneToManyParent.References.Add(new ReferenceNode(association.Parent, oneToManyChild.Alias, RelationshipType.OneToMany, new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache)
+            public void AddOneToOneModificationReference(ForeignKeyAssociation association, TableFactory tableCache)
             {
-                _addOneToOneSaveReference(association, tableCache, false);
-            }
+                // if we are deleing and we have a 1-1 nullable reference and the 
 
-            private void _addOneToOneSaveReference(ForeignKeyAssociation association, TableFactory tableCache, bool isNullableReference)
-            {
                 var oneToOneParentIndex = _indexOf(association.Parent);
 
                 _insert(oneToOneParentIndex, association.Value, association, _configuration, tableCache);
@@ -186,14 +183,28 @@ namespace OR_M_Data_Entities.Data
                 var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
                 var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ChildType)[0];
 
-                parent.References.Add(new ReferenceNode(association.Value, child.Alias,
-                    isNullableReference ? RelationshipType.OneToMany : RelationshipType.OneToOne, // treat a nullable 1-1 like 1-many so the join is correct
+                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne,
                     new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
-            public void AddOneToOneNullableSaveReference(ForeignKeyAssociation association, TableFactory tableCache)
+            public void AddOneToOneParentPrimaryKeyModificationReference(ForeignKeyAssociation association, TableFactory tableCache, object value)
             {
-                _addOneToOneSaveReference(association, tableCache, true);
+                // if we are deleing and we have a 1-1 nullable reference and the 
+
+                var oneToOneParentIndex = _indexOf(association.Parent);
+
+                _insert(oneToOneParentIndex + 1, association.Value, association, _configuration, tableCache);
+
+                var oneToOneIndex = _indexOf(association.Parent);
+                var childIndex = _indexOf(association.Value);
+                var child = this[childIndex];
+                var parent = this[oneToOneIndex];
+                var oneToOneForeignKeyAttribute = association.Property.GetCustomAttribute<ForeignKeyAttribute>();
+                var oneToOneParentProperty = association.ParentType.GetProperty(oneToOneForeignKeyAttribute.ForeignKeyColumnName);
+                var oneToOneChildProperty = ReflectionCacheTable.GetPrimaryKeys(association.ChildType)[0];
+
+                parent.References.Add(new ReferenceNode(association.Value, child.Alias, RelationshipType.OneToOne,
+                    new Link(oneToOneParentProperty, oneToOneChildProperty)));
             }
 
             private int _indexOf(object entity)
@@ -429,7 +440,7 @@ namespace OR_M_Data_Entities.Data
                         {
                             // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                             // the value property
-                            map.AddOneToManySaveReference(e, tableCache, item);
+                            map.AddOneToManyModificationReference(e, tableCache, item);
 
                             // add any dependencies
                             if (ReflectionCacheTable.HasForeignKeys(item)) entities.AddRange(_getForeignKeys(item));
@@ -441,21 +452,27 @@ namespace OR_M_Data_Entities.Data
                         // we need to delete the child first
                         var foreignKey = e.Property.GetCustomAttribute<ForeignKeyAttribute>();
                         var parentPrimaryKeys = ReflectionCacheTable.GetPrimaryKeys(e.Parent);
-                        var foundKey = parentPrimaryKeys.FirstOrDefault(w => w.Name == foreignKey.ForeignKeyColumnName);
 
-                        if (foundKey != null)
+                        // only perform if the PK is the only key
+                        if (parentPrimaryKeys.Count == 1)
                         {
-                            map.AddOneToOneNullableSaveReference(e, tableCache);
+                            var foundKey = parentPrimaryKeys.FirstOrDefault(w => w.Name == foreignKey.ForeignKeyColumnName);
 
-                            // add any dependencies
-                            if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
-                            continue;
+                            if (foundKey != null)
+                            {
+                                map.AddOneToOneParentPrimaryKeyModificationReference(e, tableCache, e.Value);
+
+                                // add any dependencies
+                                if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
+                                continue;
+                            }
                         }
+
 
                         // must be saved before the parent
                         // ForeignKeySaveNode implements IEquatable and Overrides get hash code to only compare
                         // the value property
-                        map.AddOneToOneSaveReference(e, tableCache);
+                        map.AddOneToOneModificationReference(e, tableCache);
 
                         // add any dependencies
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
