@@ -74,6 +74,7 @@ namespace OR0M_Data_Entities.Console
         private static void Main(string[] args)
         {
             var context = new SqlContext();
+            var ps = typeof (Test).GetProperties();
 
             var s = DateTime.Now;
             //var tt = context.Find<Contact>(500);
