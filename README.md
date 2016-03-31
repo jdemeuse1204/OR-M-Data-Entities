@@ -3,9 +3,11 @@ Speedy Object Relational Mapper
 
 OR-M Data Entities
 Overview:  <br><br>
-This solution is a micro Object-Relational Mapper aimed at speed.  Others out there are bulky and slow, unlike ORM Data Entities.  The catch is there is less "micro managing" of code going on, which makes the framework much faster.  
+This solution is a micro Object-Relational Mapper aimed at speed.  Others out there can be bulky and slow, unlike OR-M Data Entities.  OR-M Data Entities is designed to feel like Entity Framework to minimize any learning curve.  In fact, I have gotten a lot of compliments saying that OR-M Data Entities is easier to setup and use.  The reason setup is easier and the OR-M is easier comes from less micro-managing of code.  No tables are created if they are not there, table names are your class names, unless you change them.  Everything is much more straight forward, including the creation of foreign keys. Check it out for yourself!
 
-OR-M Data Entities is now even better. Support was added for ForeignKeys, Pseudo Keys, ReadOnly Tables, and VIEWS!  Yes thats right, Views now exist!  When writing the new code I realized some models that have foreign keys can get pretty big and you might not want to always select everything.  Sure you could shape your data with a select, but that can be a lot of code for bigger models.  Enter views!  Just put the ViewAttribute on each Foreign Key class and specify which view you want it to be a part of.  Then in the context do FromView<T>(string viewId) to select your data. 
+Version 3 coming soon!
+
+
 
 ###Documentation Link:
 
