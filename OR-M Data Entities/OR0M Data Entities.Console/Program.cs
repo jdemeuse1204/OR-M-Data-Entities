@@ -23,7 +23,7 @@ namespace OR0M_Data_Entities.Console
 
             Configuration.UseTransactions = true;
             Configuration.ConcurrencyChecking.IsOn = true;
-            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.Continue;
 
             OnConcurrencyViolation += OnOnConcurrencyViolation;
 

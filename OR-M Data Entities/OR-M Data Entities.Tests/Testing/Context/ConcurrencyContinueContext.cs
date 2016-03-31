@@ -9,7 +9,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Context
         {
             Configuration.UseTransactions = false;
             Configuration.ConcurrencyChecking.IsOn = true;
-            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue;
+            Configuration.ConcurrencyChecking.ViolationRule = ConcurrencyViolationRule.Continue;
             OnSqlGeneration += ContextMembers.OnOnSqlGeneration;
         }
     }

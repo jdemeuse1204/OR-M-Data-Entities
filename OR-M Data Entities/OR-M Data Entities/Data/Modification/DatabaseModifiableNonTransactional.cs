@@ -799,7 +799,7 @@ ELSE
                         {
                             case ConcurrencyViolationRule.ThrowException:
                                 throw new DBConcurrencyException(string.Format("Concurrency Violation.  {0} was changed prior to this update", reference.Entity.ToString(TableNameFormat.Plain)));
-                            case ConcurrencyViolationRule.OverwriteAndContinue:
+                            case ConcurrencyViolationRule.Continue:
                                 break;
                             case ConcurrencyViolationRule.UseHandler:
                                 if (OnConcurrencyViolation != null) OnConcurrencyViolation(reference.Entity.Value);

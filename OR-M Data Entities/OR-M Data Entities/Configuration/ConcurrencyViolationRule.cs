@@ -11,7 +11,7 @@ namespace OR_M_Data_Entities
     public enum ConcurrencyViolationRule
     {
         ThrowException,
-        OverwriteAndContinue,
+        Continue,
         UseHandler
     }
 }

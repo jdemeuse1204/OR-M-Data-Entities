@@ -300,8 +300,8 @@ namespace OR_M_Data_Entities.Data
 
                 ConcurrencyChecking = new ConcurrencyConfiguration
                 {
-                    ViolationRule = ConcurrencyViolationRule.OverwriteAndContinue,
-                    IsOn = true
+                    ViolationRule = ConcurrencyViolationRule.Continue,
+                    IsOn = false
                 };
 
                 InsertKeys = new KeyConfiguration();
