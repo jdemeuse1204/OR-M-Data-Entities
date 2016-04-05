@@ -66,7 +66,8 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             // test with EST on and off
             try
             {
-                var c1 = ctx.Find<Contact>(1);
+                var id = ctx.From<Contact>().Select(w => w.ContactID).Max();
+                var c1 = ctx.Find<Contact>(id);
 
                 c1.Appointments.Add(new OR_M_Data_Entities.Tests.Tables.EntityStateTrackableOff.Appointment
                 {

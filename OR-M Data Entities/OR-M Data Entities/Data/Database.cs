@@ -293,10 +293,12 @@ namespace OR_M_Data_Entities.Data
 
         private class ConfigurationOptions : IConfigurationOptions
         {
-            public ConfigurationOptions(bool useTransactions, string defaultSchema)
+            public ConfigurationOptions(bool isMarsEnabled, string defaultSchema)
             {
+                _isMarsEnabled = isMarsEnabled;
+
                 IsLazyLoading = false;
-                UseTransactions = useTransactions;
+                UseTransactions = false; // default should be false
 
                 ConcurrencyChecking = new ConcurrencyConfiguration
                 {
@@ -310,13 +312,26 @@ namespace OR_M_Data_Entities.Data
 
             public bool IsLazyLoading { get; set; }
 
-            public bool UseTransactions { get; set; }
+            private bool _useTransactions;
+            public bool UseTransactions
+            {
+                get { return _useTransactions; }
+                set
+                {
+                    // make sure mars is enabled so transactions can be used
+                    if (value && !_isMarsEnabled) throw new ConfigurationErrorsException("Multiple Active Result Sets must be enabled to use Transactions");
+
+                    _useTransactions = value;
+                }
+            }
 
             public ConcurrencyConfiguration ConcurrencyChecking { get; private set; }
 
             public KeyConfiguration InsertKeys { get; private set; }
 
             public string DefaultSchema { get; private set; }
+
+            private readonly bool _isMarsEnabled;
         }
         #endregion
     }

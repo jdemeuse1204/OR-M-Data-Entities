@@ -16,10 +16,7 @@ namespace OR_M_Data_Entities
         #region Constructor
 
         public DbSqlContext(string connectionStringOrName)
-            : base(connectionStringOrName)
-        {
-            Configuration.UseTransactions = false;
-        }
+            : base(connectionStringOrName) { }
 
         public DbSqlContext(SqlConnectionStringBuilder connection)
             : this(connection.ConnectionString) { }

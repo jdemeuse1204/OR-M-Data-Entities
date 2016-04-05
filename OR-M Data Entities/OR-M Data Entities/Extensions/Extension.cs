@@ -91,7 +91,7 @@ namespace OR_M_Data_Entities
 
         public static Type GetUnderlyingType(this Type type)
         {
-            return type.IsList() || type.IsNullable()
+            return type.IsList()
                 ? type.GetGenericArguments()[0]
                 : type;
         }
