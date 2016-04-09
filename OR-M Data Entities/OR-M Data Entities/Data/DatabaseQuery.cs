@@ -1178,6 +1178,9 @@ namespace OR_M_Data_Entities.Data
 
                     if (schematicToScan == null) throw new Exception(string.Format("Could not find property name - {0}", table));
 
+                    // table might already be included
+                    if (schematicToScan.MappedTable.IsIncluded) continue;
+
                     schematicToScan.MappedTable.Include();
                     nextOrdinal += schematicToScan.MappedTable.SelectAll(nextOrdinal);
                 }
