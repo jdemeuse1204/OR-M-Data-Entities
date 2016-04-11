@@ -205,5 +205,27 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                 return false;
             }
         }
+
+        public static bool Test_8(DefaultContext ctx)
+        {
+            // make sure we can insert guid with dbdefault
+            try
+            {
+                var id = ctx.From<Contact>().Select(w => w.ContactID).Max();
+                var contact =
+                    ctx.From<Contact>()
+                        .Include("Appointments")
+                        .Include("Appointments.Address")
+                        .Include("Appointments.Address.State")
+                        .Include("Appointments.Address.ZipCode")
+                        .FirstOrDefault(w => w.ContactID == id);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
     }
 }
