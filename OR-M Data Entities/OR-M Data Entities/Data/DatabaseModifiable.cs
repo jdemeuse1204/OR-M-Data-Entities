@@ -388,16 +388,18 @@ namespace OR_M_Data_Entities.Data
                         // we can skip the foreign key if its nullable and one to one
                         if (isNullable) continue;
 
-                        if (e.Parent == null) throw new SqlSaveException("Cannot save a null object");
+                        // if an objects FKs are null and we are updating, this is ok.
+                        // We cannot insert and have FK's be null
+                        var parentPrimaryKeys = ReflectionCacheTable.GetPrimaryKeys(e.Parent);
 
-                        // check the update type of the parent
-                        var modifcationEntity = new ModificationEntity(e.Parent, columnName, configuration, tableCache);
-
-                        if (modifcationEntity.UpdateType == UpdateType.Insert ||
-                            modifcationEntity.UpdateType == UpdateType.TryInsert ||
-                            modifcationEntity.UpdateType == UpdateType.TryInsertUpdate)
+                        if (
+                            parentPrimaryKeys.Select(primaryKey => primaryKey.GetValue(e.Parent))
+                                .Any(value => ModificationEntity.IsKeyInInsertArray(configuration, value)))
                         {
-                            throw new SqlSaveException(string.Format("Foreign Key violation.  {0} cannot be null", Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
+                            throw new SqlSaveException(
+                                string.Format(
+                                    "Foreign Key violation.  {0} cannot be null unless you are updating its parent.",
+                                    Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
                         }
 
                         continue;

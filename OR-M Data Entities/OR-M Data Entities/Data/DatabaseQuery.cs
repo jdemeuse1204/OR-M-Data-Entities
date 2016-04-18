@@ -436,6 +436,7 @@ namespace OR_M_Data_Entities.Data
                     MappedTables = mappedTables;
                     DataLoadSchematic = dataLoadSchematic;
                     ConfigurationOptions = configuration;
+                    ReturnOverride = null;
                 }
 
                 public IConfigurationOptions ConfigurationOptions { get; private set; }
@@ -559,6 +560,8 @@ namespace OR_M_Data_Entities.Data
 
                     // recursive clear
                     DataLoadSchematic.ClearRowReadCache();
+
+                    ReturnOverride = null;
                 }
 
                 public void SetReturnOverride(Expression expression)
@@ -838,6 +841,11 @@ namespace OR_M_Data_Entities.Data
             public bool AreColumnsSelected()
             {
                 return !string.IsNullOrEmpty(_columns);
+            }
+
+            public bool CanUseOrderBy()
+            {
+                return !_exists && !_min && !_max && !_count;
             }
 
             public void AddParameter(object value, out string parameterKey)
@@ -1138,7 +1146,9 @@ namespace OR_M_Data_Entities.Data
                 {
                     // order by primary keys, so we can select the data
                     // back correctly from the data reader
-                    OrderByPrimaryKeys();
+                    // can only order if we are not doing a 
+                    // Min/Max/Count/Exists
+                    if (_expressionQuerySql.CanUseOrderBy()) OrderByPrimaryKeys();
 
                     // resolve the foreign key joins
                     ForeignKeyJoins();

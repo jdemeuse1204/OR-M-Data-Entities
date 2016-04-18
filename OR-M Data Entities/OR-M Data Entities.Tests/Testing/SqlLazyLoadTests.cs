@@ -61,5 +61,17 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(LazyLoadTests.Test_8(_ctx));
         }
+
+        [TestMethod]
+        public void Test_LazyLoading_9()
+        {
+            Assert.IsTrue(OtherTests.Test_8(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_LazyLoading_10()
+        {
+            Assert.IsTrue(OtherTests.Test_9(_ctx));
+        }
     }
 }

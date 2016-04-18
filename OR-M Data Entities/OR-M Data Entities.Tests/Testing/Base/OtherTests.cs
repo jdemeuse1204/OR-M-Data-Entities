@@ -206,7 +206,7 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
             }
         }
 
-        public static bool Test_8(DefaultContext ctx)
+        public static bool Test_8(LazyLoadContext ctx)
         {
             // make sure we can insert guid with dbdefault
             try
@@ -219,6 +219,40 @@ namespace OR_M_Data_Entities.Tests.Testing.Base
                         .Include("Appointments.Address.State")
                         .Include("Appointments.Address.ZipCode")
                         .FirstOrDefault(w => w.ContactID == id);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_9(LazyLoadContext ctx)
+        {
+            // should be able to update without any FK's present
+            try
+            {
+                var id = ctx.From<Contact>().Select(w => w.ContactID).Max();
+                var contact = ctx.From<Contact>().FirstOrDefault(w => w.ContactID == id);
+
+                ctx.SaveChanges(contact);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_10(DefaultContext ctx)
+        {
+            // make sure the return override is reset after doing a select
+            try
+            {
+                var id = ctx.From<Contact>().Select(w => w.ContactID).Max();
+                var contact = ctx.From<Contact>().FirstOrDefault(w => w.ContactID == id);
 
                 return true;
             }
