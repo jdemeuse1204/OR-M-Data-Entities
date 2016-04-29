@@ -8,6 +8,7 @@ using System.Xml.Schema;
 using OR_M_Data_Entities;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Mapping;
+using OR_M_Data_Entities.Mock;
 using OR_M_Data_Entities.Scripts;
 using OR_M_Data_Entities.Scripts.Base;
 using OR_M_Data_Entities.Tracking;
@@ -62,8 +63,19 @@ namespace OR0M_Data_Entities.Console
         public string FirstName { get; set; }
     }
 
+
+
     internal class Program
     {
+        public class MockContext : MockDbSqlContext
+        {
+            protected override void OnDatabaseCreating()
+            {
+                var c = new Contact();
+                Add(c);
+            }
+        }
+
         private static bool Test(int i)
         {
             return false;
@@ -73,8 +85,13 @@ namespace OR0M_Data_Entities.Console
 
         private static void Main(string[] args)
         {
+            var mock = new MockContext();
+
+            mock.From<Contact>().First();
+
+
             var context = new SqlContext();
-            var ps = typeof (Test).GetProperties();
+            var ps = typeof(Test).GetProperties();
 
             var s = DateTime.Now;
             //var tt = context.Find<Contact>(500);
@@ -98,7 +115,7 @@ namespace OR0M_Data_Entities.Console
 
             //context.SaveChanges(t);
 
-            
+
             var test = context.From<Contact>().Count(w => w.ContactID == 1);
             var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
             var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);

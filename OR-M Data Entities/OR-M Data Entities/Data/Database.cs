@@ -48,6 +48,8 @@ namespace OR_M_Data_Entities.Data
         private SqlCommand _command { get; set; }
 
         private bool _configurationCheckPerformed { get; set; }
+
+        private const string _defaultSchema = "dbo";
         #endregion
 
         #region Constructor
@@ -58,20 +60,28 @@ namespace OR_M_Data_Entities.Data
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
                 ConnectionString = connectionStringOrName;
+
+                // check to see if MARS is enabled, it is needed for transactions
+                Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString), _defaultSchema);
+
+                _connection = new SqlConnection(ConnectionString);
+                return;
             }
-            else
+
+            if (!string.Equals(connectionStringOrName, "MOCK", StringComparison.Ordinal))
             {
                 var conn = ConfigurationManager.ConnectionStrings[connectionStringOrName];
 
                 if (conn == null) throw new ConfigurationErrorsException("Connection string not found in config");
 
                 ConnectionString = conn.ConnectionString;
+                return;
             }
 
-            // check to see if MARS is enabled, it is needed for transactions
-            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString), "dbo");
+            // mock
+            ConnectionString = connectionStringOrName;
 
-            _connection = new SqlConnection(ConnectionString);
+            Configuration = new ConfigurationOptions(false, _defaultSchema);
         }
         #endregion
 
