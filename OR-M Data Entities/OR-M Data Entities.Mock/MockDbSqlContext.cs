@@ -1,4 +1,7 @@
-﻿namespace OR_M_Data_Entities.Mock
+﻿using System.Collections.Generic;
+using OR_M_Data_Entities.Data.Definition;
+
+namespace OR_M_Data_Entities.Mock
 {
     public abstract class MockDbSqlContext : DbSqlContext
     {
@@ -18,5 +21,13 @@
         {
             _database.Add(DbTableFactory, Configuration, entity);
         }
+
+        #region Overrides
+
+        protected override void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
+        {
+            
+        }
+        #endregion
     }
 }

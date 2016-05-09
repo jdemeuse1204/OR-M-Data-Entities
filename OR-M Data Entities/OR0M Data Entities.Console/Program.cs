@@ -87,7 +87,7 @@ namespace OR0M_Data_Entities.Console
         {
             var mock = new MockContext();
 
-            mock.From<Contact>().First();
+            mock.From<Contact>().Mock_First();
 
 
             var context = new SqlContext();

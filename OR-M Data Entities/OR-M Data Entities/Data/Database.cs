@@ -60,28 +60,20 @@ namespace OR_M_Data_Entities.Data
             if (connectionStringOrName.Contains(";") || connectionStringOrName.Contains("="))
             {
                 ConnectionString = connectionStringOrName;
-
-                // check to see if MARS is enabled, it is needed for transactions
-                Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString), _defaultSchema);
-
-                _connection = new SqlConnection(ConnectionString);
-                return;
             }
-
-            if (!string.Equals(connectionStringOrName, "MOCK", StringComparison.Ordinal))
+            else
             {
                 var conn = ConfigurationManager.ConnectionStrings[connectionStringOrName];
 
                 if (conn == null) throw new ConfigurationErrorsException("Connection string not found in config");
 
                 ConnectionString = conn.ConnectionString;
-                return;
             }
 
-            // mock
-            ConnectionString = connectionStringOrName;
+            // check to see if MARS is enabled, it is needed for transactions
+            Configuration = new ConfigurationOptions(_isMARSEnabled(ConnectionString), _defaultSchema);
 
-            Configuration = new ConfigurationOptions(false, _defaultSchema);
+            _connection = new SqlConnection(ConnectionString);
         }
         #endregion
 
@@ -195,7 +187,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Execution
-        protected void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
+        protected virtual void ExecuteReader(string sql, List<SqlDbParameter> parameters, IQuerySchematic schematic)
         {
             lock (_executionLock)
             {

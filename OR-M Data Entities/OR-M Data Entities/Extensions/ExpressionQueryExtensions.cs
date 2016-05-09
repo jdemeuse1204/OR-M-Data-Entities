@@ -576,11 +576,6 @@ namespace OR_M_Data_Entities
             if (source.HasForeignKeys()) throw new OrderByException("Cannot join Expression Querys that have foreign keys.");
         }
 
-
-
-
-
-        // not done
         #region Select
         public static IExpressionQuery<TResult> Select<TSource, TResult>(this IExpressionQuery<TSource> source, Expression<Func<TSource, TResult>> selector)
         {
