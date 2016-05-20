@@ -1,0 +1,7 @@
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug\OR-M Data Entities.Mock.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug\OR-M Data Entities.Mock.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.csprojResolveAssemblyReference.cache

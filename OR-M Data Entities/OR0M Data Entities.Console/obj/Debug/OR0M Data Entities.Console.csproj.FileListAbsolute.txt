@@ -14,3 +14,9 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.dll
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.pdb
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.Mock.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.Mock.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.WebApi.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\Newtonsoft.Json.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.WebApi.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\Newtonsoft.Json.xml

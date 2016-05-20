@@ -17,6 +17,8 @@ Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "OR-M Data Entities.Tests.Da
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR-M Data Entities.Mock", "OR-M Data Entities.Mock\OR-M Data Entities.Mock.csproj", "{75A91086-6D08-4B0B-A7C7-03683C2C2395}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OR-M Data Entities.WebApi", "OR-M Data Entities.WebApi\OR-M Data Entities.WebApi.csproj", "{B4A95725-08AA-4F54-A512-5F1F043BF376}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,6 +55,10 @@ Global
 		{75A91086-6D08-4B0B-A7C7-03683C2C2395}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75A91086-6D08-4B0B-A7C7-03683C2C2395}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75A91086-6D08-4B0B-A7C7-03683C2C2395}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4A95725-08AA-4F54-A512-5F1F043BF376}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4A95725-08AA-4F54-A512-5F1F043BF376}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4A95725-08AA-4F54-A512-5F1F043BF376}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4A95725-08AA-4F54-A512-5F1F043BF376}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

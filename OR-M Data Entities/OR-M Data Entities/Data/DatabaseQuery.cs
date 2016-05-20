@@ -25,7 +25,7 @@ namespace OR_M_Data_Entities.Data
     public abstract class DatabaseQuery : DatabaseExecution
     {
         #region Properties
-        private IQuerySchematicFactory _querySchematicFactory { get; set; }
+        protected IQuerySchematicFactory SchematicFactory { get; set; }
 
         #endregion
 
@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Data
         protected DatabaseQuery(string connectionStringOrName)
             : base(connectionStringOrName)
         {
-            _querySchematicFactory = new QuerySchematicFactory();
+            SchematicFactory = new QuerySchematicFactory();
         }
         #endregion
 
@@ -53,12 +53,12 @@ namespace OR_M_Data_Entities.Data
                 var table = DbTableFactory.Find<T>(Configuration);
 
                 // get the schematic
-                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                var schematic = SchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
                 // initialize the selected columns
                 schematic.InitializeSelect(Configuration.IsLazyLoading);
 
-                return new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory, DbTableFactory);
+                return new ExpressionQuery<T>(this, schematic, Configuration, SchematicFactory, DbTableFactory);
             }
         }
 
@@ -76,9 +76,9 @@ namespace OR_M_Data_Entities.Data
                 var table = DbTableFactory.Find<T>(Configuration);
 
                 // get the schematic
-                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                var schematic = SchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory,
+                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, SchematicFactory,
                     DbTableFactory);
 
                 // initialize the selected columns, we tell it false always for find so the whole object will be returned
@@ -100,9 +100,9 @@ namespace OR_M_Data_Entities.Data
                 var table = DbTableFactory.Find<T>(Configuration);
 
                 // get the schematic
-                var schematic = _querySchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+                var schematic = SchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
 
-                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, _querySchematicFactory,
+                var expressionQuery = new ExpressionQuery<T>(this, schematic, Configuration, SchematicFactory,
                     DbTableFactory);
 
                 // initialize the selected columns, we tell it false always for find so the whole object will be returned
@@ -118,7 +118,7 @@ namespace OR_M_Data_Entities.Data
 
         public override void Dispose()
         {
-            _querySchematicFactory = null;
+            SchematicFactory = null;
 
             base.Dispose();
         }
@@ -784,7 +784,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private class ExpressionQuerySqlResolutionContainer
+        protected class ExpressionQuerySqlResolutionContainer
         {
             #region Fields And Parameters
             private string _orderBy { get; set; }
