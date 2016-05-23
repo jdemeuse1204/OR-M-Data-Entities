@@ -899,6 +899,11 @@ namespace OR_M_Data_Entities.Data
                 _from = fromTable;
             }
 
+            public IMappedTable From()
+            {
+                return _from;
+            }
+
             public void AddJoin(string statement)
             {
                 _join = string.Concat(_join, statement);
@@ -1262,7 +1267,7 @@ namespace OR_M_Data_Entities.Data
         }
 
         #region Expression Query Resolution
-        private class ExpressionQueryWhereResolver : ExpressionQueryResolverBase
+        protected class ExpressionQueryWhereResolver : ExpressionQueryResolverBase
         {
             public static void Resolve<T>(Expression<Func<T, bool>> expressionQuery,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
@@ -1721,7 +1726,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private class ExpressionQueryJoinResolver : ExpressionQueryResolverBase
+        protected class ExpressionQueryJoinResolver : ExpressionQueryResolverBase
         {
             // needs to happen before reading
             public static void ResolveForeignKeyJoins(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
@@ -1763,7 +1768,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private class ExpressionQueryOrderByResolver : ExpressionQuerySelectResolver
+        protected class ExpressionQueryOrderByResolver : ExpressionQuerySelectResolver
         {
             public static void ResolveOrderByPrimaryKeys(IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
             {
@@ -1812,7 +1817,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private class ExpressionQuerySelectResolver : ExpressionQueryResolverBase
+        protected class ExpressionQuerySelectResolver : ExpressionQueryResolverBase
         {
             public static void Resolve<TSource, TResult>(Expression<Func<TSource, TResult>> expressionQuery, IQuerySchematic schematic, ExpressionQuerySqlResolutionContainer expressionQuerySql)
             {
@@ -2102,7 +2107,7 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
-        private abstract class ExpressionQueryResolverBase
+        protected abstract class ExpressionQueryResolverBase
         {
             #region Get Value
 
@@ -2343,7 +2348,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
         }
 
-        private class TableColumnContainer
+        protected class TableColumnContainer
         {
             public readonly string TableName;
 

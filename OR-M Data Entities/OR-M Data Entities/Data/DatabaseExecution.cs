@@ -268,7 +268,7 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Data Translator
-        private class DataTranslator<T> : IDataTranslator<T>
+        protected class DataTranslator<T> : IDataTranslator<T>
         {
             #region Properties and Fields
             private readonly IPeekDataReader _reader;

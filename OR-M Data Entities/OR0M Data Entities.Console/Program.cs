@@ -94,15 +94,15 @@ namespace OR0M_Data_Entities.Console
             context.ApiQuery(@"
     {
 	    read:{
-		    Contacts: [{
-			    where: ['Id = 1'],
-			    select: [ 'Id' ],
+		    Contacts: {
+			    where: ['ContactID = 1'],
+			    select: [ 'Contacts.*' ],
 			    join: {
 				    Appointments: {
 					    on: [ 'Id = Contacts.ID' ]
 				    }
 			    }
-		    }]
+		    }
 	    }
     }
 ");
