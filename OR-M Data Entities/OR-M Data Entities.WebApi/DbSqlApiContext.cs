@@ -38,6 +38,9 @@ namespace OR_M_Data_Entities.WebApi
 
         public object ApiQuery(string query)
         {
+            // make sure lazy loading is turned on
+            Configuration.IsLazyLoading = true;
+
             object result = null;
 
             if (string.IsNullOrEmpty(query)) return null;
@@ -70,7 +73,9 @@ namespace OR_M_Data_Entities.WebApi
                 }
 
                 Type fromType;
-                var executableQuery = QueryConverter.Convert(_registeredTables, node, DbTableFactory, SchematicFactory,
+                var executableQuery = QueryConverter.Convert(_registeredTables, 
+                    node, DbTableFactory, 
+                    SchematicFactory,
                     Configuration, out fromType);
 
                 ExecuteReader(executableQuery.Sql(), executableQuery.Parameters());
@@ -236,9 +241,34 @@ namespace OR_M_Data_Entities.WebApi
             }
 
             // one record
-            private static void _fillReadQuery(ExpressionQuerySqlResolutionContainer query, IQuerySchematic schematic, JObject property)
+            private static void _fillReadQuery(ExpressionQuerySqlResolutionContainer query, IQuerySchematic schematic, HashSet<Type> registeredTables, JObject property)
             {
-                var s = new ExpressionQuerySqlResolutionContainer();
+                var children = property.Children();
+
+                foreach (var child in children)
+                {
+                    var node = child as JProperty;
+
+                    if (node == null) throw new QueryParseException("Query not valid.  Parse node into JProperty");
+
+                    switch (node.Name)
+                    {
+                        case SELECT:
+                            _parseSelect(query, schematic, registeredTables, node);
+
+                            // resolve selected columns
+                            ExpressionQuerySelectResolver.ResolveSelectAll(schematic, query);
+                            break;
+                        case JOIN:
+                            _parseJoin(query, node);
+                            break;
+                        case WHERE:
+                            _parseWhere(query, schematic, registeredTables, node);
+                            break;
+                        default:
+                            throw new QueryParseException(string.Format("Node not valid.  Name: {0}", node.Name));
+                    }
+                }
             }
             #endregion
 
