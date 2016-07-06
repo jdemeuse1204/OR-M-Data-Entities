@@ -91,7 +91,7 @@ namespace OR0M_Data_Entities.Console
             var context = new ApiContext();
 
 
-            context.ApiQuery(@"
+            var sdfs = context.ApiQuery(@"
     {
 	    read:{
 		    Contacts: {

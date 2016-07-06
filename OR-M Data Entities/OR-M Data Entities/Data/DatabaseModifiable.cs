@@ -638,9 +638,13 @@ namespace OR_M_Data_Entities.Data
 
         private abstract class SqlModificationBuilder : SqlSecureExecutable, ISqlBuilder
         {
+            #region Properties
+
+            private ISqlContainer _container { get; set; }
+
+            #endregion
+
             #region Constructor
-
-
             protected SqlModificationBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
                 : base(parameters)
             {
@@ -666,9 +670,9 @@ namespace OR_M_Data_Entities.Data
 
             public string GetSql()
             {
-                var container = BuildContainer();
+                _container = BuildContainer();
 
-                return container.Resolve();
+                return _container.Resolve();
             }
 
             #endregion

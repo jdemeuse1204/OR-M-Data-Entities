@@ -88,7 +88,7 @@ namespace OR_M_Data_Entities.Data
                 // resolve the pks for the where statement
                 expressionQuery.ResolveExists(entity);
 
-                return ((IExpressionQuery<T>) expressionQuery).Any();
+                return ((IExpressionQuery<T>)expressionQuery).Any();
             }
         }
 
@@ -112,7 +112,7 @@ namespace OR_M_Data_Entities.Data
                 // resolve the pks for the where statement
                 expressionQuery.Find<T>(pks, Configuration);
 
-                return ((IExpressionQuery<T>) expressionQuery).FirstOrDefault();
+                return ((IExpressionQuery<T>)expressionQuery).FirstOrDefault();
             }
         }
 
@@ -1179,7 +1179,7 @@ namespace OR_M_Data_Entities.Data
             public void Include(string pathOrTableName)
             {
                 if (string.IsNullOrEmpty(pathOrTableName)) throw new ArgumentNullException("pathOrTableName");
-                    
+
                 var tables = pathOrTableName.Split('.');
                 var nextOrdinal = _schematic.NextOrdinal();
                 var schematicToScan = _schematic.DataLoadSchematic;
@@ -1216,12 +1216,12 @@ namespace OR_M_Data_Entities.Data
             {
                 // make sure the current schematic has the inner type, if not make
                 // a temporary schematic, should almost always happen
-                if (!_schematic.HasTable(typeof (TInner)))
+                if (!_schematic.HasTable(typeof(TInner)))
                 {
-                    var types = new List<Type> {typeof (TOuter), typeof (TInner)};
+                    var types = new List<Type> { typeof(TOuter), typeof(TInner) };
 
                     // change the selected schematic
-                    ChangeSchematic(_querySchematicFactory.CreateTemporarySchematic(types, _configuration, _dbTableFactory, typeof (TOuter)));
+                    ChangeSchematic(_querySchematicFactory.CreateTemporarySchematic(types, _configuration, _dbTableFactory, typeof(TOuter)));
                 }
 
                 // combine schematics before sending them in
@@ -1349,7 +1349,7 @@ namespace OR_M_Data_Entities.Data
 
                         // process the not nodes like this because the actual
                         // expression is embedded inside of it
-                        if (e.NodeType == ExpressionType.Not)
+                        if (e.NodeType == ExpressionType.Not || e.NodeType == ExpressionType.NotEqual)
                         {
                             sql = _processNotExpression(e, expressionQuerySql, schematic, replacementString, sql);
                             continue;
@@ -1407,7 +1407,7 @@ namespace OR_M_Data_Entities.Data
                     return expressionString.Replace(replacementString, _getSql(item as MethodCallExpression, expressionQuerySql, schematic, isNotExpressionType, expressionValue));
                 }
 
-                if (item.NodeType == ExpressionType.Equal)
+                if (item.NodeType == ExpressionType.Equal || item.NodeType == ExpressionType.NotEqual)
                 {
                     // check to see if the user is using (test == true) instead of (test)
                     bool outLeftValue;
@@ -1439,14 +1439,14 @@ namespace OR_M_Data_Entities.Data
                     item.NodeType == ExpressionType.LessThanOrEqual)
                 {
                     // check to see the order the user typed the statement
-                    if (WhereUtilities.IsConstant(item.Left))
+                    if (WhereUtilities.IsConstantOrConvertible(item.Left))
                     {
                         return expressionString.Replace(replacementString,
                             _getSqlGreaterThanLessThan(item as BinaryExpression, expressionQuerySql, schematic, isNotExpressionType, item.NodeType));
                     }
 
                     // check to see the order the user typed the statement
-                    if (WhereUtilities.IsConstant(item.Right))
+                    if (WhereUtilities.IsConstantOrConvertible(item.Right))
                     {
                         return expressionString.Replace(replacementString,
                             _getSqlGreaterThanLessThan(item as BinaryExpression, expressionQuerySql, schematic, isNotExpressionType, item.NodeType));
@@ -1477,13 +1477,15 @@ namespace OR_M_Data_Entities.Data
                 var right = string.Empty;
 
                 // check to see if the left and right are not constants, if so they need to be evaulated
-                if (WhereUtilities.IsConstant(expression.Left) || WhereUtilities.IsConstant(expression.Right))
+                if (WhereUtilities.IsConstantOrConvertible(expression.Left) || WhereUtilities.IsConstantOrConvertible(expression.Right))
                 {
                     var leftTableAndColumnname = _getTableAliasAndColumnName(expression, schematic);
 
                     left = leftTableAndColumnname.GetTableAndColumnName();
 
-                    expressionQuerySql.AddParameter(GetValue(expression), out right);
+                    var value = GetValue(expression);
+
+                    _processExpressionValue(expressionQuerySql, value, isNotExpressionType, ref right, ref comparison);
 
                     return string.Format("({0} {1} {2})", left, comparison, right);
                 }
@@ -1595,12 +1597,34 @@ namespace OR_M_Data_Entities.Data
             {
                 var aliasAndColumnName = LoadColumnAndTableName(expression as dynamic, schematic);
                 var comparison = isNotExpressionType ? "!=" : "=";
-                string parameter;
+                var parameter = string.Empty;
 
-                expressionQuerySql.AddParameter(expressionValue, out parameter);
+                _processExpressionValue(expressionQuerySql, expressionValue, isNotExpressionType, ref parameter, ref comparison);
 
                 return string.Format("({0} {1} {2})", aliasAndColumnName.GetTableAndColumnName(),
                     comparison, parameter);
+            }
+
+            private static bool _processExpressionValue(ExpressionQuerySqlResolutionContainer expressionQuerySql,
+                object value,
+                bool isNotExpressionType,
+                ref string parameter,
+                ref string comparison)
+            {
+                comparison = isNotExpressionType ? "!=" : "=";
+
+                if (value == null)
+                {
+                    parameter = "NULL";
+                    comparison = "IS";
+
+                    if (isNotExpressionType) parameter = "NOT NULL";
+
+                    return true;
+                }
+
+                expressionQuerySql.AddParameter(value, out parameter);
+                return false;
             }
 
             private static string _getSqlStartsEndsWith(MethodCallExpression expression,
@@ -1720,7 +1744,7 @@ namespace OR_M_Data_Entities.Data
 
             private static TableColumnContainer _getTableAliasAndColumnName(BinaryExpression expression, IQuerySchematic schematic)
             {
-                return WhereUtilities.IsConstant(expression.Right)
+                return WhereUtilities.IsConstantOrConvertible(expression.Right)
                     ? LoadColumnAndTableName(expression.Left as dynamic, schematic)
                     : LoadColumnAndTableName(expression.Right as dynamic, schematic);
             }
@@ -1759,7 +1783,7 @@ namespace OR_M_Data_Entities.Data
                 var outerKeySelectorString = LoadColumnAndTableName(outerKeySelector.Body as dynamic, schematic);
                 var table = schematic.FindTable(typeof(TInner));
 
-                expressionQuerySql.AddJoin(string.Format(join, 
+                expressionQuerySql.AddJoin(string.Format(join,
                     joinString,
                     table.Table.ToString(TableNameFormat.SqlWithSchema),
                     table.Alias,
@@ -1919,6 +1943,11 @@ namespace OR_M_Data_Entities.Data
 
                 var tableAndColumnName = LoadColumnAndTableName((dynamic)expression, schematic);
 
+                if (tableAndColumnName.IsNotMapped)
+                {
+                    throw new QueryNotValidException(string.Format("Cannot select an Unmapped Column.  Column: {0}, Table: {1}", tableAndColumnName.DatabaseColumnName, tableAndColumnName.TableName));
+                }
+
                 // find our table
                 var table = schematic.FindTable(expression.Expression.Type);
 
@@ -2062,7 +2091,7 @@ namespace OR_M_Data_Entities.Data
                 return null;
             }
 
-            public static bool IsConstant(Expression expression)
+            public static bool IsConstantOrConvertible(Expression expression)
             {
                 var constant = expression as ConstantExpression;
 
@@ -2073,7 +2102,9 @@ namespace OR_M_Data_Entities.Data
                 // could be something like Guid.Empty, DateTime.Now
                 if (memberExpression != null) return memberExpression.Member.DeclaringType == memberExpression.Type || memberExpression.NodeType == ExpressionType.MemberAccess;
 
-                return false;
+                var unaryExpression = expression as UnaryExpression;
+
+                return unaryExpression != null && unaryExpression.NodeType == ExpressionType.Convert;
             }
 
             public static string GetReplaceString(Expression expression)
@@ -2087,7 +2118,7 @@ namespace OR_M_Data_Entities.Data
                 {
                     ExpressionType.Equal, ExpressionType.Call, ExpressionType.Lambda, ExpressionType.Not,
                     ExpressionType.GreaterThan, ExpressionType.GreaterThanOrEqual, ExpressionType.LessThan,
-                    ExpressionType.LessThanOrEqual, ExpressionType.MemberAccess,
+                    ExpressionType.LessThanOrEqual, ExpressionType.MemberAccess,ExpressionType.NotEqual
                 };
 
                 return finalExpressionTypes.Contains(expressionType);
@@ -2113,7 +2144,7 @@ namespace OR_M_Data_Entities.Data
 
             protected static object GetValue(ConstantExpression expression)
             {
-                return expression.Value ?? "IS NULL";
+                return expression.Value;
             }
 
             protected static object GetValue(MemberExpression expression)
@@ -2126,7 +2157,7 @@ namespace OR_M_Data_Entities.Data
 
                 var value = getter();
 
-                return value ?? "IS NULL";
+                return value;
             }
 
             private static object _getValueFromConstantExpression(ConstantExpression expression, string memberName)
@@ -2218,7 +2249,7 @@ namespace OR_M_Data_Entities.Data
 
                 var value = getter();
 
-                return value ?? "IS NULL";
+                return value;
             }
 
             protected static object GetValue(UnaryExpression expression)
@@ -2228,7 +2259,7 @@ namespace OR_M_Data_Entities.Data
 
             protected static object GetValue(BinaryExpression expression)
             {
-                return WhereUtilities.IsConstant(expression.Right)
+                return WhereUtilities.IsConstantOrConvertible(expression.Right)
                     ? GetValue(expression.Right as dynamic)
                     : GetValue(expression.Left as dynamic);
             }
@@ -2286,6 +2317,7 @@ namespace OR_M_Data_Entities.Data
             protected static TableColumnContainer LoadColumnAndTableName(MemberExpression expression, IQuerySchematic schematic)
             {
                 var columnAttribute = expression.Member.GetCustomAttribute<ColumnAttribute>();
+                var unmappedAttribute = expression.Member.GetCustomAttribute<UnmappedAttribute>();
                 var columnName = columnAttribute != null ? columnAttribute.Name : expression.Member.Name;
                 string alias;
                 string tableName;
@@ -2301,7 +2333,7 @@ namespace OR_M_Data_Entities.Data
                     tableName = ((MemberExpression)expression.Expression).Member.Name;
                 }
 
-                return new TableColumnContainer(tableName, columnName, alias, expression.Member.Name);
+                return new TableColumnContainer(tableName, columnName, alias, expression.Member.Name, unmappedAttribute != null);
             }
 
             protected static TableColumnContainer LoadColumnAndTableName(MethodCallExpression expression, IQuerySchematic schematic)
@@ -2358,12 +2390,15 @@ namespace OR_M_Data_Entities.Data
 
             public readonly string PropertyName;
 
-            public TableColumnContainer(string tableName, string columnName, string alias, string propertyName)
+            public readonly bool IsNotMapped; 
+
+            public TableColumnContainer(string tableName, string columnName, string alias, string propertyName, bool isNotMapped)
             {
                 TableName = tableName;
                 DatabaseColumnName = columnName;
                 Alias = alias;
                 PropertyName = propertyName;
+                IsNotMapped = isNotMapped;
             }
 
             public string GetTableAndColumnName()

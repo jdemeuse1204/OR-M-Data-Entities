@@ -358,7 +358,15 @@ namespace OR_M_Data_Entities.Data
                 var insert = new SqlInsertBuilder(this, Configuration, parameters);
                 var update = new SqlUpdateBuilder(this, Configuration, parameters);
 
-                return new SqlExistsBuilder(this, Configuration, parameters, insert, update);
+                // pre-build the container to check and see if the container has updates.
+                // it will not be built twice
+                update.BuildContainer();
+
+                // if the update container does not have updates, we
+                // want to exclude the update statement
+                return update.HasUpdates
+                    ? new SqlExistsBuilder(this, Configuration, parameters, insert, update)
+                    : new SqlExistsBuilder(this, Configuration, parameters, insert);
             }
         }
 
@@ -450,7 +458,6 @@ ELSE
     END");
             }
 
-            // not used
             protected override ISqlContainer NewContainer()
             {
                 return _notExists != null ? new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql(), _notExists.GetSql())) : new CustomContainer(Entity, string.Format(_existsStatement, _exists.GetSql()));
@@ -550,10 +557,19 @@ ELSE
 
         private class SqlUpdateBuilder : SqlModificationBuilder
         {
+            #region Properties
+
+            public bool HasUpdates { get; private set; }
+
+            private UpdateContainer _container { get; set; }
+
+            #endregion
+
             #region Constructor
 
             public SqlUpdateBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) : base(builder, configurationOptions, parameters)
             {
+                HasUpdates = false;
             }
 
             #endregion
@@ -573,6 +589,7 @@ ELSE
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var parameter = AddParameter(item, value);
 
+                HasUpdates = true;
                 ((UpdateContainer) container).AddUpdate(item, parameter);
             }
 
@@ -592,8 +609,11 @@ ELSE
 
             public override ISqlContainer BuildContainer()
             {
+                // prevent rebuilding from early evaluation
+                if (_container != null) return _container;
+
                 var items = Entity.All();
-                var container = (UpdateContainer) NewContainer();
+                _container = (UpdateContainer) NewContainer();
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
                 if (items.Count == 0) throw new SqlSaveException("No items to update, query analyzer failed");
@@ -604,11 +624,11 @@ ELSE
 
                     if (item.IsPrimaryKey)
                     {
-                        AddWhere(container, item);
+                        AddWhere(_container, item);
 
                         // if we are using transactions we need to select back primary keys 
                         // they are used in subsequent queries
-                        if (Configuration.UseTransactions) AddOutput(container, item);
+                        if (Configuration.UseTransactions) AddOutput(_container, item);
 
                         continue;
                     }
@@ -616,12 +636,12 @@ ELSE
                     // select back the whole object, someone else might
                     // have updated a different field than what the user 
                     // is updating
-                    AddOutput(container, item);
+                    AddOutput(_container, item);
 
                     if (!item.IsModified) continue;
 
                     // set the item to be updated
-                    AddUpdate(container, item);
+                    AddUpdate(_container, item);
 
                     // check to see if concurrency checking is on
                     if (!Configuration.ConcurrencyChecking.IsOn) continue;
@@ -642,15 +662,15 @@ ELSE
                     {
                         // concurrency is only checked in an update so we do not need to use TryAddParameter
                         var concurrencyParameter = AddPristineParameter(item, concurrencyValue);
-                        container.AddWhere(item, concurrencyParameter);
+                        _container.AddWhere(item, concurrencyParameter);
                         continue;
                     }
 
                     // property is null, make a different check
-                    container.AddNullWhere(item);
+                    _container.AddNullWhere(item);
                 }
 
-                return container;
+                return _container;
             }
 
             #endregion

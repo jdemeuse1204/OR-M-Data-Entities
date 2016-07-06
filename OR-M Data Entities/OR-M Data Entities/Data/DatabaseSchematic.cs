@@ -1098,7 +1098,7 @@ namespace OR_M_Data_Entities.Data
                         }
 
                         // if the db generation option is none and there is no pk value this is an error because the db doesnt generate the pk
-                        throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
+                        //throw new SqlSaveException(string.Format("Primary Key must not be an insert value when DbGenerationOption is set to None.  Primary Key Name: {0}, Table: {1}", key.Name, ToString(TableNameFormat.Plain)));
                     }
 
                     // If we have only primary keys we need to perform a try insert and see if we can try to insert our data.

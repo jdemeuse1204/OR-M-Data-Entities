@@ -443,7 +443,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
             var _configurationCheckPerformed = (bool)_getPropertyValue(ctx, typeof(Database), "_configurationCheckPerformed") == false;
 
-            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "_querySchematicFactory") == null;
+            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "SchematicFactory") == null;
 
             var OnBeforeSave = _getEventValue(ctx, "OnBeforeSave") == null;
             var OnAfterSave = _getEventValue(ctx, "OnAfterSave") == null;
@@ -1117,11 +1117,10 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
             try
             {
                 ctx.SaveChanges(item);
-                testOne = false;
             }
             catch (Exception)
             {
-
+                testOne = false;
             }
 
             item.Id = ctx.From<TestUpdateWithKeyDbGenerationOptionNone>().Select(w => w.Id).Max() + 1;
@@ -1959,7 +1958,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             var _command = _getPropertyValue(ctx, typeof(Database), "_command") == null;
             var _configurationCheckPerformed = (bool)_getPropertyValue(ctx, typeof(Database), "_configurationCheckPerformed") == false;
 
-            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "_querySchematicFactory") == null;
+            var _schematicManager = _getPropertyValue(ctx, typeof(DatabaseQuery), "SchematicFactory") == null;
 
             var OnBeforeSave = _getEventValue(ctx, "OnBeforeSave") == null;
             var OnAfterSave = _getEventValue(ctx, "OnAfterSave") == null;
@@ -2578,11 +2577,11 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             try
             {
                 ctx.SaveChanges(item);
-                return false;
+                return true;
             }
             catch (Exception)
             {
-                return true;
+                return false;
             }
         }
 
@@ -2649,11 +2648,10 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             try
             {
                 ctx.SaveChanges(item);
-                testOne = false;
             }
             catch (Exception)
             {
-
+                testOne = false;
             }
 
             item.Id = ctx.From<TestUpdateWithKeyDbGenerationOptionNone>().Select(w => w.Id).Max() + 1;
@@ -2963,6 +2961,27 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
                 w.Appointments,
                 w.Number.PhoneType
             }).FirstOrDefault();
+
+            return t != null;
+        }
+
+        public static bool Test_73(DbSqlContext ctx)
+        {
+            var t = ctx.From<Contact>().FirstOrDefault(w => w.FirstName != null);
+
+            return t != null;
+        }
+
+        public static bool Test_74(DbSqlContext ctx)
+        {
+            var t = ctx.From<Contact>().FirstOrDefault(w => w.FirstName == null);
+
+            return t != null;
+        }
+
+        public static bool Test_75(DbSqlContext ctx)
+        {
+            var t = ctx.From<Appointment>().FirstOrDefault(w => w.IsScheduled && w.Description == null);
 
             return t != null;
         }
