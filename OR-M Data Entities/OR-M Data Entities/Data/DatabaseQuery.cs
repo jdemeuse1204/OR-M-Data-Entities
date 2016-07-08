@@ -1390,6 +1390,13 @@ namespace OR_M_Data_Entities.Data
                 throw new Exception(string.Format("Expression Type not valid.  Type: {0}", item.NodeType));
             }
 
+            private static bool _tryReplace(string value, string oldValue, string newValue, out string newString)
+            {
+                newString = value.Replace(oldValue, newValue);
+
+                return newString.IndexOf(newValue, StringComparison.Ordinal) > -1;
+            }
+
             private static string _processExpression(dynamic item,
                 ExpressionQuerySqlResolutionContainer expressionQuerySql,
                 IQuerySchematic schematic,
@@ -1402,9 +1409,19 @@ namespace OR_M_Data_Entities.Data
                 if (item.NodeType == ExpressionType.Call)
                 {
                     // try and evaluate the expression to get the internal value
+                    string result;
                     var expressionValue = GetValue(item);
+                    var sql = _getSql(item as MethodCallExpression, expressionQuerySql, schematic, isNotExpressionType, expressionValue);
 
-                    return expressionString.Replace(replacementString, _getSql(item as MethodCallExpression, expressionQuerySql, schematic, isNotExpressionType, expressionValue));
+                    // make sure the string was actually replaced.  On an ANY this could fail
+                    // because we already converted the expressions AndAlso's, OrElse's to And/Or
+                    if (_tryReplace(expressionString, replacementString, sql, out result)) return result;
+
+                    replacementString = WhereUtilities.ConvertExpressionLanguageToSql(replacementString);
+
+                    _tryReplace(expressionString, replacementString, sql, out result);
+
+                    return result;
                 }
 
                 if (item.NodeType == ExpressionType.Equal || item.NodeType == ExpressionType.NotEqual)
@@ -2042,7 +2059,12 @@ namespace OR_M_Data_Entities.Data
 
             public static string GetSqlFromExpression(Expression expression)
             {
-                return expression.ToString().Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND");
+                return ConvertExpressionLanguageToSql(expression.ToString());
+            }
+
+            public static string ConvertExpressionLanguageToSql(string expressionText)
+            {
+                return expressionText.Replace("OrElse", "\r\n\tOR").Replace("AndAlso", "\r\n\tAND");
             }
 
             // checks to see if the left side of the binary expression is a boolean value
@@ -2390,7 +2412,7 @@ namespace OR_M_Data_Entities.Data
 
             public readonly string PropertyName;
 
-            public readonly bool IsNotMapped; 
+            public readonly bool IsNotMapped;
 
             public TableColumnContainer(string tableName, string columnName, string alias, string propertyName, bool isNotMapped)
             {

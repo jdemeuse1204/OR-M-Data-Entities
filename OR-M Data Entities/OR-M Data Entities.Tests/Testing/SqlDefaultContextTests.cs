@@ -927,6 +927,18 @@ namespace OR_M_Data_Entities.Tests.Testing
         {
             Assert.IsTrue(DefaultTestsESTOff.Test_75(_ctx));
         }
+
+        [TestMethod]
+        public void Test_Default_153()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_76(_ctx));
+        }
+
+        [TestMethod]
+        public void Test_Default_154()
+        {
+            Assert.IsTrue(DefaultTestsESTOff.Test_77(_ctx));
+        }
         #endregion
     }
 }

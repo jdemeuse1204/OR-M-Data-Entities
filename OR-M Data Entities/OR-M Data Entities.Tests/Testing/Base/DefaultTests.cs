@@ -2986,6 +2986,30 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             return t != null;
         }
 
+        public static bool Test_76(DbSqlContext ctx)
+        {
+            var t =
+                ctx.From<Contact>()
+                    .FirstOrDefault(
+                        w =>
+                            w.FirstName.StartsWith("Te") &&
+                            w.Appointments.Any(x => !x.IsScheduled && x.Description == null));
+
+            return t != null;
+        }
+
+        public static bool Test_77(DbSqlContext ctx)
+        {
+            var t =
+                ctx.From<Contact>()
+                    .FirstOrDefault(
+                        w =>
+                            w.FirstName.StartsWith("Te") &&
+                            w.Appointments.Any(x => x.IsScheduled));
+
+            return t != null;
+        }
+
         #region helpers
         protected static Policy _addPolicy(DbSqlContext ctx)
         {
