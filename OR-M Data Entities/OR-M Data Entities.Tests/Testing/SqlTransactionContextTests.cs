@@ -780,6 +780,7 @@ namespace OR_M_Data_Entities.Tests.Testing
         [TestMethod]
         public void Test_Transaction_128()
         {
+            // transaction context, ignore
             Assert.IsTrue(DefaultTestsESTOn.Test_57(_ctx));
         }
 
@@ -876,6 +877,7 @@ namespace OR_M_Data_Entities.Tests.Testing
         [TestMethod]
         public void Test_Transaction_144()
         {
+            // transaction context, ignore
             Assert.IsTrue(OtherTests.Test_3(_ctx));
         }
 

@@ -733,6 +733,8 @@ namespace OR_M_Data_Entities.Data
 
                     foreach (var column in selectableColumns)
                     {
+                        if (!column.IsSelectable) throw new Exception(string.Format("Invalid operation, column is not a selectable type.  Column - {0}", column.DatabaseColumnName));
+
                         _addSelectColumn(column, startingOrdinal);
                         startingOrdinal++;
                     }
@@ -1958,12 +1960,10 @@ namespace OR_M_Data_Entities.Data
                 // set the return override so we can load our object correctly
                 schematic.SetReturnOverride(expression);
 
+                // load column and table name will also
+                // make sure the column is not Unmapped.  An unmapped
+                // column cannot be used in any way in the query
                 var tableAndColumnName = LoadColumnAndTableName((dynamic)expression, schematic);
-
-                if (tableAndColumnName.IsNotMapped)
-                {
-                    throw new QueryNotValidException(string.Format("Cannot select an Unmapped Column.  Column: {0}, Table: {1}", tableAndColumnName.DatabaseColumnName, tableAndColumnName.TableName));
-                }
 
                 // find our table
                 var table = schematic.FindTable(expression.Expression.Type);
@@ -2355,7 +2355,13 @@ namespace OR_M_Data_Entities.Data
                     tableName = ((MemberExpression)expression.Expression).Member.Name;
                 }
 
-                return new TableColumnContainer(tableName, columnName, alias, expression.Member.Name, unmappedAttribute != null);
+                // make sure column is not unmapped
+                if (unmappedAttribute != null)
+                {
+                    throw new QueryNotValidException(string.Format("Cannot include unmapped column in query.  Table: {0}, Column: {1}", tableName, columnName));
+                }
+
+                return new TableColumnContainer(tableName, columnName, alias, expression.Member.Name);
             }
 
             protected static TableColumnContainer LoadColumnAndTableName(MethodCallExpression expression, IQuerySchematic schematic)
@@ -2412,15 +2418,12 @@ namespace OR_M_Data_Entities.Data
 
             public readonly string PropertyName;
 
-            public readonly bool IsNotMapped;
-
-            public TableColumnContainer(string tableName, string columnName, string alias, string propertyName, bool isNotMapped)
+            public TableColumnContainer(string tableName, string columnName, string alias, string propertyName)
             {
                 TableName = tableName;
                 DatabaseColumnName = columnName;
                 Alias = alias;
                 PropertyName = propertyName;
-                IsNotMapped = isNotMapped;
             }
 
             public string GetTableAndColumnName()

@@ -3010,6 +3010,35 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
             return t != null;
         }
 
+        public static bool Test_78(DbSqlContext ctx)
+        {
+            try
+            {
+                ctx.From<Policy>().Select(w => w.Test).FirstOrDefault();
+
+                return false;
+            }
+            catch (QueryNotValidException ex)
+            {
+                return true;
+            }
+        }
+
+        public static bool Test_79(DbSqlContext ctx)
+        {
+            try
+            {
+                ctx.From<Policy>()
+                        .FirstOrDefault(w => w.Test == "");
+
+                return false;
+            }
+            catch (QueryNotValidException ex)
+            {
+                return true;
+            }
+        }
+
         #region helpers
         protected static Policy _addPolicy(DbSqlContext ctx)
         {
