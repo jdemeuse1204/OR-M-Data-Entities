@@ -89,6 +89,13 @@ namespace OR0M_Data_Entities.Console
         private static void Main(string[] args)
         {
             var context = new ApiContext();
+            var c = new SqlContext();
+            //c.SaveChanges()
+
+
+
+
+
 
 
             var sdfs = context.ApiQuery(@"

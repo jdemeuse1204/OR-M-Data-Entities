@@ -1357,7 +1357,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOn
                 {
                     Name = "Different User"
                 },
-                
+
             };
 
             ctx.SaveChanges(contact);
@@ -1974,15 +1974,15 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
         {
             try
             {
-                var names = new List<string> {"James","Megan"};
+                var names = new List<string> { "James", "Megan" };
                 var test = ctx.From<Contact>().Where(w => names.Contains(w.FirstName)).Count(w => w.ContactID == 10);
             }
             catch (Exception)
             {
-                
+
                 throw;
             }
-            
+
             return true;
         }
 
@@ -2718,7 +2718,7 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
 
             item = ctx.Find<SchemaChangeOne_ts>(item.Id);
 
-           return (item != null);
+            return (item != null);
         }
 
         public static bool Test_61(DbSqlContext ctx)
@@ -3034,6 +3034,46 @@ namespace OR_M_Data_Entities.Tests.Testing.BaseESTOff
                 return false;
             }
             catch (QueryNotValidException ex)
+            {
+                return true;
+            }
+        }
+
+        public static bool Test_80(DbSqlContext ctx)
+        {
+            try
+            {
+                var phoneNumber = new PhoneNumber
+                {
+                    Phone = "Test",
+                    PhoneTypeID = 2
+                };
+
+                ctx.SaveChanges(phoneNumber);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public static bool Test_81(DbSqlContext ctx)
+        {
+            try
+            {
+                var phoneNumber = new PhoneNumber
+                {
+                    Phone = "Test",
+                    PhoneTypeID = 1
+                };
+
+                ctx.SaveChanges(phoneNumber);
+
+                return false;
+            }
+            catch (Exception ex)
             {
                 return true;
             }

@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Loading;
@@ -142,7 +143,7 @@ namespace OR_M_Data_Entities.Data
 
                     case SqlDbType.DateTime:
                         break;
-                    
+
                     case SqlDbType.UniqueIdentifier:
                         _set = string.Concat(_set, string.Format("SET {0} = NEWID();\r", key));
                         break;
@@ -496,8 +497,8 @@ ELSE
                 var value = Entity.GetPropertyValue(item.PropertyName);
                 var data = AddParameter(item, value);
 
-                ((InsertContainer) container).AddField(item);
-                ((InsertContainer) container).AddValue(data);
+                ((InsertContainer)container).AddField(item);
+                ((InsertContainer)container).AddValue(data);
             }
 
             protected virtual void AddDbGenerationOptionGenerate(ISqlContainer container, IModificationItem item)
@@ -505,15 +506,15 @@ ELSE
                 // key from the set method
                 string key;
 
-                ((InsertContainer) container).AddSetGenerationItem(item, out key);
-                ((InsertContainer) container).AddField(item);
-                ((InsertContainer) container).AddValue(key);
-                ((InsertContainer) container).AddDeclare(key, item.SqlDataTypeString);
+                ((InsertContainer)container).AddSetGenerationItem(item, out key);
+                ((InsertContainer)container).AddField(item);
+                ((InsertContainer)container).AddValue(key);
+                ((InsertContainer)container).AddDeclare(key, item.SqlDataTypeString);
             }
 
             protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
             {
-                ((InsertContainer) container).AddOutput(item);
+                ((InsertContainer)container).AddOutput(item);
             }
 
             public override ISqlContainer BuildContainer()
@@ -590,7 +591,7 @@ ELSE
                 var parameter = AddParameter(item, value);
 
                 HasUpdates = true;
-                ((UpdateContainer) container).AddUpdate(item, parameter);
+                ((UpdateContainer)container).AddUpdate(item, parameter);
             }
 
             protected virtual void AddWhere(ISqlContainer container, IModificationItem item)
@@ -599,12 +600,12 @@ ELSE
                 var parameter = AddParameter(item, value);
 
                 // PK cannot be null here
-                ((UpdateContainer) container).AddWhere(item, parameter);
+                ((UpdateContainer)container).AddWhere(item, parameter);
             }
 
             protected virtual void AddOutput(ISqlContainer container, IModificationItem item)
             {
-                ((UpdateContainer) container).AddOutput(item);
+                ((UpdateContainer)container).AddOutput(item);
             }
 
             public override ISqlContainer BuildContainer()
@@ -613,7 +614,7 @@ ELSE
                 if (_container != null) return _container;
 
                 var items = Entity.All();
-                _container = (UpdateContainer) NewContainer();
+                _container = (UpdateContainer)NewContainer();
 
                 // if we got here there are columns to update, the entity is analyzed before this method.  Check again anyways
                 if (items.Count == 0) throw new SqlSaveException("No items to update, query analyzer failed");
@@ -701,16 +702,16 @@ ELSE
                 // PK can be null here
                 if (value == null)
                 {
-                    ((DeleteContainer) container).AddNullWhere(item);
+                    ((DeleteContainer)container).AddNullWhere(item);
                     return;
                 }
 
-                ((DeleteContainer) container).AddWhere(item, parameter);
+                ((DeleteContainer)container).AddWhere(item, parameter);
             }
 
             public override ISqlContainer BuildContainer()
             {
-                var container = (DeleteContainer) NewContainer();
+                var container = (DeleteContainer)NewContainer();
 
                 // keys are not part of changes so we need to grab them
                 var primaryKeys = Entity.Keys();
@@ -732,6 +733,41 @@ ELSE
         #endregion
 
         #region Methods
+        // since we have lazy loading, we should preprocess the entity and make sure FK's are
+        // set correctly.  If we are saving an object PhoneNumber, which has a FK to
+        // PhoneType and its a 1-1.  If the PhoneTypeId is set on PhoneNumber,
+        // but the actual object is null we will get an error.  This might not be valid,
+        // we need to preprocess the entity to set the FK value if its not set,
+        // if the FK doesnt exist throw an error
+        // only care about 1-1 relationships
+        private void _resolveExistsEntities(ICollection<object> foreignKeysExist)
+        {
+            if (!foreignKeysExist.Any()) return;
+
+            var errors = string.Empty;
+
+            foreach (var foreignKey in foreignKeysExist)
+            {
+                var existsMethod = GetType().GetMethod("Exists", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                var exists = existsMethod.MakeGenericMethod(foreignKey.GetType());
+
+                var result = exists.Invoke(this, new object[] {foreignKey}) as bool?;
+
+                if (result != null && result.Value)
+                {
+
+                }
+                
+                errors += string.Format("{0}Foreign Key does not exist.  Please make sure the entity exists for the Foreign Key Id being used.  Foreign Key: {1}",
+                    string.IsNullOrEmpty(errors) ? string.Empty : "\r\n",
+                    Table.GetTableName(foreignKey));
+            }
+
+            if (string.IsNullOrEmpty(errors)) return;
+
+            throw new SqlSaveException(errors);
+        }
 
         /// <summary>
         /// returns true if anything was modified and false if no changes were made
@@ -748,7 +784,7 @@ ELSE
                 var changeManager = new ChangeManager();
 
                 // get all items to save and get them in order
-                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
+                EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, this);
 
                 for (var i = 0; i < referenceMap.Count; i++)
                 {
@@ -863,7 +899,7 @@ ELSE
             var changeManager = new ChangeManager();
 
             // get all items to save and get them in order
-            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory);
+            EntityMapper.BuildReferenceMap(parent, referenceMap, Configuration, DbTableFactory, this);
 
             // reverse the order to back them out of the database
             referenceMap.Reverse();

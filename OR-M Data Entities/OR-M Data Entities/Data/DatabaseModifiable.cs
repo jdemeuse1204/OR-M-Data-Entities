@@ -13,9 +13,11 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Xml;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
+using OR_M_Data_Entities.Data.Loading;
 using OR_M_Data_Entities.Data.Modification;
 using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Data.Secure;
@@ -363,7 +365,7 @@ namespace OR_M_Data_Entities.Data
 
         private static class EntityMapper
         {
-            public static void BuildReferenceMap(ModificationEntity entity, ReferenceMap map, IConfigurationOptions configuration, TableFactory tableCache)
+            public static void BuildReferenceMap(ModificationEntity entity, ReferenceMap map, IConfigurationOptions configuration, TableFactory tableCache, DatabaseModifiable context)
             {
                 var entities = _getForeignKeys(entity.Value);
 
@@ -375,7 +377,7 @@ namespace OR_M_Data_Entities.Data
                     var foreignKeyIsList = e.Property == null ? false : e.Property.IsList();
                     var tableType = e.Property == null ? e.Value.GetType() : e.Property.GetPropertyType();
                     var tableInfo = new Table(tableType, configuration, tableCache);
-                     
+
                     // this is ok as long as the parent is not an insert
                     if (e.Value == null)
                     {
@@ -392,14 +394,40 @@ namespace OR_M_Data_Entities.Data
                         // We cannot insert and have FK's be null
                         var parentPrimaryKeys = ReflectionCacheTable.GetPrimaryKeys(e.Parent);
 
+                        var parentPrimaryKeyValues = parentPrimaryKeys.Select(primaryKey => primaryKey.GetValue(e.Parent)).ToList();
+
+                        // check to see if they are inserts
                         if (
-                            parentPrimaryKeys.Select(primaryKey => primaryKey.GetValue(e.Parent))
-                                .Any(value => ModificationEntity.IsKeyInInsertArray(configuration, value)))
+                            parentPrimaryKeyValues.Any(
+                                value => ModificationEntity.IsKeyInInsertArray(configuration, value)))
                         {
-                            throw new SqlSaveException(
-                                string.Format(
-                                    "Foreign Key violation.  {0} cannot be null unless you are updating its parent.",
+                            var parentPropertyValue = e.Parent.GetType().GetProperty(columnName).GetValue(e.Parent);
+                            var foreignKeyType = e.Property.PropertyType;
+
+                            if (ModificationEntity.IsKeyInInsertArray(configuration, parentPropertyValue))
+                            {
+                                throw new SqlSaveException(string.Format("Foreign Key violation.  {0} cannot be null.",
                                     Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
+                            }
+
+                            // make sure the entity exists
+                            var instance = Activator.CreateInstance(foreignKeyType);
+
+                            var key = ReflectionCacheTable.GetPrimaryKeys(e.Property.PropertyType).FirstOrDefault();
+
+                            ObjectLoader.SetPropertyInfoValue(instance, key, parentPropertyValue);
+
+                            // use reflection otherwise exists will use the generic object as the type and it will fail
+                            var existsMethod = typeof(DatabaseModifiable).GetMethod("Exists", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                            var exists = existsMethod.MakeGenericMethod(foreignKeyType);
+
+                            var result = exists.Invoke(context, new object[] { instance }) as bool?;
+
+                            if (result != null && result.Value) continue;
+ 
+                            throw new SqlSaveException(string.Format("Foreign Key does not exist.  Please make sure the entity exists for the Foreign Key Id being used.  Foreign Key: {0}",
+                                Table.GetTableName(e.Property.PropertyType.GetUnderlyingType())));
                         }
 
                         continue;
@@ -475,7 +503,6 @@ namespace OR_M_Data_Entities.Data
                         if (ReflectionCacheTable.HasForeignKeys(e.Value)) entities.AddRange(_getForeignKeys(e.Value));
                     }
                 }
-
             }
         }
 
@@ -623,10 +650,10 @@ namespace OR_M_Data_Entities.Data
             {
                 // build the sql package
                 var package = GetBuilder();
-                
+
                 // generate the sql command
                 var command = new SqlCommand(CleanSqlCommandText(package.GetSql()), connection);
-                
+
                 // insert the parameters
                 package.InsertParameters(command);
 
@@ -645,7 +672,7 @@ namespace OR_M_Data_Entities.Data
             #endregion
 
             #region Constructor
-            protected SqlModificationBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) 
+            protected SqlModificationBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(parameters)
             {
                 Entity = plan.Entity;
@@ -846,7 +873,7 @@ namespace OR_M_Data_Entities.Data
 
             public void AddChange(string columnName, string tableName, object oldValue, object newValue)
             {
-                var container =_findChangeContainer(tableName);
+                var container = _findChangeContainer(tableName);
 
                 // create column element
                 var columnElement = _doc.CreateElement(string.Empty, "column", string.Empty);
