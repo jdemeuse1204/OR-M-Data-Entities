@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v3.0
+ * OR-M Data Entities v3.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -10,7 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Reflection;
+using System.Linq.Expressions;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
 using OR_M_Data_Entities.Data.Loading;
@@ -243,11 +243,13 @@ namespace OR_M_Data_Entities.Data
 
         private class DeleteContainer : SqlModificationContainer, ISqlContainer
         {
-            protected string Where { get; set; }
+            protected string Where { get; private set; }
 
-            protected string Output { get; set; }
+            protected string Output { get; private set; }
 
-            protected readonly string Statement;
+            protected string Statement { get; private set; }
+
+            protected ExpressionQueryResolutionContainer OverrideSqlContainer { get; private set; }
 
             public DeleteContainer(IModificationEntity entity) : base(entity)
             {
@@ -255,6 +257,11 @@ namespace OR_M_Data_Entities.Data
 
                 Where = string.Empty;
                 Statement = string.Format("DELETE FROM [{0}]", SqlFormattedTableName);
+            }
+
+            public void OverrideSql(ExpressionQueryResolutionContainer container)
+            {
+                OverrideSqlContainer = container;
             }
 
             public void AddWhere(IModificationItem item, string parameterKey)
@@ -279,7 +286,7 @@ namespace OR_M_Data_Entities.Data
 
             public virtual ISqlPartStatement Split()
             {
-                var sql = string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
+                var sql = OverrideSqlContainer != null ? OverrideSqlContainer.Sql()  : string.Format("{0} {1} WHERE {2}", Statement, Output, Where.TrimEnd(','));
 
                 return new SqlPartStatement(sql);
             }
@@ -387,13 +394,50 @@ namespace OR_M_Data_Entities.Data
             }
         }
 
+        private class SqlDeleteWherePlan : SqlExecutionPlan
+        {
+            public readonly Expression Expression;
+
+            public readonly IQuerySchematic Schematic;
+
+            public SqlDeleteWherePlan(ModificationEntity entity, Expression expression, IConfigurationOptions configurationOptions, IQuerySchematic schematic)
+                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            {
+                Expression = expression;
+                Schematic = schematic;
+            }
+
+            public void MergeParameters(ExpressionQueryResolutionContainer container)
+            {
+                var parameters = container.GetParameters();
+
+                if (parameters == null) return;
+
+                foreach (var parameter in container.GetParameters())
+                {
+                    Parameters.Add(new SqlSecureQueryParameter
+                    {
+                        Value = new SqlSecureObject(parameter.Value),
+                        Key = parameter.Name
+                    });
+                }
+            }
+
+            public override ISqlBuilder GetBuilder()
+            {
+                return new SqlDeleteWhereBuilder(this, Configuration, Parameters);
+            }
+        }
+
         private class SqlDeletePlan : SqlExecutionPlan
         {
-            public SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions) : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
+            public SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions)
+                : base(entity, configurationOptions, new List<SqlSecureQueryParameter>())
             {
             }
 
-            protected SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
+            protected SqlDeletePlan(ModificationEntity entity, IConfigurationOptions configurationOptions,
+                List<SqlSecureQueryParameter> sharedParameters) : base(entity, configurationOptions, sharedParameters)
             {
             }
 
@@ -677,6 +721,46 @@ ELSE
             #endregion
         }
 
+        private class SqlDeleteWhereBuilder : SqlDeleteBuilder
+        {
+            #region Constructor
+
+            public SqlDeleteWhereBuilder(ISqlExecutionPlan builder, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters) : base(builder, configurationOptions, parameters)
+            {
+            }
+
+            #endregion
+
+            #region Methods
+
+            protected override ISqlContainer NewContainer()
+            {
+                return new DeleteContainer(Entity);
+            }
+
+            public override ISqlContainer BuildContainer()
+            {
+                var container = (DeleteContainer)NewContainer();
+                var plan = (SqlDeleteWherePlan)Plan;
+                var resolutionContainer = new ExpressionQuerySqlDeleteResolutionContainer(plan.Schematic.UseTableAlias);
+
+                ExpressionQueryWhereResolver.Resolve(plan.Expression, resolutionContainer, plan.Schematic);
+
+                resolutionContainer.From(plan.Schematic.MappedTables[0]);
+
+                // we are crossing layers of the Context,
+                // so we need to override the default action
+                container.OverrideSql(resolutionContainer);
+
+                // merge parameters
+                plan.MergeParameters(resolutionContainer);
+
+                return container;
+            }
+
+            #endregion
+        }
+
         private class SqlDeleteBuilder : SqlModificationBuilder
         {
             #region Constructor
@@ -733,42 +817,6 @@ ELSE
         #endregion
 
         #region Methods
-        // since we have lazy loading, we should preprocess the entity and make sure FK's are
-        // set correctly.  If we are saving an object PhoneNumber, which has a FK to
-        // PhoneType and its a 1-1.  If the PhoneTypeId is set on PhoneNumber,
-        // but the actual object is null we will get an error.  This might not be valid,
-        // we need to preprocess the entity to set the FK value if its not set,
-        // if the FK doesnt exist throw an error
-        // only care about 1-1 relationships
-        private void _resolveExistsEntities(ICollection<object> foreignKeysExist)
-        {
-            if (!foreignKeysExist.Any()) return;
-
-            var errors = string.Empty;
-
-            foreach (var foreignKey in foreignKeysExist)
-            {
-                var existsMethod = GetType().GetMethod("Exists", BindingFlags.Instance | BindingFlags.NonPublic);
-
-                var exists = existsMethod.MakeGenericMethod(foreignKey.GetType());
-
-                var result = exists.Invoke(this, new object[] {foreignKey}) as bool?;
-
-                if (result != null && result.Value)
-                {
-
-                }
-                
-                errors += string.Format("{0}Foreign Key does not exist.  Please make sure the entity exists for the Foreign Key Id being used.  Foreign Key: {1}",
-                    string.IsNullOrEmpty(errors) ? string.Empty : "\r\n",
-                    Table.GetTableName(foreignKey));
-            }
-
-            if (string.IsNullOrEmpty(errors)) return;
-
-            throw new SqlSaveException(errors);
-        }
-
         /// <summary>
         /// returns true if anything was modified and false if no changes were made
         /// </summary>

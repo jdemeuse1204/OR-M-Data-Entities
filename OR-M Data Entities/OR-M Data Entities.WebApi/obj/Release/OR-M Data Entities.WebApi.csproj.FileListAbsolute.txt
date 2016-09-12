@@ -1,0 +1,9 @@
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\OR-M Data Entities.WebApi.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\OR-M Data Entities.WebApi.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\Newtonsoft.Json.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\OR-M Data Entities.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\OR-M Data Entities.pdb
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Release\Newtonsoft.Json.xml
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Release\OR-M Data Entities.WebApi.csprojResolveAssemblyReference.cache
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Release\OR-M Data Entities.WebApi.dll
+C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Release\OR-M Data Entities.WebApi.pdb

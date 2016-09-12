@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v3.0
+ * OR-M Data Entities v3.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -590,6 +590,15 @@ namespace OR_M_Data_Entities
 
             return resolvable.Select(source, selector);
         }
+
+        #endregion
+
+        #region Update / Set
+        public static TSource Set<TSource>(this IModifiableExpressionQuery<TSource> source, Expression<Func<TSource, Dictionary<object, object>>> expression)
+        {
+            return default(TSource);
+        }
+
         #endregion
     }
 }

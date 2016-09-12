@@ -84,6 +84,13 @@ namespace OR0M_Data_Entities.Console
             return false;
         }
 
+        private static void True(DbSqlContext ctx)
+        {
+        }
+
+        private static void False(DbSqlContext ctx)
+        {
+        }
 
 
         private static void Main(string[] args)
@@ -92,10 +99,18 @@ namespace OR0M_Data_Entities.Console
             var c = new SqlContext();
             //c.SaveChanges()
 
+            // Done
+            //var result = c.DeleteWhere<Appointment>(w => w.Description.StartsWith("TEST"));
 
+            // Done
+            //c.IfExists<Contact>(w => w.FirstName == "Jamessdfsdfs").True(True).False(new CS2 { Changed = "Different", Id = 1 });
 
-
-
+            c.UpdateWhere<Contact>(w => w.FirstName == "James")
+            .Set(w => new Dictionary<object, object>
+            {
+                            {w.FirstName, ""},
+                            {w.LastName, "James"}
+            });
 
 
             var sdfs = context.ApiQuery(@"
@@ -113,150 +128,6 @@ namespace OR0M_Data_Entities.Console
 	    }
     }
 ");
-
-            var s = DateTime.Now;
-            //var tt = context.Find<Contact>(500);
-            //var t = context.From<Contact>().Where(w => w.ContactID == 1).Select(w => new
-            //{
-            //    ID = w.ContactID,
-            //    w.CreatedByUserID,
-            //    w.FirstName,
-            //    w.Number,
-            //    w.Appointments,
-            //    w.Number.PhoneType
-            //}).ToList();
-            //var ttt = context.From<Contact>().IncludeAll().ToList();
-            var sdsdfgf = context.From<Contact>().Where(w => w.ContactID == 1).Include("Appointments").Select(w => w.Appointments).ToList();
-
-            var e = DateTime.Now;
-
-            System.Console.WriteLine((e - s).Milliseconds);
-
-            //t.FirstName = "Different";
-
-            //context.SaveChanges(t);
-
-
-            var test = context.From<Contact>().Count(w => w.ContactID == 1);
-            var sdgf = context.From<Contact>().OrderByDescending(w => w.ContactID).FirstOrDefault();
-            var sdgdf = context.From<Contact>().Any(w => w.ContactID == 2);
-
-            if (sdgf != null)
-            {
-                sdgf.Appointments = new List<Appointment>();
-            }
-
-            //c1.FirstName = "WINing!";
-
-            //context.SaveChanges(c1);
-
-            //var xy = new Contact
-            //{
-            //    FirstName = "James"
-            //};
-
-            //context.SaveChanges(xy);
-
-            var x = new Contact
-            {
-                CreatedBy = new User
-                {
-                    Name = "James Demeuse"
-                },
-                EditedBy = new User
-                {
-                    Name = "Different User"
-                },
-                FirstName = "Test",
-                LastName = "User",
-                Names = new List<Name>
-                {
-                    new Name
-                    {
-                        Value = "Win!"
-                    },
-                    new Name
-                    {
-                        Value = "FTW!"
-                    }
-                },
-                Number = new PhoneNumber
-                {
-                    Phone = "555-555-5555",
-                    PhoneType = new PhoneType
-                    {
-                        Type = "Cell"
-                    }
-                },
-                Appointments = new List<Appointment>
-                {
-                    new Appointment
-                    {
-                        Description = "Appointment 1",
-                        IsScheduled = false,
-                        Address = new List<Address>
-                        {
-                            new Address
-                            {
-                                Addy = "1234 First Ave South",
-                                State = new StateCode
-                                {
-                                    Value = "MN"
-                                },
-                                ZipCode = new List<Zip>
-                                {
-                                    new Zip
-                                    {
-                                        Zip4 = "5412",
-                                        Zip5 = "55555"
-                                    },
-                                    new Zip
-                                    {
-                                        Zip5 = "12345"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-
-            context.SaveChanges(x);
-
-            //var x = context.Find<Contact>(2077);
-
-            //x.FirstName = "WINss";
-
-            //context.Delete(x);
-
-            //var test = context.GetHealth<Contact>(DatabaseStoreType.SqlServer);
-            //var tests = context.GetAllHealth(DatabaseStoreType.SqlServer, "OR_M_Data_Entities.Tests.Tables");
-            //if (test != null)
-            //{
-
-            //}
-
-            //foreach (var health in tests)
-            //{
-
-            //}
-
-            // after save, need to update the _tableOnLoad to match
-
-            var items = context.From<Contact>();
-
-            foreach (var item in items)
-            {
-                if (item != null)
-                {
-
-                }
-            }
-
-            var q = context.From<Contact>().Select(w => new Contact
-            {
-                ContactID = w.ContactID
-            }).FirstOrDefault();
 
         }
 
@@ -344,7 +215,7 @@ namespace OR0M_Data_Entities.Console
         }
 
         [Table("Contacts")]
-        public class Contact : EntityStateTrackable, IReadScript<Contact>
+        public class Contact : EntityStateTrackable
         {
             [Key]
             [Column("ID")]

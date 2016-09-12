@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v3.0
+ * OR-M Data Entities v3.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -39,5 +39,5 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("3.0.4.0")]
-[assembly: AssemblyFileVersion("3.0.4.0")]
+[assembly: AssemblyVersion("3.1.0.0")]
+[assembly: AssemblyFileVersion("3.1.0.0")]

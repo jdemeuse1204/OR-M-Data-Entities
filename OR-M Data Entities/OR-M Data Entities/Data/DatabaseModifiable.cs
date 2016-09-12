@@ -1,5 +1,5 @@
 ﻿/*
- * OR-M Data Entities v3.0
+ * OR-M Data Entities v3.1
  * License: The MIT License (MIT)
  * Code: https://github.com/jdemeuse1204/OR-M-Data-Entities
  * Email: james.demeuse@gmail.com
@@ -12,8 +12,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Xml;
 using OR_M_Data_Entities.Configuration;
 using OR_M_Data_Entities.Data.Definition;
@@ -26,6 +26,8 @@ using OR_M_Data_Entities.Mapping;
 
 namespace OR_M_Data_Entities.Data
 {
+    public delegate void OnConditionHandler(DbSqlContext context);
+
     /// <summary>
     /// This class uses DataFetching functions to Save, Delete
     /// </summary>
@@ -97,6 +99,57 @@ namespace OR_M_Data_Entities.Data
         #endregion
 
         #region Delete Methods
+
+        public virtual IPersistResult DeleteWhere<T>(Expression<Func<T, bool>> expression) where T : class
+        {
+            lock (_modificationLock)
+            {
+                var entity = Activator.CreateInstance<T>();
+                var referenceMap = new ReferenceMap(Configuration);
+                var parent = new ModificationEntity(entity, referenceMap.NextAlias(), Configuration, DbTableFactory);
+                var changeManager = new ChangeManager();
+
+                if (OnBeforeSave != null) OnBeforeSave(entity, UpdateType.Delete);
+
+                // grab the base table and reset it
+                var table = DbTableFactory.Find<T>(Configuration);
+
+                // get the schematic
+                var schematic = SchematicFactory.FindAndReset(table, Configuration, DbTableFactory);
+
+                // tell the schematic not to use table aliases
+                schematic.ShouldUseTableAlias(false);
+
+                var builder = new SqlDeleteWherePlan(parent, expression.Body, Configuration, schematic);
+
+                if (OnSaving != null) OnSaving(entity);
+
+                // execute the sql
+                ExecuteReader(builder);
+
+                var rowsAffected = 0;
+
+                if (Reader.HasRows)
+                {
+                    Reader.Read();
+
+                    rowsAffected = Reader.GetInt32(0);
+                }
+
+                // we return the deleted id's to check and see if anything was deleted
+                var actionTaken = rowsAffected > 0 ? UpdateType.Delete : UpdateType.RowNotFound;
+
+                // clean up connection
+                Disconnect();
+
+                // add result to change manager
+                changeManager.AddTable(parent.PlainTableName, actionTaken);
+
+                if (OnAfterSave != null) OnAfterSave(entity, actionTaken);
+
+                return changeManager.Compile();
+            }
+        }
 
         public virtual IPersistResult Delete<T>(T entity) where T : class
         {
@@ -646,6 +699,11 @@ namespace OR_M_Data_Entities.Data
 
             public abstract ISqlBuilder GetBuilder();
 
+            public List<SqlSecureQueryParameter> GetParameters()
+            {
+                return Parameters;
+            }
+
             public SqlCommand BuildSqlCommand(SqlConnection connection)
             {
                 // build the sql package
@@ -675,6 +733,7 @@ namespace OR_M_Data_Entities.Data
             protected SqlModificationBuilder(ISqlExecutionPlan plan, IConfigurationOptions configurationOptions, List<SqlSecureQueryParameter> parameters)
                 : base(parameters)
             {
+                Plan = plan;
                 Entity = plan.Entity;
                 Configuration = configurationOptions;
             }
@@ -686,6 +745,8 @@ namespace OR_M_Data_Entities.Data
             protected readonly IModificationEntity Entity;
 
             protected readonly IConfigurationOptions Configuration;
+
+            protected readonly ISqlExecutionPlan Plan;
 
             #endregion
 

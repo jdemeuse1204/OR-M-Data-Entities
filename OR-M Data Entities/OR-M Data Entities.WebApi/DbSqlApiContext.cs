@@ -78,7 +78,7 @@ namespace OR_M_Data_Entities.WebApi
                     SchematicFactory,
                     Configuration, out fromType);
 
-                ExecuteReader(executableQuery.Sql(), executableQuery.Parameters());
+                ExecuteReader(executableQuery.Sql(), executableQuery.GetParameters());
 
                 if (!Reader.HasRows) return null;
 
