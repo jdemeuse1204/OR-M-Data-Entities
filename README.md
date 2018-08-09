@@ -7,13 +7,3 @@ This solution is a micro Object-Relational Mapper aimed at speed.  Others out th
 <br/><br/><br/>
 ##Version 3 Released!
 ###Version 3 contains breaking changes from Version 2.  Please decide if you should update or not.
-
-<br/><br/><br/>
-
-###Documentation Link:
-
-http://ormdataentities.com/
-
-Issues/Questions/Comments:
-
-Mail To - james.demeuse@gmail.com
