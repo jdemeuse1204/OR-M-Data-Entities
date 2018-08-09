@@ -1370,6 +1370,7 @@ namespace OR_M_Data_Entities.Data
                 if (field == null) throw new SqlSaveException("Cannot find Pristine Entity");
 
                 field.SetValue(instance, EntityCloner.Clone(instance));
+
             }
 
             #endregion

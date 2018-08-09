@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>OR0M_Data_Entities.Console</RootNamespace>
     <AssemblyName>OR0M Data Entities.Console</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
@@ -26,6 +26,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -67,17 +68,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OR-M Data Entities.Mock\OR-M Data Entities.Mock.csproj">
-      <Project>{75a91086-6d08-4b0b-a7c7-03683c2c2395}</Project>
-      <Name>OR-M Data Entities.Mock</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\OR-M Data Entities.WebApi\OR-M Data Entities.WebApi.csproj">
-      <Project>{b4a95725-08aa-4f54-a512-5f1f043bf376}</Project>
-      <Name>OR-M Data Entities.WebApi</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\OR-M Data Entities\OR-M Data Entities.csproj">
-      <Project>{a7e402c6-3b5c-4477-950d-20772598fe4c}</Project>
-      <Name>OR-M Data Entities</Name>
+    <ProjectReference Include="..\OR-M Data Entities.Lite\OR-M Data Entities.Lite.csproj">
+      <Project>{d7d557b8-5da0-4375-b650-e53433fe2796}</Project>
+      <Name>OR-M Data Entities.Lite</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

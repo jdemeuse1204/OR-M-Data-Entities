@@ -23,6 +23,7 @@ using OR_M_Data_Entities.Data.Query;
 using OR_M_Data_Entities.Exceptions;
 using OR_M_Data_Entities.Mapping;
 using OR_M_Data_Entities.Mapping.Base;
+using FastMember;
 
 namespace OR_M_Data_Entities.Data
 {
@@ -818,9 +819,12 @@ namespace OR_M_Data_Entities.Data
                             list = Activator.CreateInstance(currentSchematic.ActualType);
 
                             // set the new list on the parent
-                            foundInstanceForListSetValue.GetType()
-                                .GetProperty(currentSchematic.PropertyName)
-                                .SetValue(foundInstanceForListSetValue, list);
+                            //foundInstanceForListSetValue.GetType()
+                            //    .GetProperty(currentSchematic.PropertyName)
+                            //    .SetValue(foundInstanceForListSetValue, list);
+
+                            var listAccessors = TypeAccessor.Create(foundInstanceForListSetValue.GetType());
+                            listAccessors[foundInstanceForListSetValue, currentSchematic.PropertyName] = list;
                         }
 
                         // add object to list
@@ -837,9 +841,13 @@ namespace OR_M_Data_Entities.Data
                     var foundInstanceForSingleSetValue = _getInstance(i, originalCount, currentSchematic, parentInstance);
 
                     // Single Instance
-                    foundInstanceForSingleSetValue.GetType()
-                        .GetProperty(currentSchematic.PropertyName)
-                        .SetValue(foundInstanceForSingleSetValue, newInstance);
+                    var accessors = TypeAccessor.Create(foundInstanceForSingleSetValue.GetType());
+                    accessors[foundInstanceForSingleSetValue, currentSchematic.PropertyName] = newInstance;
+
+
+                    //foundInstanceForSingleSetValue.GetType()
+                    //    .GetProperty(currentSchematic.PropertyName)
+                    //    .SetValue(foundInstanceForSingleSetValue, newInstance);
 
                     // store references to the current instance so we can load the objects,
                     // otherwise we will have to search through the object and look for the instance

@@ -7,3 +7,13 @@ C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Enti
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csprojResolveAssemblyReference.cache
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.dll
 C:\Users\jdemeuse\Documents\GitHubVisualStudio\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\OR-M Data Entities.WebApi.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\OR-M Data Entities.WebApi.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\Newtonsoft.Json.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\OR-M Data Entities.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\OR-M Data Entities.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\Newtonsoft.Json.xml
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csprojResolveAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\FastMember.dll

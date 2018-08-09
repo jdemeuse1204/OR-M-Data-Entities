@@ -34,3 +34,22 @@ C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Enti
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.xml
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
 C:\Users\james\Source\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csprojResolveAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Test.mdf
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Test_log.ldf
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.exe.config
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.exe
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Compare.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Tests.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Tests.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.xml
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.xml
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csprojResolveAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.exe
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\FastMember.dll

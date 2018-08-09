@@ -1,4 +1,4 @@
-﻿using OR_M_Data_Entities.Mapping;
+﻿using OR_M_Data_Entities.Lite.Mapping;
 
 namespace OR0M_Data_Entities.Console
 {
