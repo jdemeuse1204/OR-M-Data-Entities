@@ -12,5 +12,6 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
         public Type ParentType { get; set; }
         public Type ChildType { get; set; }
         public bool MustLeftJoin { get; set; }
+        public bool IsNullableKey { get; set; }
     }
 }

@@ -48,6 +48,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Benchmark">
+      <HintPath>..\..\..\..\Users\James\source\repos\BenchMark\Benchmark\bin\Debug\Benchmark.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -58,6 +61,46 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Child.cs" />
+    <Compile Include="DTOs\ReadOnlyAddress.cs" />
+    <Compile Include="DTOs\ReadOnlyAddressType.cs" />
+    <Compile Include="DTOs\ReadOnlyContact.cs" />
+    <Compile Include="DTOs\ReadOnlyContactEmailAddress.cs" />
+    <Compile Include="DTOs\ReadOnlyContactPhoneNumber.cs" />
+    <Compile Include="DTOs\ReadOnlyContactsDesignations.cs" />
+    <Compile Include="DTOs\ReadOnlyCustomer.cs" />
+    <Compile Include="DTOs\ReadOnlyCustomerAddress.cs" />
+    <Compile Include="DTOs\ReadOnlyDesignation.cs" />
+    <Compile Include="DTOs\ReadOnlyDwellingType.cs" />
+    <Compile Include="DTOs\ReadOnlyEmailAddress.cs" />
+    <Compile Include="DTOs\ReadOnlyItem.cs" />
+    <Compile Include="DTOs\ReadOnlyJob.cs" />
+    <Compile Include="DTOs\ReadOnlyJobAddress.cs" />
+    <Compile Include="DTOs\ReadOnlyJobAssignmentQueue.cs" />
+    <Compile Include="DTOs\ReadOnlyJobIntakeType.cs" />
+    <Compile Include="DTOs\ReadOnlyJobLineItem.cs" />
+    <Compile Include="DTOs\ReadOnlyJobMainItem.cs" />
+    <Compile Include="DTOs\ReadOnlyJobNote.cs" />
+    <Compile Include="DTOs\ReadOnlyJobStatus.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveType.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveTypeAssignment.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveTypeAssignmentRole.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveTypeJobStatusCommitment.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveTypeJobStatusPermission.cs" />
+    <Compile Include="DTOs\ReadOnlyMoveTypeRule.cs" />
+    <Compile Include="DTOs\ReadOnlyNote.cs" />
+    <Compile Include="DTOs\ReadOnlyPaymentDistribution.cs" />
+    <Compile Include="DTOs\ReadOnlyPaymentDistributionSplit.cs" />
+    <Compile Include="DTOs\ReadOnlyPaymentType.cs" />
+    <Compile Include="DTOs\ReadOnlyPhone.cs" />
+    <Compile Include="DTOs\ReadOnlyPlacementLocation.cs" />
+    <Compile Include="DTOs\ReadOnlyPricingType.cs" />
+    <Compile Include="DTOs\ReadOnlyRole.cs" />
+    <Compile Include="DTOs\ReadOnlyRoleSettings.cs" />
+    <Compile Include="DTOs\ReadOnlyRule.cs" />
+    <Compile Include="DTOs\ReadOnlyState.cs" />
+    <Compile Include="DTOs\ReadOnlyUserInformation.cs" />
+    <Compile Include="DTOs\ReadOnlyUserNoForeignKeys.cs" />
+    <Compile Include="DTOs\ReadOnlyUserWIthUserInformation.cs" />
     <Compile Include="Parent.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -94,6 +137,7 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

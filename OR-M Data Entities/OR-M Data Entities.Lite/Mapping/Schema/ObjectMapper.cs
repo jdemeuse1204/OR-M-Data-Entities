@@ -59,6 +59,7 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
             if (foreignKeyAttribute != null)
             {
                 var mustLeftJoin = false;
+                var isNullable = false;
                 var isList = member.Type.IsList();
                 Type parentColumn;
                 Type childColumn;
@@ -71,6 +72,8 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                     if (foundMember.Type.IsNullableType())
                     {
                         mustLeftJoin = true;
+                        isNullable = true;
+
                         // set the join column names
                         childColumn = member.Type.Resolve();
                         parentColumn = currentType;
@@ -98,7 +101,8 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                     Attribute = foreignKeyAttribute,
                     ParentType = parentColumn,
                     ChildType = childColumn,
-                    MustLeftJoin = mustLeftJoin
+                    MustLeftJoin = mustLeftJoin,
+                    IsNullableKey = isNullable
                 };
             }
 

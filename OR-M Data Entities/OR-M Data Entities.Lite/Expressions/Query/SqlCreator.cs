@@ -26,32 +26,45 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
                 {
                     if (column.ForeignKey != null)
                     {
-                        if (column.ForeignKey.MustLeftJoin)
+                        if (column.ForeignKey.MustLeftJoin && column.ForeignKey.IsNullableKey == false)
                         {
                             types.Add(column.ForeignKey.ChildType);
 
                             // Left Join
                             var childTable = tableSchemas[column.ForeignKey.ChildType];
-                            var childColumn = childTable.Columns.First(w => w.IsKey);
-                            var parentColumn = tableSchema.Columns.First(w => w.PropertyName == column.ForeignKey.Attribute.ForeignKeyColumnName);
+                            var parentColumn = tableSchema.Columns.First(w => w.IsKey);
+                            var childColumn = childTable.Columns.First(w => w.PropertyName == column.ForeignKey.Attribute.ForeignKeyColumnName);
+                            var childAlias = CreateAlias(childTable.Index);
 
-
-                            joins.AppendLine($"Left Join [dbo].[{tableSchema.Name}] {alias} on [{alias}].[{parentColumn.ColumnName}] = [{CreateAlias(childTable.Index)}].[{childColumn.ColumnName}]");
+                            joins.AppendLine($"\tLeft Join [dbo].[{childTable.Name}] {childAlias} on [{childAlias}].[{childColumn.ColumnName}] = [{alias}].[{parentColumn.ColumnName}]");
                         }
                         else
                         {
-                            types.Add(column.ForeignKey.ParentType);
+                            Type tableType;
+                            if (column.ForeignKey.IsNullableKey)
+                            {
+                                tableType = column.ForeignKey.ChildType;
+                                types.Add(column.ForeignKey.ChildType);
+                            }
+                            else
+                            {
+                                tableType = column.ForeignKey.ParentType;
+                                types.Add(column.ForeignKey.ParentType);
+                            }
 
                             // Inner Join
-                            var childTable = tableSchemas[column.ForeignKey.ParentType];
+                            var childTable = tableSchemas[tableType];
                             var childColumn = childTable.Columns.First(w => w.IsKey);
                             var parentColumn = tableSchema.Columns.First(w => w.PropertyName == column.ForeignKey.Attribute.ForeignKeyColumnName);
+                            var childAlias = CreateAlias(childTable.Index);
 
-                            joins.AppendLine($"Inner Join [dbo].[{tableSchema.Name}] {alias} on [{alias}].[{parentColumn.ColumnName}] = [{CreateAlias(childTable.Index)}].[{childColumn.ColumnName}]");
+                            joins.AppendLine($"\t{(column.ForeignKey.IsNullableKey ? "Left" : "Inner")} Join [dbo].[{childTable.Name}] {childAlias} on [{childAlias}].[{childColumn.ColumnName}] = [{alias}].[{parentColumn.ColumnName}]");
                         }
                     }
-
-                    columns.AppendLine($"[{alias}].[{column.ColumnName}],");
+                    else
+                    {
+                        columns.AppendLine($"\t[{alias}].[{column.ColumnName}],");
+                    }
                 }
 
                 if (i == 0)
@@ -62,9 +75,9 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
 
             return $@"
 Select
-    {columns.ToString()}
+{columns.ToString().TrimEnd('\r', '\n', ',')}
 From {from.ToString()}
-{1}
+{joins.ToString()}
 Where {1}
 ";
         }

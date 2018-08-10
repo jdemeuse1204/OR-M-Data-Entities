@@ -1,8 +1,11 @@
-﻿using OR_M_Data_Entities.Lite;
+﻿using Benchmark;
+using NickOfTime.ServiceModels.DataTransferObjects.ORM;
+using OR_M_Data_Entities.Lite;
 using OR_M_Data_Entities.Lite.Mapping;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Threading;
 
 namespace OR0M_Data_Entities.Console
 {
@@ -10,10 +13,18 @@ namespace OR0M_Data_Entities.Console
     {
         private static void Main(string[] args)
         {
-            var context = new DbSqlLiteContext("");
+            var duration = Profiler.Profile("", 1, () =>
+            {
+                var context = new DbSqlLiteContext("");
 
-            var result = context.From<Contact>().FirstOrDefault(w => w.ContactID == 1);
+                var result = context.From<ReadOnlyJob>().FirstOrDefault(w => w.JobId == 1);
 
+            });
+
+            if (duration != null)
+            {
+
+            }
         }
 
         [Table("Contacts")]

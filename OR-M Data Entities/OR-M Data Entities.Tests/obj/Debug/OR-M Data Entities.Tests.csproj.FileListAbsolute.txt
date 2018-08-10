@@ -30,8 +30,9 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debu
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\OR-M Data Entities.pdb
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csprojResolveAssemblyReference.cache
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csprojAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csproj.CoreCompileInputs.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\obj\Debug\OR-M Data Entities.Tests.csproj.CopyComplete
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Tests\bin\Debug\FastMember.dll

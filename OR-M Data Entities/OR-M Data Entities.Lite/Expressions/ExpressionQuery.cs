@@ -39,7 +39,7 @@ namespace OR_M_Data_Entities.Lite.Expressions
             // create the query
             var sql = SqlCreator.Create<T>(objectSchemas);
 
-            return executionContext.LoadOne<T>(sql, objectSchemas);
+            return default(T);// executionContext.LoadOne<T>(sql, objectSchemas);
         }
 
         public IExpressionQuery<T> Include(string pathOrTableName)

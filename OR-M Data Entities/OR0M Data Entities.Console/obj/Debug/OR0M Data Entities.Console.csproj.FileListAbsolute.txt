@@ -25,7 +25,11 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\De
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.pdb
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR0M Data Entities.Console.exe
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR0M Data Entities.Console.pdb
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.csprojResolveAssemblyReference.cache
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.Lite.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\FastMember.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\OR-M Data Entities.Lite.pdb
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.csprojAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.csproj.CoreCompileInputs.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\obj\Debug\OR0M Data Entities.Console.csproj.CopyComplete
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\Benchmark.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR0M Data Entities.Console\bin\Debug\Benchmark.pdb
