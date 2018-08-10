@@ -50,8 +50,6 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\De
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\EntityFramework.SqlServer.xml
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.exe
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.pdb
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\OR-M Data Entities.Tests.dll.config
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csprojAssemblyReference.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csproj.CoreCompileInputs.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csproj.CopyComplete
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\FastMember.dll
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\obj\Debug\OR-M Data Entities.Compare.csprojResolveAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Compare\bin\Debug\Microsoft.VisualStudio.QualityTools.UnitTestFramework.xml

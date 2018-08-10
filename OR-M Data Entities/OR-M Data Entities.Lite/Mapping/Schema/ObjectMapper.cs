@@ -12,9 +12,21 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
         {
             var tableTypes = new List<Type> { type };
 
+            // create object map all the way to the property, this
+            // will be the key so we can build an alias for a table
+            // For each type, store list of different maps that exist for that type
+
+            // can we put levels on the types we loop through?
+            // level 0 = main object, level 1 = any child objects, 2 = children of children?
+
+            // can we create a list of lists to loop through? 
+            // We need to know where in the current object we are,
+            // If we do not know we cannot properly create an alias
+
             for (var i = 0; i < tableTypes.Count; i++)
             {
                 var tableType = tableTypes[i];
+                
 
                 // skip anything already mapped
                 if (currentMap.ContainsKey(tableType)) { continue; }

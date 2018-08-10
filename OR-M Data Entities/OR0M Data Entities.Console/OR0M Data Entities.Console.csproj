@@ -49,7 +49,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Benchmark">
-      <HintPath>..\..\..\..\Users\James\source\repos\BenchMark\Benchmark\bin\Debug\Benchmark.dll</HintPath>
+      <HintPath>..\..\..\Benchmark\Benchmark\bin\Debug\Benchmark.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

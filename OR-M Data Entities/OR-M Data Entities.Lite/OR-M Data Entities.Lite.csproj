@@ -56,6 +56,7 @@
     <Compile Include="Mapping\ForeignKeyAttribute.cs" />
     <Compile Include="Mapping\KeyAttribute.cs" />
     <Compile Include="Mapping\Schema\ForeignKeySchema.cs" />
+    <Compile Include="Mapping\Schema\IndexedType.cs" />
     <Compile Include="Mapping\TableAttribute.cs" />
     <Compile Include="DbSqlLiteContext.cs" />
     <Compile Include="Expressions\IExpressionQuery.cs" />
