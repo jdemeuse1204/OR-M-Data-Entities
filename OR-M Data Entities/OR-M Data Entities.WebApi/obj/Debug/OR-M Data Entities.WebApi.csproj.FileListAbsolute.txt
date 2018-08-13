@@ -16,6 +16,4 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Deb
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.pdb
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\bin\Debug\FastMember.dll
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csprojAssemblyReference.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csproj.CoreCompileInputs.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csproj.CopyComplete
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.WebApi\obj\Debug\OR-M Data Entities.WebApi.csprojResolveAssemblyReference.cache

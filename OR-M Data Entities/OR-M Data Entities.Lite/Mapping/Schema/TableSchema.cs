@@ -9,14 +9,12 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
 {
     internal class TableSchema
     {
-        public TableSchema(string name, int index)
+        public TableSchema(string name)
         {
             Name = name;
-            Index = index;
         }
 
         public string Name { get; }
         public IEnumerable<ColumnSchema> Columns { get; set; }
-        public int Index { get; }
     }
 }

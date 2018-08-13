@@ -115,6 +115,10 @@
       <Project>{d7d557b8-5da0-4375-b650-e53433fe2796}</Project>
       <Name>OR-M Data Entities.Lite</Name>
     </ProjectReference>
+    <ProjectReference Include="..\OR-M Data Entities\OR-M Data Entities.csproj">
+      <Project>{A7E402C6-3B5C-4477-950D-20772598FE4C}</Project>
+      <Name>OR-M Data Entities</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

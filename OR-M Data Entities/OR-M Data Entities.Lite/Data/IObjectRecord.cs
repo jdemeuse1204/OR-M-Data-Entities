@@ -8,12 +8,12 @@ namespace OR_M_Data_Entities.Lite.Data
     {
         Type FromType { get; set; }
 
-        string Location { get; }
         Type Type { get; }
         string FromPropertyName { get; }
         string ForeignKeyProperty { get; }
         ForeignKeyType ForeignKeyType { get; set; }
         MemberSet Members { get; }
-        int LevelId { get; }
+        string LevelId { get; }
+        string ParentLevelId { get; }
     }
 }

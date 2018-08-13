@@ -1,4 +1,5 @@
-﻿using OR_M_Data_Entities.Lite.Mapping.Schema;
+﻿using OR_M_Data_Entities.Lite.Data;
+using OR_M_Data_Entities.Lite.Mapping.Schema;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,85 +12,74 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
     {
         public static string Create<T>(IReadOnlyDictionary<Type, TableSchema> tableSchemas)
         {
-            var indexedTypes = new List<IndexedType> { new IndexedType(typeof(T)) };
-            var columns = new StringBuilder();
+            var select = new StringBuilder();
             var joins = new StringBuilder();
             var where = new StringBuilder();
-            var from = new StringBuilder();
+            var order = new StringBuilder();
+            var reader = new ObjectReader<T>();
+            var from = string.Empty;
 
-            for (var i = 0; i < indexedTypes.Count; i++)
+            while (reader.Read())
             {
-                var currentIndexedType = indexedTypes[i];
-                var tableSchema = tableSchemas[currentIndexedType.Type];
-                var alias = CreateAlias(1);
+                var record = reader.GetRecord();
+                var tableSchema = tableSchemas[record.Type];
+                var alias = GetTableAlias(record.LevelId);
 
                 foreach (var column in tableSchema.Columns)
                 {
-                    if (column.ForeignKey != null)
+                    select.AppendLine($"\t[{alias}].[{column.ColumnName}],");
+
+                    if (column.IsKey)
                     {
-                        if (column.ForeignKey.MustLeftJoin && column.ForeignKey.IsNullableKey == false)
-                        {
-                            var oneToManyIndexedType = new IndexedType(column.ForeignKey.ChildType, column.ForeignKey.Attribute.ForeignKeyColumnName);
-                            indexedTypes.Add(oneToManyIndexedType);
-
-                            // Left Join
-                            var childTable = tableSchemas[column.ForeignKey.ChildType];
-                            var parentColumn = tableSchema.Columns.First(w => w.IsKey);
-                            var childColumn = childTable.Columns.First(w => w.PropertyName == column.ForeignKey.Attribute.ForeignKeyColumnName);
-                            var childAlias = CreateAlias(1);
-
-                            joins.AppendLine($"\tLeft Join [dbo].[{childTable.Name}] {childAlias} on [{childAlias}].[{childColumn.ColumnName}] = [{alias}].[{parentColumn.ColumnName}]");
-                        }
-                        else
-                        {
-                            Type tableType;
-                            IndexedType oneToOneIndexedType;
-                            if (column.ForeignKey.IsNullableKey)
-                            {
-                                tableType = column.ForeignKey.ChildType;
-                                oneToOneIndexedType = new IndexedType(column.ForeignKey.ChildType, column.ForeignKey.Attribute.ForeignKeyColumnName);
-                            }
-                            else
-                            {
-                                tableType = column.ForeignKey.ParentType;
-                                oneToOneIndexedType = new IndexedType(column.ForeignKey.ParentType, column.ForeignKey.Attribute.ForeignKeyColumnName);
-                            }
-
-                            indexedTypes.Add(oneToOneIndexedType);
-
-                            // Inner Join
-                            var childTable = tableSchemas[tableType];
-                            var childColumn = childTable.Columns.First(w => w.IsKey);
-                            var parentColumn = tableSchema.Columns.First(w => w.PropertyName == column.ForeignKey.Attribute.ForeignKeyColumnName);
-                            var childAlias = CreateAlias(1);
-
-                            joins.AppendLine($"\t{(column.ForeignKey.IsNullableKey ? "Left" : "Inner")} Join [dbo].[{childTable.Name}] {childAlias} on [{childAlias}].[{childColumn.ColumnName}] = [{alias}].[{parentColumn.ColumnName}]");
-                        }
-                    }
-                    else
-                    {
-                        columns.AppendLine($"\t[{alias}].[{column.ColumnName}],");
+                        order.Append($"[{alias}].[{column.ColumnName}] ASC, ");
                     }
                 }
-
-                if (i == 0)
+                
+                if (record.LevelId == "0")
                 {
-                    from.AppendLine($"[dbo].[{tableSchema.Name}] {alias}");
+                    // from
+                    from = $"[{alias}].[{tableSchema.Name}]";
+                }
+                else
+                {
+                    // join
+                    var parentRecord = reader.Find(record.ParentLevelId);
+                    var parentAlias = GetTableAlias(record.ParentLevelId);
+
+                    switch (record.ForeignKeyType)
+                    {
+                        case ForeignKeyType.NullableOneToOne:
+                            var nullableOneToOneKey = tableSchema.Columns.First(w => w.IsKey == true);
+                            joins.AppendLine($"\tLeft Join [dbo].[{tableSchema.Name}] {alias} on [{alias}].[{nullableOneToOneKey.ColumnName}] = [{parentAlias}].[{record.ForeignKeyProperty}]");
+                            break;
+                        case ForeignKeyType.OneToMany:
+                            var parentTableSchema = tableSchemas[record.FromType];
+                            var oneToManyKey = parentTableSchema.Columns.First(w => w.IsKey == true);
+                            joins.AppendLine($"\tLeft Join [dbo].[{tableSchema.Name}] {alias} on [{alias}].[{record.ForeignKeyProperty}] = [{parentAlias}].[{oneToManyKey.ColumnName}]");
+                            break;
+                        case ForeignKeyType.OneToOne:
+                            var oneToOneKey = tableSchema.Columns.First(w => w.IsKey == true);
+                            joins.AppendLine($"\tInner Join [dbo].[{tableSchema.Name}] {alias} on [{alias}].[{oneToOneKey.ColumnName}] = [{parentAlias}].[{record.ForeignKeyProperty}]");
+                            break;
+                    }
+
+                    
                 }
             }
 
             return $@"
 Select
-{columns.ToString().TrimEnd('\r', '\n', ',')}
+{select.ToString().TrimEnd('\r', '\n', ',')}
 From {from.ToString()}
 {joins.ToString()}
 Where {1}
+Order By {order.ToString().TrimEnd(',')}
 ";
         }
 
-        private static string CreateAlias(int index)
+        private static string GetTableAlias(string level)
         {
-            return $"AKA{index}";
+            return $"AKA{level}";
         }
     }
 }

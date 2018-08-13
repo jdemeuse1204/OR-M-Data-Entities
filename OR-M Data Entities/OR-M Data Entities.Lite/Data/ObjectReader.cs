@@ -8,20 +8,24 @@ using System.Linq;
 
 namespace OR_M_Data_Entities.Lite.Data
 {
-    public class ObjectReader<T> where T : class
+    public class ObjectReader<T> 
     {
-        private readonly List<ObjectRecord> objectTypes;
+        private List<IObjectRecord> objectTypes;
         private int index;
-        private int currentLevel;
         private string lastFromObjectName;
-        private string location;
-        private static Dictionary<Type, Dictionary<Type, Type>> results;
+        private int nextLevelId;
+        private int stepId;
+        private readonly Type type;
+        private readonly bool readFromCache;
+
+        private static Dictionary<Type, List<IObjectRecord>> results;
         private static Dictionary<Type, TypeAccessor> typeAccessors;
         private static Dictionary<Type, MemberSet> memberSets;
-        private int nextLevelId;
 
         public ObjectReader()
         {
+            readFromCache = false;
+
             if (typeAccessors == null)
             {
                 typeAccessors = new Dictionary<Type, TypeAccessor>();
@@ -34,19 +38,26 @@ namespace OR_M_Data_Entities.Lite.Data
 
             if (results == null)
             {
-                results = new Dictionary<Type, Dictionary<Type, Type>>();
+                results = new Dictionary<Type, List<IObjectRecord>>();
             }
 
             nextLevelId = 0;
+            stepId = 0;
             index = 0;
-            currentLevel = 0;
-            location = "Main";
             lastFromObjectName = string.Empty;
+            type = typeof(T);
 
-            objectTypes = new List<ObjectRecord>
+            if (results.ContainsKey(type))
             {
-                new ObjectRecord(typeof(T), string.Empty, string.Empty, string.Empty, nextLevelId)
-            };
+                readFromCache = true;
+            }
+            else
+            {
+                objectTypes = new List<IObjectRecord>
+                {
+                    new ObjectRecord(type, string.Empty, string.Empty, "0", "0")
+                };
+            }
         }
 
         private static TypeAccessor GetTypeAccessor(Type type)
@@ -65,38 +76,49 @@ namespace OR_M_Data_Entities.Lite.Data
 
         public bool Read()
         {
-            while (index < objectTypes.Count)
+            if (readFromCache)
             {
-                var objectType = objectTypes[index];
+                objectTypes = results[type];
 
-                if (objectType.LevelId > currentLevel)
+                while (index < objectTypes.Count)
                 {
-                    currentLevel++;
-
-                    // change location
-                    location = string.Join(".", location, objectType.FromPropertyName);
+                    index++;
+                    return true;
                 }
 
-                nextLevelId++;
-
-                foreach (var member in objectType.Members)
-                {
-                    var foreignKey = member.GetAttribute<ForeignKeyAttribute>();
-                    var memberType = member.Type.Resolve();
-
-                    if (foreignKey != null)
-                    {
-                        var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, nextLevelId);
-
-                        objectTypes.Add(objectRecord);
-                    }
-                }
-                index++;
-
-                return true;
+                return false;
             }
+            else
+            {
+                while (index < objectTypes.Count)
+                {
+                    var objectType = objectTypes[index];
 
-            return false;
+                    nextLevelId++;
+
+                    foreach (var member in objectType.Members)
+                    {
+                        var foreignKey = member.GetAttribute<ForeignKeyAttribute>();
+                        var memberType = member.Type.Resolve();
+
+                        if (foreignKey != null)
+                        {
+                            var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, $"{nextLevelId}_{stepId}", objectType.LevelId);
+                            stepId++;
+                            objectTypes.Add(objectRecord);
+                        }
+                    }
+                    index++;
+                    stepId = 0;
+
+                    return true;
+                }
+
+                // store result
+                results.Add(type, objectTypes);
+
+                return false;
+            }
         }
 
         public IObjectRecord GetRecord()
@@ -104,9 +126,14 @@ namespace OR_M_Data_Entities.Lite.Data
             return objectTypes[index - 1];
         }
 
-        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, int splitId)
+        public IObjectRecord Find(string levelId)
         {
-            var result = new ObjectRecord(resolvedMemberType, member.Name, foreignKeyAttribute.ForeignKeyColumnName, $"{location}.{member.Name}", splitId);
+            return objectTypes.FirstOrDefault(w => w.LevelId == levelId);
+        }
+
+        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, string levelId, string parentLevelId)
+        {
+            var result = new ObjectRecord(resolvedMemberType, member.Name, foreignKeyAttribute.ForeignKeyColumnName, levelId, parentLevelId);
             var isList = member.Type.IsList();
             var foreignKeyType = ForeignKeyType.OneToOne;
 
@@ -133,7 +160,7 @@ namespace OR_M_Data_Entities.Lite.Data
 
         private class ObjectRecord : IObjectRecord
         {
-            public ObjectRecord(Type type, string fromPropertyName, string foreignKeyProperty, string location, int levelId)
+            public ObjectRecord(Type type, string fromPropertyName, string foreignKeyProperty, string levelId, string parentLevelId)
             {
                 Type = type;
                 FromPropertyName = fromPropertyName;
@@ -141,19 +168,19 @@ namespace OR_M_Data_Entities.Lite.Data
                 TypeAccessor = GetTypeAccessor(type);
                 Members = TypeAccessor.GetMembers();
                 ForeignKeyType = ForeignKeyType.None;
-                Location = location;
                 LevelId = levelId;
+                ParentLevelId = parentLevelId;
             }
 
             public Type FromType { get; set; }
 
-            public string Location { get; }
             public Type Type { get; }
             public string FromPropertyName { get; }
             public string ForeignKeyProperty { get; }
             public ForeignKeyType ForeignKeyType { get; set; }
             public MemberSet Members { get; }
-            public int LevelId { get; }
+            public string LevelId { get; }
+            public string ParentLevelId { get; }
 
             private TypeAccessor TypeAccessor { get; }
         }
