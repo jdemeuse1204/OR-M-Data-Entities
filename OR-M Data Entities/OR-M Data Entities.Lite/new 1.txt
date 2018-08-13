@@ -1,0 +1,71 @@
+- Edit Work Order
+	Logic
+	Status Logic
+- My Work Orders/Search Work Orders - Order of display?
+	Filter on Status
+- Calendar
+- Dashboard
+
+
+
+ReadOnlyJob
+	PaymentDistribution
+		PaymentDistributionSplits
+			PayeeRole
+				ReadOnlyRoleSettings
+	ReacOnlyCustomer
+		ReadOnlyContact
+			ReadOnlyContactPhoneNumber
+				ReadOnlyPhone
+			ReadOnlyContactEmailAddress
+				ReadOnlyEmailAddress
+			ReadOnlyContactsDesignations
+				ReadOnlyDesignation
+		ReadOnlyCustomerAddress
+			ReadOnlyAddress
+				ReadOnlyDwellingType
+				ReadOnlyAddressType
+				ReadOnlyState
+	ReadOnlyUserNoForeignKeys
+	ReadOnlyJobIntakeType
+	ReadOnlyJobStatus
+	ReadOnlyPaymentType
+	ReadOnlyMoveType
+		ReadOnlyPaymentDistribution
+			ReadOnlyPaymentDistributionSplit
+				ReadOnlyRole
+					ReadOnlyRoleSettings
+		ReadOnlyPricingType
+		ReadOnlyMoveTypeAssignment
+			ReadOnlyMoveTypeAssignmentRole
+				ReadOnlyRole
+					ReadOnlyRoleSettings
+		ReadOnlyMoveTypeJobStatusCommitment
+	ReadOnlyPlacementLocation
+	ReadOnlyJobAddress
+		ReadOnlyAddress
+			ReadOnlyDwellingType
+			ReadOnlyAddressType
+			ReadOnlyState
+	ReadOnlyJobLineItem
+		ReadOnlyItem
+	ReadOnlyJobMainItem
+		ReadOnlyItem
+	ReadOnlyJobNote
+		ReadOnlyNote
+			ReadOnlyUserWIthUserInformation
+				ReadOnlyUserInformation
+			ReadOnlyUserWIthUserInformation
+				ReadOnlyUserInformation
+	ReadOnlyJobAssignmentQueue
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				

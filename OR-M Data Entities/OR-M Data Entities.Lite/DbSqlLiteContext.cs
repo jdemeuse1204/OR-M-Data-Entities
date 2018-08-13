@@ -27,7 +27,7 @@ namespace OR_M_Data_Entities.Lite
             if (ObjectSchemas == null) { ObjectSchemas = new Dictionary<Type, TableSchema>(); }
 
             // build map of everything we need for selecting, reading, and setting data
-            ObjectMapper.Map(typeof(T), ObjectSchemas);
+            ObjectMapper.Map<T>(ObjectSchemas);
 
             return new ExpressionQuery<T>(ExecutionContext, ObjectSchemas);
         }

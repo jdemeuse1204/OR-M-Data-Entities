@@ -12,4 +12,6 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.pdb
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\bin\Debug\FastMember.dll
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.csprojResolveAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.csprojAssemblyReference.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.csproj.CoreCompileInputs.cache
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Mock\obj\Debug\OR-M Data Entities.Mock.csproj.CopyComplete

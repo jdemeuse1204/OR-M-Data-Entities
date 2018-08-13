@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 
 namespace OR_M_Data_Entities.Lite.Mapping.Schema
 {
-    internal class ColumnSchema
+    public enum ForeignKeyType
     {
-        public string PropertyName { get; set; }
-        public string ColumnName { get; set; }
-        public bool IsKey { get; set; }
+        OneToMany,
+        OneToOne,
+        NullableOneToOne,
+        None
     }
 }

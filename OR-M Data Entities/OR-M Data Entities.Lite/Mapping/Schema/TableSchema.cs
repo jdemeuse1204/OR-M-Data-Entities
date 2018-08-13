@@ -15,7 +15,6 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
             Index = index;
         }
 
-        public TypeAccessor TypeAccessor { get; set; }
         public string Name { get; }
         public IEnumerable<ColumnSchema> Columns { get; set; }
         public int Index { get; }

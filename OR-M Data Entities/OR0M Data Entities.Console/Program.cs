@@ -13,7 +13,7 @@ namespace OR0M_Data_Entities.Console
     {
         private static void Main(string[] args)
         {
-            var duration = Profiler.OnlyProfile("", 1, () =>
+            var duration = Profiler.Profile("", 1, () =>
             {
                 var context = new DbSqlLiteContext("");
 
