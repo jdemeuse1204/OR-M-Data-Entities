@@ -13,11 +13,12 @@ namespace OR0M_Data_Entities.Console
     {
         private static void Main(string[] args)
         {
-            var duration = Profiler.OnlyProfile("", 1, () =>
+            var list = new List<int> { 1, 2, 4 };
+            var duration = Profiler.Profile("", 1, () =>
             {
                 var context = new DbSqlLiteContext("");
 
-                var result = context.From<ReadOnlyJob>().FirstOrDefault(w => w.JobId == 1);
+                var result = context.From<ReadOnlyJob>().FirstOrDefault(w => w.JobId == 1 && w.IntakeTypeId == 1 || w.JobId == 2 && list.Contains(w.JobId));
 
             });
 
