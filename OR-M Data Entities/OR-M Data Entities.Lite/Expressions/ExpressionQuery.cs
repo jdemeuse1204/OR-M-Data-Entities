@@ -37,7 +37,7 @@ namespace OR_M_Data_Entities.Lite.Expressions
         public T FirstOrDefault(Expression<Func<T, bool>> expression)
         {
             // create the query
-            var sql = SqlCreator.Create<T>(objectSchemas, expression);
+            var sql = SqlCreator.Create(objectSchemas, expression);
 
             return default(T);// executionContext.LoadOne<T>(sql, objectSchemas);
         }

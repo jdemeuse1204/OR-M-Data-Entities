@@ -8,10 +8,10 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
 {
     public enum ForeignKeyType
     {
-        OneToMany,
-        OneToOne,
         NullableOneToOne,
-        LeftJoinOneToOne,
+        LeftOneToOne,
+        OneToOne,
+        OneToMany,
         None
     }
 }

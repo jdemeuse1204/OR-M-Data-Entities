@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace OR_M_Data_Entities.Lite.Data
 {
-    public class ObjectReader<T> 
+    public class ObjectReader
     {
         private List<IObjectRecord> objectTypes;
         private int index;
@@ -22,7 +22,7 @@ namespace OR_M_Data_Entities.Lite.Data
         private static Dictionary<Type, TypeAccessor> typeAccessors;
         private static Dictionary<Type, MemberSet> memberSets;
 
-        public ObjectReader()
+        public ObjectReader(Type type)
         {
             readFromCache = false;
 
@@ -45,7 +45,7 @@ namespace OR_M_Data_Entities.Lite.Data
             stepId = 0;
             index = 0;
             lastFromObjectName = string.Empty;
-            type = typeof(T);
+            this.type = type;
 
             if (results.ContainsKey(type))
             {
@@ -137,22 +137,22 @@ namespace OR_M_Data_Entities.Lite.Data
             var isList = member.Type.IsList();
             var foreignKeyType = ForeignKeyType.OneToOne;
 
-            if (parentJoinType == ForeignKeyType.NullableOneToOne || parentJoinType == ForeignKeyType.OneToMany || parentJoinType == ForeignKeyType.LeftJoinOneToOne)
+            // if the parent is left joined, then the 
+            // children need to be left joined,
+            // inner joined will cause the query to fail if 
+            // no results are found
+            if (!isList)
             {
-                // if the parent is left joined, then the 
-                // children need to be left joined,
-                // inner joined will cause the query to fail if 
-                // no results are found
-                foreignKeyType = ForeignKeyType.LeftJoinOneToOne;
-            }
-            else if (!isList)
-            {
+                var isParentNullableOrLeftJoin = parentJoinType == ForeignKeyType.LeftOneToOne || parentJoinType == ForeignKeyType.NullableOneToOne || parentJoinType == ForeignKeyType.OneToMany;
+
+                foreignKeyType = isParentNullableOrLeftJoin ? ForeignKeyType.LeftOneToOne : ForeignKeyType.OneToOne;
+
                 // Is not a list
                 var foundMember = allMembers.First(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
 
                 if (foundMember.Type.IsNullableType())
                 {
-                    foreignKeyType = ForeignKeyType.NullableOneToOne;
+                    foreignKeyType = isParentNullableOrLeftJoin ? ForeignKeyType.LeftOneToOne : ForeignKeyType.NullableOneToOne;
                 }
             }
             else
@@ -164,6 +164,11 @@ namespace OR_M_Data_Entities.Lite.Data
             result.FromType = fromType;
 
             return result;
+        }
+
+        public static IObjectRecord GetFuzzyObjectRecord(Type baseType, Type type)
+        {
+            return results[baseType].First(w => w.Type == type);
         }
 
         private class ObjectRecord : IObjectRecord

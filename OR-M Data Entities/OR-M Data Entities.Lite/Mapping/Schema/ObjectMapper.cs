@@ -1,5 +1,4 @@
-﻿using FastMember;
-using OR_M_Data_Entities.Lite.Data;
+﻿using OR_M_Data_Entities.Lite.Data;
 using OR_M_Data_Entities.Lite.Extensions;
 using System;
 using System.Collections.Generic;
@@ -11,7 +10,7 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
     {
         public static void Map<T>(Dictionary<Type, TableSchema> currentMap) where T : class
         {
-            var objectReader = new ObjectReader<T>();
+            var objectReader = new ObjectReader(typeof(T));
 
             while (objectReader.Read())
             {
@@ -40,7 +39,7 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                         IsKey = member.GetAttribute<KeyAttribute>() != null
                     });
                 }
-
+                
                 tableSchema.Columns = columns;
 
                 currentMap.Add(record.Type, tableSchema);

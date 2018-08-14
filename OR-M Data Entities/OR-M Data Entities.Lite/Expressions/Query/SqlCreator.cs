@@ -18,7 +18,8 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
             var joins = new StringBuilder();
             var where = new StringBuilder();
             var order = new StringBuilder();
-            var reader = new ObjectReader<T>();
+            var reader = new ObjectReader(typeof(T));
+            var expressionResolver = new WhereExpressionResolver(typeof(T), tableSchemas);
             var from = string.Empty;
 
             while (reader.Read())
@@ -48,50 +49,40 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
                 var parentRecord = reader.Find(record.ParentLevelId);
                 var parentAlias = GetTableAlias(record.ParentLevelId);
 
-                switch (record.ForeignKeyType)
-                {
-                    case ForeignKeyType.LeftJoinOneToOne:
-                        // any children of a left join also need to be left joined,
-                        // otherwise if the inner join fails, the query fails
-
-                        // need to follow how the original join is, 
-                        // use flags
-
-                        // Nullable,
-                        // One To One
-                        // One To Many
-                        // Left Join
+                switch (record.ForeignKeyType) {
+                    case ForeignKeyType.OneToOne:
+                        // inner join
+                        var oneToOneKey = tableSchema.Columns.First(w => w.IsKey == true);
+                        joins.AppendLine($"\tInner Join [dbo].[{tableSchema.Name}] [{alias}] on [{alias}].[{oneToOneKey.ColumnName}] = [{parentAlias}].[{record.ForeignKeyProperty}]");
                         break;
                     case ForeignKeyType.NullableOneToOne:
+                    case ForeignKeyType.LeftOneToOne:
+                        // left join one to one
                         var nullableOneToOneKey = tableSchema.Columns.First(w => w.IsKey == true);
                         joins.AppendLine($"\tLeft Join [dbo].[{tableSchema.Name}] [{alias}] on [{alias}].[{nullableOneToOneKey.ColumnName}] = [{parentAlias}].[{record.ForeignKeyProperty}]");
                         break;
                     case ForeignKeyType.OneToMany:
+                        // left join one to many
                         var parentTableSchema = tableSchemas[record.FromType];
                         var oneToManyKey = parentTableSchema.Columns.First(w => w.IsKey == true);
                         joins.AppendLine($"\tLeft Join [dbo].[{tableSchema.Name}] [{alias}] on [{alias}].[{record.ForeignKeyProperty}] = [{parentAlias}].[{oneToManyKey.ColumnName}]");
                         break;
-                    case ForeignKeyType.OneToOne:
-                        var oneToOneKey = tableSchema.Columns.First(w => w.IsKey == true);
-                        joins.AppendLine($"\tInner Join [dbo].[{tableSchema.Name}] [{alias}] on [{alias}].[{oneToOneKey.ColumnName}] = [{parentAlias}].[{record.ForeignKeyProperty}]");
-                        break;
                 }
             }
 
-            //var whereClause = WhereExpressionResolver.Resolve<T>(expression);
-            var query = $@"
-            Select
+            var whereClause = expressionResolver.Resolve(expression);
+            var query = $@"Select
 {select.ToString().TrimEnd('\r', '\n', ',')}
-            From {from.ToString()}
+From {from.ToString()}
 {joins.ToString()}
-            Where {1}
-            Order By {order.ToString().TrimEnd('\r', '\n', ',', '\t', ' ')}
+Where {1}
+    Order By {order.ToString().TrimEnd('\r', '\n', ',', '\t', ' ')}
             ";
 
-            return new SqlQuery(query, null);
+            return new SqlQuery(query, whereClause.Parameters);
         }
 
-        private static string GetTableAlias(string level)
+        public static string GetTableAlias(string level)
         {
             return $"AKA{level}";
         }

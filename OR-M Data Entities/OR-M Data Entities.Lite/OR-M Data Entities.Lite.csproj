@@ -52,6 +52,7 @@
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\Query\SqlCreator.cs" />
     <Compile Include="Expressions\Query\SqlQuery.cs" />
+    <Compile Include="Expressions\ResolvedExpressionBlock.cs" />
     <Compile Include="Expressions\ResolvedWhereExpression.cs" />
     <Compile Include="Expressions\Resolvers\WhereExpressionResolver.cs" />
     <Compile Include="Extensions\AttributeExtensions.cs" />

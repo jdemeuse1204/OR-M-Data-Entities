@@ -9,7 +9,13 @@ namespace OR_M_Data_Entities.Lite.Expressions
 {
     internal class ResolvedWhereExpression
     {
-        public string Sql { get; set; }
-        public IEnumerable<SqlParameter> Parameters { get; set; }
+        public ResolvedWhereExpression(string sql, IEnumerable<SqlParameter> parameters)
+        {
+            Sql = sql;
+            Parameters = parameters;
+        }
+
+        public string Sql { get; }
+        public IEnumerable<SqlParameter> Parameters { get; }
     }
 }
