@@ -11,6 +11,7 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
         OneToMany,
         OneToOne,
         NullableOneToOne,
+        LeftJoinOneToOne,
         None
     }
 }

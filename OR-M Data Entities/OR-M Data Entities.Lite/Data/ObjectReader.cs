@@ -103,7 +103,7 @@ namespace OR_M_Data_Entities.Lite.Data
 
                         if (foreignKey != null)
                         {
-                            var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, $"{nextLevelId}_{stepId}", objectType.LevelId);
+                            var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, $"{nextLevelId}_{stepId}", objectType.LevelId, objectType.ForeignKeyType);
                             stepId++;
                             objectTypes.Add(objectRecord);
                         }
@@ -131,13 +131,21 @@ namespace OR_M_Data_Entities.Lite.Data
             return objectTypes.FirstOrDefault(w => w.LevelId == levelId);
         }
 
-        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, string levelId, string parentLevelId)
+        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, string levelId, string parentLevelId, ForeignKeyType parentJoinType)
         {
             var result = new ObjectRecord(resolvedMemberType, member.Name, foreignKeyAttribute.ForeignKeyColumnName, levelId, parentLevelId);
             var isList = member.Type.IsList();
             var foreignKeyType = ForeignKeyType.OneToOne;
 
-            if (!isList)
+            if (parentJoinType == ForeignKeyType.NullableOneToOne || parentJoinType == ForeignKeyType.OneToMany || parentJoinType == ForeignKeyType.LeftJoinOneToOne)
+            {
+                // if the parent is left joined, then the 
+                // children need to be left joined,
+                // inner joined will cause the query to fail if 
+                // no results are found
+                foreignKeyType = ForeignKeyType.LeftJoinOneToOne;
+            }
+            else if (!isList)
             {
                 // Is not a list
                 var foundMember = allMembers.First(w => w.Name == foreignKeyAttribute.ForeignKeyColumnName);
