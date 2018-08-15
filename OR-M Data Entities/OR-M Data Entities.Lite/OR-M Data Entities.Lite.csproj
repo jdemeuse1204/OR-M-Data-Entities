@@ -49,12 +49,14 @@
     <Compile Include="Data\IObjectRecord.cs" />
     <Compile Include="Data\IPeekDataReader.cs" />
     <Compile Include="Data\PeekDataReader.cs" />
+    <Compile Include="Expressions\ExpressionBlock.cs" />
     <Compile Include="Expressions\ExpressionQuery.cs" />
     <Compile Include="Expressions\Query\SqlCreator.cs" />
     <Compile Include="Expressions\Query\SqlQuery.cs" />
     <Compile Include="Expressions\ResolvedExpressionBlock.cs" />
     <Compile Include="Expressions\ResolvedWhereExpression.cs" />
     <Compile Include="Expressions\Resolvers\WhereExpressionResolver.cs" />
+    <Compile Include="Expressions\Utilities\ExpressionUtilities.cs" />
     <Compile Include="Extensions\AttributeExtensions.cs" />
     <Compile Include="Extensions\MappingAttributeExtensions.cs" />
     <Compile Include="Mapping\ColumnAttribute.cs" />
@@ -79,6 +81,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

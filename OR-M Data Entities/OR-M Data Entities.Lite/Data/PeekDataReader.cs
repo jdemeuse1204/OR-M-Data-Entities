@@ -57,35 +57,6 @@ namespace OR_M_Data_Entities.Lite.Data
         }
         #endregion
 
-        #region Data Loading Methods
-        public T ToObjectDefault<T>()
-        {
-            if (HasRows) return ToObject<T>();
-
-            // clean up reader
-            Dispose();
-
-            // return the default
-            return default(T);
-        }
-
-        public T ToObject<T>()
-        {
-            if (!HasRows)
-            {
-                // clean up reader
-                Dispose();
-
-                throw new DataException("Query contains no rows");
-            }
-
-            if (typeof(T).IsValueType || typeof(T) == typeof(string)) return this[0] == DBNull.Value ? default(T) : (T)this[0];
-
-            // if its an anonymous type, use the correct loader
-            return default(T);
-        }
-        #endregion
-
         #region Methods
         public bool Peek()
         {

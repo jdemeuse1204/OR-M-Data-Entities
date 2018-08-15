@@ -5,10 +5,11 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using OR_M_Data_Entities.Lite.Mapping.Schema;
 using OR_M_Data_Entities.Lite.Expressions.Query;
+using OR_M_Data_Entities.Lite.Data;
 
 namespace OR_M_Data_Entities.Lite.Expressions
 {
-    internal class ExpressionQuery<T> : IExpressionQuery<T>
+    internal class ExpressionQuery<T> : IExpressionQuery<T> where T : class, new()
     {
         private readonly ExecutionContext executionContext;
         private readonly IReadOnlyDictionary<Type, TableSchema> objectSchemas;
@@ -31,15 +32,18 @@ namespace OR_M_Data_Entities.Lite.Expressions
 
         public T FirstOrDefault()
         {
-            throw new NotImplementedException();
+            // create the query
+            var sqlQuery = SqlCreator.Create<T>(objectSchemas);
+
+            return executionContext.LoadOneDefault<T>(sqlQuery, objectSchemas);
         }
 
         public T FirstOrDefault(Expression<Func<T, bool>> expression)
         {
             // create the query
-            var sql = SqlCreator.Create(objectSchemas, expression);
+            var sqlQuery = SqlCreator.Create(objectSchemas, expression);
 
-            return default(T);// executionContext.LoadOne<T>(sql, objectSchemas);
+            return executionContext.LoadOneDefault<T>(sqlQuery, objectSchemas);
         }
 
         public IExpressionQuery<T> Include(string pathOrTableName)

@@ -3,16 +3,16 @@ using OR_M_Data_Entities.Lite.Expressions.Resolvers;
 using OR_M_Data_Entities.Lite.Mapping.Schema;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace OR_M_Data_Entities.Lite.Expressions.Query
 {
     internal static class SqlCreator
     {
-        public static SqlQuery Create<T>(IReadOnlyDictionary<Type, TableSchema> tableSchemas, Expression<Func<T, bool>> expression)
+        public static SqlQuery Create<T>(IReadOnlyDictionary<Type, TableSchema> tableSchemas, Expression<Func<T, bool>> expression = null)
         {
             var select = new StringBuilder();
             var joins = new StringBuilder();
@@ -70,12 +70,12 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
                 }
             }
 
-            var whereClause = expressionResolver.Resolve(expression);
+            var whereClause = expression == null ? new ResolvedWhereExpression("", new List<SqlParameter>()) : expressionResolver.Resolve(expression);
             var query = $@"Select
 {select.ToString().TrimEnd('\r', '\n', ',')}
 From {from.ToString()}
 {joins.ToString()}
-Where {1}
+{whereClause.Sql}
     Order By {order.ToString().TrimEnd('\r', '\n', ',', '\t', ' ')}
             ";
 

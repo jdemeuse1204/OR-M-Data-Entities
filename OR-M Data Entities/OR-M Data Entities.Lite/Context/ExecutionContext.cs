@@ -1,9 +1,11 @@
 ﻿using OR_M_Data_Entities.Lite.Data;
+using OR_M_Data_Entities.Lite.Expressions.Query;
 using OR_M_Data_Entities.Lite.Extensions;
 using OR_M_Data_Entities.Lite.Mapping.Schema;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 
 namespace OR_M_Data_Entities.Lite.Context
 {
@@ -16,12 +18,14 @@ namespace OR_M_Data_Entities.Lite.Context
             this.connectionString = connectionString;
         }
 
-        private T Load<T>(string sql, Func<IPeekDataReader, T> load)
+        private T Load<T>(SqlQuery query, Func<IPeekDataReader, T> load) where T : class, new()
         {
             using (var connection = new SqlConnection(this.connectionString))
-            using (var command = new SqlCommand(sql, connection))
+            using (var command = new SqlCommand(query.Query, connection))
             {
                 if (connection.State != System.Data.ConnectionState.Open) { connection.Open(); }
+
+                command.Parameters.AddRange(query.Parameters.ToArray());
 
                 using (var reader = command.ExecutePeekReader())
                 {
@@ -30,35 +34,37 @@ namespace OR_M_Data_Entities.Lite.Context
             }
         }
 
-        public T LoadOne<T>(string sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas)
+        public T LoadOne<T>(SqlQuery sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas) where T : class, new()
         {
             return Load(sql, (reader) =>
             {
-                return reader.ToObject<T>();
+                return default(T);
             });
         }
 
-        public T LoadOneDefault<T>(string sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas)
+        public T LoadOneDefault<T>(SqlQuery sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas) where T : class, new()
         {
             return Load(sql, (reader) =>
             {
-                return reader.ToObjectDefault<T>();
+                return default(T);
             });
         }
 
-        public List<T> LoadAll<T>(string sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas)
+        public List<T> LoadAll<T>(SqlQuery sql, IReadOnlyDictionary<Type, TableSchema> tableSchemas) where T : class, new()
         {
             using (var connection = new SqlConnection(this.connectionString))
-            using (var command = new SqlCommand(sql, connection))
+            using (var command = new SqlCommand(sql.Query, connection))
             {
                 if (connection.State != System.Data.ConnectionState.Open) { connection.Open(); }
+
+                command.Parameters.AddRange(sql.Parameters.ToArray());
 
                 using (var reader = command.ExecutePeekReader())
                 {
                     var result = new List<T>();
                     while (reader.Read())
                     {
-                        result.Add(reader.ToObject<T>());
+                        result.Add(default(T));
                     }
                     return result;
                 }

@@ -22,7 +22,7 @@ namespace OR_M_Data_Entities.Lite
             ExecutionContext = new ExecutionContext(this.connectionString);
         }
 
-        public IExpressionQuery<T> From<T>() where T : class
+        public IExpressionQuery<T> From<T>() where T : class, new()
         {
             if (ObjectSchemas == null) { ObjectSchemas = new Dictionary<Type, TableSchema>(); }
 

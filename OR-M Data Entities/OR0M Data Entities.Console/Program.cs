@@ -16,9 +16,9 @@ namespace OR0M_Data_Entities.Console
             var list = new List<int> { 1, 2, 4 };
             var duration = Profiler.OnlyProfile("", 1, () =>
             {
-                var context = new DbSqlLiteContext("");
+                var context = new DbSqlLiteContext("Application Name=NickOfTimeMoving;Data Source=198.71.225.145;Initial Catalog=NickOfTimeMoving;Persist Security Info=true;User ID=jdemeuse;Password=j*ehE177;Pooling=true;Max Pool Size=50;");
                 //w.JobId == 1 && w.IntakeTypeId == 1 || w.JobId == 2 && 
-                var result = context.From<ReadOnlyJob>().FirstOrDefault(w => !list.Contains(w.JobId) && w.JobId == 1 && w.IntakeTypeId == 1 || w.JobId == 2);
+                var result = context.From<ReadOnlyJob>().FirstOrDefault(w => w.JobId == 100);
 
             });
 
