@@ -15,5 +15,8 @@ namespace OR_M_Data_Entities.Lite.Data
         MemberSet Members { get; }
         string LevelId { get; }
         string ParentLevelId { get; }
+
+        TypeAccessor TypeAccessor { get; }
+        IObjectRecord ParentObjectRecord { get; }
     }
 }

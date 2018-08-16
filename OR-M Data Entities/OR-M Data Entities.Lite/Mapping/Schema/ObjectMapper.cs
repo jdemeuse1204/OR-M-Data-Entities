@@ -43,7 +43,7 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                         });
                     }
 
-                    tableSchema.Columns = columns;
+                    tableSchema.Columns = columns.OrderByDescending(w => w.IsKey);
 
                     currentMap.Add(record.Type, tableSchema);
                 }

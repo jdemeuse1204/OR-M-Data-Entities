@@ -58,6 +58,7 @@
     <Compile Include="Expressions\Resolvers\WhereExpressionResolver.cs" />
     <Compile Include="Expressions\Utilities\ExpressionUtilities.cs" />
     <Compile Include="Extensions\AttributeExtensions.cs" />
+    <Compile Include="Extensions\DataReaderExtensions.cs" />
     <Compile Include="Extensions\MappingAttributeExtensions.cs" />
     <Compile Include="Mapping\ColumnAttribute.cs" />
     <Compile Include="Mapping\ForeignKeyAttribute.cs" />
