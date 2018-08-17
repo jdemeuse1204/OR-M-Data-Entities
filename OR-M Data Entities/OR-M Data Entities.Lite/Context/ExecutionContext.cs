@@ -3,6 +3,7 @@ using OR_M_Data_Entities.Lite.Expressions.Query;
 using OR_M_Data_Entities.Lite.Extensions;
 using OR_M_Data_Entities.Lite.Mapping.Schema;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -49,10 +50,11 @@ namespace OR_M_Data_Entities.Lite.Context
                 if (!reader.HasRows) { return default(T); }
 
                 var objectReader = new ObjectReader(typeof(T));
-                var index = 0;
+                var wasFirstRowRead = false;
                 var ordinal = 0;
                 var instance = new T();
                 object lastInstance = null;
+                var lastCompositeKey = string.Empty;
 
                 while (reader.Read())
                 {
@@ -61,19 +63,44 @@ namespace OR_M_Data_Entities.Lite.Context
                         var record = objectReader.GetRecord();
                         var tableSchematic = tableSchemas[record.Type];
 
-                        if (index == 0)
+                        if (!wasFirstRowRead)
                         {
+                            wasFirstRowRead = true;
+
+                            var compositeKeyPieces = new List<object>();
+                            var wasCompositeKeyCompared = false;
                             // base object
                             foreach (var column in tableSchematic.Columns)
                             {
-                                record.TypeAccessor[instance, column.PropertyName] = reader.Get(ordinal);
-                                lastInstance = instance;
+                                var value = reader.Get(ordinal);
 
+                                if (column.IsKey)
+                                {
+                                    compositeKeyPieces.Add(value);
+                                }
+
+                                if (!wasCompositeKeyCompared && lastCompositeKey != string.Empty)
+                                {
+                                    var currentCompositeKey = compositeKeyPieces.Aggregate(string.Empty, (current, next) => $"{current}{next}");
+
+                                    if (currentCompositeKey == lastCompositeKey)
+                                    {
+                                        ordinal += tableSchematic.Columns.Count();
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        lastCompositeKey = currentCompositeKey;
+                                    }
+                                }
+
+                                // composite key should have been compared by now
+                                // set wasCompositeKeyCompared so we can more easily terminate the above if statement
+                                wasCompositeKeyCompared = true;
+                                record.TypeAccessor[instance, column.PropertyName] = value;
+                                lastInstance = instance;
                                 ordinal++;
                             }
-
-                            index++;
-                            continue;
                         }
 
                         // child object
@@ -83,6 +110,38 @@ namespace OR_M_Data_Entities.Lite.Context
                         {
                             // need a new list if there isnt one
                             // check to see if the parent already has a list on it, if so load that list
+                            IList listInstance = (IList)record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName];
+
+                            if (listInstance == null)
+                            {
+                                listInstance = (IList)Activator.CreateInstance(record.ActualType);
+                            }
+
+                            // load one record
+                            // need to make sure the item isnt already in the list later
+                            var singularInstance = Activator.CreateInstance(record.Type);
+
+                            foreach (var column in tableSchematic.Columns)
+                            {
+                                // keys are always orders to be read first
+                                var value = reader.Get(ordinal);
+
+                                if (column.IsKey && value == null)
+                                {
+                                    singularInstance = null;
+                                    ordinal += tableSchematic.Columns.Count();
+                                    break;
+                                }
+
+                                record.TypeAccessor[singularInstance, column.PropertyName] = value;
+                                ordinal++;
+                            }
+
+                            // no reflection needed to add
+                            listInstance.Add(singularInstance);
+
+                            // so we need to set it?
+                            record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = listInstance;
 
                             continue;
                         }
@@ -113,6 +172,7 @@ namespace OR_M_Data_Entities.Lite.Context
                             {
                                 record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = singularInstance;
                             }
+                            continue;
                         }
 
                         if (record.ForeignKeyType == ForeignKeyType.OneToOne)
@@ -129,11 +189,11 @@ namespace OR_M_Data_Entities.Lite.Context
                             // set the property on the parent with the loaded object
                             record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = singularInstance;
                         }
-
-                        index++;
                     }
-                    // read ordinals
-                    // load main object
+
+
+                    // reset the index for the next row of reading
+                    wasFirstRowRead = false;
                 }
 
                 return default(T);

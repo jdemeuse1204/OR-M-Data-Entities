@@ -55,7 +55,7 @@ namespace OR_M_Data_Entities.Lite.Data
             {
                 objectTypes = new List<IObjectRecord>
                 {
-                    new ObjectRecord(type, string.Empty, string.Empty, "0", "0", null)
+                    new ObjectRecord(type, string.Empty, string.Empty, "0", "0", null, type)
                 };
             }
         }
@@ -103,7 +103,7 @@ namespace OR_M_Data_Entities.Lite.Data
 
                         if (foreignKey != null)
                         {
-                            var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, $"{nextLevelId}_{stepId}", objectType.LevelId, objectType.ForeignKeyType, objectType);
+                            var objectRecord = CreateObjectRecord(member, objectType.Members, objectType.Type, memberType, foreignKey, $"{nextLevelId}_{stepId}", objectType.LevelId, objectType.ForeignKeyType, objectType, member.Type);
                             stepId++;
                             objectTypes.Add(objectRecord);
                         }
@@ -130,9 +130,9 @@ namespace OR_M_Data_Entities.Lite.Data
             return objectTypes.FirstOrDefault(w => w.LevelId == levelId);
         }
 
-        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, string levelId, string parentLevelId, ForeignKeyType parentJoinType, IObjectRecord parentObjectRecord)
+        private ObjectRecord CreateObjectRecord(Member member, MemberSet allMembers, Type fromType, Type resolvedMemberType, ForeignKeyAttribute foreignKeyAttribute, string levelId, string parentLevelId, ForeignKeyType parentJoinType, IObjectRecord parentObjectRecord, Type actualType)
         {
-            var result = new ObjectRecord(resolvedMemberType, member.Name, foreignKeyAttribute.ForeignKeyColumnName, levelId, parentLevelId, parentObjectRecord);
+            var result = new ObjectRecord(resolvedMemberType, member.Name, foreignKeyAttribute.ForeignKeyColumnName, levelId, parentLevelId, parentObjectRecord, actualType);
             var isList = member.Type.IsList();
             var foreignKeyType = ForeignKeyType.OneToOne;
 
@@ -172,7 +172,7 @@ namespace OR_M_Data_Entities.Lite.Data
 
         private class ObjectRecord : IObjectRecord
         {
-            public ObjectRecord(Type type, string fromPropertyName, string foreignKeyProperty, string levelId, string parentLevelId, IObjectRecord parentObjectRecord)
+            public ObjectRecord(Type type, string fromPropertyName, string foreignKeyProperty, string levelId, string parentLevelId, IObjectRecord parentObjectRecord, Type actualType)
             {
                 Type = type;
                 FromPropertyName = fromPropertyName;
@@ -183,11 +183,13 @@ namespace OR_M_Data_Entities.Lite.Data
                 LevelId = levelId;
                 ParentLevelId = parentLevelId;
                 ParentObjectRecord = parentObjectRecord;
+                ActualType = actualType;
             }
 
             public Type FromType { get; set; }
 
             public Type Type { get; }
+            public Type ActualType { get; }
             public string FromPropertyName { get; }
             public string ForeignKeyProperty { get; }
             public ForeignKeyType ForeignKeyType { get; set; }

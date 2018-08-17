@@ -9,6 +9,7 @@ namespace OR_M_Data_Entities.Lite.Data
         Type FromType { get; set; }
 
         Type Type { get; }
+        Type ActualType { get; }
         string FromPropertyName { get; }
         string ForeignKeyProperty { get; }
         ForeignKeyType ForeignKeyType { get; set; }
