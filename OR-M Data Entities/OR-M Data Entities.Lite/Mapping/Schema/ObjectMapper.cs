@@ -24,6 +24,8 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
 
                     var tableSchema = new TableSchema(record.Type.GetTableName());
                     var columns = new List<ColumnSchema>();
+                    var hasKeysOnly = true;
+                    var keyCount = 0;
 
                     foreach (var member in record.Members)
                     {
@@ -34,6 +36,16 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                         }
 
                         var memberType = member.Type.Resolve();
+                        var isKey = member.GetAttribute<KeyAttribute>() != null;
+
+                        if (isKey)
+                        {
+                            keyCount++;
+                        }
+                        else
+                        {
+                            hasKeysOnly = false;
+                        }
 
                         columns.Add(new ColumnSchema
                         {
@@ -44,6 +56,17 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
                     }
 
                     tableSchema.Columns = columns.OrderByDescending(w => w.IsKey).ToList();
+                    tableSchema.HasKeysOnly = hasKeysOnly;
+                    tableSchema.KeyCount = keyCount;
+
+                    foreach (var column in columns)
+                    {
+                        if (column.IsKey == false)
+                        {
+                            column.IsFirstNonKey = true;
+                            break;
+                        }
+                    }
 
                     currentMap.Add(record.Type, tableSchema);
                 }

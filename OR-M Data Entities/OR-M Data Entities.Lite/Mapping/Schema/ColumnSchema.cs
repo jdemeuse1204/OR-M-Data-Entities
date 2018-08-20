@@ -11,5 +11,6 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
         public string PropertyName { get; set; }
         public string ColumnName { get; set; }
         public bool IsKey { get; set; }
+        public bool IsFirstNonKey { get; set; }
     }
 }

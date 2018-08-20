@@ -15,6 +15,8 @@ namespace OR_M_Data_Entities.Lite.Mapping.Schema
         }
 
         public string Name { get; }
-        public IEnumerable<ColumnSchema> Columns { get; set; }
+        public bool HasKeysOnly { get; set; }
+        public int KeyCount { get; set; }
+        public IReadOnlyList<ColumnSchema> Columns { get; set; }
     }
 }

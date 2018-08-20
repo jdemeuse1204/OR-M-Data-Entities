@@ -50,11 +50,8 @@ namespace OR_M_Data_Entities.Lite.Context
                 if (!reader.HasRows) { return default(T); }
 
                 var objectReader = new ObjectReader(typeof(T));
-                var wasFirstRowRead = false;
                 var ordinal = 0;
                 var instance = new T();
-                object lastInstance = null;
-                var lastCompositeKey = string.Empty;
 
                 while (reader.Read())
                 {
@@ -63,44 +60,54 @@ namespace OR_M_Data_Entities.Lite.Context
                         var record = objectReader.GetRecord();
                         var tableSchematic = tableSchemas[record.Type];
 
-                        if (!wasFirstRowRead)
+                        if (record.ForeignKeyType == ForeignKeyType.None)
                         {
-                            wasFirstRowRead = true;
-
                             var compositeKeyPieces = new List<object>();
-                            var wasCompositeKeyCompared = false;
+
                             // base object
-                            foreach (var column in tableSchematic.Columns)
+                            for (var i = 0; i < tableSchematic.Columns.Count; i++)
                             {
+                                var column = tableSchematic.Columns[i];
                                 var value = reader.Get(ordinal);
 
                                 if (column.IsKey)
                                 {
                                     compositeKeyPieces.Add(value);
+                                    ordinal++;
+                                    continue;
                                 }
 
-                                if (!wasCompositeKeyCompared && lastCompositeKey != string.Empty)
+                                if (column.IsFirstNonKey)
                                 {
+                                    // check to see if item has already been loaded
+                                    // This is where Activator.CreateInstance should go
                                     var currentCompositeKey = compositeKeyPieces.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
-                                    if (currentCompositeKey == lastCompositeKey)
+                                    if (record.DataBags.Contains(currentCompositeKey))
                                     {
-                                        ordinal += tableSchematic.Columns.Count();
-                                        continue;
+                                        ordinal += (tableSchematic.Columns.Count - tableSchematic.KeyCount);
+                                        break;
                                     }
                                     else
                                     {
-                                        lastCompositeKey = currentCompositeKey;
+                                        // load keys into the object
+                                        for (var j = 0; j < compositeKeyPieces.Count; j++)
+                                        {
+                                            var keyValue = compositeKeyPieces[j];
+                                            var keyColumn = tableSchematic.Columns[j];
+                                            record.TypeAccessor[instance, keyColumn.PropertyName] = keyValue;
+                                        }
                                     }
                                 }
 
                                 // composite key should have been compared by now
                                 // set wasCompositeKeyCompared so we can more easily terminate the above if statement
-                                wasCompositeKeyCompared = true;
                                 record.TypeAccessor[instance, column.PropertyName] = value;
-                                lastInstance = instance;
                                 ordinal++;
                             }
+
+                            record.DataBag = instance;
+                            continue;
                         }
 
                         // child object
@@ -110,7 +117,8 @@ namespace OR_M_Data_Entities.Lite.Context
                         {
                             // need a new list if there isnt one
                             // check to see if the parent already has a list on it, if so load that list
-                            IList listInstance = (IList)record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName];
+                            IList listInstance = (IList)record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName];
+                            var oneToManyKeyBag = new List<object>();
 
                             if (listInstance == null)
                             {
@@ -126,11 +134,18 @@ namespace OR_M_Data_Entities.Lite.Context
                                 // keys are always orders to be read first
                                 var value = reader.Get(ordinal);
 
-                                if (column.IsKey && value == null)
+                                if (column.IsKey)
                                 {
-                                    singularInstance = null;
-                                    ordinal += tableSchematic.Columns.Count();
-                                    break;
+                                    if (value == null)
+                                    {
+                                        singularInstance = null;
+                                        ordinal += tableSchematic.Columns.Count();
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+
                                 }
 
                                 record.TypeAccessor[singularInstance, column.PropertyName] = value;
@@ -140,8 +155,10 @@ namespace OR_M_Data_Entities.Lite.Context
                             // no reflection needed to add
                             listInstance.Add(singularInstance);
 
+                            record.DataBag = singularInstance;
+
                             // so we need to set it?
-                            record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = listInstance;
+                            record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] = listInstance;
 
                             continue;
                         }
@@ -149,6 +166,12 @@ namespace OR_M_Data_Entities.Lite.Context
                         // check the PK to see if the row exists
                         if (record.ForeignKeyType == ForeignKeyType.NullableOneToOne || record.ForeignKeyType == ForeignKeyType.LeftOneToOne)
                         {
+                            if (record.ParentObjectRecord.DataBag != null && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
+                            {
+                                ordinal += tableSchematic.Columns.Count();
+                                continue;
+                            }
+
                             var singularInstance = Activator.CreateInstance(record.Type);
 
                             foreach (var column in tableSchematic.Columns)
@@ -170,13 +193,20 @@ namespace OR_M_Data_Entities.Lite.Context
                             // set the property on the parent with the loaded object
                             if (singularInstance != null)
                             {
-                                record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = singularInstance;
+                                record.DataBag = singularInstance;
+                                record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] = singularInstance;
                             }
                             continue;
                         }
 
                         if (record.ForeignKeyType == ForeignKeyType.OneToOne)
                         {
+                            if (record.ParentObjectRecord.DataBag != null && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
+                            {
+                                ordinal += tableSchematic.Columns.Count();
+                                continue;
+                            }
+
                             var singularInstance = Activator.CreateInstance(record.Type);
 
                             foreach (var column in tableSchematic.Columns)
@@ -186,13 +216,16 @@ namespace OR_M_Data_Entities.Lite.Context
                                 ordinal++;
                             }
 
+                            record.DataBag = singularInstance;
+
                             // set the property on the parent with the loaded object
-                            record.ParentObjectRecord.TypeAccessor[lastInstance, record.FromPropertyName] = singularInstance;
+                            record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] = singularInstance;
                         }
                     }
 
-
                     // reset the index for the next row of reading
+                    objectReader.Reset();
+                    ordinal = 0;
                     wasFirstRowRead = false;
                 }
 

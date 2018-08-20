@@ -74,6 +74,14 @@ namespace OR_M_Data_Entities.Lite.Data
             return typeAccessor;
         }
 
+        public void Reset()
+        {
+            nextLevelId = 0;
+            stepId = 0;
+            index = 0;
+            lastFromObjectName = string.Empty;
+        }
+
         public bool Read()
         {
             if (readFromCache)
@@ -184,9 +192,12 @@ namespace OR_M_Data_Entities.Lite.Data
                 ParentLevelId = parentLevelId;
                 ParentObjectRecord = parentObjectRecord;
                 ActualType = actualType;
+                DataBags = new List<object>();
             }
 
             public Type FromType { get; set; }
+            public object DataBag { get; set; }
+            public List<object> DataBags { get; set; }
 
             public Type Type { get; }
             public Type ActualType { get; }
