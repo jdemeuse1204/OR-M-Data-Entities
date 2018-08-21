@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NickOfTime.ServiceModels.DataTransferObjects.ORM
+namespace NickOfTime.ServiceModels.DataTransferObjects.ORM.Lite
 {
     [Table("Customers")]
     public class ReadOnlyCustomer

@@ -1,8 +1,7 @@
-﻿using NickOfTime.ServiceModels.DataTransferObjects.ORM.User;
-using OR_M_Data_Entities.Lite.Mapping;
+﻿using OR_M_Data_Entities.Lite.Mapping;
 using System;
 
-namespace NickOfTime.ServiceModels.DataTransferObjects.ORM
+namespace NickOfTime.ServiceModels.DataTransferObjects.ORM.Lite
 {
     [Table("Notes")]
     public class ReadOnlyNote

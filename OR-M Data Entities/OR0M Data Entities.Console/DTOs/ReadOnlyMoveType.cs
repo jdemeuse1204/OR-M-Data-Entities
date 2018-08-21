@@ -1,7 +1,7 @@
 ﻿using OR_M_Data_Entities.Lite.Mapping;
 using System.Collections.Generic;
 
-namespace NickOfTime.ServiceModels.DataTransferObjects.ORM
+namespace NickOfTime.ServiceModels.DataTransferObjects.ORM.Lite
 {
     [Table("MoveTypes")]
     public class ReadOnlyMoveType

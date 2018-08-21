@@ -21,9 +21,11 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
             var reader = new ObjectReader(typeof(T));
             var expressionResolver = new WhereExpressionResolver(typeof(T), tableSchemas);
             var from = string.Empty;
+            var index = 0;
 
             while (reader.Read())
             {
+                index++;
                 var record = reader.GetRecord();
                 var tableSchema = tableSchemas[record.Type];
                 var alias = GetTableAlias(record.LevelId);
@@ -32,8 +34,11 @@ namespace OR_M_Data_Entities.Lite.Expressions.Query
                 {
                     select.AppendLine($"\t[{alias}].[{column.ColumnName}],");
 
-                    if (column.IsKey)
+                    if (column.IsKey && index == 1)
                     {
+                        // trying to only order by the first key.
+                        // we check to see if other stuff is loaded, so 
+                        // I think we can skip the other orders
                         order.Append($"[{alias}].[{column.ColumnName}] ASC, ");
                     }
                 }

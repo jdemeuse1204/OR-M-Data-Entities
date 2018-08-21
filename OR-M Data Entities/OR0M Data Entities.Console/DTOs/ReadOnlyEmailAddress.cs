@@ -1,7 +1,7 @@
 ﻿using OR_M_Data_Entities.Lite.Mapping;
 using System;
 
-namespace NickOfTime.ServiceModels.DataTransferObjects.ORM
+namespace NickOfTime.ServiceModels.DataTransferObjects.ORM.Lite
 {
     [Table("EmailAddresses")]
     public class ReadOnlyEmailAddress

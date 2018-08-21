@@ -1,6 +1,6 @@
 ﻿using OR_M_Data_Entities.Lite.Mapping;
 
-namespace NickOfTime.ServiceModels.DataTransferObjects.ORM
+namespace NickOfTime.ServiceModels.DataTransferObjects.ORM.Lite
 {
     [Table("PaymentTypes")]
     public class ReadOnlyPaymentType
