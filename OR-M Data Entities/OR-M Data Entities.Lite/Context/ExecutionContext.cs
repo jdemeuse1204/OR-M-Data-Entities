@@ -122,8 +122,11 @@ namespace OR_M_Data_Entities.Lite.Context
                                             {
                                                 var currentCompositeKey = oneToOneKeyBag.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
-                                                if (record.DataBags.Contains(currentCompositeKey))
+                                                if (record.DataBags.Contains(currentCompositeKey) && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
                                                 {
+                                                    // need to also make sure the property was not loaded
+                                                    // it can contain a key and not be loaded.  If we are loading the 
+                                                    // same object in two different spots
                                                     ordinal += (tableSchematic.Columns.Count - tableSchematic.KeyCount);
                                                     break;
                                                 }
@@ -189,8 +192,11 @@ namespace OR_M_Data_Entities.Lite.Context
                                                 // This is where Activator.CreateInstance should go
                                                 var currentCompositeKey = leftAndNullableOneToOneKeyBag.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
-                                                if (record.DataBags.Contains(currentCompositeKey))
+                                                if (record.DataBags.Contains(currentCompositeKey) && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
                                                 {
+                                                    // need to also make sure the property was not loaded
+                                                    // it can contain a key and not be loaded.  If we are loading the 
+                                                    // same object in two different spots
                                                     ordinal += (tableSchematic.Columns.Count - tableSchematic.KeyCount);
                                                     break;
                                                 }
@@ -257,8 +263,11 @@ namespace OR_M_Data_Entities.Lite.Context
                                                 // This is where Activator.CreateInstance should go
                                                 var currentCompositeKey = oneToManyKeyBag.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
-                                                if (record.DataBags.Contains(currentCompositeKey))
+                                                if (record.DataBags.Contains(currentCompositeKey) && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
                                                 {
+                                                    // need to also make sure the property was not loaded
+                                                    // it can contain a key and not be loaded.  If we are loading the 
+                                                    // same object in two different spots
                                                     ordinal += (tableSchematic.Columns.Count - tableSchematic.KeyCount);
                                                     break;
                                                 }
@@ -300,7 +309,7 @@ namespace OR_M_Data_Entities.Lite.Context
 
                                             var currentCompositeKey = oneToManyKeyBag.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
-                                            if (record.DataBags.Contains(currentCompositeKey))
+                                            if (record.DataBags.Contains(currentCompositeKey) && record.ParentObjectRecord.TypeAccessor[record.ParentObjectRecord.DataBag, record.FromPropertyName] != null)
                                             {
                                                 // ordinal already changed from reading above
                                                 break;
