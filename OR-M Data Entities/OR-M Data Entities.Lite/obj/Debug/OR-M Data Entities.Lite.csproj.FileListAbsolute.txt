@@ -3,6 +3,4 @@ C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\bin\Debug
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\bin\Debug\FastMember.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.dll
 C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.pdb
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.csprojAssemblyReference.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.csproj.CoreCompileInputs.cache
-C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.csproj.CopyComplete
+C:\Repos\OR-M-Data-Entities\OR-M Data Entities\OR-M Data Entities.Lite\obj\Debug\OR-M Data Entities.Lite.csprojResolveAssemblyReference.cache

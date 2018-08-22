@@ -43,7 +43,7 @@ namespace OR_M_Data_Entities.Lite.Context
 
                     while (reader.Read())
                     {
-                        while (objectReader.Read())
+                          while (objectReader.Read())
                         {
                             var record = objectReader.GetRecord();
                             var tableSchematic = tableSchemas[record.Type];
@@ -290,6 +290,14 @@ namespace OR_M_Data_Entities.Lite.Context
 
                                         if (tableSchematic.HasKeysOnly)
                                         {
+                                            // if nothing was loaded in the key bag,
+                                            // then we need to break out of the switch
+                                            // otherwise an empty object will be loaded
+                                            if (oneToManyKeyBag.Count == 0)
+                                            {
+                                                break;
+                                            }
+
                                             var currentCompositeKey = oneToManyKeyBag.Aggregate(string.Empty, (current, next) => $"{current}{next}");
 
                                             if (record.DataBags.Contains(currentCompositeKey))
